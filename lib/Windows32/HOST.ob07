@@ -1,0 +1,258 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE HOST;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    OS* = "WIN";
+
+    slash* = "\";
+
+    OFS_MAXPATHNAME = 128;
+
+    MAX_PARAM = 1024;
+
+    SW_SHOW = 5;
+
+
+TYPE
+
+    POverlapped = POINTER TO OVERLAPPED;
+
+    OVERLAPPED = RECORD
+
+        Internal:       INTEGER;
+        InternalHigh:   INTEGER;
+        Offset:         INTEGER;
+        OffsetHigh:     INTEGER;
+        hEvent:         INTEGER
+
+    END;
+
+    OFSTRUCT = RECORD
+
+        cBytes:         CHAR;
+        fFixedDisk:     CHAR;
+        nErrCode:       SYSTEM.CARD16;
+        Reserved1:      SYSTEM.CARD16;
+        Reserved2:      SYSTEM.CARD16;
+        szPathName:     ARRAY OFS_MAXPATHNAME OF CHAR
+
+    END;
+
+    PSecurityAttributes = POINTER TO TSecurityAttributes;
+
+    TSecurityAttributes = RECORD
+
+        nLength:               INTEGER;
+        lpSecurityDescriptor:  INTEGER;
+        bInheritHandle:        INTEGER
+
+    END;
+
+
+VAR
+
+    hConsoleOutput: INTEGER;
+
+    Params: ARRAY MAX_PARAM, 2 OF INTEGER;
+    argc*: INTEGER;
+
+
+PROCEDURE [winapi, "kernel32.dll", "GetTickCount"]
+    _GetTickCount* (): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "GetStdHandle"]
+    GetStdHandle (nStdHandle: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "GetCommandLineA"]
+    GetCommandLine (): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "ReadFile"]
+    ReadFile (hFile, Buffer, nNumberOfBytesToRW: INTEGER; VAR NumberOfBytesRW: INTEGER; lpOverlapped: POverlapped): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "WriteFile"]
+    WriteFile (hFile, Buffer, nNumberOfBytesToRW: INTEGER; VAR NumberOfBytesRW: INTEGER; lpOverlapped: POverlapped): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "CloseHandle"]
+    CloseHandle (hObject: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "CreateFileA"]
+    CreateFile (
+        lpFileName, dwDesiredAccess, dwShareMode: INTEGER;
+        lpSecurityAttributes: PSecurityAttributes;
+        dwCreationDisposition, dwFlagsAndAttributes,
+        hTemplateFile: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "OpenFile"]
+    OpenFile (lpFileName: INTEGER; lpReOpenBuff: OFSTRUCT; uStyle: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]
+    ExitProcess* (code: INTEGER);
+
+PROCEDURE [winapi, "shell32.dll", "ShellExecuteA"]
+    ShellExecute* (hWnd, Operation, FileName, Parameters, Directory, ShowCmd: INTEGER): INTEGER;
+
+
+PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := ShellExecute(0, 0, SYSTEM.ADR(FileName[0]), SYSTEM.ADR(Parameters[0]), 0, SW_SHOW);
+    IF res <= 32 THEN
+        res := 0
+    END
+
+    RETURN res
+END exec;
+
+
+PROCEDURE GetChar (adr: INTEGER): CHAR;
+VAR
+    res: CHAR;
+
+BEGIN
+    SYSTEM.GET(adr, res)
+    RETURN res
+END GetChar;
+
+
+PROCEDURE ParamParse;
+VAR
+    p, count, cond: INTEGER;
+    c: CHAR;
+
+
+    PROCEDURE ChangeCond (A, B, C: INTEGER; VAR cond: INTEGER; c: CHAR);
+    BEGIN
+        IF (c <= 20X) & (c # 0X) THEN
+            cond := A
+        ELSIF c = 22X THEN
+            cond := B
+        ELSIF c = 0X THEN
+            cond := 6
+        ELSE
+            cond := C
+        END
+    END ChangeCond;
+
+
+BEGIN
+    p := GetCommandLine();
+    cond := 0;
+    count := 0;
+    WHILE (count < MAX_PARAM) & (cond # 6) DO
+        c := GetChar(p);
+        CASE cond OF
+        |0: ChangeCond(0, 4, 1, cond, c); IF cond = 1 THEN Params[count, 0] := p END
+        |1: ChangeCond(0, 3, 1, cond, c); IF cond IN {0, 6} THEN Params[count, 1] := p - 1; INC(count) END
+        |3: ChangeCond(3, 1, 3, cond, c); IF cond = 6 THEN Params[count, 1] := p - 1; INC(count) END
+        |4: ChangeCond(5, 0, 5, cond, c); IF cond = 5 THEN Params[count, 0] := p END
+        |5: ChangeCond(5, 1, 5, cond, c); IF cond = 6 THEN Params[count, 1] := p - 1; INC(count) END
+        |6:
+        END;
+        INC(p)
+    END;
+    argc := count
+END ParamParse;
+
+
+PROCEDURE GetArg* (n: INTEGER; VAR s: ARRAY OF CHAR);
+VAR
+    i, j, len: INTEGER;
+    c: CHAR;
+
+BEGIN
+    j := 0;
+    IF n < argc THEN
+        len := LEN(s) - 1;
+        i := Params[n, 0];
+        WHILE (j < len) & (i <= Params[n, 1]) DO
+            c := GetChar(i);
+            IF c # 22X THEN
+                s[j] := c;
+                INC(j)
+            END;
+            INC(i)
+        END
+    END;
+    s[j] := 0X
+END GetArg;
+
+
+PROCEDURE FileRead* (F, Buffer, Count: INTEGER): INTEGER;
+VAR
+    res, n: INTEGER;
+
+BEGIN
+    IF ReadFile(F, Buffer, Count, n, NIL) = 0 THEN
+        res := -1
+    ELSE
+        res := n
+    END
+
+    RETURN res
+END FileRead;
+
+
+PROCEDURE FileWrite* (F, Buffer, Count: INTEGER): INTEGER;
+VAR
+    res, n: INTEGER;
+
+BEGIN
+    IF WriteFile(F, Buffer, Count, n, NIL) = 0 THEN
+        res := -1
+    ELSE
+        res := n
+    END
+
+    RETURN res
+END FileWrite;
+
+
+PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN CreateFile(SYSTEM.ADR(FName[0]), 0C0000000H, 0, NIL, 2, 80H, 0)
+END FileCreate;
+
+
+PROCEDURE FileClose* (F: INTEGER);
+BEGIN
+    CloseHandle(F)
+END FileClose;
+
+
+PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
+VAR
+    ofstr: OFSTRUCT;
+
+BEGIN
+    RETURN OpenFile(SYSTEM.ADR(FName[0]), ofstr, 0)
+END FileOpen;
+
+
+PROCEDURE OutChar* (c: CHAR);
+VAR
+    count: INTEGER;
+BEGIN
+    WriteFile(hConsoleOutput, SYSTEM.ADR(c), 1, count, NIL)
+END OutChar;
+
+
+PROCEDURE GetTickCount* (): INTEGER;
+    RETURN _GetTickCount() DIV 10
+END GetTickCount;
+
+
+BEGIN
+    hConsoleOutput := GetStdHandle(-11);
+    ParamParse
+END HOST.

@@ -1,0 +1,46 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE API;
+
+IMPORT SYSTEM;
+
+
+PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
+PROCEDURE [winapi, "kernel32.dll", "GlobalAlloc"]  Alloc (uFlags, dwBytes: INTEGER): INTEGER;
+PROCEDURE [winapi, "kernel32.dll", "GlobalFree"]   Free (hMem: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "user32.dll", "MessageBoxA"]    MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
+
+
+PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
+BEGIN
+    MessageBoxA(0, lpText, lpCaption, 16)
+END DebugMsg;
+
+
+PROCEDURE _NEW* (size: INTEGER): INTEGER;
+    RETURN Alloc(64, size)
+END _NEW;
+
+
+PROCEDURE _DISPOSE* (p: INTEGER): INTEGER;
+    RETURN Free(p)
+END _DISPOSE;
+
+
+PROCEDURE init* (ptr: INTEGER);
+END init;
+
+
+PROCEDURE exit* (code: INTEGER);
+BEGIN
+    ExitProcess(code)
+END exit;
+
+
+END API.

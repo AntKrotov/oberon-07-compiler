@@ -1,0 +1,132 @@
+﻿(*
+    Copyright 2013, 2017, 2018 Anton Krotov
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*)
+
+MODULE File;
+
+IMPORT SYSTEM, WINAPI;
+
+
+CONST
+
+    OPEN_R* = 0;     OPEN_W* = 1;     OPEN_RW* = 2;
+    SEEK_BEG* = 0;   SEEK_CUR* = 1;   SEEK_END* = 2;
+
+
+PROCEDURE Exists* (FName: ARRAY OF CHAR): BOOLEAN;
+VAR
+    FindData: WINAPI.TWin32FindData;
+    Handle:   INTEGER;
+
+BEGIN
+    Handle := WINAPI.FindFirstFile(SYSTEM.ADR(FName[0]), FindData);
+    IF Handle # -1 THEN
+        WINAPI.FindClose(Handle);
+        IF 4 IN FindData.dwFileAttributes THEN
+            Handle := -1
+        END
+    END
+
+    RETURN Handle # -1
+END Exists;
+
+
+PROCEDURE Delete* (FName: ARRAY OF CHAR): BOOLEAN;
+    RETURN WINAPI.DeleteFile(SYSTEM.ADR(FName[0])) # 0
+END Delete;
+
+
+PROCEDURE Create* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN WINAPI.CreateFile(SYSTEM.ADR(FName[0]), 0C0000000H, 0, NIL, 2, 80H, 0)
+END Create;
+
+
+PROCEDURE Close* (F: INTEGER);
+BEGIN
+    WINAPI.CloseHandle(F)
+END Close;
+
+
+PROCEDURE Open* (FName: ARRAY OF CHAR; Mode: INTEGER): INTEGER;
+VAR
+    ofstr: WINAPI.OFSTRUCT;
+BEGIN
+    RETURN WINAPI.OpenFile(SYSTEM.ADR(FName[0]), ofstr, Mode)
+END Open;
+
+
+PROCEDURE Seek* (F, Offset, Origin: INTEGER): INTEGER;
+    RETURN WINAPI.SetFilePointer(F, Offset, 0, Origin)
+END Seek;
+
+
+PROCEDURE Read* (F, Buffer, Count: INTEGER): INTEGER;
+VAR
+    res, n: INTEGER;
+
+BEGIN
+    IF WINAPI.ReadFile(F, Buffer, Count, SYSTEM.ADR(n), NIL) = 0 THEN
+        res := -1
+    ELSE
+        res := n
+    END
+
+    RETURN res
+END Read;
+
+
+PROCEDURE Write* (F, Buffer, Count: INTEGER): INTEGER;
+VAR
+    res, n: INTEGER;
+
+BEGIN
+    IF WINAPI.WriteFile(F, Buffer, Count, SYSTEM.ADR(n), NIL) = 0 THEN
+        res := -1
+    ELSE
+        res := n
+    END
+
+    RETURN res
+END Write;
+
+
+PROCEDURE Load* (FName: ARRAY OF CHAR; VAR Size: INTEGER): INTEGER;
+VAR
+    res, n, F: INTEGER;
+
+BEGIN
+    res := 0;
+    F := Open(FName, OPEN_R); 
+
+    IF F # -1 THEN
+        Size := Seek(F, 0, SEEK_END);
+        n    := Seek(F, 0, SEEK_BEG);
+        res  := WINAPI.GlobalAlloc(64, Size);
+        IF (res = 0) OR (Read(F, res, Size) # Size) THEN
+            IF res # 0 THEN
+                WINAPI.GlobalFree(Size);
+                res := 0;
+                Size := 0
+            END
+        END;
+        Close(F)
+    END 
+
+    RETURN res
+END Load;
+
+
+END File.
