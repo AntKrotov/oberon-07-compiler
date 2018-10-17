@@ -1,0 +1,120 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE BTREES;
+
+
+TYPE
+
+    DATA* = POINTER TO rDATA;
+
+    NODE* = POINTER TO rNODE;
+
+    TREE* = POINTER TO rTREE;
+
+    rDATA* = RECORD
+
+    END;
+
+    rNODE = RECORD
+
+        data*: DATA;
+
+        left, right: NODE
+
+    END;
+
+    CMP* = PROCEDURE (a, b: DATA): INTEGER;
+
+    rTREE = RECORD (rNODE)
+
+        cmp: CMP;
+
+        add*: PROCEDURE (tree: TREE; data: DATA; VAR newnode: BOOLEAN): NODE
+
+    END;
+
+
+PROCEDURE add (tree: TREE; data: DATA; VAR newnode: BOOLEAN): NODE;
+VAR
+    node: NODE;
+    rescmp: INTEGER;
+    result: NODE;
+
+
+    PROCEDURE newresult (data: DATA): NODE;
+    VAR
+        result: NODE;
+
+    BEGIN
+        NEW(result);
+        result.left := NIL;
+        result.right := NIL;
+        result.data := data
+
+        RETURN result
+    END newresult;
+
+
+BEGIN
+    ASSERT(tree # NIL);
+    ASSERT(data # NIL);
+
+    node := tree;
+    result := NIL;
+
+    REPEAT
+
+        rescmp := tree.cmp(node.data, data);
+
+        IF rescmp < 0 THEN
+            IF node.left # NIL THEN
+                node := node.left
+            ELSE
+                result := newresult(data);
+                node.left := result;
+                newnode := TRUE
+            END
+        ELSIF rescmp > 0 THEN
+            IF node.right # NIL THEN
+                node := node.right
+            ELSE
+                result := newresult(data);
+                node.right := result;
+                newnode := TRUE
+            END
+        ELSE
+            result := node;
+            newnode := FALSE
+        END
+
+    UNTIL result # NIL
+
+    RETURN result
+END add;
+
+
+PROCEDURE create* (data: DATA; cmp: CMP): TREE;
+VAR
+    tree: TREE;
+
+BEGIN
+    ASSERT(data # NIL);
+    ASSERT(cmp # NIL);
+
+    NEW(tree);
+    tree.data  := data;
+    tree.left  := NIL;
+    tree.right := NIL;
+    tree.cmp   := cmp;
+    tree.add   := add
+
+    RETURN tree
+END create;
+
+
+END BTREES.

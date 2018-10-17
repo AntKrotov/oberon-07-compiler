@@ -1,0 +1,32 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE ERRORS;
+
+IMPORT UTILS;
+
+
+PROCEDURE hintmsg* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
+BEGIN
+    IF hint = 0 THEN
+        UTILS.OutString("  hint ("); UTILS.OutInt(line); UTILS.OutString(":"); UTILS.OutInt(col); UTILS.OutString(")");
+        UTILS.OutString(" variable "); UTILS.OutString(22X); UTILS.OutString(name); UTILS.OutString(22X); UTILS.OutString(" never used"); UTILS.OutLn
+    END
+END hintmsg;
+
+
+PROCEDURE errormsg* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
+BEGIN
+    UTILS.OutString("error: ");  UTILS.OutInt(errno);     UTILS.OutLn;
+    UTILS.OutString("line:  ");  UTILS.OutInt(line);      UTILS.OutLn;
+    UTILS.OutString("col:   ");  UTILS.OutInt(col);       UTILS.OutLn;
+    UTILS.OutString("file:  ");  UTILS.OutString(fname);  UTILS.OutLn;
+    UTILS.exit(1)
+END errormsg;
+
+
+END ERRORS.

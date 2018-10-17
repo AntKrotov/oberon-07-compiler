@@ -1,0 +1,124 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE LISTS;
+
+
+TYPE
+
+    LIST* = POINTER TO rLIST;
+
+    ITEM* = POINTER TO rITEM;
+
+    rLIST = RECORD
+
+        first*, last*: ITEM;
+
+        push*:   PROCEDURE (list: LIST; item: ITEM);
+        insert*: PROCEDURE (list: LIST; cur, nov: ITEM);
+        delete*: PROCEDURE (list: LIST; item: ITEM)
+
+    END;
+
+    rITEM = RECORD
+
+        prev*, next*: ITEM
+
+    END;
+
+
+PROCEDURE push (list: LIST; item: ITEM);
+BEGIN
+    ASSERT(list # NIL);
+    ASSERT(item # NIL);
+
+    IF list.first = NIL THEN
+        list.first := item;
+        list.last  := item;
+        item.prev  := NIL;
+        item.next  := NIL
+    ELSE
+        ASSERT(list.last # NIL);
+
+        item.prev := list.last;
+        list.last.next := item;
+        item.next := NIL;
+        list.last := item
+    END
+END push;
+
+
+PROCEDURE insert (list: LIST; cur, nov: ITEM);
+VAR
+    next: ITEM;
+
+BEGIN
+    ASSERT(list # NIL);
+    ASSERT(nov # NIL);
+    ASSERT(cur # NIL);
+
+    next := cur.next;
+
+    IF next # NIL THEN
+        next.prev := nov;
+        nov.next := next;
+        cur.next := nov;
+        nov.prev := cur
+    ELSE
+        list.push(list, nov)
+    END
+
+END insert;
+
+
+PROCEDURE delete (list: LIST; item: ITEM);
+VAR
+    prev, next: ITEM;
+
+BEGIN
+    ASSERT(list # NIL);
+    ASSERT(item # NIL);
+
+    prev := item.prev;
+    next := item.next;
+
+    IF (next # NIL) & (prev # NIL) THEN
+        prev.next := next;
+        next.prev := prev
+    ELSIF (next = NIL) & (prev = NIL) THEN
+        list.first := NIL;
+        list.last := NIL
+    ELSIF (next = NIL) & (prev # NIL) THEN
+        prev.next := NIL;
+        list.last := prev
+    ELSIF (next # NIL) & (prev = NIL) THEN
+        next.prev := NIL;
+        list.first := next
+    END;
+    DISPOSE(item)
+
+END delete;
+
+
+PROCEDURE create* (list: LIST): LIST;
+BEGIN
+    IF list = NIL THEN
+        NEW(list)
+    END;
+
+    list.first  := NIL;
+    list.last   := NIL;
+
+    list.push   := push;
+    list.insert := insert;
+    list.delete := delete
+
+    RETURN list
+END create;
+
+
+END LISTS.

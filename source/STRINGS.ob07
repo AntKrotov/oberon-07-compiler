@@ -1,0 +1,223 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE STRINGS;
+
+
+PROCEDURE append* (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
+VAR
+    n1, n2, i, j: INTEGER;
+BEGIN
+    n1 := LENGTH(s1);
+    n2 := LENGTH(s2);
+
+    ASSERT(n1 + n2 < LEN(s1));
+
+    i := 0;
+    j := n1;
+    WHILE i < n2 DO
+        s1[j] := s2[i];
+        INC(i);
+        INC(j)
+    END;
+
+    s1[j] := 0X
+
+END append;
+
+
+PROCEDURE reverse* (VAR s: ARRAY OF CHAR);
+VAR
+    i, j: INTEGER;
+    a, b: CHAR;
+
+BEGIN
+
+    i := 0;
+    j := LENGTH(s) - 1;
+
+    WHILE i < j DO
+        a := s[i];
+        b := s[j];
+        s[i] := b;
+        s[j] := a;
+        INC(i);
+        DEC(j)
+    END
+END reverse;
+
+
+PROCEDURE IntToStr* (x: INTEGER; VAR str: ARRAY OF CHAR);
+VAR
+    i, a: INTEGER;
+    minus: BOOLEAN;
+
+BEGIN
+    minus := x < 0;
+    i := 0;
+    a := 0;
+    REPEAT
+        str[i] := CHR(x MOD 10 + ORD("0"));
+        x := x DIV 10;
+        INC(i)
+    UNTIL x = 0;
+
+    IF minus THEN
+        str[i] := "-";
+        INC(i)
+    END;
+
+    str[i] := 0X;
+    reverse(str)
+END IntToStr;
+
+
+PROCEDURE copy* (src: ARRAY OF CHAR; VAR dst: ARRAY OF CHAR; spos, dpos, count: INTEGER);
+BEGIN
+    WHILE count > 0 DO
+        dst[dpos] := src[spos];
+        INC(spos);
+        INC(dpos);
+        DEC(count)
+    END
+END copy;
+
+
+PROCEDURE search* (s: ARRAY OF CHAR; VAR pos: INTEGER; c: CHAR; forward: BOOLEAN);
+VAR
+    length: INTEGER;
+
+BEGIN
+    length := LENGTH(s);
+
+    IF (0 <= pos) & (pos < length) THEN
+        IF forward THEN
+            WHILE (pos < length) & (s[pos] # c) DO
+                INC(pos)
+            END;
+            IF pos = length THEN
+                pos := -1
+            END
+        ELSE
+            WHILE (pos >= 0) & (s[pos] # c) DO
+                DEC(pos)
+            END
+        END
+    ELSE
+        pos := -1
+    END
+END search;
+
+
+PROCEDURE letter* (c: CHAR): BOOLEAN;
+    RETURN ("a" <= c) & (c <= "z") OR ("A" <= c) & (c <= "Z") OR (c = "_")
+END letter;
+
+
+PROCEDURE digit* (c: CHAR): BOOLEAN;
+    RETURN ("0" <= c) & (c <= "9")
+END digit;
+
+
+PROCEDURE hexdigit* (c: CHAR): BOOLEAN;
+    RETURN ("0" <= c) & (c <= "9") OR ("A" <= c) & (c <= "F")
+END hexdigit;
+
+
+PROCEDURE space* (c: CHAR): BOOLEAN;
+    RETURN (0X < c) & (c <= 20X)
+END space;
+
+
+PROCEDURE StrToInt* (str: ARRAY OF CHAR; VAR x: INTEGER): BOOLEAN;
+VAR
+    i, k: INTEGER;
+    res: BOOLEAN;
+
+BEGIN
+    res := TRUE;
+    i := 0;
+    x := 0;
+    k := LENGTH(str);
+    WHILE i < k DO
+        IF digit(str[i]) THEN
+            x := x * 10 + ORD(str[i]) - ORD("0")
+        ELSE
+            i := k;
+            res := FALSE
+        END;
+        INC(i)
+    END
+
+    RETURN res
+END StrToInt;
+
+
+PROCEDURE CheckVer (str: ARRAY OF CHAR): BOOLEAN;
+VAR
+    i, k: INTEGER;
+    res: BOOLEAN;
+
+BEGIN
+    k := LENGTH(str);
+    res := k < LEN(str);
+
+    IF res & digit(str[0]) THEN
+        i := 0;
+        WHILE (i < k) & digit(str[i]) DO
+            INC(i)
+        END;
+        IF (i < k) & (str[i] = ".") THEN
+            INC(i);
+            IF i < k THEN
+                WHILE (i < k) & digit(str[i]) DO
+                    INC(i)
+                END
+            ELSE
+                res := FALSE
+            END
+        ELSE
+            res := FALSE
+        END;
+
+        res := res & (i = k)
+    ELSE
+        res := FALSE
+    END
+
+    RETURN res
+END CheckVer;
+
+
+PROCEDURE StrToVer* (str: ARRAY OF CHAR; VAR major, minor: INTEGER): BOOLEAN;
+VAR
+    i: INTEGER;
+    res: BOOLEAN;
+
+BEGIN
+    res := CheckVer(str);
+
+    IF res THEN
+        i := 0;
+        minor := 0;
+        major := 0;
+        WHILE digit(str[i]) DO
+            major := major * 10 + ORD(str[i]) - ORD("0");
+            INC(i)
+        END;
+        INC(i);
+        WHILE digit(str[i]) DO
+            minor := minor * 10 + ORD(str[i]) - ORD("0");
+            INC(i)
+        END
+    END
+
+    RETURN res
+END StrToVer;
+
+
+END STRINGS.
