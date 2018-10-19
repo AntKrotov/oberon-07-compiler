@@ -1,11 +1,4 @@
-﻿(*
-    BSD 2-Clause License
-
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
-
-MODULE PARS;
+﻿MODULE PARS;
 
 IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
 
@@ -786,14 +779,16 @@ BEGIN
 END VarDeclaration;
 
 
-PROCEDURE DeclarationSequence (parser: PARSER);
+PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 VAR
-    ptr: PROG.FRWPTR;
+    ptr: PROG.FRWPTR; 
+    endmod: BOOLEAN;
 
 
-    PROCEDURE ProcDeclaration (parser: PARSER);
+    PROCEDURE ProcDeclaration (parser: PARSER): BOOLEAN;
     VAR
         proc:       PROG.IDENT;
+        endname,
         name:       SCAN.IDENT;
         param:      LISTS.ITEM;
         unit:       PROG.UNIT;
@@ -805,8 +800,11 @@ VAR
         call:       INTEGER;
         t:          PROG.TYPE_;
         import:     CODE.IMPORT_PROC;
+        endmod, b:  BOOLEAN;
 
-    BEGIN
+    BEGIN         
+        endmod := FALSE;
+
         unit := parser.unit;
 
         call := procflag(parser, import, TRUE);
@@ -847,55 +845,74 @@ VAR
 
         IF import = NIL THEN
 
-        label := CODE.NewLabel();
-        proc.proc.label := label;
+            label := CODE.NewLabel();
+            proc.proc.label := label;
 
-        IF parser.main & proc.export & program.dll THEN
-            IF program.obj THEN
-                check((proc.name.s # "lib_init") & (proc.name.s # "version"), parser, pos, 114)
+            IF parser.main & proc.export & program.dll THEN
+                IF program.obj THEN
+                    check((proc.name.s # "lib_init") & (proc.name.s # "version"), parser, pos, 114)
+                END;
+                CODE.AddExp(label, proc.name.s);
+                proc.proc.used := TRUE
             END;
-            CODE.AddExp(label, proc.name.s);
-            proc.proc.used := TRUE
+
+            b := DeclarationSequence(parser);
+
+            program.locsize := 0;
+            CODE.SetProcLabel(label);
+            proc.proc.beg := CODE.getlast();
+            enter := CODE.Enter();
+
+            IF parser.lex.typ = SCAN.lxBEGIN THEN
+                getlex(parser);
+                parser.StatSeq(parser)
+            END;
+
+            IF t.base # NIL THEN
+                checklex(parser, SCAN.lxRETURN);
+                getlex(parser);
+                pos := parser.lex.pos;
+                parser.expression(parser, e);
+                check(parser.chkreturn(parser, e, t.base), parser, pos, 87)
+            ELSE
+                check1(parser.lex.typ # SCAN.lxRETURN, parser, 70)
+            END;
+
+            CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), t.params.size * ORD(t.call # PROG.cdecl));
+            proc.proc.end := CODE.getlast();
+            enter.param := program.locsize;
+            checklex(parser, SCAN.lxEND)
         END;
-
-        DeclarationSequence(parser);
-
-        program.locsize := 0;
-        CODE.SetProcLabel(label);
-        proc.proc.beg := CODE.getlast();
-        enter := CODE.Enter();
-
-        IF parser.lex.typ = SCAN.lxBEGIN THEN
+        
+        IF parser.lex.typ = SCAN.lxEND THEN
             getlex(parser);
-            parser.StatSeq(parser)
-        END;
-
-        IF t.base # NIL THEN
-            checklex(parser, SCAN.lxRETURN);
-            getlex(parser);
+            checklex(parser, SCAN.lxIDENT);
+            endname := parser.lex.ident;   
             pos := parser.lex.pos;
-            parser.expression(parser, e);
-            check(parser.chkreturn(parser, e, t.base), parser, pos, 87)
-        ELSE
-            check1(parser.lex.typ # SCAN.lxRETURN, parser, 70)
-        END;
-
-        CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), t.params.size * ORD(t.call # PROG.cdecl));
-        proc.proc.end := CODE.getlast();
-        enter.param := program.locsize;
-
-        checklex(parser, SCAN.lxEND);
-        getlex(parser);
-        checklex(parser, SCAN.lxIDENT);
-        check1(parser.lex.ident = name, parser, 60);
-        getlex(parser);
-        checklex(parser, SCAN.lxSEMI);
-        getlex(parser);
-
+            IF import = NIL THEN
+                check(endname = name, parser, pos, 60);
+                getlex(parser);
+                checklex(parser, SCAN.lxSEMI);
+                getlex(parser)
+            ELSE
+                IF endname = parser.unit.name THEN
+                    getlex(parser);
+                    checklex(parser, SCAN.lxPOINT);
+                    getlex(parser);
+                    endmod := TRUE
+                ELSIF endname = name THEN
+                    getlex(parser);
+                    checklex(parser, SCAN.lxSEMI);
+                    getlex(parser)
+                ELSE
+                    check(FALSE, parser, pos, 60)
+                END
+            END
         END;
 
         unit.scope.close(unit)
-
+        
+        RETURN endmod
     END ProcDeclaration;
 
 
@@ -929,19 +946,23 @@ BEGIN
             VarDeclaration(parser)
         END
     END;
-
-    WHILE parser.lex.typ = SCAN.lxPROCEDURE DO
+           
+    endmod := FALSE;
+    WHILE ~endmod & (parser.lex.typ = SCAN.lxPROCEDURE) DO
         getlex(parser);
-        ProcDeclaration(parser)
-    END
+        endmod := ProcDeclaration(parser)
+    END 
+    
+    RETURN endmod
 END DeclarationSequence;
 
 
 PROCEDURE parse (parser: PARSER);
 VAR
-    unit:  PROG.UNIT;
-    label: INTEGER;
-    name:  INTEGER;
+    unit:    PROG.UNIT;
+    label:   INTEGER;
+    name:    INTEGER;
+    endmod:  BOOLEAN;
 
 BEGIN
     ASSERT(parser # NIL);
@@ -985,23 +1006,27 @@ BEGIN
     CODE.AddCmd(CODE.opPARAM, 1);
     CODE.AddCmd0(CODE.opERR);
 
-    DeclarationSequence(parser);
+    endmod := DeclarationSequence(parser);
 
-    CODE.SetLabel(label);
+    CODE.SetLabel(label);  
+    
+    IF ~endmod THEN
 
-    IF parser.lex.typ = SCAN.lxBEGIN THEN
+        IF parser.lex.typ = SCAN.lxBEGIN THEN
+            getlex(parser);
+            parser.StatSeq(parser)
+        END;
+
+        checklex(parser, SCAN.lxEND);
+
         getlex(parser);
-        parser.StatSeq(parser)
+        checklex(parser, SCAN.lxIDENT);
+        check1(parser.lex.s = unit.name.s, parser, 25);
+
+        getlex(parser);
+        checklex(parser, SCAN.lxPOINT)
+    
     END;
-
-    checklex(parser, SCAN.lxEND);
-
-    getlex(parser);
-    checklex(parser, SCAN.lxIDENT);
-    check1(parser.lex.s = unit.name.s, parser, 25);
-
-    getlex(parser);
-    checklex(parser, SCAN.lxPOINT);
 
     unit.close(unit)
 

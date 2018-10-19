@@ -1,11 +1,4 @@
-﻿(*
-    BSD 2-Clause License
-
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
-
-MODULE Compiler;
+﻿MODULE Compiler;
 
 IMPORT PARS, PROG, SCAN, ARITH, UTILS, STRINGS, LISTS, CODE, X86;
 
@@ -2836,6 +2829,7 @@ VAR
     modname:  PARS.PATH;
     outname:  PARS.PATH;
     param:    PARS.PATH;
+    temp:     PARS.PATH;
 
     Ini:      PARS.PATH;
     Fasm:     SCAN.LEXSTR;
@@ -2854,10 +2848,10 @@ VAR
 BEGIN
 
     Fasm := "";
-
-    UTILS.GetArg(0, app_path);
-    UTILS.split(app_path, lib_path, modname, ext);
-
+    
+    UTILS.GetCurrentDirectory(app_path);
+    lib_path := app_path;
+    
     Ini := lib_path;
     STRINGS.append(Ini, "Compiler.ini");
     ParseIni(Ini, ini);
@@ -2869,7 +2863,7 @@ BEGIN
 
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
-        UTILS.OutString("Akron Oberon-07/16 Compiler v0.80"); UTILS.OutLn;
+        UTILS.OutString("Akron Oberon-07/16 Compiler v0.81"); UTILS.OutLn;
         UTILS.OutString("Usage: Compiler <inputfile> <outputfile> <target> [stack size (Mb)]"); UTILS.OutLn;
         UTILS.OutString("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); UTILS.OutLn;
         UTILS.exit(1)
@@ -2879,11 +2873,19 @@ BEGIN
         UTILS.OutString("inputfile name extension must be '"); UTILS.OutString(EXT); UTILS.OutString("'"); UTILS.OutLn;
         UTILS.exit(1)
     END;
+    IF UTILS.isRelative(path) THEN
+        UTILS.RelPath(app_path, path, temp);
+        path := temp
+    END;
 
     UTILS.GetArg(2, outname);
     IF outname = "" THEN
         UTILS.OutString("not enough parameters"); UTILS.OutLn;
         UTILS.exit(1)
+    END;
+    IF UTILS.isRelative(outname) THEN
+        UTILS.RelPath(app_path, outname, temp);
+        outname := temp
     END;
 
     UTILS.GetArg(3, param);
@@ -3015,8 +3017,3 @@ END main;
 BEGIN
     main
 END Compiler.
-(* 24.01.18 *)
-(* underflow, memory *)
-(* self 30.03.18 *)
-(* self FASM 25.04.18 *)
-(* http://shell-storm.org/online/Online-Assembler-and-Disassembler/ *)
