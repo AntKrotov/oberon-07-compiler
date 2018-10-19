@@ -124,9 +124,20 @@ VAR
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo)
     RETURN Card16ToInt(ScrBufInfo.dwCursorPosition.Y)
-END GetCursorY;
+END GetCursorY; 
 
 
+PROCEDURE open*;
 BEGIN
+    WINAPI.AllocConsole;
     hConsoleOutput := WINAPI.GetStdHandle(-11)
+END open;
+
+
+PROCEDURE exit* (b: BOOLEAN);
+BEGIN     
+    WINAPI.FreeConsole
+END exit;
+
+
 END Console.

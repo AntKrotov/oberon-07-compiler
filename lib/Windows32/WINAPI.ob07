@@ -231,7 +231,13 @@ PROCEDURE [winapi, "kernel32.dll", "GetProcAddress"]
     GetProcAddress* (hModule, name: INTEGER): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "LoadLibraryA"]
-    LoadLibraryA* (name: INTEGER): INTEGER;
+    LoadLibraryA* (name: INTEGER): INTEGER;       
+    
+PROCEDURE [winapi, "kernel32.dll", "AllocConsole"]
+    AllocConsole* (): BOOLEAN;
+    
+PROCEDURE [winapi, "kernel32.dll", "FreeConsole"]
+    FreeConsole* (): BOOLEAN;
 
 
 END WINAPI.
