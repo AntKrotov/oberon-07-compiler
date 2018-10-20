@@ -1,4 +1,11 @@
-﻿MODULE UTILS;
+(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE UTILS;
 
 IMPORT SYSTEM, HOST, STRINGS;
 
