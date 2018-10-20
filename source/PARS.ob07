@@ -1,4 +1,10 @@
-﻿MODULE PARS;
+(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+MODULE PARS;
 
 IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
 
