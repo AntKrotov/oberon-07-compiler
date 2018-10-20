@@ -1,4 +1,10 @@
-﻿MODULE Compiler;
+(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+MODULE Compiler;
 
 IMPORT PARS, PROG, SCAN, ARITH, UTILS, STRINGS, LISTS, CODE, X86;
 
