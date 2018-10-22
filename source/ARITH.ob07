@@ -3,7 +3,7 @@
 
     Copyright (c) 2018, Anton Krotov
     All rights reserved.
-*)                      
+*)
 
 MODULE ARITH;
 
@@ -13,7 +13,8 @@ IMPORT BTREES, STRINGS, UTILS;
 CONST
 
     tINTEGER* = 1;  tREAL* = 2;  tSET*    = 3;
-    tBOOLEAN* = 4;  tCHAR* = 5;  tSTRING* = 6;
+    tBOOLEAN* = 4;  tCHAR* = 5;  tWCHAR*  = 6;
+    tSTRING*  = 7;
 
 
 TYPE
@@ -43,6 +44,8 @@ BEGIN
     IF v.typ = tINTEGER THEN
         res := v.int
     ELSIF v.typ = tCHAR THEN
+        res := v.int
+    ELSIF v.typ = tWCHAR THEN
         res := v.int
     ELSIF v.typ = tSET THEN
         res := ORD(v.set)
@@ -79,7 +82,9 @@ BEGIN
 
     IF (v.typ = tINTEGER) & ((v.int < UTILS.target.minInt) OR (v.int > UTILS.target.maxInt)) THEN
         error := TRUE
-    ELSIF (v.typ = tCHAR) & ((v.int < 0) OR (v.int > UTILS.target.maxChar)) THEN
+    ELSIF (v.typ = tCHAR) & ((v.int < 0) OR (v.int > 255)) THEN
+        error := TRUE
+    ELSIF (v.typ = tWCHAR) & ((v.int < 0) OR (v.int > 65535)) THEN
         error := TRUE
     ELSIF (v.typ = tREAL) & ((v.float < -UTILS.target.maxReal) OR (v.float > UTILS.target.maxReal)) THEN
         error := TRUE
@@ -168,7 +173,7 @@ BEGIN
 
     END;
 
-    IF (s[i] = "X") & (n # -1) & ((i - n > UTILS.native.maxHexChar) OR (i - n > UTILS.target.maxHexChar)) THEN
+    IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
         error := 3
     END;
 
@@ -177,7 +182,10 @@ BEGIN
         IF s[i] = "X" THEN
             v.typ := tCHAR;
             IF ~check(v) THEN
-                error := 3
+                v.typ := tWCHAR;
+                IF ~check(v) THEN
+                    error := 3
+                END
             END
         ELSE
             v.typ := tINTEGER;
@@ -338,6 +346,13 @@ BEGIN
     v.typ := tCHAR;
     v.int := ord
 END setChar;
+
+
+PROCEDURE setWChar* (VAR v: VALUE; ord: INTEGER);
+BEGIN
+    v.typ := tWCHAR;
+    v.int := ord
+END setWChar;
 
 
 PROCEDURE addInt (VAR a: INTEGER; b: INTEGER): BOOLEAN;
@@ -505,7 +520,7 @@ END opFloat;
 PROCEDURE ord* (VAR v: VALUE);
 BEGIN
     CASE v.typ OF
-    |tCHAR:
+    |tCHAR, tWCHAR:
     |tBOOLEAN: v.int := ORD(v.bool)
     |tSET:     v.int := ORD(v.set)
     END;
@@ -602,16 +617,17 @@ PROCEDURE range* (i: VALUE; a, b: INTEGER): BOOLEAN;
 END range;
 
 
-PROCEDURE less (v: VALUE; v2: VALUE; VAR error: INTEGER): BOOLEAN;
+PROCEDURE less (v, v2: VALUE; VAR error: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
 
 BEGIN
     res := FALSE;
 
-    IF v.typ = v2.typ THEN
+    IF (v.typ = v2.typ) OR (v.typ IN {tCHAR, tWCHAR}) & (v2.typ IN {tCHAR, tWCHAR}) THEN
         CASE v.typ OF
         |tINTEGER,
+         tWCHAR,
          tCHAR:     res := v.int < v2.int
         |tREAL:     res := v.float < v2.float
         |tBOOLEAN,
@@ -625,16 +641,17 @@ BEGIN
 END less;
 
 
-PROCEDURE equal (v: VALUE; v2: VALUE; VAR error: INTEGER): BOOLEAN;
+PROCEDURE equal (v, v2: VALUE; VAR error: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
 
 BEGIN
     res := FALSE;
 
-    IF v.typ = v2.typ THEN
+    IF (v.typ = v2.typ) OR (v.typ IN {tCHAR, tWCHAR}) & (v2.typ IN {tCHAR, tWCHAR}) THEN
         CASE v.typ OF
         |tINTEGER,
+         tWCHAR,
          tCHAR:     res := v.int = v2.int
         |tREAL:     res := v.float = v2.float
         |tBOOLEAN:  res := v.bool = v2.bool

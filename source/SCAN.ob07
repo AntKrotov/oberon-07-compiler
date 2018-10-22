@@ -50,7 +50,7 @@ TYPE
     IDENT* = POINTER TO RECORD (BTREES.rDATA)
 
         s*: LEXSTR;
-        offset*: INTEGER
+        offset*, offsetW*: INTEGER
 
     END;
 
@@ -152,7 +152,8 @@ BEGIN
     ident := node.data(IDENT);
     IF newnode THEN
         NEW(vocabulary.ident);
-        vocabulary.ident.offset := -1
+        vocabulary.ident.offset  := -1;
+        vocabulary.ident.offsetW := -1
     END
 
     RETURN ident
@@ -690,12 +691,14 @@ BEGIN
     enterkw(i, "WHILE");
 
     NEW(vocabulary.ident);
-    vocabulary.ident.s := "";
-    vocabulary.ident.offset := -1;
+    vocabulary.ident.s       := "";
+    vocabulary.ident.offset  := -1;
+    vocabulary.ident.offsetW := -1;
     vocabulary.idents  := BTREES.create(vocabulary.ident, nodecmp);
 
     NEW(vocabulary.ident);
-    vocabulary.ident.offset := -1;
+    vocabulary.ident.offset  := -1;
+    vocabulary.ident.offsetW := -1;
 
 END init;
 

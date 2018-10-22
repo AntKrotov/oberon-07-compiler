@@ -114,7 +114,7 @@ BEGIN
 END WriteHexLn;
 
 
-PROCEDURE WriteChar (i: INTEGER);
+PROCEDURE WriteByte (i: INTEGER);
 VAR
     s: ARRAY 5 OF CHAR;
     k: INTEGER;
@@ -128,7 +128,7 @@ BEGIN
         DEC(k)
     END;
     Write(s)
-END WriteChar;
+END WriteByte;
 
 
 PROCEDURE Byte (x: INTEGER): INTEGER;
@@ -352,6 +352,11 @@ BEGIN
         |CODE.opSAVE8C:
             REG.UnOp(R, reg1);
             Write("mov byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
+            reg1 := REG.Drop(R)
+
+        |CODE.opSAVE16C:
+            REG.UnOp(R, reg1);
+            Write("mov word["); Write(r32[reg1]); Write("],"); WriteHexLn( ORD( BITS(cmd.param) * {0..15} ));
             reg1 := REG.Drop(R)
 
         |CODE.opVLOAD32:
@@ -772,7 +777,7 @@ BEGIN
             WriteLn("@@:")
 
         |CODE.opCODE:
-            Write("db "); WriteChar(cmd.param); NewLine
+            Write("db "); WriteByte(cmd.param); NewLine
 
         |CODE.opGET:
             REG.BinOp(R, reg1, reg2);
@@ -958,11 +963,21 @@ BEGIN
             REG.PushAll(R);
             R.pushed := R.pushed - 2;
             CallRTL(CODE._length);
-            ASSERT(REG.GetReg(R, eax));
+            ASSERT(REG.GetReg(R, eax))
+
+        |CODE.opLENGTHW:
+            REG.PushAll(R);
+            R.pushed := R.pushed - 2;
+            CallRTL(CODE._lengthw);
+            ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCHR:
             REG.UnOp(R, reg1);
             Write("and "); Write(r32[reg1]); WriteLn(",255")
+
+        |CODE.opWCHR:
+            REG.UnOp(R, reg1);
+            Write("and "); Write(r32[reg1]); WriteLn(",65535")
 
         |CODE.opASR, CODE.opROR, CODE.opLSL, CODE.opLSR:
             REG.UnOp(R, reg1);
@@ -1249,6 +1264,12 @@ BEGIN
             Write("push "); WriteHexLn(cmd.param);
             CallRTL(CODE._strcpy)
 
+        |CODE.opCOPYS2:
+            REG.PushAll(R);
+            R.pushed := R.pushed - 4;
+            Write("push "); WriteHexLn(cmd.param);
+            CallRTL(CODE._strcpy2)
+
         |CODE.opROT:
             REG.PushAll(R);
             WriteLn("push esp");
@@ -1282,6 +1303,51 @@ BEGIN
             |CODE.opGES: WriteLn("push 5")
             END;
             CallRTL(CODE._strcmp);
+            ASSERT(REG.GetReg(R, eax))
+
+        |CODE.opEQS2, CODE.opNES2, CODE.opLTS2,
+         CODE.opLES2, CODE.opGTS2, CODE.opGES2:
+            REG.PushAll(R);
+            R.pushed := R.pushed - 4;
+            CASE cmd.opcode OF
+            |CODE.opEQS2: WriteLn("push 0")
+            |CODE.opNES2: WriteLn("push 1")
+            |CODE.opLTS2: WriteLn("push 2")
+            |CODE.opLES2: WriteLn("push 3")
+            |CODE.opGTS2: WriteLn("push 4")
+            |CODE.opGES2: WriteLn("push 5")
+            END;
+            CallRTL(CODE._strcmp2);
+            ASSERT(REG.GetReg(R, eax))
+
+        |CODE.opEQSW, CODE.opNESW, CODE.opLTSW,
+         CODE.opLESW, CODE.opGTSW, CODE.opGESW:
+            REG.PushAll(R);
+            R.pushed := R.pushed - 4;
+            CASE cmd.opcode OF
+            |CODE.opEQSW: WriteLn("push 0")
+            |CODE.opNESW: WriteLn("push 1")
+            |CODE.opLTSW: WriteLn("push 2")
+            |CODE.opLESW: WriteLn("push 3")
+            |CODE.opGTSW: WriteLn("push 4")
+            |CODE.opGESW: WriteLn("push 5")
+            END;
+            CallRTL(CODE._strcmpw);
+            ASSERT(REG.GetReg(R, eax))
+
+        |CODE.opEQSW2, CODE.opNESW2, CODE.opLTSW2,
+         CODE.opLESW2, CODE.opGTSW2, CODE.opGESW2:
+            REG.PushAll(R);
+            R.pushed := R.pushed - 4;
+            CASE cmd.opcode OF
+            |CODE.opEQSW2: WriteLn("push 0")
+            |CODE.opNESW2: WriteLn("push 1")
+            |CODE.opLTSW2: WriteLn("push 2")
+            |CODE.opLESW2: WriteLn("push 3")
+            |CODE.opGTSW2: WriteLn("push 4")
+            |CODE.opGESW2: WriteLn("push 5")
+            END;
+            CallRTL(CODE._strcmpw2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQP, CODE.opNEP, CODE.opEQIP, CODE.opNEIP:
@@ -1851,7 +1917,7 @@ BEGIN
 
     i := 0;
     WHILE i < code.dcount - 1 DO
-        WriteChar(ORD(code.data[i]));
+        WriteByte(code.data[i]);
         INC(i);
         IF i MOD 12 = 0 THEN
             NewLine;
@@ -1861,7 +1927,7 @@ BEGIN
         END
     END;
 
-    WriteChar(ORD(code.data[i]));
+    WriteByte(code.data[i]);
     NewLine;
 
     IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN

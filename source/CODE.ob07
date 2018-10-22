@@ -76,6 +76,11 @@ CONST
     opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64 = 206;
 
     opPROC* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
+    opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
+
+    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
+    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
 
 
     _move      *=   0;
@@ -105,6 +110,11 @@ CONST
     _dllentry  *=  24;
     _strcpy    *=  25;
     _exit      *=  26;
+    _strcpy2   *=  27;
+    _lengthw   *=  28;
+    _strcmp2   *=  29;
+    _strcmpw   *=  30;
+    _strcmpw2  *=  31;
 
 
 TYPE
@@ -160,15 +170,16 @@ TYPE
         export*:    LISTS.LIST;
         import*:    LISTS.LIST;
         types*:     ARRAY MAXRECORDS + 1 OF INTEGER;
-        data*:      ARRAY 1024*1024*4 OF CHAR;
+        data*:      ARRAY 1024*1024*4 OF BYTE;
         dcount*:    INTEGER;
         dmin*:      INTEGER;
         tcount*:    INTEGER;
         lcount:     INTEGER;
         gsize*:     INTEGER;
-        rtl*:       ARRAY 27 OF INTEGER;
+        rtl*:       ARRAY 32 OF INTEGER;
 
-        charoffs:   ARRAY 256 OF INTEGER
+        charoffs:   ARRAY 256 OF INTEGER;
+        wcharoffs:  ARRAY 256*256 OF INTEGER
 
     END;
 
@@ -179,7 +190,9 @@ VAR
 
     commands:  LISTS.LIST;
 
-    fregs: INTEGER;
+    fregs: INTEGER;  
+    
+    wstr: ARRAY 16*1024 OF WCHAR;
 
 
 PROCEDURE getlast* (): COMMAND;
@@ -201,35 +214,84 @@ BEGIN
     i := 0;
     n := LENGTH(s);
     WHILE i < n DO
-        codes.data[codes.dcount] := s[i];
+        codes.data[codes.dcount] := ORD(s[i]);
         INC(i);
         INC(codes.dcount)
     END;
-    codes.data[codes.dcount] := 0X;
+    codes.data[codes.dcount] := 0;
     INC(codes.dcount)
 
     RETURN res
 END putstr;
 
 
-PROCEDURE putstr1* (c: CHAR): INTEGER;
+PROCEDURE putstr1* (c: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
 BEGIN
-    IF codes.charoffs[ORD(c)] = -1 THEN
+    IF codes.charoffs[c] = -1 THEN
         res := codes.dcount;
         codes.data[codes.dcount] := c;
         INC(codes.dcount);
-        codes.data[codes.dcount] := 0X;
+        codes.data[codes.dcount] := 0;
         INC(codes.dcount);
-        codes.charoffs[ORD(c)] := res
+        codes.charoffs[c] := res
     ELSE
-        res := codes.charoffs[ORD(c)]
+        res := codes.charoffs[c]
     END
 
     RETURN res
 END putstr1;
+
+
+PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
+VAR
+    i, n, res: INTEGER;
+BEGIN
+    res := codes.dcount;
+
+    n := UTILS.Utf8To16(s, wstr);
+
+    i := 0;
+    WHILE i < n DO
+        codes.data[codes.dcount] := ORD(wstr[i]) MOD 256;
+        INC(codes.dcount);
+        codes.data[codes.dcount] := ORD(wstr[i]) DIV 256;
+        INC(codes.dcount);
+        INC(i)
+    END;
+    codes.data[codes.dcount] := 0;
+    INC(codes.dcount);
+    codes.data[codes.dcount] := 0;
+    INC(codes.dcount)
+
+    RETURN res
+END putstrW;
+
+
+PROCEDURE putstrW1* (c: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF codes.wcharoffs[c] = -1 THEN
+        res := codes.dcount;
+        codes.data[codes.dcount] := c MOD 256;
+        INC(codes.dcount);
+        codes.data[codes.dcount] := c DIV 256;
+        INC(codes.dcount);
+        codes.data[codes.dcount] := 0;
+        INC(codes.dcount);
+        codes.data[codes.dcount] := 0;
+        INC(codes.dcount);
+        codes.wcharoffs[c] := res
+    ELSE
+        res := codes.wcharoffs[c]
+    END
+
+    RETURN res
+END putstrW1;
 
 
 PROCEDURE SetMinDataSize* (size: INTEGER);
@@ -412,7 +474,10 @@ PROCEDURE isCmp (opcode: BYTE): BOOLEAN;
     opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
     opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
 
-    opEQS* = 52; opNES* = 53; opLTS* = 54; opLES* = 55; opGTS* = 56; opGES* = 57;
+    opEQS*   =  52; opNES*   =  53; opLTS*   =  54; opLES*   =  55; opGTS*   =  56; opGES*   =  57;
+    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
+    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
 
     opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
     opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
@@ -421,6 +486,8 @@ PROCEDURE isCmp (opcode: BYTE): BOOLEAN;
                                                                                   *)
 
     RETURN (opEQ <= opcode) & (opcode <= opGER) OR (opEQS <= opcode) & (opcode <= opGES) OR
+           (opEQS2 <= opcode) & (opcode <= opGES2) OR (opEQSW <= opcode) & (opcode <= opGESW) OR
+           (opEQSW2 <= opcode) & (opcode <= opGESW2) OR
            (opEQF <= opcode) & (opcode <= opGEFI) OR (opcode = opEQP) OR (opcode = opNEP)
 END isCmp;
 
@@ -457,6 +524,27 @@ BEGIN
     |opLES:   opcode := opGTS
     |opGTS:   opcode := opLES
     |opGES:   opcode := opLTS
+    
+    |opEQS2:  opcode := opNES2
+    |opNES2:  opcode := opEQS2
+    |opLTS2:  opcode := opGES2
+    |opLES2:  opcode := opGTS2
+    |opGTS2:  opcode := opLES2
+    |opGES2:  opcode := opLTS2
+    
+    |opEQSW:  opcode := opNESW
+    |opNESW:  opcode := opEQSW
+    |opLTSW:  opcode := opGESW
+    |opLESW:  opcode := opGTSW
+    |opGTSW:  opcode := opLESW
+    |opGESW:  opcode := opLTSW
+    
+    |opEQSW2: opcode := opNESW2
+    |opNESW2: opcode := opEQSW2
+    |opLTSW2: opcode := opGESW2
+    |opLESW2: opcode := opGTSW2
+    |opGTSW2: opcode := opLESW2
+    |opGESW2: opcode := opLTSW2
 
     |opEQF:   opcode := opNEF
     |opNEF:   opcode := opEQF
@@ -948,6 +1036,10 @@ BEGIN
 
     FOR i := 0 TO LEN(codes.charoffs) - 1 DO
         codes.charoffs[i] := -1
+    END;
+
+    FOR i := 0 TO LEN(codes.wcharoffs) - 1 DO
+        codes.wcharoffs[i] := -1
     END
 END init;
 

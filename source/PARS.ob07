@@ -1,9 +1,10 @@
-(*
+﻿(*
     BSD 2-Clause License
 
     Copyright (c) 2018, Anton Krotov
     All rights reserved.
-*)
+*)        
+
 MODULE PARS;
 
 IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
@@ -787,7 +788,7 @@ END VarDeclaration;
 
 PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 VAR
-    ptr: PROG.FRWPTR; 
+    ptr: PROG.FRWPTR;
     endmod: BOOLEAN;
 
 
@@ -808,7 +809,7 @@ VAR
         import:     CODE.IMPORT_PROC;
         endmod, b:  BOOLEAN;
 
-    BEGIN         
+    BEGIN
         endmod := FALSE;
 
         unit := parser.unit;
@@ -889,11 +890,11 @@ VAR
             enter.param := program.locsize;
             checklex(parser, SCAN.lxEND)
         END;
-        
+
         IF parser.lex.typ = SCAN.lxEND THEN
             getlex(parser);
             checklex(parser, SCAN.lxIDENT);
-            endname := parser.lex.ident;   
+            endname := parser.lex.ident;
             pos := parser.lex.pos;
             IF import = NIL THEN
                 check(endname = name, parser, pos, 60);
@@ -917,7 +918,7 @@ VAR
         END;
 
         unit.scope.close(unit)
-        
+
         RETURN endmod
     END ProcDeclaration;
 
@@ -952,13 +953,13 @@ BEGIN
             VarDeclaration(parser)
         END
     END;
-           
+
     endmod := FALSE;
     WHILE ~endmod & (parser.lex.typ = SCAN.lxPROCEDURE) DO
         getlex(parser);
         endmod := ProcDeclaration(parser)
-    END 
-    
+    END
+
     RETURN endmod
 END DeclarationSequence;
 
@@ -1014,8 +1015,8 @@ BEGIN
 
     endmod := DeclarationSequence(parser);
 
-    CODE.SetLabel(label);  
-    
+    CODE.SetLabel(label);
+
     IF ~endmod THEN
 
         IF parser.lex.typ = SCAN.lxBEGIN THEN
@@ -1031,7 +1032,7 @@ BEGIN
 
         getlex(parser);
         checklex(parser, SCAN.lxPOINT)
-    
+
     END;
 
     unit.close(unit)

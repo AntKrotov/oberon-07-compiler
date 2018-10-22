@@ -24,9 +24,9 @@ CONST
     tBOOLEAN* =  5;  tREAL*      =  6;  tARRAY*  =  7;  tRECORD* =  8;
     tPOINTER* =  9;  tPROCEDURE* = 10;  tSTRING* = 11;  tNIL*    = 12;
     tCARD8*   = 13;  tCARD16*    = 14;  tCARD32* = 15;  tCARD64* = 16;
-    tANYREC*  = 17;
+    tANYREC*  = 17;  tWCHAR*     = 18;
 
-    BASICTYPES* = {tINTEGER, tBYTE, tCHAR, tSET, tBOOLEAN, tREAL, tCARD8, tCARD16, tCARD32, tCARD64};
+    BASICTYPES* = {tINTEGER, tBYTE, tCHAR, tSET, tBOOLEAN, tREAL, tCARD8, tCARD16, tCARD32, tCARD64, tWCHAR};
 
     stABS*  =  1;  stASR*  =  2;  stCHR*    =  3;  stFLOOR* =  4;
     stFLT*  =  5;  stLEN*  =  6;  stLSL*    =  7;  stODD*   =  8;
@@ -38,7 +38,8 @@ CONST
     stDISPOSE* = 23;  stLSR*     = 24;  stBITS*  = 25;  sysCODE*  = 26;
     sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*   = 29;  stMAX*    = 30;
     sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY* = 33;  sysINF*   = 34;
-    sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;
+    sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
+    sysWSADR*  = 39;
 
     default* =  1; stdcall* = 2; winapi* = 3; cdecl* = 4; kosapi* = 5;
     noalign* = 10;
@@ -224,7 +225,7 @@ TYPE
 
         stTypes*:     RECORD
 
-            tINTEGER*, tBYTE*, tCHAR*, tSET*, tBOOLEAN*, tREAL*, tSTRING*, tNIL*,
+            tINTEGER*, tBYTE*, tCHAR*, tWCHAR*, tSET*, tBOOLEAN*, tREAL*, tSTRING*, tNIL*,
             tCARD8*, tCARD16*, tCARD32*, tCARD64*, tANYREC*: TYPE_
 
         END;
@@ -627,6 +628,10 @@ BEGIN
     ident      := addIdent(unit, stName, idTYPE);
     ident.type := program.stTypes.tCHAR;
 
+    stName     := SCAN.enterid("WCHAR");
+    ident      := addIdent(unit, stName, idTYPE);
+    ident.type := program.stTypes.tWCHAR;
+
     stName     := SCAN.enterid("SET");
     ident      := addIdent(unit, stName, idTYPE);
     ident.type := program.stTypes.tSET;
@@ -669,6 +674,7 @@ BEGIN
     EnterProc(unit, "ABS",      idSTFUNC,  stABS);
     EnterProc(unit, "ASR",      idSTFUNC,  stASR);
     EnterProc(unit, "CHR",      idSTFUNC,  stCHR);
+    EnterProc(unit, "WCHR",     idSTFUNC,  stWCHR);
     EnterProc(unit, "FLOOR",    idSTFUNC,  stFLOOR);
     EnterProc(unit, "FLT",      idSTFUNC,  stFLT);
     EnterProc(unit, "LEN",      idSTFUNC,  stLEN);
@@ -1017,6 +1023,8 @@ BEGIN
         res := program.stTypes.tBOOLEAN
     ELSIF typ = ARITH.tCHAR THEN
         res := program.stTypes.tCHAR
+    ELSIF typ = ARITH.tWCHAR THEN
+        res := program.stTypes.tWCHAR
     ELSIF typ = ARITH.tSTRING THEN
         res := program.stTypes.tSTRING
     ELSE
@@ -1051,6 +1059,7 @@ BEGIN
     EnterProc(unit, "ADR",    idSYSFUNC, sysADR);
     EnterProc(unit, "SIZE",   idSYSFUNC, sysSIZE);
     EnterProc(unit, "SADR",   idSYSFUNC, sysSADR);
+    EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
     EnterProc(unit, "TYPEID", idSYSFUNC, sysTYPEID);
     EnterProc(unit, "INF",    idSYSFUNC, sysINF);
 
@@ -1169,26 +1178,28 @@ BEGIN
     program.enterType := enterType;
     program.getType   := getType;
 
-    program.stTypes.tINTEGER := enterType(program, tINTEGER,           program.target.word, 0, NIL);
-    program.stTypes.tBYTE    := enterType(program, tBYTE,                                1, 0, NIL);
-    program.stTypes.tCHAR    := enterType(program, tCHAR,    UTILS.target.maxHexChar DIV 2, 0, NIL);
-    program.stTypes.tSET     := enterType(program, tSET,               program.target.word, 0, NIL);
-    program.stTypes.tBOOLEAN := enterType(program, tBOOLEAN,                             1, 0, NIL);
-    program.stTypes.tREAL    := enterType(program, tREAL,                                8, 0, NIL);
-    program.stTypes.tSTRING  := enterType(program, tSTRING,            program.target.word, 0, NIL);
-    program.stTypes.tNIL     := enterType(program, tNIL,               program.target.word, 0, NIL);
+    program.stTypes.tINTEGER := enterType(program, tINTEGER,  program.target.word, 0, NIL);
+    program.stTypes.tBYTE    := enterType(program, tBYTE,                       1, 0, NIL);
+    program.stTypes.tCHAR    := enterType(program, tCHAR,                       1, 0, NIL);
+    program.stTypes.tWCHAR   := enterType(program, tWCHAR,                      2, 0, NIL);
+    program.stTypes.tSET     := enterType(program, tSET,      program.target.word, 0, NIL);
+    program.stTypes.tBOOLEAN := enterType(program, tBOOLEAN,                    1, 0, NIL);
+    program.stTypes.tREAL    := enterType(program, tREAL,                       8, 0, NIL);
+    program.stTypes.tSTRING  := enterType(program, tSTRING,   program.target.word, 0, NIL);
+    program.stTypes.tNIL     := enterType(program, tNIL,      program.target.word, 0, NIL);
 
-    program.stTypes.tCARD8   := enterType(program, tCARD8,                               1, 0, NIL);
-    program.stTypes.tCARD16  := enterType(program, tCARD16,                              2, 0, NIL);
-    program.stTypes.tCARD32  := enterType(program, tCARD32,                              4, 0, NIL);
-    //program.stTypes.tCARD64  := enterType(program, tCARD64,                              8, 0, NIL);
+    program.stTypes.tCARD8   := enterType(program, tCARD8,                      1, 0, NIL);
+    program.stTypes.tCARD16  := enterType(program, tCARD16,                     2, 0, NIL);
+    program.stTypes.tCARD32  := enterType(program, tCARD32,                     4, 0, NIL);
+    //program.stTypes.tCARD64  := enterType(program, tCARD64,                     8, 0, NIL);
 
-    program.stTypes.tANYREC  := enterType(program, tRECORD,                              0, 0, NIL);
+    program.stTypes.tANYREC  := enterType(program, tRECORD,                     0, 0, NIL);
     program.stTypes.tANYREC.closed := TRUE;
 
     program.stTypes.tINTEGER.align := program.stTypes.tINTEGER.size;
     program.stTypes.tBYTE.align    := 1;
     program.stTypes.tCHAR.align    := program.stTypes.tCHAR.size;
+    program.stTypes.tWCHAR.align   := program.stTypes.tWCHAR.size;
     program.stTypes.tSET.align     := program.stTypes.tSET.size;
     program.stTypes.tBOOLEAN.align := program.stTypes.tBOOLEAN.size;
     program.stTypes.tREAL.align    := program.stTypes.tREAL.size;
