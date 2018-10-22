@@ -109,6 +109,12 @@ BEGIN
 END _strcpy;
 
 
+PROCEDURE [stdcall] _strcpy2* (chr_size, len_src, src, len_dst, dst: INTEGER);
+BEGIN
+    _move(MIN(len_dst, len_src) * chr_size, src, dst)
+END _strcpy2;
+
+
 PROCEDURE [stdcall] _rot* (VAR A: ARRAY OF INTEGER);
 VAR
     i, n, k: INTEGER;
@@ -289,6 +295,28 @@ BEGIN
 END strncmp;
 
 
+PROCEDURE strncmpw (a, b, n: INTEGER): INTEGER;
+VAR
+    A, B: WCHAR;
+    res:  INTEGER;
+
+BEGIN
+    res := 0;
+    WHILE n > 0 DO
+        SYSTEM.GET(a, A); INC(a, 2);
+        SYSTEM.GET(b, B); INC(b, 2);
+        DEC(n);
+        IF A # B THEN
+            res := ORD(A) - ORD(B);
+            n := 0
+        ELSIF A = WCHR(0) THEN
+            n := 0
+        END
+    END
+    RETURN res
+END strncmpw;
+
+
 PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
@@ -310,6 +338,28 @@ BEGIN
 
     RETURN 0
 END _length;
+
+
+PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
+VAR
+    i, res: INTEGER;
+    w: WCHAR;
+
+BEGIN
+    i := 0; res := 0;
+    WHILE i < len DO
+        SYSTEM.GET(str, w);
+        IF w = WCHR(0) THEN
+            i := len
+        ELSE
+            INC(str, 2);
+            INC(res);
+            INC(i)
+        END
+    END
+
+    RETURN res
+END _lengthw;
 
 
 PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): INTEGER;
@@ -334,6 +384,40 @@ BEGIN
 
     RETURN res
 END _strcmp;
+
+
+PROCEDURE [stdcall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): INTEGER;
+    RETURN _strcmp(op, len2, str2, len1, str1)
+END _strcmp2;
+
+
+PROCEDURE [stdcall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+
+    res := strncmpw(str1, str2, MIN(len1, len2));
+    IF res = 0 THEN
+        res := _lengthw(len1, str1) - _lengthw(len2, str2)
+    END;
+
+    CASE op OF
+    |0: res := ORD(res =  0)
+    |1: res := ORD(res #  0)
+    |2: res := ORD(res <  0)
+    |3: res := ORD(res <= 0)
+    |4: res := ORD(res >  0)
+    |5: res := ORD(res >= 0)
+    END
+
+    RETURN res
+END _strcmpw;
+
+
+PROCEDURE [stdcall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): INTEGER;
+    RETURN _strcmpw(op, len2, str2, len1, str1)
+END _strcmpw2;
 
 
 PROCEDURE PCharToStr (pchar: INTEGER; VAR s: ARRAY OF CHAR);
