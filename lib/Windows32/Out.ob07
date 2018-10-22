@@ -35,6 +35,12 @@ BEGIN
   WINAPI.WriteFile(hConsoleOutput, sys.ADR(s[0]), LENGTH(s), sys.ADR(count), NIL)
 END String;
 
+PROCEDURE StringW*(s: ARRAY OF WCHAR);
+VAR count: INTEGER;
+BEGIN
+  WINAPI.WriteConsoleW(hConsoleOutput, sys.ADR(s[0]), LENGTH(s), sys.ADR(count), 0)
+END StringW;
+
 PROCEDURE Char*(x: CHAR);
 VAR count: INTEGER;
 BEGIN
