@@ -1,0 +1,21 @@
+﻿MODULE HelloRus;
+
+IMPORT In, Out;
+
+
+PROCEDURE main;
+VAR
+    str: ARRAY 10 OF WCHAR;
+
+BEGIN
+    str := "Привет!";
+    Out.StringW(str)
+END main;
+
+
+BEGIN
+    In.Open;
+    Out.Open;
+    main;
+    In.Ln
+END HelloRus.
