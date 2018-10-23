@@ -3,7 +3,7 @@
 
     Copyright (c) 2018, Anton Krotov
     All rights reserved.
-*)        
+*)
 
 MODULE PARS;
 
@@ -535,7 +535,7 @@ BEGIN
         IF ident # NIL THEN
             check1(ident.typ = PROG.idTYPE, parser, 49);
             t := ident.type;
-
+            check1(t # NIL, parser, 50);
             IF closed IN flags THEN
                 check1(t.closed, parser, 50)
             END

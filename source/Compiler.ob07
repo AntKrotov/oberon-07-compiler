@@ -153,7 +153,7 @@ BEGIN
     END
     RETURN res
 END strlen;
-                         
+
 
 PROCEDURE _length (s: ARRAY OF CHAR): INTEGER;
 VAR
@@ -171,7 +171,7 @@ BEGIN
 
     RETURN res
 END _length;
-    
+
 
 PROCEDURE utf8strlen (e: PARS.EXPR): INTEGER;
 VAR
@@ -195,7 +195,7 @@ VAR
 BEGIN
     ASSERT(UTILS.Utf8To16(s, res) = 1)
     RETURN ORD(res[0])
-END StrToWChar; 
+END StrToWChar;
 
 
 PROCEDURE isStringW1 (e: PARS.EXPR): BOOLEAN;
@@ -278,7 +278,7 @@ END String;
 PROCEDURE StringW (e: PARS.EXPR): INTEGER;
 VAR
     offset: INTEGER;
-    string: SCAN.IDENT;  
+    string: SCAN.IDENT;
 
 BEGIN
     IF utf8strlen(e) # 1 THEN
@@ -298,7 +298,7 @@ BEGIN
             offset := string.offsetW
         END
     END
-    
+
     RETURN offset
 END StringW;
 
@@ -413,7 +413,7 @@ BEGIN
         ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.tWCHAR) & (t.length > utf8strlen(e))) THEN
             IF utf8strlen(e) # 1 THEN
                 offset := StringW(e)
-            ELSE     
+            ELSE
                 offset := StringW(e)
             END;
             CODE.saves(offset, (utf8strlen(e) + 1) * 2)
@@ -1000,7 +1000,7 @@ BEGIN
         |PROG.stORD:
             parser.expression(parser, e);
             PARS.check(isChar(e) OR isBoolean(e) OR isSet(e) OR isCharW(e) OR isStringW1(e), parser, pos, 66);
-            IF e.obj = eCONST THEN 
+            IF e.obj = eCONST THEN
                 IF isStringW1(e) THEN
                     ASSERT(ARITH.setInt(e.value, StrToWChar(e.value.string(SCAN.IDENT).s)))
                 ELSE
@@ -1044,7 +1044,7 @@ BEGIN
             CODE.AddCmd(CODE.opSADR, String(e));
             e.type := PARS.program.stTypes.tINTEGER;
             e.obj := eEXPR
-            
+
         |PROG.sysWSADR:
             parser.expression(parser, e);
             PARS.check(isStringW(e), parser, pos, 66);
@@ -1209,6 +1209,8 @@ BEGIN
         PARS.check(~parser.constexp, parser, pos, 109);
         e.obj    := eSYSFUNC;
         e.stproc := ident.stproc
+    |PROG.idNONE:
+        PARS.check(FALSE, parser, pos, 115)
     END;
 
     IF isVar(e) THEN
@@ -3121,7 +3123,7 @@ BEGIN
 
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
-        UTILS.OutString("Akron Oberon-07/16 Compiler v0.81"); UTILS.OutLn;
+        UTILS.OutString("Akron Oberon-07/16 Compiler v0.82"); UTILS.OutLn;
         UTILS.OutString("Usage: Compiler <inputfile> <outputfile> <target> [stack size (Mb)]"); UTILS.OutLn;
         UTILS.OutString("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); UTILS.OutLn;
         UTILS.exit(1)
