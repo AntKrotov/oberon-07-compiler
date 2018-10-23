@@ -103,7 +103,10 @@ _fasm_kos "/rd/1/develop/fasm"
                 v - переменная или процедура;
                 возвращает адрес v
 
-        PROCEDURE SADR(x: строковая константа): INTEGER
+        PROCEDURE SADR(x: строковая константа (CHAR UTF-8)): INTEGER
+                возвращает адрес x
+
+        PROCEDURE WSADR(x: строковая константа (WCHAR)): INTEGER
                 возвращает адрес x
 
         PROCEDURE SIZE(T): INTEGER
