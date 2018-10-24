@@ -98,7 +98,7 @@ BEGIN
   RETURN Res
 END Decode;
 
-PROCEDURE Now*(VAR Year, Month, Day, Hour, Min, Sec: INTEGER);
+PROCEDURE Now*(VAR Year, Month, Day, Hour, Min, Sec, Msec: INTEGER);
 VAR date, time: INTEGER;
 BEGIN
   date  := KOSAPI.sysfunc1(29);
@@ -134,7 +134,8 @@ BEGIN
   Sec := (time MOD 16) * 10 + Sec;
   time  := time DIV 16;
 
-  Year  := Year + 2000
+  Year := Year + 2000;
+  Msec := 0
 END Now;
 
 END DateTime.

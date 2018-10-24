@@ -17,7 +17,7 @@
 
 MODULE Console;
 
-IMPORT ConsoleLib; 
+IMPORT ConsoleLib, In, Out;
 
 
 CONST
@@ -26,24 +26,24 @@ CONST
     Red* = 4;        Magenta* = 5;        Brown* = 6;        LightGray* = 7;
     DarkGray* = 8;   LightBlue* = 9;      LightGreen* = 10;  LightCyan* = 11;
     LightRed* = 12;  LightMagenta* = 13;  Yellow* = 14;      White* = 15;
-                                   
+
 
 PROCEDURE SetCursor* (X, Y: INTEGER);
 BEGIN
     ConsoleLib.set_cursor_pos(X, Y)
-END SetCursor;      
+END SetCursor;
 
 
 PROCEDURE GetCursor* (VAR X, Y: INTEGER);
 BEGIN
     ConsoleLib.get_cursor_pos(X, Y)
-END GetCursor;    
+END GetCursor;
 
 
 PROCEDURE Cls*;
 BEGIN
     ConsoleLib.cls
-END Cls;            
+END Cls;
 
 
 PROCEDURE SetColor* (FColor, BColor: INTEGER);
@@ -54,7 +54,7 @@ BEGIN
     IF (FColor IN {0..15}) & (BColor IN {0..15}) THEN
         res := ConsoleLib.set_flags(LSL(BColor, 4) + FColor)
     END
-END SetColor;      
+END SetColor;
 
 
 PROCEDURE GetCursorX* (): INTEGER;
@@ -64,7 +64,7 @@ VAR
 BEGIN
     ConsoleLib.get_cursor_pos(x, y)
     RETURN x
-END GetCursorX;         
+END GetCursorX;
 
 
 PROCEDURE GetCursorY* (): INTEGER;
@@ -79,7 +79,9 @@ END GetCursorY;
 
 PROCEDURE open*;
 BEGIN
-    ConsoleLib.open(-1, -1, -1, -1, "")
+    ConsoleLib.open(-1, -1, -1, -1, "");
+    In.Open;
+    Out.Open
 END open;
 
 
