@@ -1,6 +1,6 @@
 ﻿MODULE HelloRus;
 
-IMPORT In, Out;
+IMPORT Console, In, Out;
 
 
 PROCEDURE main;
@@ -9,13 +9,18 @@ VAR
 
 BEGIN
     str := "Привет!";
+    Out.StringW(str); Out.Ln;
+    str[2] := "е";
+    str[5] := "д";
     Out.StringW(str)
 END main;
 
 
 BEGIN
-    In.Open;
-    Out.Open;
+    Console.open;
+
     main;
-    In.Ln
+    In.Ln;            
+
+    Console.exit(TRUE)
 END HelloRus.
