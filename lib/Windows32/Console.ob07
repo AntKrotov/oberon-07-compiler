@@ -17,7 +17,7 @@
 
 MODULE Console;
 
-IMPORT SYSTEM, WINAPI;
+IMPORT SYSTEM, WINAPI, In, Out;
 
 
 CONST
@@ -124,18 +124,20 @@ VAR
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo)
     RETURN Card16ToInt(ScrBufInfo.dwCursorPosition.Y)
-END GetCursorY; 
+END GetCursorY;
 
 
 PROCEDURE open*;
 BEGIN
     WINAPI.AllocConsole;
-    hConsoleOutput := WINAPI.GetStdHandle(-11)
+    hConsoleOutput := WINAPI.GetStdHandle(-11);
+    In.Open;
+    Out.Open
 END open;
 
 
 PROCEDURE exit* (b: BOOLEAN);
-BEGIN     
+BEGIN
     WINAPI.FreeConsole
 END exit;
 
