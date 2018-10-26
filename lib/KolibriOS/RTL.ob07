@@ -496,12 +496,12 @@ BEGIN
     s := "";
     CASE err MOD 16 OF
     |1: append(s, "assertion failure")
-    |2: append(s, "NIL pointer dereference")
+    |2: append(s, "NIL dereference")
     |3: append(s, "division by zero")
-    |4: append(s, "variable of a procedure type has NIL as value")
-    |5: append(s, "type guard failure")
-    |6: append(s, "index check error")
-    |7: append(s, "invalid CASE value")
+    |4: append(s, "NIL procedure call")
+    |5: append(s, "type guard error")
+    |6: append(s, "index out of range")
+    |7: append(s, "invalid CASE")
     |8: append(s, "array assignment error")
     END;
 
