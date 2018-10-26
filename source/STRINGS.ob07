@@ -57,7 +57,10 @@ VAR
     minus: BOOLEAN;
 
 BEGIN
-    minus := x < 0;
+    minus := x < 0; 
+    IF minus THEN
+        x := -x
+    END;
     i := 0;
     a := 0;
     REPEAT

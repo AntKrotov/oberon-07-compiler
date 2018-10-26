@@ -3123,7 +3123,7 @@ BEGIN
 
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
-        UTILS.OutString("Akron Oberon-07/16 Compiler v0.82"); UTILS.OutLn;
+        UTILS.OutString("Akron Oberon-07/16 Compiler v0.83"); UTILS.OutLn;
         UTILS.OutString("Usage: Compiler <inputfile> <outputfile> <target> [stack size (Mb)]"); UTILS.OutLn;
         UTILS.OutString("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); UTILS.OutLn;
         UTILS.exit(1)

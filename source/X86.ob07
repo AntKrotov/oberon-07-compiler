@@ -29,15 +29,17 @@ TYPE
 
 VAR
 
-    file:   FILE;
-    eol:    ARRAY 3 OF CHAR;
-    error:  BOOLEAN;
+    file:    FILE;
+    eol:     ARRAY 3 OF CHAR;
+    error:   BOOLEAN;
 
-    R:      REG.REGS;
+    R:       REG.REGS;
 
     r8,
     r16,
-    r32:    ARRAY N, 4 OF CHAR;
+    r32:     ARRAY N, 4 OF CHAR;
+    
+    hexdgts: ARRAY 16 OF CHAR;
 
 
 PROCEDURE fcreate (name: ARRAY OF CHAR): FILE;
@@ -53,12 +55,11 @@ END fclose;
 
 PROCEDURE Write (s: ARRAY OF CHAR);
 VAR
-    bytes, n: INTEGER;
+    n: INTEGER;
 
 BEGIN
     n := LENGTH(s);
-    bytes := UTILS.fwrite(file, s, n);
-    IF bytes # n THEN
+    IF UTILS.fwrite(file, s, n) # n THEN
         error := TRUE
     END
 END Write;
@@ -66,28 +67,15 @@ END Write;
 
 PROCEDURE WriteLn (s: ARRAY OF CHAR);
 BEGIN
-    Write(s);
+    Write(s);  
     Write(eol)
 END WriteLn;
 
 
 PROCEDURE NewLine;
-BEGIN
+BEGIN         
     Write(eol)
 END NewLine;
-
-
-PROCEDURE hexdgt (i: INTEGER): CHAR;
-VAR
-    c: CHAR;
-BEGIN
-    IF i < 10 THEN
-        c := CHR(i + ORD("0"))
-    ELSE
-        c := CHR(i + ORD("a") - 10)
-    END
-    RETURN c
-END hexdgt;
 
 
 PROCEDURE WriteHex (i: INTEGER);
@@ -96,11 +84,11 @@ VAR
     k: INTEGER;
 
 BEGIN
-    s := "0x????????";
+    s := "0x00000000";
     k := 9;
     WHILE k > 1 DO
-        s[k] := hexdgt(i MOD 16);
-        i := ROR(i, 4);
+        s[k] := hexdgts[i MOD 16];
+        i := LSR(i, 4);
         DEC(k)
     END;
     Write(s)
@@ -117,23 +105,13 @@ END WriteHexLn;
 PROCEDURE WriteByte (i: INTEGER);
 VAR
     s: ARRAY 5 OF CHAR;
-    k: INTEGER;
 
 BEGIN
-    s := "0x??";
-    k := 3;
-    WHILE k > 1 DO
-        s[k] := hexdgt(i MOD 16);
-        i := ROR(i, 4);
-        DEC(k)
-    END;
+    s := "0x00";
+    s[2] := hexdgts[i DIV 16];
+    s[3] := hexdgts[i MOD 16];
     Write(s)
 END WriteByte;
-
-
-PROCEDURE Byte (x: INTEGER): INTEGER;
-    RETURN ORD(BITS(x) * {0..7})
-END Byte;
 
 
 PROCEDURE log2 (x: INTEGER): INTEGER;
@@ -307,7 +285,7 @@ BEGIN
         |CODE.opGADR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                Write("mov dword[GLOB+"); WriteHex(cmd.param); Write("], "); WriteHexLn(next.param);
+                Write("mov dword[GLOB+"); WriteHex(cmd.param); Write("],"); WriteHexLn(next.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
@@ -317,7 +295,7 @@ BEGIN
         |CODE.opLADR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                Write("mov dword[ebp+"); WriteHex(cmd.param * 4); Write("], "); WriteHexLn(next.param);
+                Write("mov dword[ebp+"); WriteHex(cmd.param * 4); Write("],"); WriteHexLn(next.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
@@ -351,12 +329,12 @@ BEGIN
 
         |CODE.opSAVE8C:
             REG.UnOp(R, reg1);
-            Write("mov byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
+            Write("mov byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
             reg1 := REG.Drop(R)
 
         |CODE.opSAVE16C:
             REG.UnOp(R, reg1);
-            Write("mov word["); Write(r32[reg1]); Write("],"); WriteHexLn( ORD( BITS(cmd.param) * {0..15} ));
+            Write("mov word["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 65536);
             reg1 := REG.Drop(R)
 
         |CODE.opVLOAD32:
@@ -891,12 +869,12 @@ BEGIN
 
         |CODE.opINCCB:
             REG.UnOp(R, reg1);
-            Write("add byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
+            Write("add byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
             reg1 := REG.Drop(R)
 
         |CODE.opDECCB:
             REG.UnOp(R, reg1);
-            Write("sub byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
+            Write("sub byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
             reg1 := REG.Drop(R)
 
         |CODE.opINCB, CODE.opDECB:
@@ -2019,8 +1997,17 @@ END _push;
 PROCEDURE CodeGen* (code: CODE.CODES; outname, modname: ARRAY OF CHAR; target, stack, ver: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
+    i:   INTEGER;
 
-BEGIN
+BEGIN     
+    FOR i := 0 TO 9 DO
+        hexdgts[i] := CHR(i + ORD("0"))
+    END;
+    
+    FOR i := 10 TO 15 DO
+        hexdgts[i] := CHR(i + ORD("a") - 10)
+    END;
+
     error := FALSE;
 
     eol[0] := 0DX;
