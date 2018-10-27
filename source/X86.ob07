@@ -38,8 +38,10 @@ VAR
     r8,
     r16,
     r32:     ARRAY N, 4 OF CHAR;
-    
+
     hexdgts: ARRAY 16 OF CHAR;
+
+    stroffs: INTEGER;
 
 
 PROCEDURE fcreate (name: ARRAY OF CHAR): FILE;
@@ -67,13 +69,13 @@ END Write;
 
 PROCEDURE WriteLn (s: ARRAY OF CHAR);
 BEGIN
-    Write(s);  
+    Write(s);
     Write(eol)
 END WriteLn;
 
 
 PROCEDURE NewLine;
-BEGIN         
+BEGIN
     Write(eol)
 END NewLine;
 
@@ -285,11 +287,11 @@ BEGIN
         |CODE.opGADR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                Write("mov dword[GLOB+"); WriteHex(cmd.param); Write("],"); WriteHexLn(next.param);
+                Write("mov dword[_bss+"); WriteHex(cmd.param); Write("],"); WriteHexLn(next.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",GLOB+"); WriteHexLn(cmd.param)
+                Write("mov "); Write(r32[reg1]); Write(",_bss+"); WriteHexLn(cmd.param)
             END
 
         |CODE.opLADR:
@@ -315,11 +317,11 @@ BEGIN
         |CODE.opSADR:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                Write("push STRINGS+"); WriteHexLn(cmd.param);
+                Write("push _data+"); WriteHex(cmd.param); Write("+"); WriteHexLn(stroffs);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",STRINGS+"); WriteHexLn(cmd.param)
+                Write("mov "); Write(r32[reg1]); Write(",_data+"); WriteHex(cmd.param); Write("+"); WriteHexLn(stroffs)
             END
 
         |CODE.opSAVEC:
@@ -345,11 +347,11 @@ BEGIN
         |CODE.opGLOAD32:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                Write("push dword[GLOB+"); WriteHex(cmd.param); WriteLn("]");
+                Write("push dword[_bss+"); WriteHex(cmd.param); WriteLn("]");
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",dword[GLOB+"); WriteHex(cmd.param); WriteLn("]")
+                Write("mov "); Write(r32[reg1]); Write(",dword[_bss+"); WriteHex(cmd.param); WriteLn("]")
             END
 
         |CODE.opLLOAD32:
@@ -381,7 +383,7 @@ BEGIN
 
         |CODE.opGLOAD8:
             reg1 := REG.GetAnyReg(R);
-            Write("movzx "); Write(r32[reg1]); Write(",byte[GLOB+"); WriteHex(cmd.param); WriteLn("]")
+            Write("movzx "); Write(r32[reg1]); Write(",byte[_bss+"); WriteHex(cmd.param); WriteLn("]")
 
         |CODE.opLLOAD8:
             reg1 := REG.GetAnyReg(R);
@@ -398,7 +400,7 @@ BEGIN
 
         |CODE.opGLOAD16:
             reg1 := REG.GetAnyReg(R);
-            Write("movzx "); Write(r32[reg1]); Write(",word[GLOB+"); WriteHex(cmd.param); WriteLn("]")
+            Write("movzx "); Write(r32[reg1]); Write(",word[_bss+"); WriteHex(cmd.param); WriteLn("]")
 
         |CODE.opLLOAD16:
             reg1 := REG.GetAnyReg(R);
@@ -794,7 +796,7 @@ BEGIN
             reg1 := REG.Drop(R);
             REG.PushAll(R);
             Write("push "); WriteLn(r32[reg1]);
-            Write("push STRINGS+"); WriteHexLn(cmd.param);
+            Write("push _data+"); WriteHex(cmd.param); Write("+"); WriteHexLn(stroffs);
             Write("push "); WriteHexLn(cmd.param2);
             CallRTL(CODE._move)
 
@@ -1575,7 +1577,7 @@ BEGIN
             WriteLn("@@:")
 
         |CODE.opINF:
-            WriteLn("fld qword[INF]")
+            WriteLn("fld qword[_data]")
 
         END;
 
@@ -1705,9 +1707,9 @@ BEGIN
 
     WriteLn("finit");
     WriteLn("push IMPORT");
-    WriteLn("push TYPES");
+    WriteLn("push _data + 8");
     Write  ("push "); WriteHexLn(code.tcount);
-    WriteLn("push MODNAME");
+    Write  ("push _data + 8 + "); WriteHexLn(code.tcount * 4 + code.dcount);
     CallRTL(CODE._init)
 END prolog;
 
@@ -1716,7 +1718,6 @@ PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack, ver: 
 VAR
     i, n: INTEGER;
     exp:  CODE.EXPORT_PROC;
-    name: ARRAY 1024 OF CHAR;
 
     PROCEDURE import (imp: LISTS.LIST);
     VAR
@@ -1814,7 +1815,7 @@ VAR
             lib := lib.next(CODE.IMPORT_LIB)
         END
 
-    END KOSimport;
+    END KOSimport; 
 
 
 BEGIN
@@ -1859,8 +1860,8 @@ BEGIN
         WriteLn("szVersion db 'version',0")
     END;
 
-    WriteLn("INF: dd 0,2146435072");
-    WriteLn("TYPES:");
+    WriteLn("_data:");
+    WriteLn("dd 0,2146435072");
     Write("dd ");
 
     i := 0;
@@ -1875,22 +1876,8 @@ BEGIN
         END
     END;
 
-    WriteHexLn(code.types[i]);
+    WriteHexLn(code.types[i]); 
 
-    Write("MODNAME: db '");
-    Write(modname);
-    IF target IN {UTILS.tarCON, UTILS.tarGUI} THEN
-        Write(".exe")
-    ELSIF target = UTILS.tarDLL THEN
-        Write(".dll")
-    ELSIF target = UTILS.tarKOS THEN
-        Write(".kex")
-    ELSIF target = UTILS.tarOBJ THEN
-        Write(".obj")
-    END;
-    WriteLn("',0");
-
-    WriteLn("STRINGS:");
     Write("db ");
 
     i := 0;
@@ -1906,7 +1893,19 @@ BEGIN
     END;
 
     WriteByte(code.data[i]);
-    NewLine;
+    NewLine;    
+    
+    Write("db '"); Write(modname);
+    IF target IN {UTILS.tarCON, UTILS.tarGUI} THEN
+        Write(".exe")
+    ELSIF target = UTILS.tarDLL THEN
+        Write(".dll")
+    ELSIF target = UTILS.tarKOS THEN
+        Write(".kex")
+    ELSIF target = UTILS.tarOBJ THEN
+        Write(".obj")
+    END;
+    WriteLn("',0");
 
     IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN
         KOSimport(code.import)
@@ -1927,7 +1926,7 @@ BEGIN
         WriteLn("section '.bss' data readable writeable")
     END;
 
-    Write("GLOB: rb "); WriteHexLn(code.gsize);
+    Write("_bss: rb "); WriteHexLn(code.gsize);
 
     IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
         WriteLn("section '.idata' import data readable writeable");
@@ -1948,10 +1947,7 @@ BEGIN
         IF exp # NIL THEN
             WriteLn("section '.edata' export data readable");
 
-            name := "";
-            STRINGS.append(name, modname);
-            STRINGS.append(name, ".dll");
-            Write("export '"); Write(name); Write("'");
+            Write("export '"); Write(modname); Write(".dll"); Write("'");
 
             WHILE exp # NIL DO
                 WriteLn(",\");
@@ -1999,11 +1995,13 @@ VAR
     res: BOOLEAN;
     i:   INTEGER;
 
-BEGIN     
+BEGIN
+    stroffs := code.tcount * 4 + 8;
+
     FOR i := 0 TO 9 DO
         hexdgts[i] := CHR(i + ORD("0"))
     END;
-    
+
     FOR i := 10 TO 15 DO
         hexdgts[i] := CHR(i + ORD("a") - 10)
     END;

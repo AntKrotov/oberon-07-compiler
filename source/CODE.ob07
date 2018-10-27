@@ -190,8 +190,8 @@ VAR
 
     commands:  LISTS.LIST;
 
-    fregs: INTEGER;  
-    
+    fregs: INTEGER;
+
     wstr: ARRAY 16*1024 OF WCHAR;
 
 
@@ -208,18 +208,20 @@ END setlast;
 
 PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 VAR
-    i, n, res: INTEGER;
+    i, n, res, idx: INTEGER;
 BEGIN
     res := codes.dcount;
+    idx := res;
     i := 0;
     n := LENGTH(s);
     WHILE i < n DO
-        codes.data[codes.dcount] := ORD(s[i]);
+        codes.data[idx] := ORD(s[i]);
         INC(i);
-        INC(codes.dcount)
+        INC(idx)
     END;
-    codes.data[codes.dcount] := 0;
-    INC(codes.dcount)
+    codes.data[idx] := 0;
+    INC(idx);
+    codes.dcount := idx
 
     RETURN res
 END putstr;
@@ -227,16 +229,18 @@ END putstr;
 
 PROCEDURE putstr1* (c: INTEGER): INTEGER;
 VAR
-    res: INTEGER;
+    res, idx: INTEGER;
 
 BEGIN
     IF codes.charoffs[c] = -1 THEN
         res := codes.dcount;
-        codes.data[codes.dcount] := c;
-        INC(codes.dcount);
-        codes.data[codes.dcount] := 0;
-        INC(codes.dcount);
-        codes.charoffs[c] := res
+        idx := res;
+        codes.data[idx] := c;
+        INC(idx);
+        codes.data[idx] := 0;
+        INC(idx);
+        codes.charoffs[c] := res;
+        codes.dcount := idx
     ELSE
         res := codes.charoffs[c]
     END
@@ -247,24 +251,34 @@ END putstr1;
 
 PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
 VAR
-    i, n, res: INTEGER;
+    i, n, res, idx: INTEGER;
+
 BEGIN
     res := codes.dcount;
+
+    IF ODD(res) THEN
+        codes.data[res] := 0;
+        INC(res)
+    END;       
+
+    idx := res;
 
     n := UTILS.Utf8To16(s, wstr);
 
     i := 0;
     WHILE i < n DO
-        codes.data[codes.dcount] := ORD(wstr[i]) MOD 256;
-        INC(codes.dcount);
-        codes.data[codes.dcount] := ORD(wstr[i]) DIV 256;
-        INC(codes.dcount);
+        codes.data[idx] := ORD(wstr[i]) MOD 256;
+        INC(idx);
+        codes.data[idx] := ORD(wstr[i]) DIV 256;
+        INC(idx);
         INC(i)
     END;
-    codes.data[codes.dcount] := 0;
-    INC(codes.dcount);
-    codes.data[codes.dcount] := 0;
-    INC(codes.dcount)
+    codes.data[idx] := 0;
+    INC(idx);
+    codes.data[idx] := 0;
+    INC(idx);          
+
+    codes.dcount := idx
 
     RETURN res
 END putstrW;
@@ -272,19 +286,27 @@ END putstrW;
 
 PROCEDURE putstrW1* (c: INTEGER): INTEGER;
 VAR
-    res: INTEGER;
+    res, idx: INTEGER;
 
 BEGIN
     IF codes.wcharoffs[c] = -1 THEN
-        res := codes.dcount;
-        codes.data[codes.dcount] := c MOD 256;
-        INC(codes.dcount);
-        codes.data[codes.dcount] := c DIV 256;
-        INC(codes.dcount);
-        codes.data[codes.dcount] := 0;
-        INC(codes.dcount);
-        codes.data[codes.dcount] := 0;
-        INC(codes.dcount);
+        res := codes.dcount;   
+
+        IF ODD(res) THEN
+            codes.data[res] := 0;
+            INC(res)
+        END;            
+
+        idx := res;
+        codes.data[idx] := c MOD 256;
+        INC(idx);
+        codes.data[idx] := c DIV 256;
+        INC(idx);
+        codes.data[idx] := 0;
+        INC(idx);
+        codes.data[idx] := 0;
+        INC(idx);      
+        codes.dcount := idx;
         codes.wcharoffs[c] := res
     ELSE
         res := codes.wcharoffs[c]
@@ -524,21 +546,21 @@ BEGIN
     |opLES:   opcode := opGTS
     |opGTS:   opcode := opLES
     |opGES:   opcode := opLTS
-    
+
     |opEQS2:  opcode := opNES2
     |opNES2:  opcode := opEQS2
     |opLTS2:  opcode := opGES2
     |opLES2:  opcode := opGTS2
     |opGTS2:  opcode := opLES2
     |opGES2:  opcode := opLTS2
-    
+
     |opEQSW:  opcode := opNESW
     |opNESW:  opcode := opEQSW
     |opLTSW:  opcode := opGESW
     |opLESW:  opcode := opGTSW
     |opGTSW:  opcode := opLESW
     |opGESW:  opcode := opLTSW
-    
+
     |opEQSW2: opcode := opNESW2
     |opNESW2: opcode := opEQSW2
     |opLTSW2: opcode := opGESW2
