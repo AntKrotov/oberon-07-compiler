@@ -55,6 +55,16 @@ BEGIN
 END fclose;
 
 
+PROCEDURE Byte (n: INTEGER): INTEGER;
+    RETURN ORD(BITS(n) * {0..7})
+END Byte;
+
+
+PROCEDURE Word (n: INTEGER): INTEGER;
+    RETURN ORD(BITS(n) * {0..15})
+END Word;
+
+
 PROCEDURE Write (s: ARRAY OF CHAR);
 VAR
     n: INTEGER;
@@ -116,6 +126,202 @@ BEGIN
 END WriteByte;
 
 
+PROCEDURE OutCode (code: ARRAY OF CHAR);
+VAR
+    i, k, hi, lo, cnt: INTEGER;
+
+BEGIN
+    i := 0;
+    k := LENGTH(code) - 1;
+    ASSERT(ODD(k));
+    Write("db ");
+    cnt := 0;
+
+    WHILE i <= k DO
+        hi := UTILS.digit[ORD(code[i])]; INC(i);
+        ASSERT(hi # -1);
+        lo := UTILS.digit[ORD(code[i])]; INC(i);
+        ASSERT(lo # -1);
+        IF cnt > 0 THEN
+            Write(",")
+        END;
+        WriteByte(hi * 16 + lo);
+        INC(cnt)
+    END;
+
+    NewLine
+END OutCode;
+
+
+PROCEDURE OutInt (n: INTEGER);
+BEGIN
+    Write("dd "); WriteHexLn(n)
+END OutInt;
+
+
+PROCEDURE OutWord (n: INTEGER);
+BEGIN
+    ASSERT((0 <= n) & (n <= 65535));
+    Write("db "); WriteByte(n MOD 256); Write(","); WriteByte(n DIV 256); NewLine
+END OutWord;
+
+
+PROCEDURE isByte (n: INTEGER): BOOLEAN;
+    RETURN (-128 <= n) & (n <= 127)
+END isByte;
+
+
+PROCEDURE OutByte (n: INTEGER);
+BEGIN
+    ASSERT((0 <= n) & (n <= 255));
+    Write("db "); WriteByte(n); NewLine
+END OutByte;
+
+
+PROCEDURE _mov (reg1, reg2: INTEGER); // mov reg1, reg2
+BEGIN
+    ASSERT(reg1 IN {eax, ecx, edx});
+    ASSERT(reg2 IN {eax, ecx, edx});
+    OutByte(89H);
+    OutByte(0C0H + reg2 * 8 + reg1)
+END _mov;
+
+
+PROCEDURE _xch (reg1, reg2: INTEGER); // xchg reg1, reg2
+VAR
+    regs: SET;
+
+BEGIN
+    ASSERT(reg1 IN {eax, ecx, edx});
+    ASSERT(reg2 IN {eax, ecx, edx});
+    regs := {reg1, reg2};
+    IF regs = {eax, ecx} THEN
+        OutByte(91H)
+    ELSIF regs = {eax, edx} THEN
+        OutByte(92H)
+    ELSIF regs = {ecx, edx} THEN
+        OutCode("87D1")
+    END
+END _xch;
+
+
+PROCEDURE _pop (reg: INTEGER); //pop reg
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(58H + reg)
+END _pop;
+
+
+PROCEDURE _push (reg: INTEGER); //push reg
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(50H + reg)
+END _push;
+
+
+PROCEDURE ShortLong(short, long: ARRAY OF CHAR; n: INTEGER);
+BEGIN
+    IF isByte(n) THEN
+        OutCode(short);
+        OutByte(Byte(n))
+    ELSE
+        OutCode(long);
+        OutInt(n)
+    END
+END ShortLong;
+
+
+PROCEDURE movrc (reg, n: INTEGER); //mov reg, n
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(0B8H + reg);
+    OutInt(n)
+END movrc;
+
+
+PROCEDURE pushc (n: INTEGER);
+BEGIN
+    ShortLong("6A", "68", n)
+END pushc;
+
+
+PROCEDURE test (reg: INTEGER); //test reg, reg
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(85H);
+
+    CASE reg OF
+    |eax: OutByte(0C0H)
+    |ecx: OutByte(0C9H)
+    |edx: OutByte(0D2H)
+    END
+END test;
+
+
+PROCEDURE neg (reg: INTEGER); //neg reg
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(0F7H);
+    OutByte(0D8H + reg)
+END neg;
+
+
+PROCEDURE not (reg: INTEGER); //not reg
+BEGIN
+    ASSERT(reg IN {eax, ecx, edx});
+    OutByte(0F7H);
+    OutByte(0D0H + reg)
+END not;
+
+
+PROCEDURE add (reg1, reg2: INTEGER);  // add reg1, reg2
+BEGIN
+    ASSERT(reg1 IN {eax, ecx, edx});
+    ASSERT(reg2 IN {eax, ecx, edx});
+    OutByte(01H);
+    OutByte(0C0H + reg2 * 8 + reg1)
+END add;
+
+
+PROCEDURE andrc (reg, n: INTEGER); //and reg, n
+BEGIN
+    IF isByte(n) THEN
+        OutByte(83H); OutByte(0E0H + reg); OutByte(Byte(n))
+    ELSE
+        OutByte(81H); OutByte(0E0H + reg); OutInt(n)
+    END
+END andrc;
+
+
+PROCEDURE addrc (reg, n: INTEGER);  //add reg, n
+BEGIN
+    IF isByte(n) THEN
+        OutByte(83H); OutByte(0C0H + reg); OutByte(Byte(n))
+    ELSE
+        OutByte(81H); OutByte(0C0H + reg); OutInt(n)
+    END
+END addrc;
+
+
+PROCEDURE cmprr (reg1, reg2: INTEGER); // cmp reg1, reg2
+BEGIN
+    ASSERT(reg1 IN {eax, ecx, edx});
+    ASSERT(reg2 IN {eax, ecx, edx});
+    OutByte(39H);
+    OutByte(0C0H + reg2 * 8 + reg1)
+END cmprr;
+
+
+PROCEDURE cmprc (reg, n: INTEGER); // cmp reg, n
+BEGIN
+    IF isByte(n) THEN
+        OutByte(83H); OutByte(0F8H + reg); OutByte(Byte(n))
+    ELSE
+        OutByte(81H); OutByte(0F8H + reg); OutInt(n)
+    END
+END cmprc;
+
+
 PROCEDURE log2 (x: INTEGER): INTEGER;
 VAR
     n: INTEGER;
@@ -169,18 +375,21 @@ BEGIN
 
         |CODE.opCALLP:
             REG.UnOp(R, reg1);
-            Write("call "); WriteLn(r32[reg1]);
+
+            OutByte(0FFH);          //call reg1
+            OutByte(0D0H + reg1);
+
             reg1 := REG.Drop(R);
             ASSERT(R.top = -1)
 
         |CODE.opPRECALL:
             n := cmd.param;
             IF (cmd.param2 # 0) & (n # 0) THEN
-                WriteLn("sub esp,8")
+                OutCode("83EC08") //sub esp,8
             END;
             WHILE n > 0 DO
-                WriteLn("sub esp,8");
-                WriteLn("fstp qword[esp]");
+                OutCode("83EC08"); // sub esp,8
+                OutCode("DD1C24"); // fstp qword[esp]
                 DEC(n)
             END;
             REG.PushAll(R)
@@ -190,37 +399,37 @@ BEGIN
             ASSERT(REG.GetReg(R, eax));
             n := cmd.param;
             WHILE n > 0 DO
-                WriteLn("fld qword[esp]");
-                WriteLn("add esp,8");
+                OutCode("DD0424"); // fld qword[esp]
+                OutCode("83C408"); // add esp,8
                 DEC(n)
             END
 
         |CODE.opRESF:
             n := cmd.param;
             IF n > 0 THEN
-                Write("fstp qword[esp+"); WriteHex(n * 8); WriteLn("]");
+                ShortLong("DD5C24", "DD9C24", n * 8); // fstp qword[esp + n*8]
                 INC(n)
             END;
 
             WHILE n > 0 DO
-                WriteLn("fld qword[esp]");
-                WriteLn("add esp,8");
+                OutCode("DD0424"); // fld qword[esp]
+                OutCode("83C408"); // add esp,8
                 DEC(n)
             END
 
         |CODE.opENTER:
             ASSERT(R.top = -1);
-            WriteLn("push ebp");
-            WriteLn("mov ebp,esp");
+            OutCode("5589E5"); // push ebp
+                               // mov ebp,esp
 
             n := cmd.param;
             IF n > 4 THEN
-                Write("mov ecx,"); WriteHexLn(n);
-                WriteLn("@@: push 0");
-                WriteLn("loop @b")
+                movrc(ecx, n);   // mov ecx,n
+                pushc(0);        // @@: push 0
+                OutCode("E2FC")  // loop @b
             ELSE
                 WHILE n > 0 DO
-                    WriteLn("push 0");
+                    pushc(0);
                     DEC(n)
                 END
             END
@@ -238,23 +447,25 @@ BEGIN
 
             ASSERT(R.top = -1);
 
-            WriteLn("mov esp,ebp");
-            WriteLn("pop ebp");
-            Write("ret ");
+            OutCode("89EC5D"); // mov esp,ebp
+                               // pop ebp
+
             n := cmd.param;
             IF n > 0 THEN
-                WriteHex(n * 4)
-            END;
-            NewLine
+                n := n * 4;
+                OutByte(0C2H); OutWord(Word(n)) // ret n
+            ELSE
+                OutByte(0C3H) // ret
+            END
 
         |CODE.opERRC:
-            Write("push "); WriteHexLn(cmd.param)
+            pushc(cmd.param)
 
         |CODE.opPARAM:
             n := cmd.param;
             IF n = 1 THEN
                 REG.UnOp(R, reg1);
-                Write("push "); WriteLn(r32[reg1]);
+                _push(reg1);
                 reg1 := REG.Drop(R)
             ELSE
                 ASSERT(R.top + 1 <= n);
@@ -271,11 +482,11 @@ BEGIN
         |CODE.opCONST:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                Write("push "); WriteHexLn(cmd.param);
+                pushc(cmd.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
+                movrc(reg1, cmd.param)
             END
 
         |CODE.opLABEL,
@@ -326,17 +537,17 @@ BEGIN
 
         |CODE.opSAVEC:
             REG.UnOp(R, reg1);
-            Write("mov dword["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param);
+            OutByte(0C7H); OutByte(reg1); OutInt(cmd.param); //mov dword[reg1], cmd.param
             reg1 := REG.Drop(R)
 
         |CODE.opSAVE8C:
             REG.UnOp(R, reg1);
-            Write("mov byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
+            OutByte(0C6H); OutByte(reg1); OutByte(Byte(cmd.param)); //mov byte[reg1], cmd.param
             reg1 := REG.Drop(R)
 
         |CODE.opSAVE16C:
             REG.UnOp(R, reg1);
-            Write("mov word["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 65536);
+            OutByte(66H); OutByte(0C7H); OutByte(reg1); OutWord(Word(cmd.param)); //mov word[reg1], cmd.param
             reg1 := REG.Drop(R)
 
         |CODE.opVLOAD32:
@@ -412,11 +623,11 @@ BEGIN
 
         |CODE.opUMINUS:
             REG.UnOp(R, reg1);
-            Write("neg "); WriteLn(r32[reg1])
+            neg(reg1)
 
         |CODE.opADD:
             REG.BinOp(R, reg1, reg2);
-            Write("add "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
+            add(reg1, reg2);
             reg1 := REG.Drop(R)
 
         |CODE.opADDL, CODE.opADDR:
@@ -447,7 +658,7 @@ BEGIN
                     ELSIF cmd.param = -1 THEN
                         Write("dec "); WriteLn(r32[reg1])
                     ELSE
-                        Write("add "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
+                        addrc(reg1, cmd.param)
                     END
                 END
             END
@@ -467,7 +678,7 @@ BEGIN
                 Write("sub "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
             END;
             IF cmd.opcode = CODE.opSUBL THEN
-                Write("neg "); WriteLn(r32[reg1])
+                neg(reg1)
             END
 
         |CODE.opMULC:
@@ -485,13 +696,13 @@ BEGIN
             IF a = 1 THEN
 
             ELSIF a = -1 THEN
-                Write("neg "); WriteLn(r32[reg1])
+                neg(reg1)
             ELSIF a = 0 THEN
                 Write("xor "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1])
             ELSE
                 IF n > 0 THEN
                     IF a < 0 THEN
-                        Write("neg "); WriteLn(r32[reg1])
+                        neg(reg1)
                     END;
                     Write("shl "); Write(r32[reg1]); Write(","); WriteHexLn(n)
                 ELSE
@@ -544,23 +755,23 @@ BEGIN
         |CODE.opNOT:
             REG.UnOp(R, reg1);
             reg1 := REG.Drop(R);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             reg1 := REG.GetAnyReg(R);
             Write("setz "); WriteLn(r8[reg1]);
-            Write("and "); Write(r32[reg1]); WriteLn(",1")
+            andrc(reg1, 1)
 
         |CODE.opORD:
             REG.UnOp(R, reg1);
             reg1 := REG.Drop(R);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             reg1 := REG.GetAnyReg(R);
             Write("setnz "); WriteLn(r8[reg1]);
-            Write("and "); Write(r32[reg1]); WriteLn(",1")
+            andrc(reg1, 1)
 
         |CODE.opSBOOL:
             REG.UnOp(R, reg1);
             reg1 := REG.Drop(R);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             reg1 := REG.GetAnyReg(R);
             Write("setnz "); WriteLn(r8[reg1]);
             REG.BinOp(R, reg1, reg2);
@@ -580,16 +791,16 @@ BEGIN
 
         |CODE.opODD:
             REG.UnOp(R, reg1);
-            Write("and "); Write(r32[reg1]); WriteLn(",1")
+            andrc(reg1, 1)
 
         |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
          CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
          CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL:
             REG.UnOp(R, reg1);
             IF cmd.param = 0 THEN
-                Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1])
+                test(reg1)
             ELSE
-                Write("cmp "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
+                cmprc(reg1, cmd.param)
             END;
             reg1 := REG.Drop(R);
 
@@ -628,13 +839,13 @@ BEGIN
                 END;
                 WriteLn(r8[reg1]);
 
-                Write("and "); Write(r32[reg1]); WriteLn(",1")
+                andrc(reg1, 1)
             END;
 
         |CODE.opGT, CODE.opGE, CODE.opLT,
          CODE.opLE, CODE.opEQ, CODE.opNE:
             REG.BinOp(R, reg1, reg2);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
+            cmprr(reg1, reg2);
             reg1 := REG.Drop(R);
             reg1 := REG.Drop(R);
 
@@ -673,7 +884,7 @@ BEGIN
                 END;
                 WriteLn(r8[reg1]);
 
-                Write("and "); Write(r32[reg1]); WriteLn(",1")
+                andrc(reg1, 1)
             END
 
         |CODE.opEQB, CODE.opNEB:
@@ -681,17 +892,16 @@ BEGIN
             reg2 := REG.Drop(R);
             reg1 := REG.Drop(R);
 
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
-            WriteLn("jz @f");
-            Write("mov "); Write(r32[reg1]); WriteLn(",1");
-            WriteLn("@@:");
+            test(reg1);
+            OutByte(74H); OutByte(5);  // jz @f
+            movrc(reg1, 1);            // mov reg1, 1
+                                       // @@:
+            test(reg2);
+            OutByte(74H); OutByte(5);  // jz @f
+            movrc(reg2, 1);            // mov reg2, 1
+                                       // @@:
 
-            Write("test "); Write(r32[reg2]); Write(","); WriteLn(r32[reg2]);
-            WriteLn("jz @f");
-            Write("mov "); Write(r32[reg2]); WriteLn(",1");
-            WriteLn("@@:");
-
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
+            cmprr(reg1, reg2);
             reg1 := REG.GetAnyReg(R);
             IF cmd.opcode = CODE.opEQB THEN
                 Write("sete ")
@@ -699,13 +909,13 @@ BEGIN
                 Write("setne ")
             END;
             WriteLn(r8[reg1]);
-            Write("and "); Write(r32[reg1]); WriteLn(",1")
+            andrc(reg1, 1)
 
         |CODE.opACC:
             IF (R.top # 0) OR (R.stk[0] # eax) THEN
                 REG.PushAll(R);
                 ASSERT(REG.GetReg(R, eax));
-                WriteLn("pop eax");
+                _pop(eax);
                 DEC(R.pushed)
             END
 
@@ -716,7 +926,7 @@ BEGIN
         |CODE.opJE, CODE.opJNE:
             REG.UnOp(R, reg1);
             reg1 := REG.Drop(R);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             IF cmd.opcode = CODE.opJE THEN
                 Write("jnz L");
             ELSE
@@ -726,12 +936,12 @@ BEGIN
 
         |CODE.opJNZ:
             REG.UnOp(R, reg1);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             Write("jnz L"); WriteHexLn(cmd.label)
 
         |CODE.opJZ:
             REG.UnOp(R, reg1);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
+            test(reg1);
             Write("jz L"); WriteHexLn(cmd.label)
 
         |CODE.opSWITCH:
@@ -746,13 +956,13 @@ BEGIN
         |CODE.opENDSW:
 
         |CODE.opCASE1:
-            Write("cmp "); Write(r32[eax]); Write(","); WriteHexLn(cmd.param);
+            cmprc(eax, cmd.param);
             Write("je L"); WriteHexLn(cmd.label)
 
         |CODE.opCASE:
-            Write("cmp "); Write(r32[eax]); Write(","); WriteHexLn(cmd.param);
+            cmprc(eax, cmd.param);
             WriteLn("jl @f");
-            Write("cmp "); Write(r32[eax]); Write(","); WriteHexLn(cmd.param2);
+            cmprc(eax, cmd.param2);
             Write("jle L"); WriteHexLn(cmd.label);
             WriteLn("@@:")
 
@@ -779,9 +989,9 @@ BEGIN
                 reg2 := REG.Drop(R);
                 reg1 := REG.Drop(R);
                 REG.PushAll(R);
-                Write("push "); WriteLn(r32[reg2]);
-                Write("push "); WriteLn(r32[reg1]);
-                WriteLn("push 8");
+                _push(reg2);
+                _push(reg1);
+                pushc(8);
                 CallRTL(CODE._move)
 
             END;
@@ -795,20 +1005,20 @@ BEGIN
             REG.UnOp(R, reg1);
             reg1 := REG.Drop(R);
             REG.PushAll(R);
-            Write("push "); WriteLn(r32[reg1]);
+            _push(reg1);
             Write("push _data+"); WriteHex(cmd.param); Write("+"); WriteHexLn(stroffs);
-            Write("push "); WriteHexLn(cmd.param2);
+            pushc(cmd.param2);
             CallRTL(CODE._move)
 
         |CODE.opCHKIDX:
             REG.UnOp(R, reg1);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
+            cmprc(reg1, cmd.param);
             Write("jb L"); WriteHexLn(cmd.label)
 
         |CODE.opCHKIDX2:
             REG.BinOp(R, reg1, reg2);
-            Write("cmp "); Write(r32[reg2]); Write(","); WriteLn(r32[reg1]);
-            Write("mov "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
+            cmprr(reg2, reg1);
+            _mov(reg1, reg2);
             reg1 := REG.Drop(R);
             Write("jb L"); WriteHexLn(cmd.label)
 
@@ -871,12 +1081,12 @@ BEGIN
 
         |CODE.opINCCB:
             REG.UnOp(R, reg1);
-            Write("add byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
+            Write("add byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
             reg1 := REG.Drop(R)
 
         |CODE.opDECCB:
             REG.UnOp(R, reg1);
-            Write("sub byte["); Write(r32[reg1]); Write("],"); WriteHexLn(cmd.param MOD 256);
+            Write("sub byte["); Write(r32[reg1]); Write("],"); WriteHexLn(Byte(cmd.param));
             reg1 := REG.Drop(R)
 
         |CODE.opINCB, CODE.opDECB:
@@ -900,7 +1110,7 @@ BEGIN
 
         |CODE.opMULSC:
             REG.UnOp(R, reg1);
-            Write("and "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
+            andrc(reg1, cmd.param)
 
         |CODE.opDIVS:
             REG.BinOp(R, reg1, reg2);
@@ -918,7 +1128,7 @@ BEGIN
 
         |CODE.opSUBS:
             REG.BinOp(R, reg1, reg2);
-            Write("not "); WriteLn(r32[reg2]);
+            not(reg2);
             Write("and "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
             reg1 := REG.Drop(R)
 
@@ -928,16 +1138,16 @@ BEGIN
 
         |CODE.opSUBSL:
             REG.UnOp(R, reg1);
-            Write("not "); WriteLn(r32[reg1]);
-            Write("and "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param)
+            not(reg1);
+            andrc(reg1, cmd.param)
 
         |CODE.opSUBSR:
             REG.UnOp(R, reg1);
-            Write("and "); Write(r32[reg1]); Write(","); WriteHexLn(ORD(-BITS(cmd.param)))
+            andrc(reg1, ORD(-BITS(cmd.param)));
 
         |CODE.opUMINS:
             REG.UnOp(R, reg1);
-            Write("not "); WriteLn(r32[reg1])
+            not(reg1)
 
         |CODE.opLENGTH:
             REG.PushAll(R);
@@ -953,11 +1163,11 @@ BEGIN
 
         |CODE.opCHR:
             REG.UnOp(R, reg1);
-            Write("and "); Write(r32[reg1]); WriteLn(",255")
+            andrc(reg1, 255)
 
         |CODE.opWCHR:
             REG.UnOp(R, reg1);
-            Write("and "); Write(r32[reg1]); WriteLn(",65535")
+            andrc(reg1, 65535)
 
         |CODE.opASR, CODE.opROR, CODE.opLSL, CODE.opLSR:
             REG.UnOp(R, reg1);
@@ -969,13 +1179,13 @@ BEGIN
 
             REG.BinOp(R, reg1, reg2);
             ASSERT(reg2 = ecx);
+            OutByte(0D3H);
             CASE cmd.opcode OF
-            |CODE.opASR: Write("sar ")
-            |CODE.opROR: Write("ror ")
-            |CODE.opLSL: Write("shl ")
-            |CODE.opLSR: Write("shr ")
+            |CODE.opASR: OutByte(0F8H + reg1)  // sar reg1, cl
+            |CODE.opROR: OutByte(0C8H + reg1)  // ror reg1, cl
+            |CODE.opLSL: OutByte(0E0H + reg1)  // shl reg1, cl
+            |CODE.opLSR: OutByte(0E8H + reg1)  // shr reg1, cl
             END;
-            Write(r32[reg1]); WriteLn(",cl");
             reg1 := REG.Drop(R)
 
         |CODE.opASR1, CODE.opROR1, CODE.opLSL1, CODE.opLSR1:
@@ -987,17 +1197,18 @@ BEGIN
             END;
 
             reg1 := REG.GetAnyReg(R);
-            Write("mov "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
+
+            movrc(reg1, cmd.param);
 
             REG.BinOp(R, reg1, reg2);
             ASSERT(reg1 = ecx);
+            OutByte(0D3H);
             CASE cmd.opcode OF
-            |CODE.opASR1: Write("sar ")
-            |CODE.opROR1: Write("ror ")
-            |CODE.opLSL1: Write("shl ")
-            |CODE.opLSR1: Write("shr ")
+            |CODE.opASR1: OutByte(0F8H + reg2)  // sar reg2, cl
+            |CODE.opROR1: OutByte(0C8H + reg2)  // ror reg2, cl
+            |CODE.opLSL1: OutByte(0E0H + reg2)  // shl reg2, cl
+            |CODE.opLSR1: OutByte(0E8H + reg2)  // shr reg2, cl
             END;
-            Write(r32[reg2]); WriteLn(",cl");
             reg1 := REG.Drop(R);
             reg1 := REG.Drop(R);
             ASSERT(REG.GetReg(R, reg2))
@@ -1014,33 +1225,33 @@ BEGIN
 
         |CODE.opMIN:
             REG.BinOp(R, reg1, reg2);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
-            WriteLn("jle @f");
-            Write("mov "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
-            WriteLn("@@:");
+            cmprr(reg1, reg2);
+            OutCode("7E02");  // jle @f
+            _mov(reg1, reg2); // mov reg1, reg2
+                              // @@:
             reg2 := REG.Drop(R)
 
         |CODE.opMAX:
             REG.BinOp(R, reg1, reg2);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
-            WriteLn("jge @f");
-            Write("mov "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
-            WriteLn("@@:");
+            cmprr(reg1, reg2);
+            OutCode("7D02");  // jge @f
+            _mov(reg1, reg2); // mov reg1, reg2
+                              // @@:
             reg2 := REG.Drop(R)
 
         |CODE.opMINC:
             REG.UnOp(R, reg1);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
-            WriteLn("jle @f");
-            Write("mov "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
-            WriteLn("@@:")
+            cmprc(reg1, cmd.param);
+            OutCode("7E05");         // jle @f
+            movrc(reg1, cmd.param);  // mov reg1, cmd.param
+                                     // @@:
 
         |CODE.opMAXC:
             REG.UnOp(R, reg1);
-            Write("cmp "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
-            WriteLn("jge @f");
-            Write("mov "); Write(r32[reg1]); Write(","); WriteHexLn(cmd.param);
-            WriteLn("@@:")
+            cmprc(reg1, cmd.param);
+            OutCode("7D05");         // jge @f
+            movrc(reg1, cmd.param);  // mov reg1, cmd.param
+                                     // @@:
 
         |CODE.opIN:
             REG.PushAll(R);
@@ -1051,14 +1262,14 @@ BEGIN
         |CODE.opINR:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._in);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINL:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._in2);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1071,14 +1282,14 @@ BEGIN
         |CODE.opRSETR:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSETL:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._set2);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1086,7 +1297,7 @@ BEGIN
             REG.UnOp(R, reg1);
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteLn(r32[reg1]);
+            _push(reg1);
             CallRTL(CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1103,13 +1314,13 @@ BEGIN
         |CODE.opINCLC:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._incl)
 
         |CODE.opEXCLC:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._excl)
 
         |CODE.opDIV:
@@ -1132,14 +1343,14 @@ BEGIN
 
             ELSIF a = -1 THEN
                 REG.UnOp(R, reg1);
-                Write("neg "); WriteLn(r32[reg1])
+                neg(reg1)
             ELSE
                 IF n > 0 THEN
                     REG.UnOp(R, reg1);
 
                     IF a < 0 THEN
                         reg2 := REG.GetAnyReg(R);
-                        Write("mov "); Write(r32[reg2]); Write(","); WriteLn(r32[reg1]);
+                        _mov(reg2, reg1);
                         Write("sar "); Write(r32[reg1]); Write(","); WriteHexLn(n);
                         Write("sub "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
                         reg2 := REG.Drop(R)
@@ -1150,7 +1361,7 @@ BEGIN
                 ELSE
                     REG.PushAll(R);
                     R.pushed := R.pushed - 1;
-                    Write("push "); WriteHexLn(cmd.param);
+                    pushc(cmd.param);
                     CallRTL(CODE._div);
                     ASSERT(REG.GetReg(R, eax))
                 END
@@ -1159,7 +1370,7 @@ BEGIN
         |CODE.opDIVL:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._div2);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1185,19 +1396,24 @@ BEGIN
             ELSE
                 IF n > 0 THEN
                     REG.UnOp(R, reg1);
-                    Write("and "); Write(r32[reg1]); Write(","); WriteHexLn(ABS(a) - 1);
+                    andrc(reg1, ABS(a) - 1);
 
                     IF a < 0 THEN
-                        Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
-                        WriteLn("jz @f");
-                        Write("add "); Write(r32[reg1]); Write(","); WriteHexLn(a);
-                        WriteLn("@@:")
+                        test(reg1);
+                        OutByte(74H);      // jz @f
+                        IF isByte(a) THEN
+                            OutByte(3)
+                        ELSE
+                            OutByte(6)
+                        END;
+                        addrc(reg1, a)
+                                           // @@:
                     END
 
                 ELSE
                     REG.PushAll(R);
                     R.pushed := R.pushed - 1;
-                    Write("push "); WriteHexLn(cmd.param);
+                    pushc(cmd.param);
                     CallRTL(CODE._mod);
                     ASSERT(REG.GetReg(R, eax))
                 END
@@ -1206,7 +1422,7 @@ BEGIN
         |CODE.opMODL:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._mod2);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1215,15 +1431,15 @@ BEGIN
 
         |CODE.opABS:
             REG.UnOp(R, reg1);
-            Write("test "); Write(r32[reg1]); Write(","); WriteLn(r32[reg1]);
-            WriteLn("jge @f");
-            Write("neg "); WriteLn(r32[reg1]);
-            WriteLn("@@:")
+            test(reg1);
+            OutCode("7D02"); // jge @f
+            neg(reg1);       // neg reg1
+                             // @@:
 
         |CODE.opCOPY:
             REG.PushAll(R);
             R.pushed := R.pushed - 2;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._move)
 
         |CODE.opMOVE:
@@ -1234,26 +1450,26 @@ BEGIN
         |CODE.opCOPYA:
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._arrcpy);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCOPYS:
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._strcpy)
 
         |CODE.opCOPYS2:
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._strcpy2)
 
         |CODE.opROT:
             REG.PushAll(R);
-            WriteLn("push esp");
-            Write("push "); WriteHexLn(cmd.param);
+            OutByte(54H);  // push esp
+            pushc(cmd.param);
             CallRTL(CODE._rot)
 
         |CODE.opNEW:
@@ -1261,8 +1477,8 @@ BEGIN
             R.pushed := R.pushed - 1;
             n := cmd.param + 8;
             ASSERT(UTILS.align(n, 32));
-            Write("push "); WriteHexLn(n);
-            Write("push "); WriteHexLn(cmd.param2);
+            pushc(n);
+            pushc(cmd.param2);
             CallRTL(CODE._new)
 
         |CODE.opDISP:
@@ -1275,12 +1491,12 @@ BEGIN
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
             CASE cmd.opcode OF
-            |CODE.opEQS: WriteLn("push 0")
-            |CODE.opNES: WriteLn("push 1")
-            |CODE.opLTS: WriteLn("push 2")
-            |CODE.opLES: WriteLn("push 3")
-            |CODE.opGTS: WriteLn("push 4")
-            |CODE.opGES: WriteLn("push 5")
+            |CODE.opEQS: pushc(0)
+            |CODE.opNES: pushc(1)
+            |CODE.opLTS: pushc(2)
+            |CODE.opLES: pushc(3)
+            |CODE.opGTS: pushc(4)
+            |CODE.opGES: pushc(5)
             END;
             CallRTL(CODE._strcmp);
             ASSERT(REG.GetReg(R, eax))
@@ -1290,12 +1506,12 @@ BEGIN
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
             CASE cmd.opcode OF
-            |CODE.opEQS2: WriteLn("push 0")
-            |CODE.opNES2: WriteLn("push 1")
-            |CODE.opLTS2: WriteLn("push 2")
-            |CODE.opLES2: WriteLn("push 3")
-            |CODE.opGTS2: WriteLn("push 4")
-            |CODE.opGES2: WriteLn("push 5")
+            |CODE.opEQS2: pushc(0)
+            |CODE.opNES2: pushc(1)
+            |CODE.opLTS2: pushc(2)
+            |CODE.opLES2: pushc(3)
+            |CODE.opGTS2: pushc(4)
+            |CODE.opGES2: pushc(5)
             END;
             CallRTL(CODE._strcmp2);
             ASSERT(REG.GetReg(R, eax))
@@ -1305,12 +1521,12 @@ BEGIN
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
             CASE cmd.opcode OF
-            |CODE.opEQSW: WriteLn("push 0")
-            |CODE.opNESW: WriteLn("push 1")
-            |CODE.opLTSW: WriteLn("push 2")
-            |CODE.opLESW: WriteLn("push 3")
-            |CODE.opGTSW: WriteLn("push 4")
-            |CODE.opGESW: WriteLn("push 5")
+            |CODE.opEQSW: pushc(0)
+            |CODE.opNESW: pushc(1)
+            |CODE.opLTSW: pushc(2)
+            |CODE.opLESW: pushc(3)
+            |CODE.opGTSW: pushc(4)
+            |CODE.opGESW: pushc(5)
             END;
             CallRTL(CODE._strcmpw);
             ASSERT(REG.GetReg(R, eax))
@@ -1320,12 +1536,12 @@ BEGIN
             REG.PushAll(R);
             R.pushed := R.pushed - 4;
             CASE cmd.opcode OF
-            |CODE.opEQSW2: WriteLn("push 0")
-            |CODE.opNESW2: WriteLn("push 1")
-            |CODE.opLTSW2: WriteLn("push 2")
-            |CODE.opLESW2: WriteLn("push 3")
-            |CODE.opGTSW2: WriteLn("push 4")
-            |CODE.opGESW2: WriteLn("push 5")
+            |CODE.opEQSW2: pushc(0)
+            |CODE.opNESW2: pushc(1)
+            |CODE.opLTSW2: pushc(2)
+            |CODE.opLESW2: pushc(3)
+            |CODE.opGTSW2: pushc(4)
+            |CODE.opGESW2: pushc(5)
             END;
             CallRTL(CODE._strcmpw2);
             ASSERT(REG.GetReg(R, eax))
@@ -1345,7 +1561,7 @@ BEGIN
             END;
             WriteLn(r8[reg1]);
 
-            Write("and "); Write(r32[reg1]); WriteLn(",1")
+            andrc(reg1, 1)
 
         |CODE.opPUSHT:
             REG.UnOp(R, reg1);
@@ -1355,79 +1571,79 @@ BEGIN
         |CODE.opISREC:
             REG.PushAll(R);
             R.pushed := R.pushed - 2;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._isrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGR:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opIS:
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._is);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEG:
             REG.UnOp(R, reg2);
             reg1 := REG.GetAnyReg(R);
-            Write("mov "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2]);
+            _mov(reg1, reg2);
             REG.PushAll(R);
             R.pushed := R.pushed - 1;
-            Write("push "); WriteHexLn(cmd.param);
+            pushc(cmd.param);
             CallRTL(CODE._guard);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCASET:
-            WriteLn("push eax");
-            WriteLn("push eax");
-            Write("push "); WriteHexLn(cmd.param);
+            _push(eax);
+            _push(eax);
+            pushc(cmd.param);
             CallRTL(CODE._guardrec);
-            WriteLn("mov ecx,eax");
-            WriteLn("pop eax");
-            Write("test "); Write(r32[ecx]); Write(","); WriteLn(r32[ecx]);
+            _mov(ecx, eax);
+            _pop(eax);
+            test(ecx);
             Write("jnz L"); WriteHexLn(cmd.label)
 
         |CODE.opPACK:
             REG.BinOp(R, reg1, reg2);
-            Write("push "); WriteLn(r32[reg2]);
-            WriteLn("fild dword[esp]");
+            _push(reg2);
+            OutCode("DB0424"); // fild dword[esp]
             Write("fld qword["); Write(r32[reg1]); WriteLn("]");
-            WriteLn("fscale");
+            OutCode("D9FD");   // fscale
             Write("fstp qword["); Write(r32[reg1]); WriteLn("]");
-            WriteLn("fistp dword[esp]");
-            Write("pop "); WriteLn(r32[reg2]);
+            OutCode("DB1C24"); // fistp dword[esp]
+            _pop(reg2);
             reg1 := REG.Drop(R);
             reg2 := REG.Drop(R)
 
         |CODE.opPACKC:
             REG.UnOp(R, reg1);
-            Write("push "); WriteHexLn(cmd.param);
-            WriteLn("fild dword[esp]");
+            pushc(cmd.param);
+            OutCode("DB0424"); // fild dword[esp]
             Write("fld qword["); Write(r32[reg1]); WriteLn("]");
-            WriteLn("fscale");
+            OutCode("D9FD");   // fscale
             Write("fstp qword["); Write(r32[reg1]); WriteLn("]");
-            WriteLn("fistp dword[esp]");
-            Write("pop "); WriteLn(r32[reg1]);
+            OutCode("DB1C24"); // fistp dword[esp]
+            _pop(reg1);
             reg1 := REG.Drop(R)
 
         |CODE.opUNPK:
             REG.BinOp(R, reg1, reg2);
             Write("fld qword["); Write(r32[reg1]); WriteLn("]");
-            WriteLn("fxtract");
+            OutCode("D9F4");   // fxtract
             Write("fstp qword["); Write(r32[reg1]); WriteLn("]");
             Write("fistp dword["); Write(r32[reg2]); WriteLn("]");
             reg1 := REG.Drop(R);
             reg2 := REG.Drop(R)
 
         |CODE.opPUSHF:
-            WriteLn("sub esp,8");
-            WriteLn("fstp qword[esp]")
+            OutCode("83EC08");  // sub esp,8
+            OutCode("DD1C24")   // fstp qword[esp]
 
         |CODE.opLOADF:
             REG.UnOp(R, reg1);
@@ -1436,18 +1652,18 @@ BEGIN
 
         |CODE.opCONSTF:
             IF cmd.float = 0.0 THEN
-                WriteLn("fldz")
+                OutCode("D9EE"); // fldz
             ELSIF cmd.float = 1.0 THEN
-                WriteLn("fld1")
+                OutCode("D9E8"); // fld1
             ELSIF cmd.float = -1.0 THEN
-                WriteLn("fld1");
-                WriteLn("fchs")
+                OutCode("D9E8"); // fld1
+                OutCode("D9E0")  // fchs
             ELSE
                 UTILS.splitf(cmd.float, a, b);
-                Write("push "); WriteHexLn(b);
-                Write("push "); WriteHexLn(a);
-                WriteLn("fld qword[esp]");
-                WriteLn("add esp,8")
+                pushc(b);
+                pushc(a);
+                OutCode("DD0424"); // fld qword[esp]
+                OutCode("83C408")  // add esp,8
             END
 
         |CODE.opSAVEF:
@@ -1474,107 +1690,131 @@ BEGIN
             WriteLn("fdivrp st1,st")
 
         |CODE.opUMINF:
-            WriteLn("fchs")
+            OutCode("D9E0")  // fchs
 
         |CODE.opFABS:
-            WriteLn("fabs")
+            OutCode("D9E1")  // fabs
 
         |CODE.opFLT:
             REG.UnOp(R, reg1);
-            Write("push "); WriteLn(r32[reg1]);
-            WriteLn("fild dword[esp]");
-            Write("pop "); WriteLn(r32[reg1]);
+            _push(reg1);
+            OutCode("DB0424"); // fild dword[esp]
+            _pop(reg1);
             reg1 := REG.Drop(R)
 
         |CODE.opFLOOR:
             reg1 := REG.GetAnyReg(R);
-            WriteLn("sub esp,8");
-            WriteLn("fstcw word[esp+4]");
-            WriteLn("fstcw word[esp+6]");
-            WriteLn("and word[esp+4],1111001111111111b");
-            WriteLn("or word[esp+4],0000010000000000b");
-            WriteLn("fldcw word[esp+4]");
-            WriteLn("frndint");
-            WriteLn("fistp dword[esp]");
-            Write("pop "); WriteLn(r32[reg1]);
-            WriteLn("fldcw word[esp+2]");
-            WriteLn("add esp,4")
+            OutCode("83EC089BD97C24049BD97C24066681642404FFF366814C24040004D96C2404D9FCDB1C24");
+            (*
+                sub esp,8
+                fstcw word[esp+4]
+                fstcw word[esp+6]
+                and word[esp+4],1111001111111111b
+                or word[esp+4],0000010000000000b
+                fldcw word[esp+4]
+                frndint
+                fistp dword[esp]
+                *)
+            _pop(reg1);
+            OutCode("D96C240283C404")
+            (*
+                fldcw word[esp+2]
+                add esp,4
+                *)
 
         |CODE.opEQF, CODE.opEQFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setz al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A060F94C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setz al
+                and eax,1
+                L:
+                *)
 
         |CODE.opNEF, CODE.opNEFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setnz al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A060F95C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setnz al
+                and eax,1
+                L:
+                *)
 
         |CODE.opLTF, CODE.opGTFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setc al");
-            WriteLn("setz ah");
-            WriteLn("test eax,eax");
-            WriteLn("setz al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A0E0F92C00F94C485C00F94C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setc al
+                setz ah
+                test eax,eax
+                setz al
+                and eax,1
+                L:
+                *)
 
         |CODE.opGTF, CODE.opLTFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setc al");
-            WriteLn("setz ah");
-            WriteLn("cmp eax,1");
-            WriteLn("sete al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A0F0F92C00F94C483F8010F94C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setc al
+                setz ah
+                cmp eax,1
+                sete al
+                and eax,1
+                L:
+                *)
 
         |CODE.opLEF, CODE.opGEFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setnc al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A060F93C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setnc al
+                and eax,1
+                L:
+                *)
 
         |CODE.opGEF, CODE.opLEFI:
             ASSERT(REG.GetReg(R, eax));
-            WriteLn("fucompp");
-            WriteLn("fstsw ax");
-            WriteLn("sahf");
-            WriteLn("mov eax,0");
-            WriteLn("jp @f");
-            WriteLn("setc al");
-            WriteLn("setz ah");
-            WriteLn("add al,ah");
-            WriteLn("cmp al,1");
-            WriteLn("sete al");
-            WriteLn("and eax,1");
-            WriteLn("@@:")
+            OutCode("DAE99BDFE09EB8000000007A100F92C00F94C400E03C010F94C083E001")
+            (*
+                fucompp
+                fstsw ax
+                sahf
+                mov eax,0
+                jp L
+                setc al
+                setz ah
+                add al,ah
+                cmp al,1
+                sete al
+                and eax,1
+                L:
+                *)
 
         |CODE.opINF:
             WriteLn("fld qword[_data]")
@@ -1682,7 +1922,7 @@ BEGIN
         WriteLn("push dword[ebp+12]");
         WriteLn("push dword[ebp+8]");
         CallRTL(CODE._dllentry);
-        WriteLn("test eax,eax");
+        test(eax);
         WriteLn("jz dllret")
 
     ELSIF target = UTILS.tarKOS THEN
@@ -1705,10 +1945,10 @@ BEGIN
         WriteLn("lib_init:")
     END;
 
-    WriteLn("finit");
+    OutCode("9BDBE3"); // finit
     WriteLn("push IMPORT");
     WriteLn("push _data + 8");
-    Write  ("push "); WriteHexLn(code.tcount);
+    pushc(code.tcount);
     Write  ("push _data + 8 + "); WriteHexLn(code.tcount * 4 + code.dcount);
     CallRTL(CODE._init)
 END prolog;
@@ -1815,27 +2055,27 @@ VAR
             lib := lib.next(CODE.IMPORT_LIB)
         END
 
-    END KOSimport; 
+    END KOSimport;
 
 
 BEGIN
 
     IF target = UTILS.tarDLL THEN
         WriteLn("dllret:");
-        WriteLn("mov eax,1");
+        movrc(eax, 1);
         WriteLn("leave");
         WriteLn("ret 12")
     END;
 
     IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
-        WriteLn("push 0");
+        pushc(0);
         CallRTL(CODE._exit);
         WriteLn("section '.data' data readable writeable")
     ELSIF target = UTILS.tarKOS THEN
-        WriteLn("push 0");
+        pushc(0);
         CallRTL(CODE._exit)
     ELSIF target = UTILS.tarOBJ THEN
-        WriteLn("mov eax,1");
+        movrc(eax, 1);
         WriteLn("ret");
         WriteLn("align 16");
         WriteLn("EXPORTS:");
@@ -1876,7 +2116,7 @@ BEGIN
         END
     END;
 
-    WriteHexLn(code.types[i]); 
+    WriteHexLn(code.types[i]);
 
     Write("db ");
 
@@ -1893,8 +2133,8 @@ BEGIN
     END;
 
     WriteByte(code.data[i]);
-    NewLine;    
-    
+    NewLine;
+
     Write("db '"); Write(modname);
     IF target IN {UTILS.tarCON, UTILS.tarGUI} THEN
         Write(".exe")
@@ -1964,30 +2204,6 @@ BEGIN
     END
 
 END epilog;
-
-
-PROCEDURE _mov (reg1, reg2: INTEGER);
-BEGIN
-    Write("mov "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2])
-END _mov;
-
-
-PROCEDURE _xch (reg1, reg2: INTEGER);
-BEGIN
-    Write("xchg "); Write(r32[reg1]); Write(","); WriteLn(r32[reg2])
-END _xch;
-
-
-PROCEDURE _pop (reg: INTEGER);
-BEGIN
-    Write("pop "); WriteLn(r32[reg])
-END _pop;
-
-
-PROCEDURE _push (reg: INTEGER);
-BEGIN
-    Write("push "); WriteLn(r32[reg])
-END _push;
 
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname, modname: ARRAY OF CHAR; target, stack, ver: INTEGER): BOOLEAN;
