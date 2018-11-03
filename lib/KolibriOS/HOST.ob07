@@ -1,4 +1,4 @@
-(*
+﻿(*
     BSD 2-Clause License
 
     Copyright (c) 2018, Anton Krotov
@@ -15,7 +15,9 @@ CONST
 
     slash* = "/";
 
-    MAX_PARAM = 1024;
+    MAX_PARAM = 1024; 
+    
+    SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
 TYPE
@@ -96,7 +98,7 @@ BEGIN
     END
 
     RETURN res
-END exec;   
+END exec;
 
 
 PROCEDURE ExitProcess* (p1: INTEGER);
@@ -213,7 +215,30 @@ BEGIN
     END
 
     RETURN res2
-END Write;
+END Write;     
+
+
+PROCEDURE Seek (F: FS; Offset, Origin: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+    fd: rFD;
+
+BEGIN
+
+    IF (F # NIL) & GetFileInfo(F.name, fd) & (BITS(fd.attr) * {4} = {}) THEN
+        CASE Origin OF
+        |SEEK_BEG: F.pos := Offset
+        |SEEK_CUR: F.pos := F.pos + Offset
+        |SEEK_END: F.pos := fd.size + Offset
+        ELSE
+        END;
+        res := F.pos
+    ELSE
+        res := -1
+    END
+
+    RETURN res
+END Seek;
 
 
 PROCEDURE Create (FName: ARRAY OF CHAR): FS;
@@ -302,7 +327,17 @@ BEGIN
     fs := Open(FName);
     SYSTEM.GET(SYSTEM.ADR(fs), res)
     RETURN res
-END FileOpen;
+END FileOpen; 
+
+
+PROCEDURE FileSeek* (F, Offset, Origin: INTEGER): INTEGER;
+VAR
+    fs: FS;
+
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(F), fs)
+    RETURN Seek(fs, Offset, Origin)
+END FileSeek;
 
 
 PROCEDURE GetTickCount* (): INTEGER;
@@ -418,7 +453,7 @@ BEGIN
         END;
     END;
     s[j] := 0X
-END GetArg;   
+END GetArg;
 
 
 PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
