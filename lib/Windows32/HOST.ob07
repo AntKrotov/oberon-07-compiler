@@ -1,4 +1,4 @@
-(*
+﻿(*
     BSD 2-Clause License
 
     Copyright (c) 2018, Anton Krotov
@@ -20,7 +20,9 @@ CONST
 
     MAX_PARAM = 1024;
 
-    SW_SHOW = 5;
+    SW_SHOW = 5; 
+    
+    SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
 TYPE
@@ -97,13 +99,16 @@ PROCEDURE [winapi, "kernel32.dll", "OpenFile"]
 
 PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]
     ExitProcess* (code: INTEGER);
-    
+
 PROCEDURE [winapi, "kernel32.dll", "GetCurrentDirectoryA"]
     _GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
 
 PROCEDURE [winapi, "shell32.dll", "ShellExecuteA"]
-    ShellExecute* (hWnd, Operation, FileName, Parameters, Directory, ShowCmd: INTEGER): INTEGER; 
-                   
+    ShellExecute* (hWnd, Operation, FileName, Parameters, Directory, ShowCmd: INTEGER): INTEGER;
+
+PROCEDURE [winapi, "kernel32.dll", "SetFilePointer"]
+    SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER;
+
 
 PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
 VAR
@@ -116,7 +121,7 @@ BEGIN
     END
 
     RETURN res
-END exec;   
+END exec;
 
 
 PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
@@ -250,6 +255,11 @@ VAR
 BEGIN
     RETURN OpenFile(SYSTEM.ADR(FName[0]), ofstr, 0)
 END FileOpen;
+
+
+PROCEDURE FileSeek* (F, Offset, Origin: INTEGER): INTEGER;
+    RETURN SetFilePointer(F, Offset, 0, Origin)
+END FileSeek;
 
 
 PROCEDURE OutChar* (c: CHAR);
