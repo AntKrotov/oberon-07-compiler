@@ -20,7 +20,8 @@ TYPE
 
         push*:   PROCEDURE (list: LIST; item: ITEM);
         insert*: PROCEDURE (list: LIST; cur, nov: ITEM);
-        delete*: PROCEDURE (list: LIST; item: ITEM)
+        delete*: PROCEDURE (list: LIST; item: ITEM);
+        count*:  PROCEDURE (list: LIST): INTEGER
 
     END;
 
@@ -101,7 +102,26 @@ BEGIN
     END;
     DISPOSE(item)
 
-END delete;
+END delete;     
+
+
+PROCEDURE count (list: LIST): INTEGER;
+VAR
+    item: ITEM;
+    res:  INTEGER;
+
+BEGIN      
+    ASSERT(list # NIL);
+    res := 0;
+
+    item := list.first;
+    WHILE item # NIL DO  
+        INC(res);
+        item := item.next
+    END
+    
+    RETURN res
+END count;
 
 
 PROCEDURE create* (list: LIST): LIST;
@@ -115,7 +135,8 @@ BEGIN
 
     list.push   := push;
     list.insert := insert;
-    list.delete := delete
+    list.delete := delete;
+    list.count  := count
 
     RETURN list
 END create;

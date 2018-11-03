@@ -17,9 +17,13 @@ CONST
     OS* = HOST.OS;
 
     tarCON* = 1; tarGUI* = 2; tarDLL* = 3; tarKOS* = 4; tarOBJ* = 5;
+    
+    PATHLEN = 2048;
 
 
-TYPE
+TYPE 
+
+    PATH* = ARRAY PATHLEN OF CHAR;
 
     FILE* = POINTER TO RECORD
 
@@ -84,7 +88,6 @@ VAR
     ptr:  INTEGER;
 
 BEGIN
-
     ptr := HOST.FileCreate(name);
 
     IF ptr > 0 THEN
@@ -118,6 +121,24 @@ BEGIN
 END fopen;
 
 
+PROCEDURE fseek* (file: FILE; offset, origin: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF file # NIL THEN
+        res := HOST.FileSeek(file.ptr, offset, origin);
+        IF res < 0 THEN
+            res := 0
+        END
+    ELSE
+        res := 0
+    END
+
+    RETURN res
+END fseek;
+
+
 PROCEDURE Flush (file: FILE; adr, bytes: INTEGER): INTEGER;
 VAR
     res: INTEGER;
@@ -142,7 +163,7 @@ BEGIN
 END copy;
 
 
-PROCEDURE Write (file: FILE; adr, bytes: INTEGER): INTEGER;
+PROCEDURE Write* (file: FILE; adr, bytes: INTEGER): INTEGER;
 VAR
     free, n, k, res: INTEGER;
 
@@ -191,12 +212,13 @@ BEGIN
         file.count := -1;
 
         HOST.FileClose(file.ptr);
-        file.ptr := 0
+        file.ptr := 0;
+        DISPOSE(file)
     END
 END fclose;
 
 
-PROCEDURE Read (file: FILE; adr, bytes: INTEGER): INTEGER;
+PROCEDURE Read* (file: FILE; adr, bytes: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 

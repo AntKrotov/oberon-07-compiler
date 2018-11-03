@@ -175,8 +175,7 @@ PROCEDURE destroy* (VAR text: TEXT);
 BEGIN
     IF text # NIL THEN
         IF text.file # NIL THEN
-            UTILS.fclose(text.file);
-            DISPOSE(text.file)
+            UTILS.fclose(text.file)
         END;
         DISPOSE(text)
     END

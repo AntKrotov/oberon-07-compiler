@@ -170,16 +170,16 @@ TYPE
         export*:    LISTS.LIST;
         import*:    LISTS.LIST;
         types*:     ARRAY MAXRECORDS + 1 OF INTEGER;
-        data*:      ARRAY 1024*1024*4 OF BYTE;
+        data*:      ARRAY 1000000 OF BYTE;
         dcount*:    INTEGER;
         dmin*:      INTEGER;
         tcount*:    INTEGER;
-        lcount:     INTEGER;
+        lcount*:    INTEGER;
         gsize*:     INTEGER;
         rtl*:       ARRAY 32 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
-        wcharoffs:  ARRAY 256*256 OF INTEGER
+        wcharoffs:  ARRAY 65536 OF INTEGER
 
     END;
 
@@ -259,7 +259,7 @@ BEGIN
     IF ODD(res) THEN
         codes.data[res] := 0;
         INC(res)
-    END;       
+    END;
 
     idx := res;
 
@@ -276,7 +276,7 @@ BEGIN
     codes.data[idx] := 0;
     INC(idx);
     codes.data[idx] := 0;
-    INC(idx);          
+    INC(idx);
 
     codes.dcount := idx
 
@@ -290,12 +290,12 @@ VAR
 
 BEGIN
     IF codes.wcharoffs[c] = -1 THEN
-        res := codes.dcount;   
+        res := codes.dcount;
 
         IF ODD(res) THEN
             codes.data[res] := 0;
             INC(res)
-        END;            
+        END;
 
         idx := res;
         codes.data[idx] := c MOD 256;
@@ -305,7 +305,7 @@ BEGIN
         codes.data[idx] := 0;
         INC(idx);
         codes.data[idx] := 0;
-        INC(idx);      
+        INC(idx);
         codes.dcount := idx;
         codes.wcharoffs[c] := res
     ELSE

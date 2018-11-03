@@ -14,6 +14,7 @@ CONST
 
     MAXARRDIM*  = 5;
     MAXRECORDS* = 2047;
+    MAXSCOPE    = 16;
 
     idNONE*    =  0;  idGUARD   =  1;  idMODULE* =  2;  idCONST*   =  3;
     idTYPE*    =  4;  idSTFUNC* =  5;  idSTPROC* =  6;  idVAR*     =  7;
@@ -102,11 +103,11 @@ TYPE
         scopeLvl*:   INTEGER;
         sysimport*:  BOOLEAN;
 
-        scopes*:     ARRAY 16 OF PROC;
+        scopes*:     ARRAY MAXSCOPE OF PROC;
 
         scope*:      RECORD
 
-            open*:   PROCEDURE (unit: UNIT; proc: PROC);
+            open*:   PROCEDURE (unit: UNIT; proc: PROC): BOOLEAN;
             close*:  PROCEDURE (unit: UNIT)
 
         END;
@@ -429,21 +430,29 @@ BEGIN
 END getOffset;
 
 
-PROCEDURE openScope (unit: UNIT; proc: PROC);
+PROCEDURE openScope (unit: UNIT; proc: PROC): BOOLEAN;
 VAR
     item: IDENT;
+    res:  BOOLEAN;
 
 BEGIN
     INC(unit.scopeLvl);
+    
+    res := unit.scopeLvl < MAXSCOPE;
+    
+    IF res THEN
 
-    unit.scopes[unit.scopeLvl] := proc;
+        unit.scopes[unit.scopeLvl] := proc;
 
-    NEW(item);
+        NEW(item);
 
-    item.name := NIL;
-    item.typ  := idGUARD;
+        item.name := NIL;
+        item.typ  := idGUARD;
 
-    unit.idents.push(unit.idents, item)
+        unit.idents.push(unit.idents, item)
+    END
+    
+    RETURN res
 END openScope;
 
 
@@ -720,12 +729,12 @@ BEGIN
     unit.pointers.add  := frwptr;
     unit.pointers.link := linkptr;
 
-    unit.scope.open(unit, NIL);
+    ASSERT(unit.scope.open(unit, NIL));
 
     enterStTypes(unit, units.program);
     enterStProcs(unit);
 
-    unit.scope.open(unit, NIL);
+    ASSERT(unit.scope.open(unit, NIL));
 
     unit.gscope := unit.idents.last(IDENT);
 

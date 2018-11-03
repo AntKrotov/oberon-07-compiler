@@ -12,7 +12,7 @@ IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
 
 CONST
 
-    PATHLEN = 2048;
+    //PATHLEN = 2048;
     EXTLEN  = 10;
 
     eCONST*   =  1;  eTYPE*   =  2;  eVAR*     =  3;  eEXPR*    =  4;
@@ -23,7 +23,7 @@ CONST
 
 TYPE
 
-    PATH* = ARRAY PATHLEN OF CHAR;
+    PATH* = UTILS.PATH;//ARRAY PATHLEN OF CHAR;
 
     EXT* = ARRAY EXTLEN OF CHAR;
 
@@ -827,7 +827,8 @@ VAR
             proc := IdentDef(parser, PROG.idPROC, name)
         END;
 
-        unit.scope.open(unit, proc.proc);
+        check(unit.scope.open(unit, proc.proc), parser, pos, 116);
+
         proc.type := program.enterType(program, PROG.tPROCEDURE, program.target.adr, 0, unit);
         t := proc.type;
         t.align  := program.target.adr;

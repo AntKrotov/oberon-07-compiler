@@ -1,0 +1,425 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE BIN;
+
+IMPORT SYSTEM, LISTS, UTILS;
+
+
+CONST
+
+    stext    = 0;
+    sdata    = 1;
+    simport  = 2;
+    sexport  = 3;
+    sreloc   = 4; 
+
+
+TYPE
+
+    DWORD = INTEGER;
+
+    RELOC = POINTER TO RECORD (LISTS.ITEM)
+
+        opcode: INTEGER;
+        offset: INTEGER
+
+    END;
+
+    IMPRT = POINTER TO RECORD (LISTS.ITEM)
+
+        nameoffs: INTEGER;
+        label:    INTEGER
+
+    END;
+    
+    EXPRT = POINTER TO RECORD (LISTS.ITEM)
+
+        nameoffs: INTEGER;
+        label:    INTEGER
+
+    END;
+
+    PROGRAM* = POINTER TO RECORD
+
+        code:      ARRAY 2000000 OF BYTE;     ccount: INTEGER;
+        data:      ARRAY 1000000 OF BYTE;     dcount: INTEGER;
+        labels*:   ARRAY  100000 OF INTEGER;
+        bss:       INTEGER;
+        stack:     INTEGER;
+        vmajor,
+        vminor:    WCHAR;
+
+        rel_list:  LISTS.LIST;
+        imp_list:  LISTS.LIST;
+        exp_list:  LISTS.LIST
+
+    END;
+
+
+    SECTION = RECORD
+
+        id, offset, size: INTEGER
+
+    END;
+
+    HEADER = RECORD
+
+        bss, stack: INTEGER;
+        vmajor, vminor: WCHAR;
+        rsrvd1, rsrvd2: INTEGER;
+        nsections: INTEGER;
+        text, data, import, reloc, export: SECTION
+
+    END;
+
+
+PROCEDURE create* (): PROGRAM;
+VAR
+    program: PROGRAM;
+    i: INTEGER;
+
+BEGIN
+    NEW(program);
+
+    program.bss    := 0;
+    program.ccount := 0;
+    program.dcount := 0;
+
+    FOR i := 0 TO LEN(program.labels) - 1 DO
+        program.labels[i] := 0
+    END;
+
+    program.rel_list := LISTS.create(NIL);
+    program.imp_list := LISTS.create(NIL);
+    program.exp_list := LISTS.create(NIL)
+
+    RETURN program
+END create;
+
+
+PROCEDURE SetParams* (program: PROGRAM; bss, stack: INTEGER; vmajor, vminor: WCHAR);
+BEGIN
+    program.bss := bss;
+    program.stack := stack;
+    program.vmajor := vmajor;
+    program.vminor := vminor;
+END SetParams;
+
+
+PROCEDURE PutReloc* (program: PROGRAM; opcode: INTEGER);
+VAR
+    cmd: RELOC;
+
+BEGIN
+    NEW(cmd);
+    cmd.opcode := opcode;
+    cmd.offset := program.ccount;
+    program.rel_list.push(program.rel_list, cmd)
+END PutReloc;
+
+
+PROCEDURE PutData* (program: PROGRAM; b: BYTE);
+BEGIN
+    program.data[program.dcount] := b;
+    INC(program.dcount)
+END PutData;
+
+
+PROCEDURE PutData32* (program: PROGRAM; i: INTEGER);
+BEGIN
+    SYSTEM.PUT(SYSTEM.ADR(program.data[program.dcount]), i);
+    INC(program.dcount, 4)
+END PutData32;
+
+
+PROCEDURE PutDataStr* (program: PROGRAM; s: ARRAY OF CHAR);
+VAR
+    i: INTEGER;
+
+BEGIN
+    i := 0;
+    WHILE s[i] # 0X DO
+        program.data[program.dcount] := ORD(s[i]);
+        INC(program.dcount);
+        INC(i)
+    END
+END PutDataStr;
+
+
+PROCEDURE PutCode* (program: PROGRAM; b: BYTE);
+BEGIN
+    program.code[program.ccount] := b;
+    INC(program.ccount)
+END PutCode;
+
+
+PROCEDURE PutCode32* (program: PROGRAM; i: INTEGER);
+BEGIN
+    SYSTEM.PUT(SYSTEM.ADR(program.code[program.ccount]), i);
+    INC(program.ccount, 4)
+END PutCode32;
+
+
+PROCEDURE SetLabel* (program: PROGRAM; label: INTEGER);
+BEGIN
+    program.labels[label] := program.ccount
+END SetLabel;
+
+
+PROCEDURE Import* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
+VAR
+    imp: IMPRT;
+
+BEGIN
+    NEW(imp);
+    imp.nameoffs := program.dcount;
+    imp.label := label;
+    program.imp_list.push(program.imp_list, imp);
+    PutDataStr(program, name);
+    PutData(program, 0)
+END Import;
+
+
+PROCEDURE Export* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
+VAR
+    exp: EXPRT;
+
+BEGIN
+    NEW(exp);
+    exp.nameoffs := program.dcount;
+    exp.label := label;
+    program.exp_list.push(program.exp_list, exp);
+    PutDataStr(program, name);
+    PutData(program, 0)
+END Export;
+
+
+PROCEDURE write* (program: PROGRAM; fname: ARRAY OF CHAR);
+
+CONST
+
+    ALIGN = 1024;
+
+
+VAR
+
+    cmd:    RELOC;
+    imp:    IMPRT;
+    exp:    EXPRT;
+    nproc:  INTEGER;
+    L:      INTEGER;
+    ip:     INTEGER;
+    offs:   INTEGER;
+
+    File:   UTILS.FILE;
+
+    header: HEADER;
+
+    nreloc: INTEGER;
+
+    n, d:   INTEGER;
+    
+
+    PROCEDURE error;
+    BEGIN
+        UTILS.OutString("writing file error"); UTILS.OutLn;
+        UTILS.exit(1)
+    END error;
+    
+    
+    PROCEDURE Write (File: UTILS.FILE; adr, bytes: INTEGER): INTEGER;
+    VAR
+        n: INTEGER;
+
+    BEGIN
+        n := UTILS.Write(File, adr, bytes);
+        IF n # bytes THEN
+            error
+        END
+        
+        RETURN n
+    END Write;
+
+
+    PROCEDURE WriteInt (File: UTILS.FILE; n: INTEGER);
+    BEGIN
+        n := Write(File, SYSTEM.ADR(n), SYSTEM.SIZE(DWORD))
+    END WriteInt;
+
+
+    PROCEDURE WriteByte (File: UTILS.FILE; n: BYTE);
+    BEGIN
+        n := Write(File, SYSTEM.ADR(n), 1)
+    END WriteByte;
+
+
+    PROCEDURE WriteSection (File: UTILS.FILE; section: SECTION);
+    BEGIN
+        WriteInt(File, section.id);
+        WriteInt(File, section.offset);
+        WriteInt(File, section.size);
+    END WriteSection;
+
+
+    PROCEDURE WriteZeroes (File: UTILS.FILE; n: INTEGER);
+    BEGIN
+        WHILE n > 0 DO
+            WriteByte(File, 0);
+            DEC(n)
+        END
+    END WriteZeroes;
+
+
+    PROCEDURE align (n, _align: INTEGER): INTEGER;
+    BEGIN
+        IF n MOD _align # 0 THEN
+            n := n + _align - (n MOD _align)
+        END
+
+        RETURN n
+    END align;
+
+
+BEGIN
+
+    nproc := 0;
+    imp := program.imp_list.first(IMPRT);
+    WHILE imp # NIL DO
+        IF imp.label # 0 THEN
+            program.labels[imp.label] := nproc;
+            INC(nproc)
+        END;
+        imp := imp.next(IMPRT)
+    END;
+
+    nreloc := 0;
+    cmd := program.rel_list.first(RELOC);
+    WHILE cmd # NIL DO
+
+        IF cmd.opcode = 1 THEN
+            ip := cmd.offset + SYSTEM.ADR(program.code[0]);
+            SYSTEM.GET(ip, L);
+            SYSTEM.PUT(ip, program.labels[L] - cmd.offset - 4)
+        ELSIF cmd.opcode = 2 THEN
+            ip := cmd.offset + SYSTEM.ADR(program.code[0]);
+            SYSTEM.GET(ip, L);
+            SYSTEM.PUT(ip, program.labels[L]);
+            INC(nreloc)
+        ELSE
+            INC(nreloc)
+        END;
+
+        cmd := cmd.next(RELOC)
+    END;
+
+    header.bss := program.bss;
+    header.stack := program.stack;
+    header.vmajor := program.vmajor;
+    header.vminor := program.vminor;
+    header.nsections := 5;
+
+    offs := ALIGN;
+
+    header.text.id := stext;
+    header.text.offset := offs;
+    header.text.size := program.ccount;
+
+    offs := offs + header.text.size;
+    offs := align(offs, ALIGN);
+
+    header.data.id := sdata;
+    header.data.offset := offs;
+    header.data.size := program.dcount;
+
+    offs := offs + header.data.size;
+    offs := align(offs, ALIGN);
+
+    header.import.id := simport;
+    header.import.offset := offs;
+    header.import.size := (program.imp_list.count(program.imp_list) + 1) * 2 * SYSTEM.SIZE(DWORD);
+
+    offs := offs + header.import.size;
+    offs := align(offs, ALIGN);
+    
+    header.export.id := sexport;
+    header.export.offset := offs;
+    header.export.size := (program.exp_list.count(program.exp_list) + 1) * 2 * SYSTEM.SIZE(DWORD);
+
+    offs := offs + header.export.size;
+    offs := align(offs, ALIGN);
+
+    header.reloc.id := sreloc;
+    header.reloc.offset := offs;
+    header.reloc.size := (nreloc + 1) * 2 * SYSTEM.SIZE(DWORD);
+    
+
+    File := UTILS.fcreate(fname); 
+    IF File = NIL THEN
+        error
+    END;
+
+    n := Write(File, SYSTEM.ADR(header), SYSTEM.SIZE(HEADER));
+
+    WriteZeroes(File, ALIGN - n);
+
+    n := Write(File, SYSTEM.ADR(program.code[0]), program.ccount);
+    d := n;    
+    d := align(d, ALIGN);
+    WriteZeroes(File, d - n);
+
+    n := Write(File, SYSTEM.ADR(program.data[0]), program.dcount);
+    d := n;       
+    d := align(d, ALIGN);
+    WriteZeroes(File, d - n);
+
+    imp := program.imp_list.first(IMPRT);
+    WHILE imp # NIL DO
+        WriteInt(File, imp.nameoffs);
+        WriteInt(File, ORD(imp.label # 0));
+        imp := imp.next(IMPRT)
+    END;
+    WriteInt(File, 0);
+    WriteInt(File, 0);
+    d := header.import.size;
+    d := align(d, ALIGN);
+    WriteZeroes(File, d - header.import.size);
+    
+    exp := program.exp_list.first(EXPRT);
+    WHILE exp # NIL DO
+        WriteInt(File, exp.nameoffs);
+        WriteInt(File, program.labels[exp.label]);
+        exp := exp.next(EXPRT)
+    END;
+    WriteInt(File, 0);
+    WriteInt(File, 0);
+    d := header.export.size;
+    d := align(d, ALIGN);
+    WriteZeroes(File, d - header.export.size);
+
+    cmd := program.rel_list.first(RELOC);
+    WHILE cmd # NIL DO
+
+        IF cmd.opcode # 1 THEN
+            WriteInt(File, cmd.opcode);
+            WriteInt(File, cmd.offset)
+        END;
+
+        cmd := cmd.next(RELOC)
+    END;
+    WriteInt(File, 0);
+    WriteInt(File, 0);
+    d := header.reloc.size; 
+    d := align(d, ALIGN);
+    WriteZeroes(File, d - header.reloc.size);
+
+    UTILS.fclose(File)
+
+END write;
+
+
+END BIN.
