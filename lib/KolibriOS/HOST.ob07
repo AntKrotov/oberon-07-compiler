@@ -15,8 +15,8 @@ CONST
 
     slash* = "/";
 
-    MAX_PARAM = 1024; 
-    
+    MAX_PARAM = 1024;
+
     SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
@@ -215,7 +215,7 @@ BEGIN
     END
 
     RETURN res2
-END Write;     
+END Write;
 
 
 PROCEDURE Seek (F: FS; Offset, Origin: INTEGER): INTEGER;
@@ -327,7 +327,7 @@ BEGIN
     fs := Open(FName);
     SYSTEM.GET(SYSTEM.ADR(fs), res)
     RETURN res
-END FileOpen; 
+END FileOpen;
 
 
 PROCEDURE FileSeek* (F, Offset, Origin: INTEGER): INTEGER;
@@ -472,7 +472,49 @@ END GetCurrentDirectory;
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
     RETURN path[0] # slash
-END isRelative;
+END isRelative;   
+
+
+PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
+VAR
+    date, time: INTEGER;
+
+BEGIN
+    date  := K.sysfunc1(29);
+    time  := K.sysfunc1(3);
+
+    year  := date MOD 16;
+    date  := date DIV 16;
+    year  := (date MOD 16) * 10 + year;
+    date  := date DIV 16;
+
+    month := date MOD 16;
+    date  := date DIV 16;
+    month := (date MOD 16) * 10 + month;
+    date  := date DIV 16;
+
+    day   := date MOD 16;
+    date  := date DIV 16;
+    day   := (date MOD 16) * 10 + day;
+    date  := date DIV 16;
+
+    hour  := time MOD 16;
+    time  := time DIV 16;
+    hour  := (time MOD 16) * 10 + hour;
+    time  := time DIV 16;
+
+    min   := time MOD 16;
+    time  := time DIV 16;
+    min   := (time MOD 16) * 10 + min;
+    time  := time DIV 16;
+
+    sec   := time MOD 16;
+    time  := time DIV 16;
+    sec   := (time MOD 16) * 10 + sec;
+    time  := time DIV 16;
+
+    year := year + 2000
+END now;
 
 
 BEGIN
