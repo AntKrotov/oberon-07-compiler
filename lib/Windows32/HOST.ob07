@@ -20,8 +20,8 @@ CONST
 
     MAX_PARAM = 1024;
 
-    SW_SHOW = 5; 
-    
+    SW_SHOW = 5;
+
     SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
@@ -58,7 +58,21 @@ TYPE
         lpSecurityDescriptor:  INTEGER;
         bInheritHandle:        INTEGER
 
+    END;  
+    
+    TSystemTime = RECORD
+
+        Year,
+        Month,
+        DayOfWeek,
+        Day,
+        Hour,
+        Min,
+        Sec,
+        MSec:  WCHAR
+
     END;
+    
 
 
 VAR
@@ -107,7 +121,10 @@ PROCEDURE [winapi, "shell32.dll", "ShellExecuteA"]
     ShellExecute* (hWnd, Operation, FileName, Parameters, Directory, ShowCmd: INTEGER): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "SetFilePointer"]
-    SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER;
+    SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER; 
+
+PROCEDURE [winapi, "kernel32.dll", "GetSystemTime"]
+    GetSystemTime (T: TSystemTime);
 
 
 PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
@@ -282,7 +299,22 @@ END letter;
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
     RETURN ~(letter(path[0]) & (path[1] = ":"))
-END isRelative;
+END isRelative; 
+
+
+PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
+VAR
+    T: TSystemTime;
+
+BEGIN
+    GetSystemTime(T);
+    year  := ORD(T.Year);
+    month := ORD(T.Month);
+    day   := ORD(T.Day);
+    hour  := ORD(T.Hour);
+    min   := ORD(T.Min);
+    sec   := ORD(T.Sec)
+END now;
 
 
 BEGIN
