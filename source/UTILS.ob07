@@ -7,7 +7,7 @@
 
 MODULE UTILS;
 
-IMPORT SYSTEM, HOST, STRINGS;
+IMPORT SYSTEM, HOST, STRINGS, UNIXTIME;
 
 
 CONST
@@ -17,11 +17,13 @@ CONST
     OS* = HOST.OS;
 
     tarCON* = 1; tarGUI* = 2; tarDLL* = 3; tarKOS* = 4; tarOBJ* = 5;
-    
+
+    vMajor* = 0; vMinor* = 85;
+
     PATHLEN = 2048;
 
 
-TYPE 
+TYPE
 
     PATH* = ARRAY PATHLEN OF CHAR;
 
@@ -286,6 +288,15 @@ BEGIN
 END OutInt;
 
 
+PROCEDURE OutInt2* (n: INTEGER);
+BEGIN
+    IF n < 10 THEN
+        OutString("0")
+    END;
+    OutInt(n)
+END OutInt2;
+
+
 PROCEDURE OutLn*;
 BEGIN
     HOST.OutChar(0DX);
@@ -424,6 +435,16 @@ BEGIN
 
     RETURN j
 END Utf8To16;
+
+
+PROCEDURE unixtime* (): INTEGER;
+VAR
+    year, month, day, hour, min, sec: INTEGER;
+
+BEGIN
+    HOST.now(year, month, day, hour, min, sec)
+    RETURN UNIXTIME.time(year, month, day, hour, min, sec)
+END unixtime;
 
 
 PROCEDURE init* (bit_depth: INTEGER);

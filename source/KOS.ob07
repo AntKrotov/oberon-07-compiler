@@ -1,0 +1,198 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE KOS;
+
+IMPORT BIN, UTILS, SYSTEM;
+
+
+TYPE
+
+    HEADER = RECORD
+
+        menuet01: ARRAY 8 OF CHAR;
+        ver, start, size, mem, sp, param, path: INTEGER 
+
+    END; 
+    
+    
+PROCEDURE align (n, _align: INTEGER): INTEGER;
+BEGIN
+    IF n MOD _align # 0 THEN
+        n := n + _align - (n MOD _align)
+    END
+
+    RETURN n
+END align; 
+
+
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);  
+
+CONST
+
+    PARAM_SIZE = 2048;
+    SIZE_OF_DWORD = 4;  
+    FileAlignment = 16;
+
+    
+TYPE
+
+    WORD  = WCHAR;
+    DWORD = INTEGER;
+
+
+VAR
+    header: HEADER;
+    
+    base, text, data, idata, bss: INTEGER;
+    
+    libcount: INTEGER;
+    import:   BIN.IMPRT; 
+    
+    ImportTable: ARRAY 2000 OF INTEGER; i: INTEGER;
+    procoffs: INTEGER; 
+    
+    reloc:   BIN.RELOC;
+    iproc:   BIN.IMPRT;
+    L:       INTEGER;  
+    
+    File: UTILS.FILE; pos: INTEGER;
+    
+    
+    PROCEDURE error;
+    BEGIN
+        UTILS.OutString("writing file error"); UTILS.OutLn;
+        UTILS.exit(1)
+    END error;
+
+
+    PROCEDURE Write (File: UTILS.FILE; adr, bytes: INTEGER): INTEGER;
+    VAR
+        n: INTEGER;
+
+    BEGIN
+        n := UTILS.Write(File, adr, bytes);
+        IF n # bytes THEN
+            error
+        END
+
+        RETURN n
+    END Write;
+
+
+    PROCEDURE WriteByte (File: UTILS.FILE; n: BYTE);
+    BEGIN
+        n := Write(File, SYSTEM.ADR(n), 1)
+    END WriteByte;
+
+
+    PROCEDURE FileAlign (File: UTILS.FILE; VAR pos: INTEGER);
+    VAR
+        i: INTEGER;
+
+    BEGIN
+        i   := pos;
+        pos := align(pos, FileAlignment);
+        i   := pos - i;
+        WHILE i > 0 DO
+            WriteByte(File, 0);
+            DEC(i)
+        END
+    END FileAlign;
+
+
+BEGIN             
+    base := 0; 
+    
+    text  := base + SYSTEM.SIZE(HEADER);
+    data  := align(text + program.ccount, FileAlignment);
+    idata := align(data + program.dcount, FileAlignment);
+                    
+    libcount  := 0;
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label = 0 THEN
+            INC(libcount)
+        END;
+        import := import.next(BIN.IMPRT)
+    END; 
+    
+    procoffs := libcount * 2 + 2;
+             
+    i := 0;
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO    
+
+        IF import.label = 0 THEN 
+            ImportTable[procoffs] := 0;
+            INC(procoffs);
+            ImportTable[i] := idata + procoffs * 4;
+            INC(i);
+            ImportTable[i] := import.nameoffs + data;
+            INC(i)
+        ELSE
+            ImportTable[procoffs] := import.nameoffs + data;
+            import.label := procoffs;
+            INC(procoffs)
+        END;            
+
+        import := import.next(BIN.IMPRT)
+    END;    
+    ImportTable[procoffs] := 0;
+    ImportTable[i] := 0;
+    ImportTable[i + 1] := 0;
+    
+    bss := align(idata + (procoffs + 1) * 4, FileAlignment);
+
+    header.menuet01 := "MENUET0";
+    header.menuet01[7] := "1";
+    header.ver := 1;
+    header.start := text;
+    header.size := idata + (procoffs + 1) * 4 - base;
+    header.mem := align(header.size + program.stack + program.bss + PARAM_SIZE * 2 + 4096, FileAlignment);
+    header.sp  := base + header.mem - PARAM_SIZE * 2;
+    header.param := header.sp;
+    header.path := header.param + PARAM_SIZE; 
+    
+    
+    reloc := program.rel_list.first(BIN.RELOC);
+    WHILE reloc # NIL DO  
+    
+        L := BIN.get32le(program.code, reloc.offset);
+
+        CASE reloc.opcode OF
+        |1:
+        |2:
+            iproc := BIN.GetIProc(program, L);
+            BIN.put32le(program.code, reloc.offset, idata + iproc.label * 4)
+
+        |3: BIN.put32le(program.code, reloc.offset, L + bss)
+        |4: BIN.put32le(program.code, reloc.offset, L + data)
+        |5: BIN.put32le(program.code, reloc.offset, L + text)
+        |6: BIN.put32le(program.code, reloc.offset, idata)
+        END;
+
+        reloc := reloc.next(BIN.RELOC)
+    END;
+    
+    File := UTILS.fcreate(FileName); 
+          
+    pos := Write(File, SYSTEM.ADR(header), SYSTEM.SIZE(HEADER));
+    pos := pos + Write(File, SYSTEM.ADR(program.code[0]), program.ccount);
+    FileAlign(File, pos);
+
+    pos := pos + Write(File, SYSTEM.ADR(program.data[0]), program.dcount);
+    FileAlign(File, pos);
+    
+    pos := pos + Write(File, SYSTEM.ADR(ImportTable), (procoffs + 1) * 4);
+
+    UTILS.fclose(File)
+
+END write;
+
+
+END KOS.

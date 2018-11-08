@@ -2986,97 +2986,6 @@ BEGIN
 END Target;
 
 
-PROCEDURE fasm (FileName, ext, Fasm: ARRAY OF CHAR): INTEGER;
-VAR
-    params: PARS.PATH;
-
-    fpath:  PARS.PATH;
-    fname:  PARS.PATH;
-    fext:   PARS.PATH;
-
-BEGIN
-    params := "";
-
-    IF UTILS.OS = "WIN" THEN
-        params[0] := '"';
-        STRINGS.append(params, FileName);
-        STRINGS.append(params, '"');
-        STRINGS.append(params, ' ');
-        STRINGS.append(params, '"');
-
-        UTILS.split(FileName, fpath, fname, fext);
-
-        STRINGS.append(params, fpath);
-        STRINGS.append(params, fname);
-        STRINGS.append(params, ext);
-
-        STRINGS.append(params, '"')
-
-    ELSIF UTILS.OS = "KOS" THEN
-        UTILS.split(FileName, fpath, fname, fext);
-
-        STRINGS.append(params, fname);
-        STRINGS.append(params, fext);
-        STRINGS.append(params, ",");
-        STRINGS.append(params, fname);
-        STRINGS.append(params, ext);
-        STRINGS.append(params, ",");
-        STRINGS.append(params, fpath)
-
-    END
-
-    RETURN UTILS.exec(Fasm, params)
-END fasm;
-
-
-PROCEDURE ParseIni (FileName: PARS.PATH; VAR ini: INI_STRUCT);
-VAR
-    Scanner: SCAN.SCANNER;
-    lex:     SCAN.LEX;
-    error:   BOOLEAN;
-
-BEGIN
-
-    ini.FasmWin := "";
-    ini.FasmKOS := "";
-
-    Scanner := SCAN.open(FileName);
-
-    error := Scanner = NIL;
-
-    IF ~error THEN
-
-        REPEAT
-            Scanner.getlex(Scanner, lex);
-            IF lex.s = "_fasm_win" THEN
-                Scanner.getlex(Scanner, lex);
-                IF lex.typ = SCAN.lxSTRING THEN
-                    ini.FasmWin := lex.s
-                ELSE
-                    error := TRUE
-                END
-            ELSIF lex.s = "_fasm_kos" THEN
-                Scanner.getlex(Scanner, lex);
-                IF lex.typ = SCAN.lxSTRING THEN
-                    ini.FasmKOS := lex.s
-                ELSE
-                    error := TRUE
-                END
-            ELSIF lex.typ = SCAN.lxEOF THEN
-
-            ELSIF lex.typ < 0 THEN
-                error := TRUE
-            ELSE
-                error := TRUE
-            END
-        UNTIL (lex.typ = SCAN.lxEOF) OR error;
-
-        SCAN.close(Scanner)
-    END
-
-END ParseIni;
-
-
 PROCEDURE main;
 VAR
     parser:   PARS.PARSER;
@@ -3091,11 +3000,6 @@ VAR
     param:    PARS.PATH;
     temp:     PARS.PATH;
 
-    Ini:      PARS.PATH;
-    Fasm:     SCAN.LEXSTR;
-
-    FasmId:   INTEGER;
-
     target:   INTEGER;
     time:     INTEGER;
 
@@ -3103,27 +3007,14 @@ VAR
     minor:    INTEGER;
     stack:    INTEGER;
 
-    ini:      INI_STRUCT;
-
 BEGIN
-
-    Fasm := "";
 
     UTILS.GetCurrentDirectory(app_path);
     lib_path := app_path;
 
-    Ini := lib_path;
-    STRINGS.append(Ini, "Compiler.ini");
-    ParseIni(Ini, ini);
-    IF UTILS.OS = "WIN" THEN
-        Fasm := ini.FasmWin
-    ELSIF UTILS.OS = "KOS" THEN
-        Fasm := ini.FasmKOS
-    END;
-
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
-        UTILS.OutString("Akron Oberon-07/16 Compiler v0.83"); UTILS.OutLn;
+        UTILS.OutString("Akron Oberon-07/16 Compiler v"); UTILS.OutInt(UTILS.vMajor); UTILS.OutString("."); UTILS.OutInt2(UTILS.vMinor); UTILS.OutLn;
         UTILS.OutString("Usage: Compiler <inputfile> <outputfile> <target> [stack size (Mb)]"); UTILS.OutLn;
         UTILS.OutString("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); UTILS.OutLn;
         UTILS.exit(1)
@@ -3155,6 +3046,11 @@ BEGIN
     END;
 
     target := Target(param);
+    IF target = UTILS.tarOBJ THEN
+        UTILS.OutString("'obj' not supported yet"); UTILS.OutLn;
+        UTILS.exit(1)
+    END;
+
     IF target = 0 THEN
         UTILS.OutString("bad parameter <target>"); UTILS.OutLn;
         UTILS.exit(1)
@@ -3241,36 +3137,12 @@ BEGIN
 
     CODE.codes.gsize := PARS.program.gsize;
 
-    IF X86.CodeGen(CODE.codes, outname, modname, target, stack, major * 65536 + minor) THEN
-        UTILS.OutString("success"); UTILS.OutLn;
-        time := UTILS.GetTickCount() - UTILS.time;
-        UTILS.OutString("elapsed time = "); UTILS.OutInt(time DIV 100); UTILS.OutString(".");
-        time := time MOD 100;
-        IF time < 10 THEN
-            UTILS.OutString("0")
-        END;
-        UTILS.OutInt(time); UTILS.OutString(" sec"); UTILS.OutLn
-    ELSE
-        UTILS.OutString("writing file error"); UTILS.OutLn;
-        UTILS.exit(1)
-    END;
+    X86.CodeGen(CODE.codes, outname, target, stack, major * 65536 + minor);
+    UTILS.OutString("success"); UTILS.OutLn;
+    time := UTILS.GetTickCount() - UTILS.time;
+    UTILS.OutString("elapsed time "); UTILS.OutInt(time DIV 100); UTILS.OutString("."); UTILS.OutInt2(time MOD 100); UTILS.OutString(" sec"); UTILS.OutLn;
 
-    CASE target OF
-    |UTILS.tarCON,
-     UTILS.tarGUI: ext := ".exe"
-    |UTILS.tarDLL: ext := ".dll"
-    |UTILS.tarOBJ: ext := ".obj"
-    |UTILS.tarKOS: ext := ".kex"
-    END;
-
-    IF Fasm # "" THEN
-        FasmId := fasm(outname, ext, Fasm);
-        IF FasmId = 0 THEN
-            UTILS.OutString("can't execute FASM"); UTILS.OutLn;
-            UTILS.exit(1)
-        END
-    END
-
+    UTILS.exit(0)
 END main;
 
 

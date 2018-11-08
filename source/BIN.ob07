@@ -7,73 +7,52 @@
 
 MODULE BIN;
 
-IMPORT SYSTEM, LISTS, UTILS;
-
-
-CONST
-
-    stext    = 0;
-    sdata    = 1;
-    simport  = 2;
-    sexport  = 3;
-    sreloc   = 4; 
+IMPORT LISTS, UTILS;
 
 
 TYPE
 
-    DWORD = INTEGER;
+    RELOC* = POINTER TO RECORD (LISTS.ITEM)
 
-    RELOC = POINTER TO RECORD (LISTS.ITEM)
-
-        opcode: INTEGER;
-        offset: INTEGER
+        opcode*: INTEGER;
+        offset*: INTEGER
 
     END;
 
-    IMPRT = POINTER TO RECORD (LISTS.ITEM)
+    IMPRT* = POINTER TO RECORD (LISTS.ITEM)
 
-        nameoffs: INTEGER;
-        label:    INTEGER
+        nameoffs*: INTEGER;
+        label*:    INTEGER;
+
+        OriginalFirstThunk*,
+        FirstThunk*: INTEGER
 
     END;
-    
-    EXPRT = POINTER TO RECORD (LISTS.ITEM)
 
-        nameoffs: INTEGER;
-        label:    INTEGER
+    EXPRT* = POINTER TO RECORD (LISTS.ITEM)
+
+        nameoffs*: INTEGER;
+        label*:    INTEGER
 
     END;
 
     PROGRAM* = POINTER TO RECORD
 
-        code:      ARRAY 2000000 OF BYTE;     ccount: INTEGER;
-        data:      ARRAY 1000000 OF BYTE;     dcount: INTEGER;
-        labels*:   ARRAY  100000 OF INTEGER;
-        bss:       INTEGER;
-        stack:     INTEGER;
-        vmajor,
-        vminor:    WCHAR;
+        code*:      ARRAY 2000000 OF BYTE;     ccount*: INTEGER;
+        data*:      ARRAY 1000000 OF BYTE;     dcount*: INTEGER;
+        labels*:    ARRAY  100000 OF INTEGER;
+        bss*:       INTEGER;
+        stack*:     INTEGER;
+        vmajor*,
+        vminor*:    WCHAR;
 
-        rel_list:  LISTS.LIST;
-        imp_list:  LISTS.LIST;
-        exp_list:  LISTS.LIST
+        modname*,
+        import*,
+        export*:    INTEGER;
 
-    END;
-
-
-    SECTION = RECORD
-
-        id, offset, size: INTEGER
-
-    END;
-
-    HEADER = RECORD
-
-        bss, stack: INTEGER;
-        vmajor, vminor: WCHAR;
-        rsrvd1, rsrvd2: INTEGER;
-        nsections: INTEGER;
-        text, data, import, reloc, export: SECTION
+        rel_list*:  LISTS.LIST;
+        imp_list*:  LISTS.LIST;
+        exp_list*:  LISTS.LIST
 
     END;
 
@@ -82,6 +61,7 @@ PROCEDURE create* (): PROGRAM;
 VAR
     program: PROGRAM;
     i: INTEGER;
+    empty: EXPRT;
 
 BEGIN
     NEW(program);
@@ -96,7 +76,13 @@ BEGIN
 
     program.rel_list := LISTS.create(NIL);
     program.imp_list := LISTS.create(NIL);
-    program.exp_list := LISTS.create(NIL)
+    program.exp_list := LISTS.create(NIL);
+
+    NEW(empty);
+    empty.label := 0;
+    empty.nameoffs := LEN(program.data) - 1;
+    program.data[LEN(program.data) - 1] := 0;
+    program.exp_list.push(program.exp_list, empty)
 
     RETURN program
 END create;
@@ -104,10 +90,10 @@ END create;
 
 PROCEDURE SetParams* (program: PROGRAM; bss, stack: INTEGER; vmajor, vminor: WCHAR);
 BEGIN
-    program.bss := bss;
-    program.stack := stack;
+    program.bss    := bss;
+    program.stack  := stack;
     program.vmajor := vmajor;
-    program.vminor := vminor;
+    program.vminor := vminor
 END SetParams;
 
 
@@ -130,11 +116,49 @@ BEGIN
 END PutData;
 
 
-PROCEDURE PutData32* (program: PROGRAM; i: INTEGER);
+PROCEDURE Byte (n: INTEGER): BYTE;
+    RETURN ORD(BITS(n) * {0..7})
+END Byte;
+
+
+PROCEDURE get32le* (array: ARRAY OF BYTE; idx: INTEGER): INTEGER;
+VAR
+    b: BYTE;
+    i: INTEGER;
+    x: INTEGER;
+
 BEGIN
-    SYSTEM.PUT(SYSTEM.ADR(program.data[program.dcount]), i);
+    x := 0;
+
+    FOR i := 3 TO 0 BY -1 DO
+        b := array[idx + i];
+        x := LSL(x, 8) + b
+    END;
+
+    IF UTILS.native.bit_depth = 64 THEN
+        x := ASR(LSL(x, 32), 32)
+    END
+
+    RETURN x
+END get32le;
+
+
+PROCEDURE put32le* (VAR array: ARRAY OF BYTE; idx: INTEGER; x: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO 3 DO
+        array[idx + i] := Byte(LSR(x, i * 8))
+    END
+END put32le;
+
+
+PROCEDURE PutData32LE* (program: PROGRAM; i: INTEGER);
+BEGIN
+    put32le(program.data, program.dcount, i);
     INC(program.dcount, 4)
-END PutData32;
+END PutData32LE;
 
 
 PROCEDURE PutDataStr* (program: PROGRAM; s: ARRAY OF CHAR);
@@ -158,11 +182,11 @@ BEGIN
 END PutCode;
 
 
-PROCEDURE PutCode32* (program: PROGRAM; i: INTEGER);
+PROCEDURE PutCode32LE* (program: PROGRAM; i: INTEGER);
 BEGIN
-    SYSTEM.PUT(SYSTEM.ADR(program.code[program.ccount]), i);
+    put32le(program.code, program.ccount, i);
     INC(program.ccount, 4)
-END PutCode32;
+END PutCode32LE;
 
 
 PROCEDURE SetLabel* (program: PROGRAM; label: INTEGER);
@@ -176,114 +200,93 @@ VAR
     imp: IMPRT;
 
 BEGIN
+    PutData(program, 0);
+    PutData(program, 0);
+    IF ODD(program.dcount) THEN
+        PutData(program, 0)
+    END;
+
     NEW(imp);
     imp.nameoffs := program.dcount;
     imp.label := label;
     program.imp_list.push(program.imp_list, imp);
+
     PutDataStr(program, name);
-    PutData(program, 0)
+    PutData(program, 0);
 END Import;
+
+
+PROCEDURE less (program: PROGRAM; a, b: EXPRT): BOOLEAN;
+VAR
+    i, j: INTEGER;
+
+BEGIN
+    i := a.nameoffs;
+    j := b.nameoffs;
+
+    WHILE (program.data[i] # 0) & (program.data[j] # 0) & (program.data[i] = program.data[j]) DO
+        INC(i);
+        INC(j)
+    END
+
+    RETURN program.data[i] < program.data[j]
+END less;
 
 
 PROCEDURE Export* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
-    exp: EXPRT;
+    exp, cur: EXPRT;
 
 BEGIN
     NEW(exp);
     exp.nameoffs := program.dcount;
-    exp.label := label;
-    program.exp_list.push(program.exp_list, exp);
+    exp.label := program.labels[label];
     PutDataStr(program, name);
-    PutData(program, 0)
+    PutData(program, 0);
+
+    cur := program.exp_list.first(EXPRT);
+    WHILE (cur # NIL) & less(program, cur, exp) DO
+        cur := cur.next(EXPRT)
+    END;
+
+    IF cur # NIL THEN
+        cur := cur.prev(EXPRT);
+        program.exp_list.insert(program.exp_list, cur, exp)
+    ELSE
+        program.exp_list.push(program.exp_list, exp)
+    END
+
 END Export;
 
 
-PROCEDURE write* (program: PROGRAM; fname: ARRAY OF CHAR);
-
-CONST
-
-    ALIGN = 1024;
-
-
+PROCEDURE GetIProc* (program: PROGRAM; n: INTEGER): IMPRT;
 VAR
+    import: IMPRT;
+    res:    IMPRT;
 
-    cmd:    RELOC;
+BEGIN
+    import  := program.imp_list.first(IMPRT);
+
+    res := NIL;
+    WHILE (import # NIL) & (n >= 0) DO
+        IF import.label # 0 THEN
+            res := import;
+            DEC(n)
+        END;
+        import := import.next(IMPRT)
+    END;
+
+    ASSERT(n = -1)
+    RETURN res
+END GetIProc;
+
+
+PROCEDURE fixup* (program: PROGRAM);
+VAR
+    rel:    RELOC;
     imp:    IMPRT;
-    exp:    EXPRT;
     nproc:  INTEGER;
     L:      INTEGER;
-    ip:     INTEGER;
-    offs:   INTEGER;
-
-    File:   UTILS.FILE;
-
-    header: HEADER;
-
-    nreloc: INTEGER;
-
-    n, d:   INTEGER;
-    
-
-    PROCEDURE error;
-    BEGIN
-        UTILS.OutString("writing file error"); UTILS.OutLn;
-        UTILS.exit(1)
-    END error;
-    
-    
-    PROCEDURE Write (File: UTILS.FILE; adr, bytes: INTEGER): INTEGER;
-    VAR
-        n: INTEGER;
-
-    BEGIN
-        n := UTILS.Write(File, adr, bytes);
-        IF n # bytes THEN
-            error
-        END
-        
-        RETURN n
-    END Write;
-
-
-    PROCEDURE WriteInt (File: UTILS.FILE; n: INTEGER);
-    BEGIN
-        n := Write(File, SYSTEM.ADR(n), SYSTEM.SIZE(DWORD))
-    END WriteInt;
-
-
-    PROCEDURE WriteByte (File: UTILS.FILE; n: BYTE);
-    BEGIN
-        n := Write(File, SYSTEM.ADR(n), 1)
-    END WriteByte;
-
-
-    PROCEDURE WriteSection (File: UTILS.FILE; section: SECTION);
-    BEGIN
-        WriteInt(File, section.id);
-        WriteInt(File, section.offset);
-        WriteInt(File, section.size);
-    END WriteSection;
-
-
-    PROCEDURE WriteZeroes (File: UTILS.FILE; n: INTEGER);
-    BEGIN
-        WHILE n > 0 DO
-            WriteByte(File, 0);
-            DEC(n)
-        END
-    END WriteZeroes;
-
-
-    PROCEDURE align (n, _align: INTEGER): INTEGER;
-    BEGIN
-        IF n MOD _align # 0 THEN
-            n := n + _align - (n MOD _align)
-        END
-
-        RETURN n
-    END align;
-
 
 BEGIN
 
@@ -297,129 +300,21 @@ BEGIN
         imp := imp.next(IMPRT)
     END;
 
-    nreloc := 0;
-    cmd := program.rel_list.first(RELOC);
-    WHILE cmd # NIL DO
+    rel := program.rel_list.first(RELOC);
+    WHILE rel # NIL DO
 
-        IF cmd.opcode = 1 THEN
-            ip := cmd.offset + SYSTEM.ADR(program.code[0]);
-            SYSTEM.GET(ip, L);
-            SYSTEM.PUT(ip, program.labels[L] - cmd.offset - 4)
-        ELSIF cmd.opcode = 2 THEN
-            ip := cmd.offset + SYSTEM.ADR(program.code[0]);
-            SYSTEM.GET(ip, L);
-            SYSTEM.PUT(ip, program.labels[L]);
-            INC(nreloc)
-        ELSE
-            INC(nreloc)
+        IF rel.opcode = 1 THEN
+            L := get32le(program.code, rel.offset);
+            put32le(program.code, rel.offset, program.labels[L] - rel.offset - 4)
+        ELSIF rel.opcode = 2 THEN
+            L := get32le(program.code, rel.offset);
+            put32le(program.code, rel.offset, program.labels[L])
         END;
 
-        cmd := cmd.next(RELOC)
-    END;
+        rel := rel.next(RELOC)
+    END
 
-    header.bss := program.bss;
-    header.stack := program.stack;
-    header.vmajor := program.vmajor;
-    header.vminor := program.vminor;
-    header.nsections := 5;
-
-    offs := ALIGN;
-
-    header.text.id := stext;
-    header.text.offset := offs;
-    header.text.size := program.ccount;
-
-    offs := offs + header.text.size;
-    offs := align(offs, ALIGN);
-
-    header.data.id := sdata;
-    header.data.offset := offs;
-    header.data.size := program.dcount;
-
-    offs := offs + header.data.size;
-    offs := align(offs, ALIGN);
-
-    header.import.id := simport;
-    header.import.offset := offs;
-    header.import.size := (program.imp_list.count(program.imp_list) + 1) * 2 * SYSTEM.SIZE(DWORD);
-
-    offs := offs + header.import.size;
-    offs := align(offs, ALIGN);
-    
-    header.export.id := sexport;
-    header.export.offset := offs;
-    header.export.size := (program.exp_list.count(program.exp_list) + 1) * 2 * SYSTEM.SIZE(DWORD);
-
-    offs := offs + header.export.size;
-    offs := align(offs, ALIGN);
-
-    header.reloc.id := sreloc;
-    header.reloc.offset := offs;
-    header.reloc.size := (nreloc + 1) * 2 * SYSTEM.SIZE(DWORD);
-    
-
-    File := UTILS.fcreate(fname); 
-    IF File = NIL THEN
-        error
-    END;
-
-    n := Write(File, SYSTEM.ADR(header), SYSTEM.SIZE(HEADER));
-
-    WriteZeroes(File, ALIGN - n);
-
-    n := Write(File, SYSTEM.ADR(program.code[0]), program.ccount);
-    d := n;    
-    d := align(d, ALIGN);
-    WriteZeroes(File, d - n);
-
-    n := Write(File, SYSTEM.ADR(program.data[0]), program.dcount);
-    d := n;       
-    d := align(d, ALIGN);
-    WriteZeroes(File, d - n);
-
-    imp := program.imp_list.first(IMPRT);
-    WHILE imp # NIL DO
-        WriteInt(File, imp.nameoffs);
-        WriteInt(File, ORD(imp.label # 0));
-        imp := imp.next(IMPRT)
-    END;
-    WriteInt(File, 0);
-    WriteInt(File, 0);
-    d := header.import.size;
-    d := align(d, ALIGN);
-    WriteZeroes(File, d - header.import.size);
-    
-    exp := program.exp_list.first(EXPRT);
-    WHILE exp # NIL DO
-        WriteInt(File, exp.nameoffs);
-        WriteInt(File, program.labels[exp.label]);
-        exp := exp.next(EXPRT)
-    END;
-    WriteInt(File, 0);
-    WriteInt(File, 0);
-    d := header.export.size;
-    d := align(d, ALIGN);
-    WriteZeroes(File, d - header.export.size);
-
-    cmd := program.rel_list.first(RELOC);
-    WHILE cmd # NIL DO
-
-        IF cmd.opcode # 1 THEN
-            WriteInt(File, cmd.opcode);
-            WriteInt(File, cmd.offset)
-        END;
-
-        cmd := cmd.next(RELOC)
-    END;
-    WriteInt(File, 0);
-    WriteInt(File, 0);
-    d := header.reloc.size; 
-    d := align(d, ALIGN);
-    WriteZeroes(File, d - header.reloc.size);
-
-    UTILS.fclose(File)
-
-END write;
+END fixup;
 
 
 END BIN.

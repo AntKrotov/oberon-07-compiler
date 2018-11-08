@@ -12,7 +12,6 @@ IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
 
 CONST
 
-    //PATHLEN = 2048;
     EXTLEN  = 10;
 
     eCONST*   =  1;  eTYPE*   =  2;  eVAR*     =  3;  eEXPR*    =  4;
@@ -23,7 +22,7 @@ CONST
 
 TYPE
 
-    PATH* = UTILS.PATH;//ARRAY PATHLEN OF CHAR;
+    PATH* = UTILS.PATH;
 
     EXT* = ARRAY EXTLEN OF CHAR;
 

@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, STRINGS, LISTS, BIN;
+IMPORT CODE, REG, UTILS, STRINGS, LISTS, BIN, PE := PE32, KOS;
 
 
 CONST
@@ -33,17 +33,9 @@ TYPE
 
 VAR
 
-    file:    FILE;
-    eol:     ARRAY 3 OF CHAR;
     error:   BOOLEAN;
 
     R:       REG.REGS;
-
-    r8,
-    r16,
-    r32:     ARRAY N, 4 OF CHAR;
-
-    hexdgts: ARRAY 16 OF CHAR;
 
     stroffs: INTEGER;
 
@@ -74,72 +66,10 @@ PROCEDURE Word (n: INTEGER): INTEGER;
 END Word;
 
 
-PROCEDURE Write (s: ARRAY OF CHAR);
-VAR
-    n: INTEGER;
-
-BEGIN
-    n := LENGTH(s);
-    IF UTILS.fwrite(file, s, n) # n THEN
-        error := TRUE
-    END
-END Write;
-
-
-PROCEDURE WriteLn (s: ARRAY OF CHAR);
-BEGIN
-    Write(s);
-    Write(eol)
-END WriteLn;
-
-
-PROCEDURE NewLine;
-BEGIN
-    Write(eol)
-END NewLine;
-
-
-PROCEDURE WriteHex (i: INTEGER);
-VAR
-    s: ARRAY 11 OF CHAR;
-    k: INTEGER;
-
-BEGIN
-    s := "0x00000000";
-    k := 9;
-    WHILE k > 1 DO
-        s[k] := hexdgts[i MOD 16];
-        i := LSR(i, 4);
-        DEC(k)
-    END;
-    Write(s)
-END WriteHex;
-
-
-PROCEDURE WriteHexLn (i: INTEGER);
-BEGIN
-    WriteHex(i);
-    NewLine
-END WriteHexLn;
-
-
-PROCEDURE WriteByte (i: INTEGER);
-VAR
-    s: ARRAY 5 OF CHAR;
-
-BEGIN
-    s := "0x00";
-    s[2] := hexdgts[i DIV 16];
-    s[3] := hexdgts[i MOD 16];
-    Write(s)
-END WriteByte;
-
-
 PROCEDURE OutByte (n: INTEGER);
 BEGIN
     ASSERT((0 <= n) & (n <= 255));
-    BIN.PutCode(program, n);
-    Write("db "); WriteByte(n); NewLine
+    BIN.PutCode(program, n)
 END OutByte;
 
 
@@ -164,10 +94,7 @@ END OutCode;
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    OutByte(Byte(n));
-    OutByte(Byte(LSR(n, 8)));
-    OutByte(Byte(LSR(n, 16)));
-    OutByte(Byte(LSR(n, 24)))
+    BIN.PutCode32LE(program, n)
 END OutInt;
 
 
@@ -333,31 +260,18 @@ END log2;
 
 PROCEDURE jcc (opcode, label: INTEGER);
 BEGIN
-    CASE opcode OF
-    |je:   Write("je")
-    |jne:  Write("jne")
-    |jl:   Write("jl")
-    |jge:  Write("jge")
-    |jle:  Write("jle")
-    |jg:   Write("jg")
-    |jb:   Write("jb")
-    END;
-    Write(" L"); WriteHexLn(label);
-
     BIN.PutCode(program, 0FH);
-    BIN.PutCode(program, opcode);
+    BIN.PutCode(program, opcode); (* je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; *)
     BIN.PutReloc(program, 1);
-    BIN.PutCode32(program, label)
+    BIN.PutCode32LE(program, label)
 END jcc;
 
 
 PROCEDURE CallRTL (proc: INTEGER);
 BEGIN
-    Write("call L"); WriteHexLn(CODE.codes.rtl[proc]);
-
-    BIN.PutCode(program, 0E8H);
+    BIN.PutCode(program, 0E8H);    //call L
     BIN.PutReloc(program, 1);
-    BIN.PutCode32(program, CODE.codes.rtl[proc])
+    BIN.PutCode32LE(program, CODE.codes.rtl[proc])
 END CallRTL;
 
 
@@ -377,23 +291,20 @@ BEGIN
         CASE cmd.opcode OF
 
         |CODE.opJMP:
-            Write("jmp L"); WriteHexLn(cmd.label);
-            BIN.PutCode(program, 0E9H);
+            BIN.PutCode(program, 0E9H);     //jmp L
             BIN.PutReloc(program, 1);
-            BIN.PutCode32(program, cmd.label)
+            BIN.PutCode32LE(program, cmd.label)
 
         |CODE.opCALL:
-            Write("call L"); WriteHexLn(cmd.label);
-            BIN.PutCode(program, 0E8H);
+            BIN.PutCode(program, 0E8H);             //call L
             BIN.PutReloc(program, 1);
-            BIN.PutCode32(program, cmd.label)
+            BIN.PutCode32LE(program, cmd.label)
 
         |CODE.opCALLI:
-            Write("call dword[L"); WriteHex(cmd.label); WriteLn("]");
-            BIN.PutCode(program, 0FFH);
+            BIN.PutCode(program, 0FFH);   //call dword[L]
             BIN.PutCode(program, 015H);
             BIN.PutReloc(program, 2);
-            BIN.PutCode32(program, cmd.label)
+            BIN.PutCode32LE(program, cmd.label)
 
         |CODE.opCALLP:
             REG.UnOp(R, reg1);
@@ -515,30 +426,27 @@ BEGIN
 
         |CODE.opLABEL,
          CODE.opPROC:
-            Write("L"); WriteHex(cmd.param); WriteLn(":");
-            BIN.SetLabel(program, cmd.param)
+            BIN.SetLabel(program, cmd.param) //L:
 
         |CODE.opNOP:
 
         |CODE.opGADR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                Write("mov dword[_bss+"); WriteHex(cmd.param); Write("],"); WriteHexLn(next.param);
-
+                //mov dword[_bss+cmd.param],next.param
                 BIN.PutCode(program, 0C7H);
                 BIN.PutCode(program,  05H);
                 BIN.PutReloc(program, 3);
-                BIN.PutCode32(program, cmd.param);
-                BIN.PutCode32(program, next.param);
+                BIN.PutCode32LE(program, cmd.param);
+                BIN.PutCode32LE(program, next.param);
 
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",_bss+"); WriteHexLn(cmd.param);
-
+                //mov reg1,_bss+cmd.param
                 BIN.PutCode(program, 0B8H + reg1);
                 BIN.PutReloc(program, 3);
-                BIN.PutCode32(program, cmd.param);
+                BIN.PutCode32LE(program, cmd.param);
 
             END
 
@@ -573,20 +481,18 @@ BEGIN
         |CODE.opSADR:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                Write("push _data+"); WriteHexLn(stroffs + cmd.param);
-
+                //push _data + stroffs + cmd.param
                 BIN.PutCode(program, 068H);
                 BIN.PutReloc(program, 4);
-                BIN.PutCode32(program, stroffs + cmd.param);
+                BIN.PutCode32LE(program, stroffs + cmd.param);
 
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",_data+"); WriteHexLn(stroffs + cmd.param);
-
+                //mov reg1,_data + stroffs + cmd.param
                 BIN.PutCode(program, 0B8H + reg1);
                 BIN.PutReloc(program, 4);
-                BIN.PutCode32(program, stroffs + cmd.param)
+                BIN.PutCode32LE(program, stroffs + cmd.param)
 
             END
 
@@ -615,22 +521,20 @@ BEGIN
         |CODE.opGLOAD32:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                Write("push dword[_bss+"); WriteHex(cmd.param); WriteLn("]");
-
+                //push dword[_bss+cmd.param]
                 BIN.PutCode(program, 0FFH);
                 BIN.PutCode(program, 035H);
                 BIN.PutReloc(program, 3);
-                BIN.PutCode32(program, cmd.param);
+                BIN.PutCode32LE(program, cmd.param);
 
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(r32[reg1]); Write(",dword[_bss+"); WriteHex(cmd.param); WriteLn("]");
-
+                //mov reg1,dword[_bss+cmd.param]
                 BIN.PutCode(program, 08BH);
                 BIN.PutCode(program,  05H + reg1 * 8);
                 BIN.PutReloc(program, 3);
-                BIN.PutCode32(program, cmd.param)
+                BIN.PutCode32LE(program, cmd.param)
             END
 
         |CODE.opLLOAD32:
@@ -669,13 +573,12 @@ BEGIN
 
         |CODE.opGLOAD8:
             reg1 := REG.GetAnyReg(R);
-            Write("movzx "); Write(r32[reg1]); Write(",byte[_bss+"); WriteHex(cmd.param); WriteLn("]");
-
+            //movzx reg1,byte[_bss+cmd.param]
             BIN.PutCode(program, 00FH);
             BIN.PutCode(program, 0B6H);
             BIN.PutCode(program,  05H + reg1 * 8);
             BIN.PutReloc(program, 3);
-            BIN.PutCode32(program, cmd.param)
+            BIN.PutCode32LE(program, cmd.param)
 
         |CODE.opLLOAD8:
             n := cmd.param * 4;
@@ -699,13 +602,12 @@ BEGIN
 
         |CODE.opGLOAD16:
             reg1 := REG.GetAnyReg(R);
-            Write("movzx "); Write(r32[reg1]); Write(",word[_bss+"); WriteHex(cmd.param); WriteLn("]");
-
+            //movzx reg1,word[_bss+cmd.param]
             BIN.PutCode(program, 00FH);
             BIN.PutCode(program, 0B7H);
             BIN.PutCode(program,  05H + reg1 * 8);
             BIN.PutReloc(program, 3);
-            BIN.PutCode32(program, cmd.param)
+            BIN.PutCode32LE(program, cmd.param)
 
         |CODE.opLLOAD16:
             n := cmd.param * 4;
@@ -850,41 +752,39 @@ BEGIN
 
         |CODE.opSAVEP:
             REG.UnOp(R, reg1);
-            Write("mov dword["); Write(r32[reg1]); Write("],L"); WriteHexLn(cmd.param);
-
+            //mov dword[reg1],L
             BIN.PutCode(program, 0C7H);
             BIN.PutCode(program,  reg1);
             BIN.PutReloc(program, 5);
-            BIN.PutCode32(program, program.labels[cmd.param]);
+            BIN.PutCode32LE(program, program.labels[cmd.param]);
 
             reg1 := REG.Drop(R)
 
         |CODE.opSAVEIP:
             REG.UnOp(R, reg1);
-            Write("push dword[L"); WriteHex(cmd.param); WriteLn("]");
-
+            //push dword[L]
             BIN.PutCode(program, 0FFH);
             BIN.PutCode(program, 035H);
             BIN.PutReloc(program, 2);
-            BIN.PutCode32(program, cmd.param);
+            BIN.PutCode32LE(program, cmd.param);
 
             OutByte(8FH); OutByte(reg1); // pop dword[reg1]
             reg1 := REG.Drop(R)
 
         |CODE.opPUSHP:
             reg1 := REG.GetAnyReg(R);
-            Write("mov "); Write(r32[reg1]); Write(",L"); WriteHexLn(cmd.param);
+            //mov reg1,L
             BIN.PutCode(program, 0B8H + reg1);
             BIN.PutReloc(program, 5);
-            BIN.PutCode32(program, program.labels[cmd.param])
+            BIN.PutCode32LE(program, program.labels[cmd.param])
 
         |CODE.opPUSHIP:
             reg1 := REG.GetAnyReg(R);
-            Write("mov "); Write(r32[reg1]); Write(",[L"); WriteHex(cmd.param); WriteLn("]");
+            //mov reg1,[L]
             BIN.PutCode(program, 8BH);
             BIN.PutCode(program, 05H + reg1 * 8);
             BIN.PutReloc(program, 2);
-            BIN.PutCode32(program, cmd.param)
+            BIN.PutCode32LE(program, cmd.param)
 
         |CODE.opNOT:
             REG.UnOp(R, reg1);
@@ -1096,7 +996,6 @@ BEGIN
             jcc(jl, label);
             cmprc(eax, cmd.param2);
             jcc(jle, cmd.label);
-            Write("L"); WriteHex(label); WriteLn(":");
             BIN.SetLabel(program, label)
 
         |CODE.opCODE:
@@ -1139,11 +1038,10 @@ BEGIN
             reg1 := REG.Drop(R);
             REG.PushAll(R);
             _push(reg1);
-            Write("push _data+"); WriteHexLn(stroffs + cmd.param);
-
+            //push _data + stroffs + cmd.param
             BIN.PutCode(program, 068H);
             BIN.PutReloc(program, 4);
-            BIN.PutCode32(program, stroffs + cmd.param);
+            BIN.PutCode32LE(program, stroffs + cmd.param);
 
             pushc(cmd.param2);
             CallRTL(CODE._move)
@@ -1710,20 +1608,18 @@ BEGIN
             REG.UnOp(R, reg1);
             CASE cmd.opcode OF
             |CODE.opEQP, CODE.opNEP:
-                Write("cmp "); Write(r32[reg1]); Write(",L"); WriteHexLn(cmd.label);
-
+                //cmp reg1,L
                 BIN.PutCode(program, 081H);
                 BIN.PutCode(program, 0F8H + reg1);
                 BIN.PutReloc(program, 5);
-                BIN.PutCode32(program, program.labels[cmd.label])
+                BIN.PutCode32LE(program, program.labels[cmd.label])
 
             |CODE.opEQIP, CODE.opNEIP:
-                Write("cmp "); Write(r32[reg1]); Write(",dword[L"); WriteHex(cmd.label); WriteLn("]");
-
+                //cmp reg1,dword[L]
                 BIN.PutCode(program, 3BH);
                 BIN.PutCode(program, 05H + reg1 * 8);
                 BIN.PutReloc(program, 2);
-                BIN.PutCode32(program, cmd.label)
+                BIN.PutCode32LE(program, cmd.label)
 
             END;
             reg1 := REG.Drop(R);
@@ -1990,11 +1886,10 @@ BEGIN
                 *)
 
         |CODE.opINF:
-            WriteLn("fld qword[_data]");
-            BIN.PutCode(program, 0DDH);
-            BIN.PutCode(program, 005H);
-            BIN.PutReloc(program, 4);
-            BIN.PutCode32(program, 0)
+            pushc(2146435072);
+            pushc(0);
+            OutCode("DD0424"); //fld qword[esp]
+            OutCode("83C408"); //add esp, 8
 
         END;
 
@@ -2009,91 +1904,13 @@ END translate;
 
 PROCEDURE prolog (code: CODE.CODES; target, stack: INTEGER);
 BEGIN
-    IF target = UTILS.tarCON THEN
-        WriteLn("format PE Console 4.0");
-        WriteLn("entry start");
-        Write("stack "); WriteHexLn(stack * 100000H);
-        WriteLn("section '.text' code readable executable");
-        WriteLn("start:")
 
-    ELSIF target = UTILS.tarGUI THEN
-        WriteLn("format PE Gui 4.0");
-        WriteLn("entry start");
-        Write("stack "); WriteHexLn(stack * 100000H);
-        WriteLn("section '.text' code readable executable");
-        WriteLn("start:")
-
-    ELSIF target = UTILS.tarDLL THEN
+    IF target = UTILS.tarDLL THEN   (*
         WriteLn("format PE GUI 4.0 DLL");
         WriteLn("entry DllEntryPoint");
-
-        WriteLn("macro export dllname,[label,string]");
-        WriteLn(" { common");
-        WriteLn("    local module,addresses,names,ordinal,count");
-        WriteLn("    count = 0");
-        WriteLn("   forward");
-        WriteLn("    count = count+1");
-        WriteLn("   common");
-        WriteLn("    dd 0,0,0,RVA module,1");
-        WriteLn("    dd count,count,RVA addresses,RVA names,RVA ordinal");
-        WriteLn("    addresses:");
-        WriteLn("   forward");
-        WriteLn("    dd RVA label");
-        WriteLn("   common");
-        WriteLn("    names:");
-        WriteLn("   forward");
-        WriteLn("    local name");
-        WriteLn("    dd RVA name");
-        WriteLn("   common");
-        WriteLn("    ordinal: count = 0");
-        WriteLn("   forward");
-        WriteLn("    dw count");
-        WriteLn("    count = count+1");
-        WriteLn("   common");
-        WriteLn("    module db dllname,0");
-        WriteLn("   forward");
-        WriteLn("    name db string,0");
-        WriteLn("   common");
-        WriteLn("    local x,y,z,str1,str2,v1,v2");
-        WriteLn("    x = count shr 1");
-        WriteLn("    while x > 0");
-        WriteLn("     y = x");
-        WriteLn("     while y < count");
-        WriteLn("      z = y");
-        WriteLn("      while z-x >= 0");
-        WriteLn("       load v1 dword from names+z*4");
-        WriteLn("       str1=($-RVA $)+v1");
-        WriteLn("       load v2 dword from names+(z-x)*4");
-        WriteLn("       str2=($-RVA $)+v2");
-        WriteLn("       while v1 > 0");
-        WriteLn("        load v1 from str1+%-1");
-        WriteLn("        load v2 from str2+%-1");
-        WriteLn("        if v1 <> v2");
-        WriteLn("         break");
-        WriteLn("        end if");
-        WriteLn("       end while");
-        WriteLn("       if v1<v2");
-        WriteLn("        load v1 dword from names+z*4");
-        WriteLn("        load v2 dword from names+(z-x)*4");
-        WriteLn("        store dword v1 at names+(z-x)*4");
-        WriteLn("        store dword v2 at names+z*4");
-        WriteLn("        load v1 word from ordinal+z*2");
-        WriteLn("        load v2 word from ordinal+(z-x)*2");
-        WriteLn("        store word v1 at ordinal+(z-x)*2");
-        WriteLn("        store word v2 at ordinal+z*2");
-        WriteLn("       else");
-        WriteLn("        break");
-        WriteLn("       end if");
-        WriteLn("       z = z-x");
-        WriteLn("      end while");
-        WriteLn("      y = y+1");
-        WriteLn("     end while");
-        WriteLn("     x = x shr 1");
-        WriteLn("    end while }");
-
         WriteLn("section '.text' code readable executable");
-        WriteLn("DllEntryPoint:");
-        dllinit := CODE.NewLabel(); 
+        WriteLn("DllEntryPoint:");   *)
+        dllinit := CODE.NewLabel();
         BIN.SetLabel(program, dllinit);
         OutByte(55H); // push ebp
         OutByte(89H); OutByte(0E5H); // mov ebp,esp
@@ -2104,50 +1921,36 @@ BEGIN
         test(eax);
         jcc(je, dllret)
 
-    ELSIF target = UTILS.tarKOS THEN
-        WriteLn("use32");
-        WriteLn("org 0");
-        WriteLn("db 'MENUET01'");
-        WriteLn("dd 1");
-        WriteLn("dd START");
-        WriteLn("dd I_END");
-        WriteLn("dd MEM");
-        WriteLn("dd STACKTOP");
-        WriteLn("dd PARAM");
-        WriteLn("dd PATH");
-        WriteLn("START:")
-
     ELSIF target = UTILS.tarOBJ THEN
-        WriteLn("format MS COFF");
+    (*    WriteLn("format MS COFF");
         WriteLn("public EXPORTS");
         WriteLn("section '.flat' code readable align 16");
-        WriteLn("lib_init:");
+        WriteLn("lib_init:");*)
         dllinit := CODE.NewLabel();
         BIN.SetLabel(program, dllinit)
     END;
 
     OutCode("9BDBE3"); // finit
-    WriteLn("push IMPORT");
 
     IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN
         BIN.PutCode(program, 068H); //push IMPORT
         BIN.PutReloc(program, 6);
-        BIN.PutCode32(program, 0)
+        BIN.PutCode32LE(program, 0)
     ELSE
         BIN.PutCode(program, 6AH);  //push 0
         BIN.PutCode(program, 00H)
     END;
 
-    WriteLn("push _data + 8");
+    //push _data
     BIN.PutCode(program, 068H);
     BIN.PutReloc(program, 4);
-    BIN.PutCode32(program, 8);
+    BIN.PutCode32LE(program, 0);
 
     pushc(code.tcount);
-    Write  ("push _data + "); WriteHexLn(code.tcount * 4 + code.dcount + 8);
+    //push _data + code.tcount * 4 + code.dcount
     BIN.PutCode(program, 068H);
     BIN.PutReloc(program, 4);
-    BIN.PutCode32(program, code.tcount * 4 + code.dcount + 8);
+    BIN.PutCode32LE(program, code.tcount * 4 + code.dcount);
 
     CallRTL(CODE._init)
 END prolog;
@@ -2163,109 +1966,26 @@ VAR
     VAR
         lib:  CODE.IMPORT_LIB;
         proc: CODE.IMPORT_PROC;
-        n:    INTEGER;
 
     BEGIN
 
-        WriteLn("IMPORT:");
-
-        n := 0;
         lib := imp.first(CODE.IMPORT_LIB);
         WHILE lib # NIL DO
-            Write("dd 0,0,0,RVA "); Write("lib_name"); WriteHex(n); Write(",RVA "); Write("lib_table"); WriteHexLn(n);
-            INC(n);
-            lib := lib.next(CODE.IMPORT_LIB)
-        END;
-
-        WriteLn("dd 0,0,0,0,0");
-
-        n := 0;
-        lib := imp.first(CODE.IMPORT_LIB);
-        WHILE lib # NIL DO
-            Write("lib_table"); WriteHex(n); WriteLn(":");
-            proc := lib.procs.first(CODE.IMPORT_PROC);
-            WHILE proc # NIL DO
-                Write("L"); WriteHex(proc.label); WriteLn(":");
-                Write("P"); WriteHex(proc.label); Write(" dd RVA "); Write("_P"); WriteHexLn(proc.label);
-                proc := proc.next(CODE.IMPORT_PROC)
-            END;
-            WriteLn("dd 0");
-            INC(n);
-            lib := lib.next(CODE.IMPORT_LIB)
-        END;
-
-        n := 0;
-        lib := imp.first(CODE.IMPORT_LIB);
-        WHILE lib # NIL DO
-            Write("lib_name"); WriteHex(n); Write(" db '"); Write(lib.name); WriteLn("',0");
             BIN.Import(program, lib.name, 0);
             proc := lib.procs.first(CODE.IMPORT_PROC);
             WHILE proc # NIL DO
-                Write("_P"); WriteHex(proc.label); WriteLn(" dw 0");
-                Write("db '"); Write(proc.name); WriteLn("',0");
                 BIN.Import(program, proc.name, proc.label);
                 proc := proc.next(CODE.IMPORT_PROC)
             END;
-            INC(n);
             lib := lib.next(CODE.IMPORT_LIB)
         END
 
     END import;
 
 
-    PROCEDURE KOSimport (imp: LISTS.LIST);
-    VAR
-        lib: CODE.IMPORT_LIB;
-        proc: CODE.IMPORT_PROC;
-        n: INTEGER;
-
-    BEGIN
-
-        WriteLn("IMPORT:");
-
-        n := 0;
-        lib := imp.first(CODE.IMPORT_LIB);
-        WHILE lib # NIL DO
-            Write("dd lib_table"); WriteHex(n); Write(",lib_name"); WriteHexLn(n);
-            INC(n);
-            lib := lib.next(CODE.IMPORT_LIB)
-        END;
-        WriteLn("dd 0,0,0");
-
-        n := 0;
-        lib := imp.first(CODE.IMPORT_LIB);
-        WHILE lib # NIL DO
-            Write("lib_name"); WriteHex(n); Write(": db '"); Write(lib.name); WriteLn("',0");
-            Write("lib_table"); WriteHex(n); WriteLn(":");
-            proc := lib.procs.first(CODE.IMPORT_PROC);
-            WHILE proc # NIL DO
-                Write("L"); WriteHex(proc.label); Write(": dd "); Write("P"); WriteHexLn(proc.label);
-                proc := proc.next(CODE.IMPORT_PROC)
-            END;
-            WriteLn("dd 0");
-            INC(n);
-            lib := lib.next(CODE.IMPORT_LIB)
-        END;
-
-        lib := imp.first(CODE.IMPORT_LIB);
-        WHILE lib # NIL DO
-            BIN.Import(program, lib.name, 0);
-            proc := lib.procs.first(CODE.IMPORT_PROC);
-            WHILE proc # NIL DO
-                Write("P"); WriteHex(proc.label); Write(": db '"); Write(proc.name); WriteLn("',0");
-                BIN.Import(program, proc.name, proc.label);
-                proc := proc.next(CODE.IMPORT_PROC)
-            END;
-            lib := lib.next(CODE.IMPORT_LIB)
-        END
-
-    END KOSimport;
-
-
 BEGIN
 
     IF target = UTILS.tarDLL THEN
-        Write("L"); WriteHex(dllret); WriteLn(":");
         BIN.SetLabel(program, dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
@@ -2275,7 +1995,6 @@ BEGIN
     IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
         pushc(0);
         CallRTL(CODE._exit);
-        WriteLn("section '.data' data readable writeable")
     ELSIF target = UTILS.tarKOS THEN
         pushc(0);
         CallRTL(CODE._exit)
@@ -2284,90 +2003,49 @@ BEGIN
         OutByte(0C3H); // ret
         dllver := CODE.NewLabel();
         BIN.SetLabel(program, dllver);
-        Write("_dllver: ");
+   //     Write("_dllver: ");
         OutInt(ver);
-        WriteLn("align 16");
+    (*    WriteLn("align 16");
         WriteLn("EXPORTS:");
         WriteLn("dd szlib_init,lib_init");
         Write("dd szVersion,"); WriteHexLn(ver);
-
+      *)
         exp := code.export.first(CODE.EXPORT_PROC);
         WHILE exp # NIL DO
-            Write("dd "); Write("N"); WriteHex(exp.label); Write(",L"); WriteHexLn(exp.label);
+         //   Write("dd "); Write("N"); WriteHex(exp.label); Write(",L"); WriteHexLn(exp.label);
             exp := exp.next(CODE.EXPORT_PROC)
         END;
 
-        WriteLn("dd 0");
+     //   WriteLn("dd 0");
 
         exp := code.export.first(CODE.EXPORT_PROC);
         WHILE exp # NIL DO
-            Write("N"); WriteHex(exp.label); Write(" db '"); Write(exp.name); WriteLn("',0");
+        //    Write("N"); WriteHex(exp.label); Write(" db '"); Write(exp.name); WriteLn("',0");
             exp := exp.next(CODE.EXPORT_PROC)
         END;
 
-        WriteLn("szlib_init db 'lib_init',0");
-        WriteLn("szVersion db 'version',0")
+     //   WriteLn("szlib_init db 'lib_init',0");
+     //   WriteLn("szVersion db 'version',0")
     END;
 
-    WriteLn("_data:");
-    BIN.PutData32(program, 0);
-    BIN.PutData32(program, 2146435072);
-    WriteLn("dd 0,2146435072");
-    Write("dd ");
 
     i := 0;
-    WHILE i < code.tcount - 1 DO
-        WriteHex(code.types[i]);
-        BIN.PutData32(program, code.types[i]);
-        INC(i);
-        IF i MOD 6 = 0 THEN
-            NewLine;
-            Write("dd ");
-        ELSE
-            Write(",")
-        END
+    WHILE i < code.tcount DO
+        BIN.PutData32LE(program, code.types[i]);
+        INC(i)
     END;
 
-    WriteHexLn(code.types[i]);
-    BIN.PutData32(program, code.types[i]);
-
-    Write("db ");
-
     i := 0;
-    WHILE i < code.dcount - 1 DO
-        WriteByte(code.data[i]);
+    WHILE i < code.dcount DO
         BIN.PutData(program, code.data[i]);
-        INC(i);
-        IF i MOD 12 = 0 THEN
-            NewLine;
-            Write("db ")
-        ELSE
-            Write(",")
-        END
+        INC(i)
     END;
 
-    WriteByte(code.data[i]);
-    BIN.PutData(program, code.data[i]);
-    NewLine;
-
-    Write("db '"); Write(modname);
+    program.modname := program.dcount;
     BIN.PutDataStr(program, modname);
-    IF target IN {UTILS.tarCON, UTILS.tarGUI} THEN
-        Write(".exe");
-        BIN.PutDataStr(program, ".exe")
-    ELSIF target = UTILS.tarDLL THEN
-        Write(".dll");
-        BIN.PutDataStr(program, ".dll")
-    ELSIF target = UTILS.tarKOS THEN
-        Write(".kex");
-        BIN.PutDataStr(program, ".kex")
-    ELSIF target = UTILS.tarOBJ THEN
-        Write(".obj");
-        BIN.PutDataStr(program, ".obj")
-    END;
-    WriteLn("',0");
-    BIN.PutData(program, 0); 
+    BIN.PutData(program, 0);
 
+    program.export := program.dcount;
     IF target = UTILS.tarOBJ THEN
         BIN.Export(program, "lib_init", dllinit);
         BIN.Export(program, "version",  dllver);
@@ -2379,126 +2057,53 @@ BEGIN
         exp := exp.next(CODE.EXPORT_PROC)
     END;
 
-    IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN
-        KOSimport(code.import)
-    END;
+    program.exp_list.delete(program.exp_list, program.exp_list.first);
 
-    IF target = UTILS.tarKOS THEN
-        WriteLn("I_END:")
-    END;
+    program.import := program.dcount;
+    import(code.import);
 
     n := code.dmin - code.dcount;
     IF n > 0 THEN
         INC(code.gsize, n)
     END;
-
+                           (*
     IF target = UTILS.tarKOS THEN
         WriteLn("align 16")
     ELSE
         WriteLn("section '.bss' data readable writeable")
     END;
 
-    Write("_bss: rb ");  WriteHexLn(code.gsize);
+    Write("_bss: rb ");  WriteHexLn(code.gsize);  *)
     BIN.SetParams(program, code.gsize, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
-
-    IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
-        WriteLn("section '.idata' import data readable writeable");
-        import(code.import)
-    END;
-
-    IF target = UTILS.tarKOS THEN
-        Write("rb 1024*1024*"); WriteHexLn(stack);
-        WriteLn("align 16");
-        WriteLn("STACKTOP:");
-        WriteLn("PARAM: rb 2048");
-        WriteLn("PATH: rb 2048");
-        WriteLn("MEM:")
-    END;
-
-    IF target = UTILS.tarDLL THEN
-        exp := code.export.first(CODE.EXPORT_PROC);
-        IF exp # NIL THEN
-            WriteLn("section '.edata' export data readable");
-
-            Write("export '"); Write(modname); Write(".dll"); Write("'");
-
-            WHILE exp # NIL DO
-                WriteLn(",\");
-                Write("L"); WriteHex(exp.label); Write(",'"); Write(exp.name); Write("'"); 
-                exp := exp.next(CODE.EXPORT_PROC)
-            END;
-
-            NewLine
-        END
-    END;
-
-    IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
-        WriteLn("section '.reloc' fixups data readable discardable")
-    END
 
 END epilog;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname, modname: ARRAY OF CHAR; target, stack, ver: INTEGER): BOOLEAN;
-VAR
-    res: BOOLEAN;
-    i:   INTEGER;
-    binpath, binname, ext: UTILS.PATH;
-
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, ver: INTEGER);
 BEGIN
     program := BIN.create();
     dllret  := CODE.NewLabel();
     label_import  := CODE.NewLabel();
-    stroffs := code.tcount * 4 + 8;
-
-    FOR i := 0 TO 9 DO
-        hexdgts[i] := CHR(i + ORD("0"))
-    END;
-
-    FOR i := 10 TO 15 DO
-        hexdgts[i] := CHR(i + ORD("a") - 10)
-    END;
+    stroffs := code.tcount * 4;
 
     error := FALSE;
 
-    eol[0] := 0DX;
-    eol[1] := 0AX;
-    eol[2] := 0X;
-
-    r8[al] := "al";
-    r8[cl] := "cl";
-    r8[dl] := "dl";
-
-    r16[ax] := "ax";
-    r16[cx] := "cx";
-    r16[dx] := "dx";
-
-    r32[eax] := "eax";
-    r32[ecx] := "ecx";
-    r32[edx] := "edx";
-
     R := REG.Create(_push, _pop, _mov, _xch);
 
-    file := fcreate(outname);
-
-    res := file # NIL;
-
-    IF res THEN
-        prolog(code, target, stack);
-        translate(code);
-        epilog(code, modname, target, stack, ver);
-        fclose(file);
-        res := ~error
-    END;
+    prolog(code, target, stack);
+    translate(code);
+    epilog(code, outname, target, stack, ver);
 
     DISPOSE(R);
 
-    UTILS.split(outname, binpath, binname, ext);
-    STRINGS.append(binpath, binname);
-    STRINGS.append(binpath, ".bin");
-    BIN.write(program, binpath)
+    BIN.fixup(program);
 
-    RETURN res
+    IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
+        PE.write(program, outname, target = UTILS.tarCON, target = UTILS.tarDLL)
+    ELSIF target = UTILS.tarKOS THEN
+        KOS.write(program, outname)
+    END
+
 END CodeGen;
 
 

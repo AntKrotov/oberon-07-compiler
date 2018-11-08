@@ -1,0 +1,709 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE PE32;
+
+IMPORT BIN, LISTS, UTILS, SYSTEM;
+
+
+CONST
+
+    SIZE_OF_DWORD = 4;
+
+    IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16;
+
+    IMAGE_SIZEOF_SHORT_NAME = 8;
+
+    (* SectionHeader.Characteristics *)
+
+    SHC_text  = 060000020H;
+    SHC_data  = 0C0000040H;
+    SHC_bss   = 0C00000C0H;
+    SHC_reloc = 042000040H;
+
+
+    SectionAlignment = 1000H;
+    FileAlignment    =  200H;
+
+
+TYPE
+
+    WORD  = WCHAR;
+    DWORD = INTEGER;
+
+
+    IMAGE_DATA_DIRECTORY = RECORD
+
+        VirtualAddress: DWORD;
+        Size:           DWORD
+
+    END;
+
+
+    IMAGE_OPTIONAL_HEADER = RECORD
+
+        Magic: WORD;
+        MajorLinkerVersion: BYTE;
+        MinorLinkerVersion: BYTE;
+        SizeOfCode: DWORD;
+        SizeOfInitializedData: DWORD;
+        SizeOfUninitializedData: DWORD;
+        AddressOfEntryPoint: DWORD;
+        BaseOfCode: DWORD;
+        BaseOfData: DWORD;
+        ImageBase: DWORD;
+        SectionAlignment: DWORD;
+        FileAlignment: DWORD;
+        MajorOperatingSystemVersion: WORD;
+        MinorOperatingSystemVersion: WORD;
+        MajorImageVersion: WORD;
+        MinorImageVersion: WORD;
+        MajorSubsystemVersion: WORD;
+        MinorSubsystemVersion: WORD;
+        Win32VersionValue: DWORD;
+        SizeOfImage: DWORD;
+        SizeOfHeaders: DWORD;
+        CheckSum: DWORD;
+        Subsystem: WORD;
+        DllCharacteristics: WORD;
+        SizeOfStackReserve: DWORD;
+        SizeOfStackCommit: DWORD;
+        SizeOfHeapReserve: DWORD;
+        SizeOfHeapCommit: DWORD;
+        LoaderFlags: DWORD;
+        NumberOfRvaAndSizes: DWORD;
+        DataDirectory: ARRAY IMAGE_NUMBEROF_DIRECTORY_ENTRIES OF IMAGE_DATA_DIRECTORY
+
+    END;
+
+
+    IMAGE_FILE_HEADER = RECORD
+
+        Machine:               WORD;
+        NumberOfSections:      WORD;
+        TimeDateStamp:         DWORD;
+        PointerToSymbolTable:  DWORD;
+        NumberOfSymbols:       DWORD;
+        SizeOfOptionalHeader:  WORD;
+        Characteristics:       WORD
+
+    END;
+
+
+    IMAGE_NT_HEADERS = RECORD
+
+        Signature:       ARRAY 4 OF BYTE;
+        FileHeader:      IMAGE_FILE_HEADER;
+        OptionalHeader:  IMAGE_OPTIONAL_HEADER
+
+    END;
+
+
+    IMAGE_SECTION_HEADER = RECORD
+
+        Name: ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
+        VirtualSize,
+        VirtualAddress,
+        SizeOfRawData,
+        PointerToRawData,
+        PointerToRelocations,
+        PointerToLinenumbers: DWORD;
+        NumberOfRelocations,
+        NumberOfLinenumbers: WORD;
+        Characteristics: DWORD
+
+    END;
+
+
+    IMAGE_EXPORT_DIRECTORY = RECORD
+
+        Characteristics:       DWORD;
+        TimeDateStamp:         DWORD;
+        MajorVersion:          WORD;
+        MinorVersion:          WORD;
+        Name,
+        Base,
+        NumberOfFunctions,
+        NumberOfNames,
+        AddressOfFunctions,
+        AddressOfNames,
+        AddressOfNameOrdinals: DWORD
+
+    END;
+
+
+    VIRTUAL_ADDR = RECORD
+
+        Code, Data, Bss, Import: INTEGER
+
+    END;
+
+
+    RELOC = POINTER TO RECORD (LISTS.ITEM)
+
+        Page, Size: DWORD;
+        reloc: ARRAY 1024 OF WORD
+
+    END;
+
+
+VAR
+
+    msdos:           ARRAY 128 OF BYTE;
+    PEHeader:        IMAGE_NT_HEADERS;
+    SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
+
+    Relocations:     LISTS.LIST;
+
+
+PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
+BEGIN
+
+    ExportDir.Characteristics        :=  0;
+    ExportDir.TimeDateStamp          :=  PEHeader.FileHeader.TimeDateStamp;
+    ExportDir.MajorVersion           :=  0X;
+    ExportDir.MinorVersion           :=  0X;
+    ExportDir.Name                   :=  program.modname + DataRVA;
+    ExportDir.Base                   :=  0;
+    ExportDir.NumberOfFunctions      :=  program.exp_list.count(program.exp_list);
+    ExportDir.NumberOfNames          :=  ExportDir.NumberOfFunctions;
+    ExportDir.AddressOfFunctions     :=  SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY);
+    ExportDir.AddressOfNames         :=  ExportDir.AddressOfFunctions + ExportDir.NumberOfFunctions * SYSTEM.SIZE(DWORD);
+    ExportDir.AddressOfNameOrdinals  :=  ExportDir.AddressOfNames     + ExportDir.NumberOfFunctions * SYSTEM.SIZE(DWORD)
+
+    RETURN SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY) + ExportDir.NumberOfFunctions * (2 * SYSTEM.SIZE(DWORD) + SYSTEM.SIZE(WORD))
+END Export;
+
+
+PROCEDURE align (n, _align: INTEGER): INTEGER;
+BEGIN
+    IF n MOD _align # 0 THEN
+        n := n + _align - (n MOD _align)
+    END
+
+    RETURN n
+END align;
+
+
+PROCEDURE GetProcCount (lib: BIN.IMPRT): INTEGER;
+VAR
+    import: BIN.IMPRT;
+    res:    INTEGER;
+
+BEGIN
+    res := 0;
+    import := lib.next(BIN.IMPRT);
+    WHILE (import # NIL) & (import.label # 0) DO
+        INC(res);
+        import := import.next(BIN.IMPRT)
+    END
+
+    RETURN res
+END GetProcCount;
+
+
+PROCEDURE GetImportSize (imp_list: LISTS.LIST): INTEGER;
+VAR
+    import: BIN.IMPRT;
+    libcnt,
+    proccnt: INTEGER;
+
+    procoffs: INTEGER;
+    OriginalCurrentThunk,
+    CurrentThunk: INTEGER;
+
+BEGIN
+    libcnt  := 0;
+    proccnt := 0;
+    import  := imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label = 0 THEN
+            INC(libcnt)
+        ELSE
+            INC(proccnt)
+        END;
+        import := import.next(BIN.IMPRT)
+    END;
+
+    procoffs := (libcnt + 1) * 5;
+
+    import  := imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label = 0 THEN
+            import.OriginalFirstThunk := procoffs;
+            import.FirstThunk := procoffs + GetProcCount(import) + 1;
+            OriginalCurrentThunk := import.OriginalFirstThunk;
+            CurrentThunk := import.FirstThunk;
+            procoffs := procoffs + (GetProcCount(import) + 1) * 2
+        ELSE
+            import.OriginalFirstThunk := OriginalCurrentThunk;
+            import.FirstThunk := CurrentThunk;
+            INC(OriginalCurrentThunk);
+            INC(CurrentThunk)
+        END;
+        import := import.next(BIN.IMPRT)
+    END
+
+    RETURN ((libcnt + 1) * 5 + (proccnt + libcnt) * 2) * SIZE_OF_DWORD
+END GetImportSize;
+
+
+PROCEDURE fixup (program: BIN.PROGRAM; Address: VIRTUAL_ADDR);
+VAR
+    reloc:   BIN.RELOC;
+    iproc:   BIN.IMPRT;
+    L:       INTEGER;
+
+    Reloc:   RELOC;
+    RVACode: INTEGER;
+    RVA,
+    oldRVA:  INTEGER;
+
+BEGIN
+
+    RVACode := Address.Code - PEHeader.OptionalHeader.ImageBase;
+
+    NEW(Reloc);
+    Relocations.push(Relocations, Reloc);
+    Reloc.Page := RVACode;
+    Reloc.Size := 2 * SIZE_OF_DWORD;
+
+    RVA := RVACode;
+
+    reloc := program.rel_list.first(BIN.RELOC);
+    WHILE reloc # NIL DO
+
+        IF reloc.opcode # 1 THEN
+            L := BIN.get32le(program.code, reloc.offset);
+
+            oldRVA := RVA;
+            RVA := RVACode + reloc.offset;
+            ASSERT(RVA >= oldRVA);
+
+            IF Reloc.Page DIV 4096 # RVA DIV 4096 THEN
+                NEW(Reloc);
+                Relocations.push(Relocations, Reloc);
+                Reloc.Page := (RVA DIV 4096) * 4096;
+                Reloc.Size := 2 * SIZE_OF_DWORD
+            END;
+
+            Reloc.reloc[(Reloc.Size - 2 * SIZE_OF_DWORD) DIV 2] := WCHR(RVA MOD 4096 + 3000H);
+            INC(Reloc.Size, 2)
+        END;
+
+        CASE reloc.opcode OF
+        |1:
+        |2:
+            iproc := BIN.GetIProc(program, L);
+            BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import)
+
+        |3: BIN.put32le(program.code, reloc.offset, L + Address.Bss)
+        |4: BIN.put32le(program.code, reloc.offset, L + Address.Data)
+        |5: BIN.put32le(program.code, reloc.offset, L + Address.Code)
+        END;
+
+        reloc := reloc.next(BIN.RELOC)
+    END
+END fixup;
+
+
+PROCEDURE InitArray (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF CHAR);
+VAR
+    i, k: INTEGER;
+
+
+    PROCEDURE hexdgt (dgt: CHAR): INTEGER;
+    VAR
+        res: INTEGER;
+
+    BEGIN
+        IF dgt < "A" THEN
+            res := ORD(dgt) - ORD("0")
+        ELSE
+            res := ORD(dgt) - ORD("A") + 10
+        END
+
+        RETURN res
+    END hexdgt;
+
+
+BEGIN
+    k := LENGTH(hex);
+    ASSERT(~ODD(k));
+    k := k DIV 2;
+
+    FOR i := 0 TO k - 1 DO
+        array[i + idx] := hexdgt(hex[2 * i]) * 16 + hexdgt(hex[2 * i + 1])
+    END;
+
+    idx := idx + k
+END InitArray;
+
+
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll: BOOLEAN);
+VAR
+    i, n: INTEGER;
+
+    Size: RECORD Code, Data, Bss, Stack, Import, Reloc, Export: INTEGER END;
+
+    Address: VIRTUAL_ADDR;
+
+    File: UTILS.FILE;
+
+    import: BIN.IMPRT;
+    ImportTable: ARRAY 2000 OF DWORD;
+
+    ExportDir: IMAGE_EXPORT_DIRECTORY;
+    export: BIN.EXPRT;
+
+    R: RELOC;
+    relsec: INTEGER;
+
+
+    PROCEDURE error;
+    BEGIN
+        UTILS.OutString("writing file error"); UTILS.OutLn;
+        UTILS.exit(1)
+    END error;
+
+
+    PROCEDURE Write (File: UTILS.FILE; adr, bytes: INTEGER): INTEGER;
+    VAR
+        n: INTEGER;
+
+    BEGIN
+        n := UTILS.Write(File, adr, bytes);
+        IF n # bytes THEN
+            error
+        END
+
+        RETURN n
+    END Write;
+
+
+    PROCEDURE WriteByte (File: UTILS.FILE; n: BYTE);
+    BEGIN
+        n := Write(File, SYSTEM.ADR(n), 1)
+    END WriteByte;
+
+
+    PROCEDURE WriteInt (File: UTILS.FILE; n: DWORD): INTEGER;
+        RETURN Write(File, SYSTEM.ADR(n), SIZE_OF_DWORD)
+    END WriteInt;
+
+
+    PROCEDURE WriteWord (File: UTILS.FILE; w: WORD): INTEGER;
+        RETURN Write(File, SYSTEM.ADR(w), 2)
+    END WriteWord;
+
+
+    PROCEDURE FileAlign (File: UTILS.FILE; VAR pos: INTEGER);
+    VAR
+        i: INTEGER;
+
+    BEGIN
+        i   := pos;
+        pos := align(pos, FileAlignment);
+        i   := pos - i;
+        WHILE i > 0 DO
+            WriteByte(File, 0);
+            DEC(i)
+        END
+    END FileAlign;
+
+
+BEGIN
+    Relocations := LISTS.create(NIL);
+
+    Size.Code  := program.ccount;
+    Size.Data  := program.dcount;
+    Size.Bss   := program.bss;
+    Size.Stack := program.stack;
+
+    PEHeader.Signature[0] := 50H;
+    PEHeader.Signature[1] := 45H;
+    PEHeader.Signature[2] := 0;
+    PEHeader.Signature[3] := 0;
+
+    PEHeader.FileHeader.Machine := 014CX;
+
+    IF dll THEN
+        PEHeader.FileHeader.NumberOfSections :=  06X
+    ELSE
+        PEHeader.FileHeader.NumberOfSections :=  05X
+    END;
+
+    PEHeader.FileHeader.TimeDateStamp         :=  UTILS.unixtime();
+    PEHeader.FileHeader.PointerToSymbolTable  :=  0H;
+    PEHeader.FileHeader.NumberOfSymbols       :=  0H;
+    PEHeader.FileHeader.SizeOfOptionalHeader  :=  0E0X;
+
+    IF dll THEN
+        PEHeader.FileHeader.Characteristics :=  210EX
+    ELSE
+        PEHeader.FileHeader.Characteristics :=  010EX
+    END;
+
+    PEHeader.OptionalHeader.Magic                        :=  010BX;
+    PEHeader.OptionalHeader.MajorLinkerVersion           :=  UTILS.vMajor;
+    PEHeader.OptionalHeader.MinorLinkerVersion           :=  UTILS.vMinor;
+    PEHeader.OptionalHeader.SizeOfCode                   :=  align(Size.Code, FileAlignment);
+//    PEHeader.OptionalHeader.SizeOfInitializedData        :=  0;
+    PEHeader.OptionalHeader.SizeOfUninitializedData      :=  0;
+    PEHeader.OptionalHeader.AddressOfEntryPoint          :=  SectionAlignment;
+    PEHeader.OptionalHeader.BaseOfCode                   :=  SectionAlignment;
+    PEHeader.OptionalHeader.BaseOfData                   :=  PEHeader.OptionalHeader.BaseOfCode + align(Size.Code, SectionAlignment);
+
+    IF dll THEN
+        PEHeader.OptionalHeader.ImageBase := 10000000H
+    ELSE
+        PEHeader.OptionalHeader.ImageBase := 400000H
+    END;
+
+    PEHeader.OptionalHeader.SectionAlignment             :=  SectionAlignment;
+    PEHeader.OptionalHeader.FileAlignment                :=  FileAlignment;
+    PEHeader.OptionalHeader.MajorOperatingSystemVersion  :=  1X;
+    PEHeader.OptionalHeader.MinorOperatingSystemVersion  :=  0X;
+    PEHeader.OptionalHeader.MajorImageVersion            :=  0X;
+    PEHeader.OptionalHeader.MinorImageVersion            :=  0X;
+    PEHeader.OptionalHeader.MajorSubsystemVersion        :=  4X;
+    PEHeader.OptionalHeader.MinorSubsystemVersion        :=  0X;
+    PEHeader.OptionalHeader.Win32VersionValue            :=  0H;
+    PEHeader.OptionalHeader.SizeOfImage                  :=  SectionAlignment;
+    PEHeader.OptionalHeader.SizeOfHeaders                :=  400H;
+    PEHeader.OptionalHeader.CheckSum                     :=  0;
+    PEHeader.OptionalHeader.Subsystem                    :=  WCHR((2 + ORD(console)) * ORD(~dll));
+    PEHeader.OptionalHeader.DllCharacteristics           :=  0040X;
+    PEHeader.OptionalHeader.SizeOfStackReserve           :=  Size.Stack;
+    PEHeader.OptionalHeader.SizeOfStackCommit            :=  Size.Stack DIV 16;
+    PEHeader.OptionalHeader.SizeOfHeapReserve            :=  100000H;
+    PEHeader.OptionalHeader.SizeOfHeapCommit             :=  10000H;
+    PEHeader.OptionalHeader.LoaderFlags                  :=  0;
+    PEHeader.OptionalHeader.NumberOfRvaAndSizes          :=  IMAGE_NUMBEROF_DIRECTORY_ENTRIES;
+
+    SectionHeaders[0].Name                  :=  ".text";
+    SectionHeaders[0].VirtualSize           :=  Size.Code;
+    SectionHeaders[0].VirtualAddress        :=  1000H;
+    SectionHeaders[0].SizeOfRawData         :=  align(Size.Code, FileAlignment);
+    SectionHeaders[0].PointerToRawData      :=  PEHeader.OptionalHeader.SizeOfHeaders;
+    SectionHeaders[0].PointerToRelocations  :=  0;
+    SectionHeaders[0].PointerToLinenumbers  :=  0;
+    SectionHeaders[0].NumberOfRelocations   :=  0X;
+    SectionHeaders[0].NumberOfLinenumbers   :=  0X;
+    SectionHeaders[0].Characteristics       :=  SHC_text;
+
+    SectionHeaders[1].Name                  :=  ".data";
+    SectionHeaders[1].VirtualSize           :=  Size.Data;
+    SectionHeaders[1].VirtualAddress        :=  align(SectionHeaders[0].VirtualAddress + SectionHeaders[0].VirtualSize, SectionAlignment);
+    SectionHeaders[1].SizeOfRawData         :=  align(Size.Data, FileAlignment);
+    SectionHeaders[1].PointerToRawData      :=  SectionHeaders[0].PointerToRawData + SectionHeaders[0].SizeOfRawData;
+    SectionHeaders[1].PointerToRelocations  :=  0;
+    SectionHeaders[1].PointerToLinenumbers  :=  0;
+    SectionHeaders[1].NumberOfRelocations   :=  0X;
+    SectionHeaders[1].NumberOfLinenumbers   :=  0X;
+    SectionHeaders[1].Characteristics       :=  SHC_data;
+
+    SectionHeaders[2].Name                  :=  ".bss";
+    SectionHeaders[2].VirtualSize           :=  Size.Bss;
+    SectionHeaders[2].VirtualAddress        :=  align(SectionHeaders[1].VirtualAddress + SectionHeaders[1].VirtualSize, SectionAlignment);
+    SectionHeaders[2].SizeOfRawData         :=  0;
+    SectionHeaders[2].PointerToRawData      :=  SectionHeaders[1].PointerToRawData + SectionHeaders[1].SizeOfRawData;
+    SectionHeaders[2].PointerToRelocations  :=  0;
+    SectionHeaders[2].PointerToLinenumbers  :=  0;
+    SectionHeaders[2].NumberOfRelocations   :=  0X;
+    SectionHeaders[2].NumberOfLinenumbers   :=  0X;
+    SectionHeaders[2].Characteristics       :=  SHC_bss;
+
+    Size.Import := GetImportSize(program.imp_list);
+
+    SectionHeaders[3].Name                  :=  ".idata";
+    SectionHeaders[3].VirtualSize           :=  Size.Import;
+    SectionHeaders[3].VirtualAddress        :=  align(SectionHeaders[2].VirtualAddress + SectionHeaders[2].VirtualSize, SectionAlignment);
+    SectionHeaders[3].SizeOfRawData         :=  align(Size.Import, FileAlignment);
+    SectionHeaders[3].PointerToRawData      :=  SectionHeaders[2].PointerToRawData + SectionHeaders[2].SizeOfRawData;
+    SectionHeaders[3].PointerToRelocations  :=  0;
+    SectionHeaders[3].PointerToLinenumbers  :=  0;
+    SectionHeaders[3].NumberOfRelocations   :=  0X;
+    SectionHeaders[3].NumberOfLinenumbers   :=  0X;
+    SectionHeaders[3].Characteristics       :=  SHC_data;
+
+    Address.Code   := SectionHeaders[0].VirtualAddress + PEHeader.OptionalHeader.ImageBase;
+    Address.Data   := SectionHeaders[1].VirtualAddress + PEHeader.OptionalHeader.ImageBase;
+    Address.Bss    := SectionHeaders[2].VirtualAddress + PEHeader.OptionalHeader.ImageBase;
+    Address.Import := SectionHeaders[3].VirtualAddress + PEHeader.OptionalHeader.ImageBase;
+
+    fixup(program, Address);
+
+    relsec := 4;
+    IF dll THEN
+        Size.Export := Export(program, SectionHeaders[1].VirtualAddress, ExportDir);
+
+        SectionHeaders[4].Name                  :=  ".edata";
+        SectionHeaders[4].VirtualSize           :=  Size.Export;
+        SectionHeaders[4].VirtualAddress        :=  align(SectionHeaders[3].VirtualAddress + SectionHeaders[3].VirtualSize, SectionAlignment);
+        SectionHeaders[4].SizeOfRawData         :=  align(Size.Export, FileAlignment);
+        SectionHeaders[4].PointerToRawData      :=  SectionHeaders[3].PointerToRawData + SectionHeaders[3].SizeOfRawData;
+        SectionHeaders[4].PointerToRelocations  :=  0;
+        SectionHeaders[4].PointerToLinenumbers  :=  0;
+        SectionHeaders[4].NumberOfRelocations   :=  0X;
+        SectionHeaders[4].NumberOfLinenumbers   :=  0X;
+        SectionHeaders[4].Characteristics       :=  SHC_data;
+
+        relsec := 5
+    END;
+
+    R := Relocations.first(RELOC);
+    Size.Reloc := 0;
+    WHILE R # NIL DO
+        IF R.Size MOD 4 # 0 THEN
+            INC(R.Size, 2);
+            R.reloc[(R.Size - 8) DIV 2 - 1] := 0X
+        END;
+        Size.Reloc := Size.Reloc + R.Size;
+        R := R.next(RELOC)
+    END;
+
+    SectionHeaders[relsec].Name                  :=  ".reloc";
+    SectionHeaders[relsec].VirtualSize           :=  Size.Reloc;
+    SectionHeaders[relsec].VirtualAddress        :=  align(SectionHeaders[relsec - 1].VirtualAddress + SectionHeaders[relsec - 1].VirtualSize, SectionAlignment);
+    SectionHeaders[relsec].SizeOfRawData         :=  align(Size.Reloc, FileAlignment);
+    SectionHeaders[relsec].PointerToRawData      :=  SectionHeaders[relsec - 1].PointerToRawData + SectionHeaders[relsec - 1].SizeOfRawData;
+    SectionHeaders[relsec].PointerToRelocations  :=  0;
+    SectionHeaders[relsec].PointerToLinenumbers  :=  0;
+    SectionHeaders[relsec].NumberOfRelocations   :=  0X;
+    SectionHeaders[relsec].NumberOfLinenumbers   :=  0X;
+    SectionHeaders[relsec].Characteristics       :=  SHC_reloc;
+
+
+    FOR i := 0 TO IMAGE_NUMBEROF_DIRECTORY_ENTRIES - 1 DO
+        PEHeader.OptionalHeader.DataDirectory[i].VirtualAddress := 0;
+        PEHeader.OptionalHeader.DataDirectory[i].Size := 0
+    END;
+
+    IF dll THEN
+        PEHeader.OptionalHeader.DataDirectory[0].VirtualAddress := SectionHeaders[4].VirtualAddress;
+        PEHeader.OptionalHeader.DataDirectory[0].Size := SectionHeaders[4].VirtualSize
+    END;
+
+    PEHeader.OptionalHeader.DataDirectory[1].VirtualAddress := SectionHeaders[3].VirtualAddress;
+    PEHeader.OptionalHeader.DataDirectory[1].Size := SectionHeaders[3].VirtualSize;
+
+    PEHeader.OptionalHeader.DataDirectory[5].VirtualAddress := SectionHeaders[relsec].VirtualAddress;
+    PEHeader.OptionalHeader.DataDirectory[5].Size := SectionHeaders[relsec].VirtualSize;
+
+    PEHeader.OptionalHeader.SizeOfInitializedData :=
+        SectionHeaders[1].SizeOfRawData + SectionHeaders[3].SizeOfRawData + SectionHeaders[4].SizeOfRawData;
+
+    IF dll THEN
+        INC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[5].SizeOfRawData)
+    END;
+
+    FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
+        INC(PEHeader.OptionalHeader.SizeOfImage, align(SectionHeaders[i].VirtualSize, SectionAlignment))
+    END;
+
+    n := 0;
+    InitArray(msdos, n, "4D5A80000100000004001000FFFF000040010000000000004000000000000000");
+    InitArray(msdos, n, "0000000000000000000000000000000000000000000000000000000080000000");
+    InitArray(msdos, n, "0E1FBA0E00B409CD21B8014CCD21546869732070726F6772616D2063616E6E6F");
+    InitArray(msdos, n, "742062652072756E20696E20444F53206D6F64652E0D0A240000000000000000");
+
+    File := UTILS.fcreate(FileName);
+
+    n := Write(File, SYSTEM.ADR(msdos), LEN(msdos));
+    n := n + Write(File, SYSTEM.ADR(PEHeader), SYSTEM.SIZE(IMAGE_NT_HEADERS));
+
+    FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
+        n := n + Write(File, SYSTEM.ADR(SectionHeaders[i]), SYSTEM.SIZE(IMAGE_SECTION_HEADER))
+    END;
+
+    FileAlign(File, n);
+
+    n := n + Write(File, SYSTEM.ADR(program.code[0]), program.ccount);
+    FileAlign(File, n);
+
+    n := n + Write(File, SYSTEM.ADR(program.data[0]), program.dcount);
+    FileAlign(File, n);
+
+    i := 0;
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label = 0 THEN
+            ImportTable[i + 0] := import.OriginalFirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress;
+            ImportTable[i + 1] := 0;
+            ImportTable[i + 2] := 0;
+            ImportTable[i + 3] := import.nameoffs + SectionHeaders[1].VirtualAddress;
+            ImportTable[i + 4] := import.FirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress;
+            i := i + 5
+        END;
+        import := import.next(BIN.IMPRT)
+    END;
+
+    ImportTable[i + 0] := 0;
+    ImportTable[i + 1] := 0;
+    ImportTable[i + 2] := 0;
+    ImportTable[i + 3] := 0;
+    ImportTable[i + 4] := 0;
+
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label # 0 THEN
+            ImportTable[import.OriginalFirstThunk] := import.nameoffs + SectionHeaders[1].VirtualAddress - 2;
+            ImportTable[import.FirstThunk]         := import.nameoffs + SectionHeaders[1].VirtualAddress - 2
+        END;
+        import := import.next(BIN.IMPRT)
+    END;
+
+    n := n + Write(File, SYSTEM.ADR(ImportTable[0]), Size.Import);
+    FileAlign(File, n);
+
+    IF dll THEN
+
+        INC(ExportDir.AddressOfFunctions,    SectionHeaders[4].VirtualAddress);
+        INC(ExportDir.AddressOfNames,        SectionHeaders[4].VirtualAddress);
+        INC(ExportDir.AddressOfNameOrdinals, SectionHeaders[4].VirtualAddress);
+
+        n := n + Write(File, SYSTEM.ADR(ExportDir), SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY));
+
+        export := program.exp_list.first(BIN.EXPRT);
+        WHILE export # NIL DO
+            n := n + WriteInt(File, export.label + SectionHeaders[0].VirtualAddress);
+            export := export.next(BIN.EXPRT)
+        END;
+
+        export := program.exp_list.first(BIN.EXPRT);
+        WHILE export # NIL DO
+            n := n + WriteInt(File, export.nameoffs + SectionHeaders[1].VirtualAddress);
+            export := export.next(BIN.EXPRT)
+        END;
+
+        FOR i := 0 TO ExportDir.NumberOfFunctions - 1 DO
+            n := n + WriteWord(File, WCHR(i))
+        END;
+
+        FileAlign(File, n)
+
+    END;
+
+    R := Relocations.first(RELOC);
+    WHILE R # NIL DO
+        n := n + WriteInt(File, R.Page);
+        n := n + WriteInt(File, R.Size);
+        FOR i := 0 TO (R.Size - 2 * SIZE_OF_DWORD) DIV 2 - 1 DO
+            n := n + WriteWord(File, R.reloc[i])
+        END;
+        R := R.next(RELOC)
+    END;
+
+    FileAlign(File, n);
+
+    UTILS.fclose(File)
+
+END write;
+
+
+END PE32.

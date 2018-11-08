@@ -405,28 +405,22 @@ END subInt;
 
 PROCEDURE lg2 (x: INTEGER): INTEGER;
 VAR
-    res, i, n: INTEGER;
+    n: INTEGER;
+
 BEGIN
     ASSERT(x > 0);
 
-    res := 0;
-    i := 0;
     n := 0;
-
-    WHILE (i < UTILS.native.bit_depth) & (n < 2) DO
-        IF ODD(x) THEN
-            res := i;
-            INC(n)
-        END;
-        x := ROR(x, 1);
-        INC(i)
+    WHILE ~ODD(x) DO
+        x := x DIV 2;
+        INC(n)
     END;
 
-    IF n # 1 THEN
-        res := 255
+    IF x # 1 THEN
+        n := 255
     END
 
-    RETURN res
+    RETURN n
 END lg2;
 
 
