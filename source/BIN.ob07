@@ -136,7 +136,10 @@ BEGIN
     END;
 
     IF UTILS.native.bit_depth = 64 THEN
-        x := ASR(LSL(x, 32), 32)
+        x := LSL(x, 16);
+        x := LSL(x, 16);
+        x := ASR(x, 16);
+        x := ASR(x, 16)
     END
 
     RETURN x

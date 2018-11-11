@@ -7,12 +7,15 @@
 
 MODULE PE32;
 
-IMPORT BIN, LISTS, UTILS, SYSTEM;
+IMPORT BIN, LISTS, UTILS, WR := WRITER;
 
 
 CONST
 
     SIZE_OF_DWORD = 4;
+    SIZE_OF_WORD  = 2;
+
+    SIZE_OF_IMAGE_EXPORT_DIRECTORY = 40;
 
     IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16;
 
@@ -38,44 +41,45 @@ TYPE
 
     IMAGE_DATA_DIRECTORY = RECORD
 
-        VirtualAddress: DWORD;
-        Size:           DWORD
+        VirtualAddress:  DWORD;
+        Size:            DWORD
 
     END;
 
 
     IMAGE_OPTIONAL_HEADER = RECORD
 
-        Magic: WORD;
-        MajorLinkerVersion: BYTE;
-        MinorLinkerVersion: BYTE;
-        SizeOfCode: DWORD;
-        SizeOfInitializedData: DWORD;
-        SizeOfUninitializedData: DWORD;
-        AddressOfEntryPoint: DWORD;
-        BaseOfCode: DWORD;
-        BaseOfData: DWORD;
-        ImageBase: DWORD;
-        SectionAlignment: DWORD;
-        FileAlignment: DWORD;
-        MajorOperatingSystemVersion: WORD;
-        MinorOperatingSystemVersion: WORD;
-        MajorImageVersion: WORD;
-        MinorImageVersion: WORD;
-        MajorSubsystemVersion: WORD;
-        MinorSubsystemVersion: WORD;
-        Win32VersionValue: DWORD;
-        SizeOfImage: DWORD;
-        SizeOfHeaders: DWORD;
-        CheckSum: DWORD;
-        Subsystem: WORD;
-        DllCharacteristics: WORD;
-        SizeOfStackReserve: DWORD;
-        SizeOfStackCommit: DWORD;
-        SizeOfHeapReserve: DWORD;
-        SizeOfHeapCommit: DWORD;
-        LoaderFlags: DWORD;
-        NumberOfRvaAndSizes: DWORD;
+        Magic:                        WORD;
+        MajorLinkerVersion:           BYTE;
+        MinorLinkerVersion:           BYTE;
+        SizeOfCode:                   DWORD;
+        SizeOfInitializedData:        DWORD;
+        SizeOfUninitializedData:      DWORD;
+        AddressOfEntryPoint:          DWORD;
+        BaseOfCode:                   DWORD;
+        BaseOfData:                   DWORD;
+        ImageBase:                    DWORD;
+        SectionAlignment:             DWORD;
+        FileAlignment:                DWORD;
+        MajorOperatingSystemVersion:  WORD;
+        MinorOperatingSystemVersion:  WORD;
+        MajorImageVersion:            WORD;
+        MinorImageVersion:            WORD;
+        MajorSubsystemVersion:        WORD;
+        MinorSubsystemVersion:        WORD;
+        Win32VersionValue:            DWORD;
+        SizeOfImage:                  DWORD;
+        SizeOfHeaders:                DWORD;
+        CheckSum:                     DWORD;
+        Subsystem:                    WORD;
+        DllCharacteristics:           WORD;
+        SizeOfStackReserve:           DWORD;
+        SizeOfStackCommit:            DWORD;
+        SizeOfHeapReserve:            DWORD;
+        SizeOfHeapCommit:             DWORD;
+        LoaderFlags:                  DWORD;
+        NumberOfRvaAndSizes:          DWORD;  
+
         DataDirectory: ARRAY IMAGE_NUMBEROF_DIRECTORY_ENTRIES OF IMAGE_DATA_DIRECTORY
 
     END;
@@ -106,15 +110,18 @@ TYPE
     IMAGE_SECTION_HEADER = RECORD
 
         Name: ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
+
         VirtualSize,
         VirtualAddress,
         SizeOfRawData,
         PointerToRawData,
         PointerToRelocations,
-        PointerToLinenumbers: DWORD;
+        PointerToLinenumbers:   DWORD;
+
         NumberOfRelocations,
-        NumberOfLinenumbers: WORD;
-        Characteristics: DWORD
+        NumberOfLinenumbers:    WORD;
+
+        Characteristics:        DWORD
 
     END;
 
@@ -151,12 +158,14 @@ TYPE
     END;
 
 
+    FILE = WR.FILE;
+
+
 VAR
 
     msdos:           ARRAY 128 OF BYTE;
     PEHeader:        IMAGE_NT_HEADERS;
     SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
-
     Relocations:     LISTS.LIST;
 
 
@@ -171,11 +180,11 @@ BEGIN
     ExportDir.Base                   :=  0;
     ExportDir.NumberOfFunctions      :=  program.exp_list.count(program.exp_list);
     ExportDir.NumberOfNames          :=  ExportDir.NumberOfFunctions;
-    ExportDir.AddressOfFunctions     :=  SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY);
-    ExportDir.AddressOfNames         :=  ExportDir.AddressOfFunctions + ExportDir.NumberOfFunctions * SYSTEM.SIZE(DWORD);
-    ExportDir.AddressOfNameOrdinals  :=  ExportDir.AddressOfNames     + ExportDir.NumberOfFunctions * SYSTEM.SIZE(DWORD)
+    ExportDir.AddressOfFunctions     :=  SIZE_OF_IMAGE_EXPORT_DIRECTORY;
+    ExportDir.AddressOfNames         :=  ExportDir.AddressOfFunctions + ExportDir.NumberOfFunctions * SIZE_OF_DWORD;
+    ExportDir.AddressOfNameOrdinals  :=  ExportDir.AddressOfNames     + ExportDir.NumberOfFunctions * SIZE_OF_DWORD
 
-    RETURN SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY) + ExportDir.NumberOfFunctions * (2 * SYSTEM.SIZE(DWORD) + SYSTEM.SIZE(WORD))
+    RETURN SIZE_OF_IMAGE_EXPORT_DIRECTORY + ExportDir.NumberOfFunctions * (2 * SIZE_OF_DWORD + SIZE_OF_WORD)
 END Export;
 
 
@@ -348,72 +357,144 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll: B
 VAR
     i, n: INTEGER;
 
-    Size: RECORD Code, Data, Bss, Stack, Import, Reloc, Export: INTEGER END;
+    Size: RECORD
+
+        Code, Data, Bss, Stack, Import, Reloc, Export: INTEGER
+
+    END;
 
     Address: VIRTUAL_ADDR;
 
-    File: UTILS.FILE;
+    File: FILE;
 
-    import: BIN.IMPRT;
-    ImportTable: ARRAY 2000 OF DWORD;
+    import:       BIN.IMPRT;
+    ImportTable:  ARRAY 2000 OF DWORD;
 
-    ExportDir: IMAGE_EXPORT_DIRECTORY;
-    export: BIN.EXPRT;
+    ExportDir:  IMAGE_EXPORT_DIRECTORY;
+    export:     BIN.EXPRT;
 
-    R: RELOC;
-    relsec: INTEGER;
-
-
-    PROCEDURE error;
-    BEGIN
-        UTILS.OutString("writing file error"); UTILS.OutLn;
-        UTILS.exit(1)
-    END error;
+    R:       RELOC;
+    relsec:  INTEGER;
 
 
-    PROCEDURE Write (File: UTILS.FILE; adr, bytes: INTEGER): INTEGER;
-    VAR
-        n: INTEGER;
-
-    BEGIN
-        n := UTILS.Write(File, adr, bytes);
-        IF n # bytes THEN
-            error
-        END
-
-        RETURN n
-    END Write;
-
-
-    PROCEDURE WriteByte (File: UTILS.FILE; n: BYTE);
-    BEGIN
-        n := Write(File, SYSTEM.ADR(n), 1)
-    END WriteByte;
-
-
-    PROCEDURE WriteInt (File: UTILS.FILE; n: DWORD): INTEGER;
-        RETURN Write(File, SYSTEM.ADR(n), SIZE_OF_DWORD)
-    END WriteInt;
-
-
-    PROCEDURE WriteWord (File: UTILS.FILE; w: WORD): INTEGER;
-        RETURN Write(File, SYSTEM.ADR(w), 2)
+    PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
+    BEGIN                
+        WR.Write16LE(file, ORD(w), pos)
     END WriteWord;
 
 
-    PROCEDURE FileAlign (File: UTILS.FILE; VAR pos: INTEGER);
+    PROCEDURE WriteExportDir (file: FILE; e: IMAGE_EXPORT_DIRECTORY; VAR pos: INTEGER);
+    BEGIN
+        WR.Write32LE(file, e.Characteristics,        pos);
+        WR.Write32LE(file, e.TimeDateStamp,          pos);
+
+        WriteWord(file, e.MajorVersion,              pos);
+        WriteWord(file, e.MinorVersion,              pos);
+
+        WR.Write32LE(file, e.Name,                   pos);
+        WR.Write32LE(file, e.Base,                   pos);
+        WR.Write32LE(file, e.NumberOfFunctions,      pos);
+        WR.Write32LE(file, e.NumberOfNames,          pos);
+        WR.Write32LE(file, e.AddressOfFunctions,     pos);
+        WR.Write32LE(file, e.AddressOfNames,         pos);
+        WR.Write32LE(file, e.AddressOfNameOrdinals,  pos)
+    END WriteExportDir;
+
+
+    PROCEDURE WriteSectionHeader (file: FILE; h: IMAGE_SECTION_HEADER; VAR pos: INTEGER);
     VAR
         i: INTEGER;
 
     BEGIN
-        i   := pos;
-        pos := align(pos, FileAlignment);
-        i   := pos - i;
-        WHILE i > 0 DO
-            WriteByte(File, 0);
-            DEC(i)
+        FOR i := 0 TO LEN(h.Name) - 1 DO
+            WR.WriteByte(file, ORD(h.Name[i]), pos)
+        END;
+
+        WR.Write32LE(file, h.VirtualSize,           pos);
+        WR.Write32LE(file, h.VirtualAddress,        pos);
+        WR.Write32LE(file, h.SizeOfRawData,         pos);
+        WR.Write32LE(file, h.PointerToRawData,      pos);
+        WR.Write32LE(file, h.PointerToRelocations,  pos);
+        WR.Write32LE(file, h.PointerToLinenumbers,  pos);
+
+        WriteWord(file, h.NumberOfRelocations,      pos);
+        WriteWord(file, h.NumberOfLinenumbers,      pos);
+
+        WR.Write32LE(file, h.Characteristics,       pos)
+    END WriteSectionHeader;
+
+
+    PROCEDURE WriteFileHeader (file: FILE; h: IMAGE_FILE_HEADER; VAR pos: INTEGER);
+    BEGIN
+        WriteWord(file, h.Machine,                  pos);
+        WriteWord(file, h.NumberOfSections,         pos);
+
+        WR.Write32LE(file, h.TimeDateStamp,         pos);
+        WR.Write32LE(file, h.PointerToSymbolTable,  pos);
+        WR.Write32LE(file, h.NumberOfSymbols,       pos);
+
+        WriteWord(file, h.SizeOfOptionalHeader,     pos);
+        WriteWord(file, h.Characteristics,          pos)
+    END WriteFileHeader;
+
+
+    PROCEDURE WriteOptHeader (file: FILE; h: IMAGE_OPTIONAL_HEADER; VAR pos: INTEGER);
+    VAR
+        i: INTEGER;
+
+    BEGIN
+
+        WriteWord(file, h.Magic,                        pos);
+
+        WR.WriteByte(file, h.MajorLinkerVersion,           pos);
+        WR.WriteByte(file, h.MinorLinkerVersion,           pos);
+
+        WR.Write32LE(file, h.SizeOfCode,                pos);
+        WR.Write32LE(file, h.SizeOfInitializedData,     pos);
+        WR.Write32LE(file, h.SizeOfUninitializedData,   pos);
+        WR.Write32LE(file, h.AddressOfEntryPoint,       pos);
+        WR.Write32LE(file, h.BaseOfCode,                pos);
+        WR.Write32LE(file, h.BaseOfData,                pos);
+        WR.Write32LE(file, h.ImageBase,                 pos);
+        WR.Write32LE(file, h.SectionAlignment,          pos);
+        WR.Write32LE(file, h.FileAlignment,             pos);
+
+        WriteWord(file, h.MajorOperatingSystemVersion,  pos);
+        WriteWord(file, h.MinorOperatingSystemVersion,  pos);
+        WriteWord(file, h.MajorImageVersion,            pos);
+        WriteWord(file, h.MinorImageVersion,            pos);
+        WriteWord(file, h.MajorSubsystemVersion,        pos);
+        WriteWord(file, h.MinorSubsystemVersion,        pos);
+
+        WR.Write32LE(file, h.Win32VersionValue,         pos);
+        WR.Write32LE(file, h.SizeOfImage,               pos);
+        WR.Write32LE(file, h.SizeOfHeaders,             pos);
+        WR.Write32LE(file, h.CheckSum,                  pos);
+
+        WriteWord(file, h.Subsystem,                    pos);
+        WriteWord(file, h.DllCharacteristics,           pos);
+
+        WR.Write32LE(file, h.SizeOfStackReserve,        pos);
+        WR.Write32LE(file, h.SizeOfStackCommit,         pos);
+        WR.Write32LE(file, h.SizeOfHeapReserve,         pos);
+        WR.Write32LE(file, h.SizeOfHeapCommit,          pos);
+        WR.Write32LE(file, h.LoaderFlags,               pos);
+        WR.Write32LE(file, h.NumberOfRvaAndSizes,       pos);
+
+        FOR i := 0 TO LEN(h.DataDirectory) - 1 DO
+            WR.Write32LE(file, h.DataDirectory[i].VirtualAddress, pos);
+            WR.Write32LE(file, h.DataDirectory[i].Size, pos)
         END
-    END FileAlign;
+
+    END WriteOptHeader;
+
+
+    PROCEDURE WritePEHeader (file: FILE; h: IMAGE_NT_HEADERS; VAR pos: INTEGER);
+    BEGIN
+        WR.Write(file, h.Signature, LEN(h.Signature),  pos);
+        WriteFileHeader(file, h.FileHeader,            pos);
+        WriteOptHeader(file, h.OptionalHeader,         pos)
+    END WritePEHeader;
 
 
 BEGIN
@@ -612,22 +693,24 @@ BEGIN
     InitArray(msdos, n, "0E1FBA0E00B409CD21B8014CCD21546869732070726F6772616D2063616E6E6F");
     InitArray(msdos, n, "742062652072756E20696E20444F53206D6F64652E0D0A240000000000000000");
 
-    File := UTILS.fcreate(FileName);
+    File := WR.Create(FileName);
+         
+    n := 0;
+    WR.Write(File, msdos, LEN(msdos), n);
 
-    n := Write(File, SYSTEM.ADR(msdos), LEN(msdos));
-    n := n + Write(File, SYSTEM.ADR(PEHeader), SYSTEM.SIZE(IMAGE_NT_HEADERS));
+    WritePEHeader(File, PEHeader, n);
 
     FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
-        n := n + Write(File, SYSTEM.ADR(SectionHeaders[i]), SYSTEM.SIZE(IMAGE_SECTION_HEADER))
+        WriteSectionHeader(File, SectionHeaders[i], n)
     END;
 
-    FileAlign(File, n);
+    WR.Padding(File, FileAlignment, n);
 
-    n := n + Write(File, SYSTEM.ADR(program.code[0]), program.ccount);
-    FileAlign(File, n);
+    WR.Write(File, program.code, program.ccount, n);
+    WR.Padding(File, FileAlignment, n);
 
-    n := n + Write(File, SYSTEM.ADR(program.data[0]), program.dcount);
-    FileAlign(File, n);
+    WR.Write(File, program.data, program.dcount, n);
+    WR.Padding(File, FileAlignment, n);
 
     i := 0;
     import := program.imp_list.first(BIN.IMPRT);
@@ -658,8 +741,11 @@ BEGIN
         import := import.next(BIN.IMPRT)
     END;
 
-    n := n + Write(File, SYSTEM.ADR(ImportTable[0]), Size.Import);
-    FileAlign(File, n);
+    FOR i := 0 TO Size.Import DIV SIZE_OF_DWORD - 1 DO
+        WR.Write32LE(File, ImportTable[i], n)
+    END;
+
+    WR.Padding(File, FileAlignment, n);
 
     IF dll THEN
 
@@ -667,41 +753,41 @@ BEGIN
         INC(ExportDir.AddressOfNames,        SectionHeaders[4].VirtualAddress);
         INC(ExportDir.AddressOfNameOrdinals, SectionHeaders[4].VirtualAddress);
 
-        n := n + Write(File, SYSTEM.ADR(ExportDir), SYSTEM.SIZE(IMAGE_EXPORT_DIRECTORY));
+        WriteExportDir(File, ExportDir, n);
 
         export := program.exp_list.first(BIN.EXPRT);
         WHILE export # NIL DO
-            n := n + WriteInt(File, export.label + SectionHeaders[0].VirtualAddress);
+            WR.Write32LE(File, export.label + SectionHeaders[0].VirtualAddress, n);
             export := export.next(BIN.EXPRT)
         END;
 
         export := program.exp_list.first(BIN.EXPRT);
         WHILE export # NIL DO
-            n := n + WriteInt(File, export.nameoffs + SectionHeaders[1].VirtualAddress);
+            WR.Write32LE(File, export.nameoffs + SectionHeaders[1].VirtualAddress, n);
             export := export.next(BIN.EXPRT)
         END;
 
         FOR i := 0 TO ExportDir.NumberOfFunctions - 1 DO
-            n := n + WriteWord(File, WCHR(i))
+            WriteWord(File, WCHR(i), n)
         END;
 
-        FileAlign(File, n)
+        WR.Padding(File, FileAlignment, n);
 
     END;
 
     R := Relocations.first(RELOC);
     WHILE R # NIL DO
-        n := n + WriteInt(File, R.Page);
-        n := n + WriteInt(File, R.Size);
+        WR.Write32LE(File, R.Page, n);
+        WR.Write32LE(File, R.Size, n);
         FOR i := 0 TO (R.Size - 2 * SIZE_OF_DWORD) DIV 2 - 1 DO
-            n := n + WriteWord(File, R.reloc[i])
+            WriteWord(File, R.reloc[i], n)
         END;
         R := R.next(RELOC)
     END;
 
-    FileAlign(File, n);
+    WR.Padding(File, FileAlignment, n);
 
-    UTILS.fclose(File)
+    WR.Close(File)
 
 END write;
 

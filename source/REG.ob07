@@ -230,16 +230,10 @@ BEGIN
 END Exchange;
 
 
-PROCEDURE Drop* (R: REGS): INTEGER;
-VAR
-    reg: INTEGER;
-
+PROCEDURE Drop* (R: REGS);
 BEGIN
-    reg := R.stk[R.top];
-    INCL(R.regs, reg);
+    INCL(R.regs, R.stk[R.top]);
     DEC(R.top)
-
-    RETURN reg
 END Drop;
 
 

@@ -21,7 +21,7 @@ TYPE
 
     TEXT* = POINTER TO RECORD
 
-        chunk:        ARRAY CHUNK OF CHAR;
+        chunk:        ARRAY CHUNK OF BYTE;
         pos, size:    INTEGER;
         file:         UTILS.FILE;
         utf8:         BOOLEAN;
@@ -40,7 +40,7 @@ TYPE
 
 PROCEDURE reset (text: TEXT);
 BEGIN
-    text.chunk[0] := 0X;
+    text.chunk[0] := 0;
     text.pos  := 0;
     text.size := 0;
     text.file := NIL;
@@ -54,7 +54,7 @@ END reset;
 
 
 PROCEDURE peak (text: TEXT): CHAR;
-    RETURN text.chunk[text.pos]
+    RETURN CHR(text.chunk[text.pos])
 END peak;
 
 
@@ -65,7 +65,7 @@ BEGIN
         text.pos := 0;
         IF text.size = 0 THEN
             text.eof := TRUE;
-            text.chunk[0] := 0X
+            text.chunk[0] := 0
         END
     END
 END load;
@@ -120,9 +120,9 @@ PROCEDURE init (text: TEXT);
 BEGIN
 
     IF (text.pos = 0) & (text.size >= 3) THEN
-        IF (text.chunk[0] = 0EFX) &
-           (text.chunk[1] = 0BBX) &
-           (text.chunk[2] = 0BFX) THEN
+        IF (text.chunk[0] = 0EFH) &
+           (text.chunk[1] = 0BBH) &
+           (text.chunk[2] = 0BFH) THEN
             next(text);
             next(text);
             next(text);
@@ -131,7 +131,7 @@ BEGIN
     END;
 
     IF text.size = 0 THEN
-        text.chunk[0] := 0X;
+        text.chunk[0] := 0;
         text.size := 1;
         text.eof := FALSE
     END;

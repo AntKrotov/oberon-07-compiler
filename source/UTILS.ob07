@@ -7,7 +7,7 @@
 
 MODULE UTILS;
 
-IMPORT SYSTEM, HOST, STRINGS, UNIXTIME;
+IMPORT HOST, STRINGS, UNIXTIME;
 
 
 CONST
@@ -51,37 +51,33 @@ VAR
     digit*: ARRAY 256 OF INTEGER;
 
 
-PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
-    RETURN HOST.exec(FileName, Parameters)
-END exec;
+PROCEDURE copy (src: ARRAY OF BYTE; src_idx: INTEGER; VAR dst: ARRAY OF BYTE; dst_idx: INTEGER; bytes: INTEGER);
+BEGIN
+    WHILE bytes > 0 DO
+        dst[dst_idx] := src[src_idx];
+        INC(dst_idx);
+        INC(src_idx);
+        DEC(bytes)
+    END
+END copy;
 
 
-PROCEDURE split* (fname: ARRAY OF CHAR; VAR path, name, ext: ARRAY OF CHAR);
+PROCEDURE flush (file: FILE): INTEGER;
 VAR
-    pos1, pos2, len: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    len := LENGTH(fname);
-    pos1 := len - 1;
-    pos2 := len - 1;
-    STRINGS.search(fname, pos1, slash, FALSE);
-    STRINGS.search(fname, pos2,   ".", FALSE);
+    IF file # NIL THEN
+        res := HOST.FileWrite(file.ptr, file.buffer, file.count);
+        IF res < 0 THEN
+            res := 0
+        END
+    ELSE
+        res := 0
+    END
 
-    path := fname;
-    path[pos1 + 1] := 0X;
-
-    IF (pos2 = -1) OR (pos2 < pos1) THEN
-        pos2 := len
-    END;
-
-    INC(pos1);
-
-    STRINGS.copy(fname, name, pos1, 0, pos2 - pos1);
-    name[pos2 - pos1] := 0X;
-    STRINGS.copy(fname, ext, pos2, 0, len - pos2);
-    ext[len - pos2] := 0X;
-
-END split;
+    RETURN res
+END flush;
 
 
 PROCEDURE fcreate* (name: ARRAY OF CHAR): FILE;
@@ -111,6 +107,7 @@ VAR
 
 BEGIN
     ptr := HOST.FileOpen(name);
+
     IF ptr > 0 THEN
         NEW(file);
         file.ptr := ptr;
@@ -123,13 +120,33 @@ BEGIN
 END fopen;
 
 
-PROCEDURE fseek* (file: FILE; offset, origin: INTEGER): INTEGER;
+PROCEDURE fclose* (VAR file: FILE);
+VAR
+    n: INTEGER;
+
+BEGIN
+    IF file # NIL THEN
+
+        IF file.count > 0 THEN
+            n := flush(file)
+        END;
+
+        file.count := -1;
+
+        HOST.FileClose(file.ptr);
+        file.ptr := 0;
+        DISPOSE(file)
+    END
+END fclose;
+
+
+PROCEDURE fread* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
 BEGIN
     IF file # NIL THEN
-        res := HOST.FileSeek(file.ptr, offset, origin);
+        res := HOST.FileRead(file.ptr, chunk, MAX(MIN(bytes, LEN(chunk)), 0));
         IF res < 0 THEN
             res := 0
         END
@@ -138,52 +155,29 @@ BEGIN
     END
 
     RETURN res
-END fseek;
+END fread;
 
 
-PROCEDURE Flush (file: FILE; adr, bytes: INTEGER): INTEGER;
+PROCEDURE fwrite* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
-    res: INTEGER;
+    free, n, k, res, idx: INTEGER;
 
 BEGIN
-    IF file # NIL THEN
-        res := HOST.FileWrite(file.ptr, adr, bytes);
-        IF res < 0 THEN
-            res := 0
-        END
-    ELSE
-        res := 0
-    END
-
-    RETURN res
-END Flush;
-
-
-PROCEDURE copy (src, dst, bytes: INTEGER);
-BEGIN
-    SYSTEM.MOVE(src, dst, bytes)
-END copy;
-
-
-PROCEDURE Write* (file: FILE; adr, bytes: INTEGER): INTEGER;
-VAR
-    free, n, k, res: INTEGER;
-
-BEGIN
+    idx := 0;
     res := 0;
     IF (file # NIL) & (file.count >= 0) THEN
 
         free := LEN(file.buffer) - file.count;
         WHILE bytes > 0 DO
             n := MIN(free, bytes);
-            copy(adr, SYSTEM.ADR(file.buffer[file.count]), n);
+            copy(chunk, idx, file.buffer, file.count, n);
             INC(res, n);
             DEC(free, n);
             DEC(bytes, n);
-            INC(adr, n);
+            INC(idx, n);
             INC(file.count, n);
             IF free = 0 THEN
-                k := Flush(file, SYSTEM.ADR(file.buffer[0]), LEN(file.buffer));
+                k := flush(file);
                 IF k # LEN(file.buffer) THEN
                     bytes := 0;
                     DEC(res, n)
@@ -197,54 +191,6 @@ BEGIN
     END
 
     RETURN res
-END Write;
-
-
-PROCEDURE fclose* (file: FILE);
-VAR
-    n: INTEGER;
-
-BEGIN
-    IF file # NIL THEN
-
-        IF file.count > 0 THEN
-            n := Flush(file, SYSTEM.ADR(file.buffer[0]), file.count)
-        END;
-
-        file.count := -1;
-
-        HOST.FileClose(file.ptr);
-        file.ptr := 0;
-        DISPOSE(file)
-    END
-END fclose;
-
-
-PROCEDURE Read* (file: FILE; adr, bytes: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    IF file # NIL THEN
-        res := HOST.FileRead(file.ptr, adr, bytes);
-        IF res < 0 THEN
-            res := 0
-        END
-    ELSE
-        res := 0
-    END
-
-    RETURN res
-END Read;
-
-
-PROCEDURE fread* (file: FILE; VAR chunk: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
-    RETURN Read(file, SYSTEM.ADR(chunk[0]), MAX(MIN(bytes, LEN(chunk)), 0))
-END fread;
-
-
-PROCEDURE fwrite* (file: FILE; chunk: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
-    RETURN Write(file, SYSTEM.ADR(chunk[0]), MAX(MIN(bytes, LEN(chunk)), 0))
 END fwrite;
 
 
@@ -306,8 +252,7 @@ END OutLn;
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
 BEGIN
-    SYSTEM.GET(SYSTEM.ADR(x),     a);
-    SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
+    HOST.splitf(x, a, b)
 END splitf;
 
 
@@ -327,6 +272,34 @@ BEGIN
 
     RETURN res
 END align;
+
+
+PROCEDURE split* (fname: ARRAY OF CHAR; VAR path, name, ext: ARRAY OF CHAR);
+VAR
+    pos1, pos2, len: INTEGER;
+
+BEGIN
+    len := LENGTH(fname);
+    pos1 := len - 1;
+    pos2 := len - 1;
+    STRINGS.search(fname, pos1, slash, FALSE);
+    STRINGS.search(fname, pos2,   ".", FALSE);
+
+    path := fname;
+    path[pos1 + 1] := 0X;
+
+    IF (pos2 = -1) OR (pos2 < pos1) THEN
+        pos2 := len
+    END;
+
+    INC(pos1);
+
+    STRINGS.copy(fname, name, pos1, 0, pos2 - pos1);
+    name[pos2 - pos1] := 0X;
+    STRINGS.copy(fname, ext, pos2, 0, len - pos2);
+    ext[len - pos2] := 0X;
+
+END split;
 
 
 PROCEDURE RelPath* (absolute, relative: ARRAY OF CHAR; VAR res: ARRAY OF CHAR);
@@ -454,7 +427,13 @@ VAR
 BEGIN
     ASSERT((bit_depth = 32) OR (bit_depth = 64));
 
-    native.bit_depth   := SYSTEM.SIZE(INTEGER) * 8;
+    native.bit_depth := 0;
+    i := 1;
+    REPEAT
+        i := ROR(i, 1);
+        INC(native.bit_depth)
+    UNTIL i = 1;
+
     native.maxSet      := native.bit_depth - 1;
     native.maxHex      := native.bit_depth DIV 4;
     native.minInt      := ROR(1, 1);

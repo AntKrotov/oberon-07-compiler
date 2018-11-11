@@ -16,11 +16,11 @@ CONST
 
     eax = REG.R0; ecx = REG.R1; edx = REG.R2;
 
-    al = eax; cl = ecx; dl = edx;
+    al = eax; cl = ecx; dl = edx; ah = 4;
 
     ax = eax; cx = ecx; dx = edx;
 
-    sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH;
+    sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
 
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
 
@@ -45,17 +45,6 @@ VAR
     label_import:  INTEGER;
 
 
-PROCEDURE fcreate (name: ARRAY OF CHAR): FILE;
-    RETURN UTILS.fcreate(name)
-END fcreate;
-
-
-PROCEDURE fclose (file: FILE);
-BEGIN
-    UTILS.fclose(file)
-END fclose;
-
-
 PROCEDURE Byte (n: INTEGER): INTEGER;
     RETURN ORD(BITS(n) * {0..7})
 END Byte;
@@ -73,23 +62,19 @@ BEGIN
 END OutByte;
 
 
-PROCEDURE OutCode (code: ARRAY OF CHAR);
-VAR
-    i, k, hi, lo: INTEGER;
-
+PROCEDURE OutByte2 (a, b: INTEGER);
 BEGIN
-    i := 0;
-    k := LENGTH(code) - 1;
-    ASSERT(ODD(k));
+    OutByte(a);
+    OutByte(b)
+END OutByte2;
 
-    WHILE i <= k DO
-        hi := UTILS.digit[ORD(code[i])]; INC(i);
-        ASSERT(hi # -1);
-        lo := UTILS.digit[ORD(code[i])]; INC(i);
-        ASSERT(lo # -1);
-        OutByte(hi * 16 + lo)
-    END
-END OutCode;
+
+PROCEDURE OutByte3 (a, b, c: INTEGER);
+BEGIN
+    OutByte(a);
+    OutByte(b);
+    OutByte(c)
+END OutByte3;
 
 
 PROCEDURE OutInt (n: INTEGER);
@@ -101,9 +86,15 @@ END OutInt;
 PROCEDURE OutWord (n: INTEGER);
 BEGIN
     ASSERT((0 <= n) & (n <= 65535));
-    OutByte(n MOD 256);
-    OutByte(n DIV 256)
+    OutByte2(n MOD 256, n DIV 256)
 END OutWord;
+
+
+PROCEDURE Reloc (op, value: INTEGER);
+BEGIN
+    BIN.PutReloc(program, op);
+    OutInt(value)
+END Reloc;
 
 
 PROCEDURE isByte (n: INTEGER): BOOLEAN;
@@ -121,119 +112,108 @@ BEGIN
 END OutIntByte;
 
 
-PROCEDURE _mov (reg1, reg2: INTEGER); // mov reg1, reg2
+PROCEDURE mov (reg1, reg2: INTEGER);
 BEGIN
-    OutByte(89H);
-    OutByte(0C0H + reg2 * 8 + reg1)
-END _mov;
+    OutByte2(89H, 0C0H + reg2 * 8 + reg1)  // mov reg1, reg2
+END mov;
 
 
-PROCEDURE _xch (reg1, reg2: INTEGER); // xchg reg1, reg2
+PROCEDURE xchg (reg1, reg2: INTEGER);
 VAR
     regs: SET;
 
 BEGIN
     regs := {reg1, reg2};
     IF regs = {eax, ecx} THEN
-        OutByte(91H)
+        OutByte(91H)                // xchg eax, ecx
     ELSIF regs = {eax, edx} THEN
-        OutByte(92H)
+        OutByte(92H)                // xchg eax, edx
     ELSIF regs = {ecx, edx} THEN
-        OutByte(87H); OutByte(0D1H)
+        OutByte2(87H, 0D1H)         // xchg ecx, edx
     END
-END _xch;
+END xchg;
 
 
-PROCEDURE _pop (reg: INTEGER); //pop reg
+PROCEDURE pop (reg: INTEGER);
 BEGIN
-    OutByte(58H + reg)
-END _pop;
+    OutByte(58H + reg) // pop reg
+END pop;
 
 
-PROCEDURE _push (reg: INTEGER); //push reg
+PROCEDURE push (reg: INTEGER);
 BEGIN
-    OutByte(50H + reg)
-END _push;
+    OutByte(50H + reg) // push reg
+END push;
 
 
-PROCEDURE movrc (reg, n: INTEGER); //mov reg, n
+PROCEDURE movrc (reg, n: INTEGER);
 BEGIN
-    OutByte(0B8H + reg);
+    OutByte(0B8H + reg); // mov reg, n
     OutInt(n)
 END movrc;
 
 
 PROCEDURE pushc (n: INTEGER);
 BEGIN
-    OutByte(68H + 2 * ORD(isByte(n)));
+    OutByte(68H + 2 * ORD(isByte(n))); // push n
     OutIntByte(n)
 END pushc;
 
 
-PROCEDURE test (reg: INTEGER); //test reg, reg
+PROCEDURE test (reg: INTEGER);
 BEGIN
-    OutByte(85H);
-    OutByte(0C0H + reg * 9)
+    OutByte2(85H, 0C0H + reg * 9)  // test reg, reg
 END test;
 
 
-PROCEDURE neg (reg: INTEGER); //neg reg
+PROCEDURE neg (reg: INTEGER);
 BEGIN
-    OutByte(0F7H);
-    OutByte(0D8H + reg)
+    OutByte2(0F7H, 0D8H + reg)  // neg reg
 END neg;
 
 
-PROCEDURE not (reg: INTEGER); //not reg
+PROCEDURE not (reg: INTEGER);
 BEGIN
-    OutByte(0F7H);
-    OutByte(0D0H + reg)
+    OutByte2(0F7H, 0D0H + reg)  // not reg
 END not;
 
 
-PROCEDURE add (reg1, reg2: INTEGER);  // add reg1, reg2
+PROCEDURE add (reg1, reg2: INTEGER);
 BEGIN
-    OutByte(01H);
-    OutByte(0C0H + reg2 * 8 + reg1)
+    OutByte2(01H, 0C0H + reg2 * 8 + reg1)  // add reg1, reg2
 END add;
 
 
-PROCEDURE andrc (reg, n: INTEGER); //and reg, n
+PROCEDURE andrc (reg, n: INTEGER);
 BEGIN
-    OutByte(81H + 2 * ORD(isByte(n)));
-    OutByte(0E0H + reg);
+    OutByte2(81H + 2 * ORD(isByte(n)), 0E0H + reg);  // and reg, n
     OutIntByte(n)
 END andrc;
 
 
-PROCEDURE addrc (reg, n: INTEGER);  //add reg, n
+PROCEDURE addrc (reg, n: INTEGER);
 BEGIN
-    OutByte(81H + 2 * ORD(isByte(n)));
-    OutByte(0C0H + reg);
+    OutByte2(81H + 2 * ORD(isByte(n)), 0C0H + reg);  // add reg, n
     OutIntByte(n)
 END addrc;
 
 
-PROCEDURE cmprr (reg1, reg2: INTEGER); // cmp reg1, reg2
+PROCEDURE cmprr (reg1, reg2: INTEGER);
 BEGIN
-    OutByte(39H);
-    OutByte(0C0H + reg2 * 8 + reg1)
+    OutByte2(39H, 0C0H + reg2 * 8 + reg1)  // cmp reg1, reg2
 END cmprr;
 
 
-PROCEDURE cmprc (reg, n: INTEGER); // cmp reg, n
+PROCEDURE cmprc (reg, n: INTEGER);
 BEGIN
-    OutByte(81H + 2 * ORD(isByte(n)));
-    OutByte(0F8H + reg);
+    OutByte2(81H + 2 * ORD(isByte(n)), 0F8H + reg);  // cmp reg, n
     OutIntByte(n)
 END cmprc;
 
 
-PROCEDURE setcc (cond, reg: INTEGER);  // setcc reg
+PROCEDURE setcc (cond, reg: INTEGER);
 BEGIN
-    OutByte(0FH);
-    OutByte(cond);
-    OutByte(0C0H + reg)
+    OutByte3(0FH, cond, 0C0H + reg)  // setcc reg
 END setcc;
 
 
@@ -260,19 +240,41 @@ END log2;
 
 PROCEDURE jcc (opcode, label: INTEGER);
 BEGIN
-    BIN.PutCode(program, 0FH);
-    BIN.PutCode(program, opcode); (* je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; *)
-    BIN.PutReloc(program, 1);
-    BIN.PutCode32LE(program, label)
+    OutByte2(0FH, opcode); (* je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; *)
+    Reloc(1, label)
 END jcc;
 
 
 PROCEDURE CallRTL (proc: INTEGER);
 BEGIN
-    BIN.PutCode(program, 0E8H);    //call L
-    BIN.PutReloc(program, 1);
-    BIN.PutCode32LE(program, CODE.codes.rtl[proc])
+    OutByte(0E8H);    // call rtl[proc]
+    Reloc(1, CODE.codes.rtl[proc])
 END CallRTL;
+
+
+PROCEDURE drop;
+BEGIN
+    REG.Drop(R)
+END drop;
+
+
+PROCEDURE UnOp (VAR reg: INTEGER);
+BEGIN
+    REG.UnOp(R, reg)
+END UnOp;
+
+
+PROCEDURE BinOp (VAR reg1, reg2: INTEGER);
+BEGIN
+    REG.BinOp(R, reg1, reg2)
+END BinOp;
+
+
+PROCEDURE PushAll (NumberOfParameters: INTEGER);
+BEGIN
+    REG.PushAll(R);
+    R.pushed := R.pushed - NumberOfParameters
+END PushAll;
 
 
 PROCEDURE translate (code: CODE.CODES);
@@ -291,76 +293,69 @@ BEGIN
         CASE cmd.opcode OF
 
         |CODE.opJMP:
-            BIN.PutCode(program, 0E9H);     //jmp L
-            BIN.PutReloc(program, 1);
-            BIN.PutCode32LE(program, cmd.label)
+            OutByte(0E9H);         // jmp L
+            Reloc(1, cmd.label)
 
         |CODE.opCALL:
-            BIN.PutCode(program, 0E8H);             //call L
-            BIN.PutReloc(program, 1);
-            BIN.PutCode32LE(program, cmd.label)
+            OutByte(0E8H);         // call L
+            Reloc(1, cmd.label)
 
         |CODE.opCALLI:
-            BIN.PutCode(program, 0FFH);   //call dword[L]
-            BIN.PutCode(program, 015H);
-            BIN.PutReloc(program, 2);
-            BIN.PutCode32LE(program, cmd.label)
+            OutByte2(0FFH, 015H);  // call dword[L]
+            Reloc(2, cmd.label)
 
         |CODE.opCALLP:
-            REG.UnOp(R, reg1);
-
-            OutByte(0FFH);          //call reg1
-            OutByte(0D0H + reg1);
-
-            reg1 := REG.Drop(R);
+            UnOp(reg1);
+            OutByte2(0FFH, 0D0H + reg1);    // call reg1
+            drop;
             ASSERT(R.top = -1)
 
         |CODE.opPRECALL:
             n := cmd.param;
             IF (cmd.param2 # 0) & (n # 0) THEN
-                OutCode("83EC08") //sub esp,8
+                OutByte3(083H, 0ECH, 008H)  // sub esp, 8
             END;
             WHILE n > 0 DO
-                OutCode("83EC08"); // sub esp,8
-                OutCode("DD1C24"); // fstp qword[esp]
+                OutByte3(083H, 0ECH, 008H); // sub esp, 8
+                OutByte3(0DDH, 01CH, 024H); // fstp qword[esp]
                 DEC(n)
             END;
-            REG.PushAll(R)
+            PushAll(0)
 
         |CODE.opRES:
             ASSERT(R.top = -1);
             ASSERT(REG.GetReg(R, eax));
             n := cmd.param;
             WHILE n > 0 DO
-                OutCode("DD0424"); // fld qword[esp]
-                OutCode("83C408"); // add esp,8
+                OutByte3(0DDH, 004H, 024H); // fld qword[esp]
+                OutByte3(083H, 0C4H, 008H); // add esp, 8
                 DEC(n)
             END
 
         |CODE.opRESF:
             n := cmd.param;
             IF n > 0 THEN
-                OutByte(0DDH); OutByte(5CH + 40H * ORD(~isByte(n * 8)));
-                OutByte(24H); OutIntByte(n * 8); // fstp qword[esp + n*8]
+                OutByte3(0DDH, 5CH + 40H * ORD(~isByte(n * 8)), 24H);
+                OutIntByte(n * 8); // fstp qword[esp + n*8]
                 INC(n)
             END;
 
             WHILE n > 0 DO
-                OutCode("DD0424"); // fld qword[esp]
-                OutCode("83C408"); // add esp,8
+                OutByte3(0DDH, 004H, 024H); // fld qword[esp]
+                OutByte3(083H, 0C4H, 008H); // add esp, 8
                 DEC(n)
             END
 
         |CODE.opENTER:
             ASSERT(R.top = -1);
-            OutCode("5589E5"); // push ebp
-                               // mov ebp,esp
+            OutByte(055H);          // push ebp
+            OutByte2(089H, 0E5H);   // mov ebp, esp
 
             n := cmd.param;
             IF n > 4 THEN
-                movrc(ecx, n);   // mov ecx,n
-                pushc(0);        // @@: push 0
-                OutCode("E2FC")  // loop @b
+                movrc(ecx, n);        // mov ecx,n
+                pushc(0);             // @@: push 0
+                OutByte2(0E2H, 0FCH)  // loop @b
             ELSE
                 WHILE n > 0 DO
                     pushc(0);
@@ -370,19 +365,19 @@ BEGIN
 
         |CODE.opLEAVE, CODE.opLEAVER, CODE.opLEAVEF:
             IF cmd.opcode = CODE.opLEAVER THEN
-                REG.UnOp(R, reg1);
+                UnOp(reg1);
                 IF reg1 # eax THEN
                     ASSERT(REG.GetReg(R, eax));
                     ASSERT(REG.Exchange(R, reg1, eax));
-                    reg1 := REG.Drop(R)
+                    drop
                 END;
-                reg1 := REG.Drop(R)
+                drop
             END;
 
             ASSERT(R.top = -1);
 
-            OutCode("89EC5D"); // mov esp,ebp
-                               // pop ebp
+            OutByte2(089H, 0ECH);  // mov esp, ebp
+            OutByte(05DH);         // pop ebp
 
             n := cmd.param;
             IF n > 0 THEN
@@ -398,19 +393,18 @@ BEGIN
         |CODE.opPARAM:
             n := cmd.param;
             IF n = 1 THEN
-                REG.UnOp(R, reg1);
-                _push(reg1);
-                reg1 := REG.Drop(R)
+                UnOp(reg1);
+                push(reg1);
+                drop
             ELSE
                 ASSERT(R.top + 1 <= n);
-                REG.PushAll(R);
-                R.pushed := R.pushed - n
+                PushAll(n)
             END
 
         |CODE.opCLEANUP:
             n := cmd.param * 4;
             IF n # 0 THEN
-                OutByte(81H + 2 * ORD(isByte(n))); OutByte(0C4H);  // add esp, n
+                OutByte2(81H + 2 * ORD(isByte(n)), 0C4H);  // add esp, n
                 OutIntByte(n)
             END
 
@@ -426,41 +420,34 @@ BEGIN
 
         |CODE.opLABEL,
          CODE.opPROC:
-            BIN.SetLabel(program, cmd.param) //L:
+            BIN.SetLabel(program, cmd.param) // L:
 
         |CODE.opNOP:
 
         |CODE.opGADR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                //mov dword[_bss+cmd.param],next.param
-                BIN.PutCode(program, 0C7H);
-                BIN.PutCode(program,  05H);
-                BIN.PutReloc(program, 3);
-                BIN.PutCode32LE(program, cmd.param);
-                BIN.PutCode32LE(program, next.param);
-
+                OutByte2(0C7H, 05H);  // mov dword[_bss + cmd.param], next.param
+                Reloc(3, cmd.param);
+                OutInt(next.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                //mov reg1,_bss+cmd.param
-                BIN.PutCode(program, 0B8H + reg1);
-                BIN.PutReloc(program, 3);
-                BIN.PutCode32LE(program, cmd.param);
-
+                OutByte(0B8H + reg1);  // mov reg1, _bss + cmd.param
+                Reloc(3, cmd.param)
             END
 
         |CODE.opLADR:
             n := cmd.param * 4;
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opSAVEC THEN
-                OutByte(0C7H); OutByte(45H + 40H * ORD(~isByte(n)));
-                OutIntByte(n);   // mov dword[ebp + n], next.param
+                OutByte2(0C7H, 45H + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], next.param
+                OutIntByte(n);
                 OutInt(next.param);
                 cmd := next
             ELSE
-                reg1 := REG.GetAnyReg(R);         // lea reg1, dword[ebp + n]
-                OutByte(8DH); OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+                reg1 := REG.GetAnyReg(R);
+                OutByte2(8DH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // lea reg1, dword[ebp + n]
                 OutIntByte(n)
             END
 
@@ -468,199 +455,166 @@ BEGIN
             n := cmd.param * 4;
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                OutByte(0FFH); OutByte(75H + 40H * ORD(~isByte(n)));
-                OutIntByte(n);   //push dword[ebp + n]
+                OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
+                OutIntByte(n);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                OutByte(8BH); // mov reg1, dword[ebp + n]
-                OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+                OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
                 OutIntByte(n)
             END
 
         |CODE.opSADR:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                //push _data + stroffs + cmd.param
-                BIN.PutCode(program, 068H);
-                BIN.PutReloc(program, 4);
-                BIN.PutCode32LE(program, stroffs + cmd.param);
-
+                OutByte(068H);  // push _data + stroffs + cmd.param
+                Reloc(4, stroffs + cmd.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                //mov reg1,_data + stroffs + cmd.param
-                BIN.PutCode(program, 0B8H + reg1);
-                BIN.PutReloc(program, 4);
-                BIN.PutCode32LE(program, stroffs + cmd.param)
-
+                OutByte(0B8H + reg1);  // mov reg1, _data + stroffs + cmd.param
+                Reloc(4, stroffs + cmd.param)
             END
 
         |CODE.opSAVEC:
-            REG.UnOp(R, reg1);
-            OutByte(0C7H); OutByte(reg1); OutInt(cmd.param); //mov dword[reg1], cmd.param
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0C7H, reg1); OutInt(cmd.param);  // mov dword[reg1], cmd.param
+            drop
 
         |CODE.opSAVE8C:
-            REG.UnOp(R, reg1);
-            OutByte(0C6H); OutByte(reg1); OutByte(Byte(cmd.param)); //mov byte[reg1], cmd.param
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte3(0C6H, reg1, Byte(cmd.param));  // mov byte[reg1], cmd.param
+            drop
 
         |CODE.opSAVE16C:
-            REG.UnOp(R, reg1);
-            OutByte(66H); OutByte(0C7H); OutByte(reg1); OutWord(Word(cmd.param)); //mov word[reg1], cmd.param
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte3(66H, 0C7H, reg1); OutWord(Word(cmd.param));  // mov word[reg1], cmd.param
+            drop
 
         |CODE.opVLOAD32:
             n := cmd.param * 4;
             reg1 := REG.GetAnyReg(R);
-            OutByte(8BH); OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n))); // mov reg1, dword[ebp + n]
+            OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
             OutIntByte(n);
-            OutByte(8BH); OutByte(reg1 * 9); // mov reg1, dword[reg1]
+            OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
 
         |CODE.opGLOAD32:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                //push dword[_bss+cmd.param]
-                BIN.PutCode(program, 0FFH);
-                BIN.PutCode(program, 035H);
-                BIN.PutReloc(program, 3);
-                BIN.PutCode32LE(program, cmd.param);
-
+                OutByte2(0FFH, 035H);  // push dword[_bss + cmd.param]
+                Reloc(3, cmd.param);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                //mov reg1,dword[_bss+cmd.param]
-                BIN.PutCode(program, 08BH);
-                BIN.PutCode(program,  05H + reg1 * 8);
-                BIN.PutReloc(program, 3);
-                BIN.PutCode32LE(program, cmd.param)
+                OutByte2(08BH, 05H + reg1 * 8);  // mov reg1, dword[_bss + cmd.param]
+                Reloc(3, cmd.param)
             END
 
         |CODE.opLLOAD32:
             next := cmd.next(COMMAND);
             n := cmd.param * 4;
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                OutByte(0FFH); OutByte(75H + 40H * ORD(~isByte(n)));
-                OutIntByte(n);                   //push dword[ebp + cmd.param * 4]
+                OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
+                OutIntByte(n);
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                OutByte(8BH); // mov reg1, dword[ebp + n]
-                OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+                OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
                 OutIntByte(n)
             END
 
         |CODE.opLOAD32:
             next := cmd.next(COMMAND);
             IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                REG.UnOp(R, reg1);
-                OutByte(0FFH); OutByte(30H + reg1); // push dword[reg1]
-                reg1 := REG.Drop(R);
+                UnOp(reg1);
+                OutByte2(0FFH, 30H + reg1);  // push dword[reg1]
+                drop;
                 cmd := next
             ELSE
-                REG.UnOp(R, reg1);
-                OutByte(8BH); OutByte(reg1 * 9) // mov reg1, dword[reg1]
+                UnOp(reg1);
+                OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
             END
 
         |CODE.opVLOAD8:
             n := cmd.param * 4;
             reg1 := REG.GetAnyReg(R);
-            OutByte(8BH); // mov reg1, dword[ebp + n]
-            OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+            OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n))); // mov reg1, dword[ebp + n]
             OutIntByte(n);
-            OutByte(0FH); OutByte(0B6H); OutByte(reg1 * 9) // movzx reg1, byte[reg1]
+            OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
 
         |CODE.opGLOAD8:
             reg1 := REG.GetAnyReg(R);
-            //movzx reg1,byte[_bss+cmd.param]
-            BIN.PutCode(program, 00FH);
-            BIN.PutCode(program, 0B6H);
-            BIN.PutCode(program,  05H + reg1 * 8);
-            BIN.PutReloc(program, 3);
-            BIN.PutCode32LE(program, cmd.param)
+            OutByte3(00FH, 0B6H, 05H + reg1 * 8);  // movzx reg1, byte[_bss + cmd.param]
+            Reloc(3, cmd.param)
 
         |CODE.opLLOAD8:
             n := cmd.param * 4;
             reg1 := REG.GetAnyReg(R);
-            OutByte(0FH);
-            OutByte(0B6H); // movzx reg1, byte[ebp + n]
-            OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+            OutByte3(0FH, 0B6H, 45H + reg1 * 8 + 40H * ORD(~isByte(n))); // movzx reg1, byte[ebp + n]
             OutIntByte(n)
 
         |CODE.opLOAD8:
-            REG.UnOp(R, reg1);
-            OutByte(0FH); OutByte(0B6H); OutByte(reg1 * 9) // movzx reg1, byte[reg1]
+            UnOp(reg1);
+            OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
 
         |CODE.opVLOAD16:
             n := cmd.param * 4;
             reg1 := REG.GetAnyReg(R);
-            OutByte(8BH); // mov reg1, dword[ebp + n]
-            OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+            OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n))); // mov reg1, dword[ebp + n]
             OutIntByte(n);
-            OutByte(0FH); OutByte(0B7H); OutByte(reg1 * 9) // movzx reg1, word[reg1]
+            OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
 
         |CODE.opGLOAD16:
             reg1 := REG.GetAnyReg(R);
-            //movzx reg1,word[_bss+cmd.param]
-            BIN.PutCode(program, 00FH);
-            BIN.PutCode(program, 0B7H);
-            BIN.PutCode(program,  05H + reg1 * 8);
-            BIN.PutReloc(program, 3);
-            BIN.PutCode32LE(program, cmd.param)
+            OutByte3(00FH, 0B7H, 05H + reg1 * 8);  // movzx reg1, word[_bss + cmd.param]
+            Reloc(3, cmd.param)
 
         |CODE.opLLOAD16:
             n := cmd.param * 4;
             reg1 := REG.GetAnyReg(R);
-            OutByte(0FH);
-            OutByte(0B7H); // movzx reg1, word[ebp + n]
-            OutByte(45H + reg1 * 8 + 40H * ORD(~isByte(n)));
+            OutByte3(0FH, 0B7H, 45H + reg1 * 8 + 40H * ORD(~isByte(n))); // movzx reg1, word[ebp + n]
             OutIntByte(n)
 
         |CODE.opLOAD16:
-            REG.UnOp(R, reg1);
-            OutByte(0FH); OutByte(0B7H); OutByte(reg1 * 9) // movzx reg1, word[reg1]
+            UnOp(reg1);
+            OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
 
         |CODE.opUMINUS:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             neg(reg1)
 
         |CODE.opADD:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             add(reg1, reg2);
-            reg1 := REG.Drop(R)
+            drop
 
         |CODE.opADDL, CODE.opADDR:
             next := cmd.next(COMMAND);
             IF next.opcode = CODE.opLOAD32 THEN
                 next2 := next.next(COMMAND);
-                REG.UnOp(R, reg1);
+                UnOp(reg1);
                 n := cmd.param;
 
                 IF (next2.opcode = CODE.opPARAM) & (next2.param = 1) THEN
-                    OutByte(0FFH); // push dword[reg1 + n]
-                    OutByte(70H + reg1 + 40H * ORD(~isByte(n)));
+                    OutByte2(0FFH, 70H + reg1 + 40H * ORD(~isByte(n))); // push dword[reg1 + n]
                     OutIntByte(n);
-                    reg1 := REG.Drop(R);
+                    drop;
                     cmd := next2
                 ELSE
-                    OutByte(8BH); // mov reg1, dword[reg1 + n]
-                    OutByte(40H + reg1 * 9 + 40H * ORD(~isByte(n)));
+                    OutByte2(8BH, 40H + reg1 * 9 + 40H * ORD(~isByte(n))); // mov reg1, dword[reg1 + n]
                     OutIntByte(n);
                     cmd := next
                 END
 
             ELSIF next.opcode = CODE.opLOAD8 THEN
-                REG.UnOp(R, reg1);
+                UnOp(reg1);
                 n := cmd.param;
-                OutByte(0FH);
-                OutByte(0B6H); // movzx reg1, byte[reg1 + n]
-                OutByte(40H + reg1 * 9 + 40H * ORD(~isByte(n)));
+                OutByte3(0FH, 0B6H, 40H + reg1 * 9 + 40H * ORD(~isByte(n))); // movzx reg1, byte[reg1 + n]
                 OutIntByte(n);
                 cmd := next
             ELSE
                 IF cmd.param # 0 THEN
-                    REG.UnOp(R, reg1);
+                    UnOp(reg1);
                     IF cmd.param = 1 THEN
                         OutByte(40H + reg1) // inc reg1
                     ELSIF cmd.param = -1 THEN
@@ -672,20 +626,19 @@ BEGIN
             END
 
         |CODE.opSUB:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(29H); OutByte(0C0H + reg2 * 8 + reg1); // sub reg1, reg2
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(29H, 0C0H + reg2 * 8 + reg1); // sub reg1, reg2
+            drop
 
         |CODE.opSUBR, CODE.opSUBL:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             n := cmd.param;
             IF n = 1 THEN
                 OutByte(48H + reg1) // dec reg1
             ELSIF n = -1 THEN
                 OutByte(40H + reg1) // inc reg1
             ELSIF n # 0 THEN
-                OutByte(81H + 2 * ORD(isByte(n))); // sub reg, n
-                OutByte(0E8H + reg1);
+                OutByte2(81H + 2 * ORD(isByte(n)), 0E8H + reg1); // sub reg, n
                 OutIntByte(n)
             END;
             IF cmd.opcode = CODE.opSUBL THEN
@@ -693,7 +646,7 @@ BEGIN
             END
 
         |CODE.opMULC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
 
             a := cmd.param;
             IF a > 1 THEN
@@ -709,7 +662,7 @@ BEGIN
             ELSIF a = -1 THEN
                 neg(reg1)
             ELSIF a = 0 THEN
-                OutByte(31H); OutByte(0C0H + reg1 * 9) // xor reg1, reg1
+                OutByte2(31H, 0C0H + reg1 * 9) // xor reg1, reg1
             ELSE
                 IF n > 0 THEN
                     IF a < 0 THEN
@@ -717,123 +670,108 @@ BEGIN
                     END;
 
                     IF n # 1 THEN
-                        OutByte(0C1H); OutByte(0E0H + reg1); OutByte(n)   // shl reg1, n
+                        OutByte3(0C1H, 0E0H + reg1, n)   // shl reg1, n
                     ELSE
-                        OutByte(0D1H); OutByte(0E0H + reg1)               // shl reg1, 1
+                        OutByte2(0D1H, 0E0H + reg1)      // shl reg1, 1
                     END
                 ELSE
-                    OutByte(69H + 2 * ORD(isByte(a))); OutByte(0C0H + reg1 * 9); // imul reg1, a
+                    OutByte2(69H + 2 * ORD(isByte(a)), 0C0H + reg1 * 9); // imul reg1, a
                     OutIntByte(a)
                 END
             END
 
         |CODE.opMUL:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(0FH); OutByte(0AFH); OutByte(0C0H + reg1 * 8 + reg2); //imul reg1, reg2
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte3(0FH, 0AFH, 0C0H + reg1 * 8 + reg2); // imul reg1, reg2
+            drop
 
         |CODE.opSAVE, CODE.opSAVE32:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(89H); OutByte(reg2 * 8 + reg1); // mov dword[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(89H, reg2 * 8 + reg1); // mov dword[reg1], reg2
+            drop;
+            drop
 
         |CODE.opSAVE8:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(88H); OutByte(reg2 * 8 + reg1); // mov byte[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(88H, reg2 * 8 + reg1); // mov byte[reg1], reg2
+            drop;
+            drop
 
         |CODE.opSAVE16:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(66H); OutByte(89H); OutByte(reg2 * 8 + reg1); // mov word[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte3(66H, 89H, reg2 * 8 + reg1); // mov word[reg1], reg2
+            drop;
+            drop
 
         |CODE.opSAVEP:
-            REG.UnOp(R, reg1);
-            //mov dword[reg1],L
-            BIN.PutCode(program, 0C7H);
-            BIN.PutCode(program,  reg1);
-            BIN.PutReloc(program, 5);
-            BIN.PutCode32LE(program, program.labels[cmd.param]);
-
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0C7H, reg1);  // mov dword[reg1], L
+            Reloc(5, program.labels[cmd.param]);
+            drop
 
         |CODE.opSAVEIP:
-            REG.UnOp(R, reg1);
-            //push dword[L]
-            BIN.PutCode(program, 0FFH);
-            BIN.PutCode(program, 035H);
-            BIN.PutReloc(program, 2);
-            BIN.PutCode32LE(program, cmd.param);
-
-            OutByte(8FH); OutByte(reg1); // pop dword[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0FFH, 035H);  // push dword[L]
+            Reloc(2, cmd.param);
+            OutByte2(8FH, reg1);   // pop dword[reg1]
+            drop
 
         |CODE.opPUSHP:
             reg1 := REG.GetAnyReg(R);
-            //mov reg1,L
-            BIN.PutCode(program, 0B8H + reg1);
-            BIN.PutReloc(program, 5);
-            BIN.PutCode32LE(program, program.labels[cmd.param])
+            OutByte(0B8H + reg1);  // mov reg1, L
+            Reloc(5, program.labels[cmd.param])
 
         |CODE.opPUSHIP:
             reg1 := REG.GetAnyReg(R);
-            //mov reg1,[L]
-            BIN.PutCode(program, 8BH);
-            BIN.PutCode(program, 05H + reg1 * 8);
-            BIN.PutReloc(program, 2);
-            BIN.PutCode32LE(program, cmd.param)
+            OutByte2(8BH, 05H + reg1 * 8);  // mov reg1, [L]
+            Reloc(2, cmd.param)
 
         |CODE.opNOT:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
+            UnOp(reg1);
+            drop;
             test(reg1);
             reg1 := REG.GetAnyReg(R);
             setcc(sete, reg1);
             andrc(reg1, 1)
 
         |CODE.opORD:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
+            UnOp(reg1);
+            drop;
             test(reg1);
             reg1 := REG.GetAnyReg(R);
             setcc(setne, reg1);
             andrc(reg1, 1)
 
         |CODE.opSBOOL:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
+            UnOp(reg1);
+            drop;
             test(reg1);
             reg1 := REG.GetAnyReg(R);
             setcc(setne, reg1);
-            REG.BinOp(R, reg1, reg2);
-            OutByte(88H); OutByte(reg2 * 8 + reg1); // mov byte[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(88H, reg2 * 8 + reg1); // mov byte[reg1], reg2
+            drop;
+            drop
 
         |CODE.opSBOOLC:
-            REG.UnOp(R, reg1);
-            OutByte(0C6H);
-            OutByte(reg1);
-            OutByte(ORD(cmd.param # 0)); // mov byte[reg1], 0/1
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte3(0C6H, reg1, ORD(cmd.param # 0)); // mov byte[reg1], 0/1
+            drop
 
         |CODE.opODD:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             andrc(reg1, 1)
 
         |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
          CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
          CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             IF cmd.param = 0 THEN
                 test(reg1)
             ELSE
                 cmprc(reg1, cmd.param)
             END;
-            reg1 := REG.Drop(R);
+            drop;
 
             IF cmd.next(COMMAND).opcode = CODE.opJE THEN
                 label := cmd.next(COMMAND).label;
@@ -876,10 +814,10 @@ BEGIN
 
         |CODE.opGT, CODE.opGE, CODE.opLT,
          CODE.opLE, CODE.opEQ, CODE.opNE:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R);
+            drop;
+            drop;
 
             IF cmd.next(COMMAND).opcode = CODE.opJE THEN
                 label := cmd.next(COMMAND).label;
@@ -921,18 +859,18 @@ BEGIN
             END
 
         |CODE.opEQB, CODE.opNEB:
-            REG.BinOp(R, reg1, reg2);
-            reg2 := REG.Drop(R);
-            reg1 := REG.Drop(R);
+            BinOp(reg1, reg2);
+            drop;
+            drop;
 
             test(reg1);
-            OutByte(74H); OutByte(5);  // je @f
-            movrc(reg1, 1);            // mov reg1, 1
-                                       // @@:
+            OutByte2(74H, 5);  // je @f
+            movrc(reg1, 1);    // mov reg1, 1
+                               // @@:
             test(reg2);
-            OutByte(74H); OutByte(5);  // je @f
-            movrc(reg2, 1);            // mov reg2, 1
-                                       // @@:
+            OutByte2(74H, 5);  // je @f
+            movrc(reg2, 1);    // mov reg2, 1
+                               // @@:
 
             cmprr(reg1, reg2);
             reg1 := REG.GetAnyReg(R);
@@ -945,19 +883,19 @@ BEGIN
 
         |CODE.opACC:
             IF (R.top # 0) OR (R.stk[0] # eax) THEN
-                REG.PushAll(R);
+                PushAll(0);
                 ASSERT(REG.GetReg(R, eax));
-                _pop(eax);
+                pop(eax);
                 DEC(R.pushed)
             END
 
         |CODE.opDROP:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            drop
 
         |CODE.opJE, CODE.opJNE:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
+            UnOp(reg1);
+            drop;
             test(reg1);
             IF cmd.opcode = CODE.opJE THEN
                 jcc(jne, cmd.label)
@@ -966,23 +904,23 @@ BEGIN
             END
 
         |CODE.opJNZ:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             test(reg1);
             jcc(jne, cmd.label)
 
         |CODE.opJZ:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             test(reg1);
             jcc(je, cmd.label)
 
         |CODE.opSWITCH:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             IF reg1 # eax THEN
                 ASSERT(REG.GetReg(R, eax));
                 ASSERT(REG.Exchange(R, reg1, eax));
-                reg1 := REG.Drop(R)
+                drop
             END;
-            reg1 := REG.Drop(R)
+            drop
 
         |CODE.opENDSW:
 
@@ -1002,222 +940,212 @@ BEGIN
             OutByte(Byte(cmd.param))
 
         |CODE.opGET:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
+            drop;
+            drop;
 
             CASE cmd.param OF
             |1:
-                OutByte(8AH); OutByte(reg1 * 9); // mov reg1, byte[reg1]
-                OutByte(88H); OutByte(reg1 * 8 + reg2) // mov byte[reg2], reg1
+                OutByte2(8AH, reg1 * 9);       // mov reg1, byte[reg1]
+                OutByte2(88H, reg1 * 8 + reg2) // mov byte[reg2], reg1
 
             |2:
-                OutByte(66H); OutByte(8BH); OutByte(reg1 * 9); // mov reg1, word[reg1]
-                OutByte(66H); OutByte(89H); OutByte(reg1 * 8 + reg2) // mov word[reg2], reg1
+                OutByte3(66H, 8BH, reg1 * 9);       // mov reg1, word[reg1]
+                OutByte3(66H, 89H, reg1 * 8 + reg2) // mov word[reg2], reg1
 
             |4:
-                OutByte(8BH); OutByte(reg1 * 9);        // mov reg1, dword[reg1]
-                OutByte(89H); OutByte(reg1 * 8 + reg2) // mov dword[reg2], reg1
+                OutByte2(8BH, reg1 * 9);        // mov reg1, dword[reg1]
+                OutByte2(89H, reg1 * 8 + reg2)  // mov dword[reg2], reg1
 
             |8:
-                reg2 := REG.Drop(R);
-                reg1 := REG.Drop(R);
-                REG.PushAll(R);
-                _push(reg2);
-                _push(reg1);
+                PushAll(0);
+                push(reg2);
+                push(reg1);
                 pushc(8);
                 CallRTL(CODE._move)
 
-            END;
-
-            IF cmd.param # 8 THEN
-                reg1 := REG.Drop(R);
-                reg1 := REG.Drop(R)
             END
 
         |CODE.opSAVES:
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
-            REG.PushAll(R);
-            _push(reg1);
-            //push _data + stroffs + cmd.param
-            BIN.PutCode(program, 068H);
-            BIN.PutReloc(program, 4);
-            BIN.PutCode32LE(program, stroffs + cmd.param);
-
+            UnOp(reg1);
+            drop;
+            PushAll(0);
+            push(reg1);
+            OutByte(068H);  // push _data + stroffs + cmd.param
+            Reloc(4, stroffs + cmd.param);
             pushc(cmd.param2);
             CallRTL(CODE._move)
 
         |CODE.opCHKIDX:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             cmprc(reg1, cmd.param);
             jcc(jb, cmd.label)
 
         |CODE.opCHKIDX2:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             cmprr(reg2, reg1);
-            _mov(reg1, reg2);
-            reg1 := REG.Drop(R);
+            mov(reg1, reg2);
+            drop;
             jcc(jb, cmd.label)
 
         |CODE.opLEN:
             n := cmd.param;
-            REG.UnOp(R, reg1);
-            reg1 := REG.Drop(R);
-            R.regs := R.regs - {reg1};
+            UnOp(reg1);
+            drop;
+            EXCL(R.regs, reg1);
 
             WHILE n > 0 DO
-                REG.UnOp(R, reg2);
-                reg2 := REG.Drop(R);
+                UnOp(reg2);
+                drop;
                 DEC(n)
             END;
 
-            R.regs := R.regs + {reg1};
-            ASSERT(REG.GetReg(R, reg1));
+            INCL(R.regs, reg1);
+            ASSERT(REG.GetReg(R, reg1))
 
         |CODE.opINC1:
-            REG.UnOp(R, reg1);
-            OutByte(0FFH); OutByte(reg1); // inc dword[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0FFH, reg1); // inc dword[reg1]
+            drop
 
         |CODE.opDEC1:
-            REG.UnOp(R, reg1);
-            OutByte(0FFH); OutByte(8 + reg1); // dec dword[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0FFH, 8 + reg1); // dec dword[reg1]
+            drop
 
         |CODE.opINCC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             n := cmd.param;
-            OutByte(81H + 2 * ORD(isByte(n))); OutByte(reg1); OutIntByte(n); //add dword[reg1], n
-            reg1 := REG.Drop(R)
+            OutByte2(81H + 2 * ORD(isByte(n)), reg1); OutIntByte(n); // add dword[reg1], n
+            drop
 
         |CODE.opDECC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             n := cmd.param;
-            OutByte(81H + 2 * ORD(isByte(n))); OutByte(28H + reg1); OutIntByte(n); //sub dword[reg1], n
-            reg1 := REG.Drop(R)
+            OutByte2(81H + 2 * ORD(isByte(n)), 28H + reg1); OutIntByte(n); // sub dword[reg1], n
+            drop
 
         |CODE.opINC:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(01H); OutByte(reg2 * 8 + reg1); // add dword[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(01H, reg2 * 8 + reg1); // add dword[reg1], reg2
+            drop;
+            drop
 
         |CODE.opDEC:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(29H); OutByte(reg2 * 8 + reg1); // sub dword[reg1], reg2
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(29H, reg2 * 8 + reg1); // sub dword[reg1], reg2
+            drop;
+            drop
 
         |CODE.opINC1B:
-            REG.UnOp(R, reg1);
-            OutByte(0FEH); OutByte(reg1); // inc byte[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0FEH, reg1); // inc byte[reg1]
+            drop
 
         |CODE.opDEC1B:
-            REG.UnOp(R, reg1);
-            OutByte(0FEH); OutByte(08H + reg1); // dec byte[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0FEH, 08H + reg1); // dec byte[reg1]
+            drop
 
         |CODE.opINCCB:
-            REG.UnOp(R, reg1);
-            OutByte(80H); OutByte(reg1); OutByte(Byte(cmd.param)); //add byte[reg1], n
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte3(80H, reg1, Byte(cmd.param)); // add byte[reg1], n
+            drop
 
         |CODE.opDECCB:
-            REG.UnOp(R, reg1);
-            OutByte(80H); OutByte(28H + reg1); OutByte(Byte(cmd.param)); //sub byte[reg1], n
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte3(80H, 28H + reg1, Byte(cmd.param)); // sub byte[reg1], n
+            drop
 
         |CODE.opINCB, CODE.opDECB:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
 
             IF cmd.opcode = CODE.opINCB THEN
-                OutByte(0H); OutByte(reg2 * 8 + reg1) // add byte[reg1], reg2
+                OutByte2(00H, reg2 * 8 + reg1) // add byte[reg1], reg2
             ELSE
-                OutByte(28H); OutByte(reg2 * 8 + reg1) // sub byte[reg1], reg2
+                OutByte2(28H, reg2 * 8 + reg1) // sub byte[reg1], reg2
             END;
 
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R)
+            drop;
+            drop
 
         |CODE.opMULS:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(21H); OutByte(0C0H + reg2 * 8 + reg1); // and reg1, reg2
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(21H, 0C0H + reg2 * 8 + reg1); // and reg1, reg2
+            drop
 
         |CODE.opMULSC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             andrc(reg1, cmd.param)
 
         |CODE.opDIVS:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(31H); OutByte(0C0H + reg2 * 8 + reg1); // xor reg1, reg2
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(31H, 0C0H + reg2 * 8 + reg1); // xor reg1, reg2
+            drop
 
         |CODE.opDIVSC:
             n := cmd.param;
-            REG.UnOp(R, reg1);
-            OutByte(81H + 2 * ORD(isByte(n))); OutByte(0F0H + reg1);  // or reg1, n
+            UnOp(reg1);
+            OutByte2(81H + 2 * ORD(isByte(n)), 0F0H + reg1);  // or reg1, n
             OutIntByte(n)
 
         |CODE.opADDS:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(9H); OutByte(0C0H + reg2 * 8 + reg1); // or reg1, reg2
-            reg1 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(9H, 0C0H + reg2 * 8 + reg1); // or reg1, reg2
+            drop
 
         |CODE.opSUBS:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             not(reg2);
-            OutByte(21H); OutByte(0C0H + reg2 * 8 + reg1); // and reg1, reg2
-            reg1 := REG.Drop(R)
+            OutByte2(21H, 0C0H + reg2 * 8 + reg1); // and reg1, reg2
+            drop
 
         |CODE.opADDSL, CODE.opADDSR:
             n := cmd.param;
-            REG.UnOp(R, reg1);
-            OutByte(81H + 2 * ORD(isByte(n))); OutByte(0C8H + reg1);  // or reg1, n
+            UnOp(reg1);
+            OutByte2(81H + 2 * ORD(isByte(n)), 0C8H + reg1);  // or reg1, n
             OutIntByte(n)
 
         |CODE.opSUBSL:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             not(reg1);
             andrc(reg1, cmd.param)
 
         |CODE.opSUBSR:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             andrc(reg1, ORD(-BITS(cmd.param)));
 
         |CODE.opUMINS:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             not(reg1)
 
         |CODE.opLENGTH:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._length);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opLENGTHW:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._lengthw);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCHR:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             andrc(reg1, 255)
 
         |CODE.opWCHR:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             andrc(reg1, 65535)
 
         |CODE.opASR, CODE.opROR, CODE.opLSL, CODE.opLSR:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             IF reg1 # ecx THEN
                 ASSERT(REG.GetReg(R, ecx));
                 ASSERT(REG.Exchange(R, reg1, ecx));
-                reg1 := REG.Drop(R)
+                drop
             END;
 
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             ASSERT(reg2 = ecx);
             OutByte(0D3H);
             CASE cmd.opcode OF
@@ -1226,21 +1154,21 @@ BEGIN
             |CODE.opLSL: OutByte(0E0H + reg1)  // shl reg1, cl
             |CODE.opLSR: OutByte(0E8H + reg1)  // shr reg1, cl
             END;
-            reg1 := REG.Drop(R)
+            drop
 
         |CODE.opASR1, CODE.opROR1, CODE.opLSL1, CODE.opLSR1:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             IF reg1 # ecx THEN
                 ASSERT(REG.GetReg(R, ecx));
                 ASSERT(REG.Exchange(R, reg1, ecx));
-                reg1 := REG.Drop(R)
+                drop
             END;
 
             reg1 := REG.GetAnyReg(R);
 
             movrc(reg1, cmd.param);
 
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             ASSERT(reg1 = ecx);
             OutByte(0D3H);
             CASE cmd.opcode OF
@@ -1249,12 +1177,12 @@ BEGIN
             |CODE.opLSL1: OutByte(0E0H + reg2)  // shl reg2, cl
             |CODE.opLSR1: OutByte(0E8H + reg2)  // shr reg2, cl
             END;
-            reg1 := REG.Drop(R);
-            reg1 := REG.Drop(R);
+            drop;
+            drop;
             ASSERT(REG.GetReg(R, reg2))
 
         |CODE.opASR2, CODE.opROR2, CODE.opLSL2, CODE.opLSR2:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             n := ORD(BITS(cmd.param) * {0..4});
             IF n # 1 THEN
                 OutByte(0C1H)
@@ -1274,108 +1202,96 @@ BEGIN
             END
 
         |CODE.opMIN:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            OutCode("7E02");  // jle @f
-            _mov(reg1, reg2); // mov reg1, reg2
-                              // @@:
-            reg2 := REG.Drop(R)
+            OutByte2(07EH, 002H);  // jle @f
+            mov(reg1, reg2);       // mov reg1, reg2
+                                   // @@:
+            drop
 
         |CODE.opMAX:
-            REG.BinOp(R, reg1, reg2);
+            BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            OutCode("7D02");  // jge @f
-            _mov(reg1, reg2); // mov reg1, reg2
-                              // @@:
-            reg2 := REG.Drop(R)
+            OutByte2(07DH, 002H);  // jge @f
+            mov(reg1, reg2);       // mov reg1, reg2
+                                   // @@:
+            drop
 
         |CODE.opMINC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             cmprc(reg1, cmd.param);
-            OutCode("7E05");         // jle @f
+            OutByte2(07EH, 005H);    // jle @f
             movrc(reg1, cmd.param);  // mov reg1, cmd.param
                                      // @@:
 
         |CODE.opMAXC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             cmprc(reg1, cmd.param);
-            OutCode("7D05");         // jge @f
+            OutByte2(07DH, 005H);    // jge @f
             movrc(reg1, cmd.param);  // mov reg1, cmd.param
                                      // @@:
 
         |CODE.opIN:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._in);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINR:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._in);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._in2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSET:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSETR:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSETL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._set2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSET1:
-            REG.UnOp(R, reg1);
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
-            _push(reg1);
+            UnOp(reg1);
+            PushAll(1);
+            push(reg1);
             CallRTL(CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINCL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._incl)
 
         |CODE.opEXCL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._excl)
 
         |CODE.opINCLC:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._incl)
 
         |CODE.opEXCLC:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._excl)
 
         |CODE.opDIV:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._div);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1392,33 +1308,32 @@ BEGIN
             IF a = 1 THEN
 
             ELSIF a = -1 THEN
-                REG.UnOp(R, reg1);
+                UnOp(reg1);
                 neg(reg1)
             ELSE
                 IF n > 0 THEN
-                    REG.UnOp(R, reg1);
+                    UnOp(reg1);
 
                     IF a < 0 THEN
                         reg2 := REG.GetAnyReg(R);
-                        _mov(reg2, reg1);
+                        mov(reg2, reg1);
                         IF n # 1 THEN
-                            OutByte(0C1H); OutByte(0F8H + reg1); OutByte(n)   // sar reg1, n
+                            OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
                         ELSE
-                            OutByte(0D1H); OutByte(0F8H + reg1)               // sar reg1, 1
+                            OutByte2(0D1H, 0F8H + reg1)        // sar reg1, 1
                         END;
-                        OutByte(29H); OutByte(0C0H + reg2 * 8 + reg1); // sub reg1, reg2
-                        reg2 := REG.Drop(R)
+                        OutByte2(29H, 0C0H + reg2 * 8 + reg1); // sub reg1, reg2
+                        drop
                     ELSE
                         IF n # 1 THEN
-                            OutByte(0C1H); OutByte(0F8H + reg1); OutByte(n)   // sar reg1, n
+                            OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
                         ELSE
-                            OutByte(0D1H); OutByte(0F8H + reg1)               // sar reg1, 1
+                            OutByte2(0D1H, 0F8H + reg1)        // sar reg1, 1
                         END
                     END
 
                 ELSE
-                    REG.PushAll(R);
-                    R.pushed := R.pushed - 1;
+                    PushAll(1);
                     pushc(cmd.param);
                     CallRTL(CODE._div);
                     ASSERT(REG.GetReg(R, eax))
@@ -1426,15 +1341,13 @@ BEGIN
             END
 
         |CODE.opDIVL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._div2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opMOD:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             CallRTL(CODE._mod);
             ASSERT(REG.GetReg(R, eax))
 
@@ -1449,11 +1362,11 @@ BEGIN
             END;
 
             IF ABS(a) = 1 THEN
-                REG.UnOp(R, reg1);
-                OutByte(31H); OutByte(0C0H + reg1 * 9) // xor reg1, reg1
+                UnOp(reg1);
+                OutByte2(31H, 0C0H + reg1 * 9) // xor reg1, reg1
             ELSE
                 IF n > 0 THEN
-                    REG.UnOp(R, reg1);
+                    UnOp(reg1);
                     andrc(reg1, ABS(a) - 1);
 
                     IF a < 0 THEN
@@ -1469,8 +1382,7 @@ BEGIN
                     END
 
                 ELSE
-                    REG.PushAll(R);
-                    R.pushed := R.pushed - 1;
+                    PushAll(1);
                     pushc(cmd.param);
                     CallRTL(CODE._mod);
                     ASSERT(REG.GetReg(R, eax))
@@ -1478,8 +1390,7 @@ BEGIN
             END
 
         |CODE.opMODL:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._mod2);
             ASSERT(REG.GetReg(R, eax))
@@ -1488,51 +1399,45 @@ BEGIN
             CallRTL(CODE._error)
 
         |CODE.opABS:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             test(reg1);
-            OutCode("7D02"); // jge @f
-            neg(reg1);       // neg reg1
-                             // @@:
+            OutByte2(07DH, 002H); // jge @f
+            neg(reg1);            // neg reg1
+                                  // @@:
 
         |CODE.opCOPY:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             pushc(cmd.param);
             CallRTL(CODE._move)
 
         |CODE.opMOVE:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 3;
+            PushAll(3);
             CallRTL(CODE._move2)
 
         |CODE.opCOPYA:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             pushc(cmd.param);
             CallRTL(CODE._arrcpy);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCOPYS:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             pushc(cmd.param);
             CallRTL(CODE._strcpy)
 
         |CODE.opCOPYS2:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             pushc(cmd.param);
             CallRTL(CODE._strcpy2)
 
         |CODE.opROT:
-            REG.PushAll(R);
+            PushAll(0);
             OutByte(54H);  // push esp
             pushc(cmd.param);
             CallRTL(CODE._rot)
 
         |CODE.opNEW:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             n := cmd.param + 8;
             ASSERT(UTILS.align(n, 32));
             pushc(n);
@@ -1540,14 +1445,12 @@ BEGIN
             CallRTL(CODE._new)
 
         |CODE.opDISP:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             CallRTL(CODE._dispose)
 
         |CODE.opEQS, CODE.opNES, CODE.opLTS,
          CODE.opLES, CODE.opGTS, CODE.opGES:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             CASE cmd.opcode OF
             |CODE.opEQS: pushc(0)
             |CODE.opNES: pushc(1)
@@ -1561,8 +1464,7 @@ BEGIN
 
         |CODE.opEQS2, CODE.opNES2, CODE.opLTS2,
          CODE.opLES2, CODE.opGTS2, CODE.opGES2:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             CASE cmd.opcode OF
             |CODE.opEQS2: pushc(0)
             |CODE.opNES2: pushc(1)
@@ -1576,8 +1478,7 @@ BEGIN
 
         |CODE.opEQSW, CODE.opNESW, CODE.opLTSW,
          CODE.opLESW, CODE.opGTSW, CODE.opGESW:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             CASE cmd.opcode OF
             |CODE.opEQSW: pushc(0)
             |CODE.opNESW: pushc(1)
@@ -1591,8 +1492,7 @@ BEGIN
 
         |CODE.opEQSW2, CODE.opNESW2, CODE.opLTSW2,
          CODE.opLESW2, CODE.opGTSW2, CODE.opGESW2:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 4;
+            PushAll(4);
             CASE cmd.opcode OF
             |CODE.opEQSW2: pushc(0)
             |CODE.opNESW2: pushc(1)
@@ -1605,24 +1505,18 @@ BEGIN
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQP, CODE.opNEP, CODE.opEQIP, CODE.opNEIP:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             CASE cmd.opcode OF
             |CODE.opEQP, CODE.opNEP:
-                //cmp reg1,L
-                BIN.PutCode(program, 081H);
-                BIN.PutCode(program, 0F8H + reg1);
-                BIN.PutReloc(program, 5);
-                BIN.PutCode32LE(program, program.labels[cmd.label])
+                OutByte2(081H, 0F8H + reg1);  // cmp reg1, L
+                Reloc(5, program.labels[cmd.label])
 
             |CODE.opEQIP, CODE.opNEIP:
-                //cmp reg1,dword[L]
-                BIN.PutCode(program, 3BH);
-                BIN.PutCode(program, 05H + reg1 * 8);
-                BIN.PutReloc(program, 2);
-                BIN.PutCode32LE(program, cmd.label)
+                OutByte2(3BH, 05H + reg1 * 8);  // cmp reg1, dword[L]
+                Reloc(2, cmd.label)
 
             END;
-            reg1 := REG.Drop(R);
+            drop;
             reg1 := REG.GetAnyReg(R);
 
             CASE cmd.opcode OF
@@ -1633,263 +1527,242 @@ BEGIN
             andrc(reg1, 1)
 
         |CODE.opPUSHT:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             reg2 := REG.GetAnyReg(R);
-            OutByte(8BH); OutByte(40H + reg2 * 8 + reg1); OutByte(0FCH);
+            OutByte3(8BH, 40H + reg2 * 8 + reg1, 0FCH)  // mov reg2, dword[reg1 - 4]
 
         |CODE.opISREC:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 2;
+            PushAll(2);
             pushc(cmd.param);
             CallRTL(CODE._isrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGR:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opIS:
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._is);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEG:
-            REG.UnOp(R, reg2);
+            UnOp(reg2);
             reg1 := REG.GetAnyReg(R);
-            _mov(reg1, reg2);
-            REG.PushAll(R);
-            R.pushed := R.pushed - 1;
+            mov(reg1, reg2);
+            PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._guard);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCASET:
-            _push(eax);
-            _push(eax);
+            push(eax);
+            push(eax);
             pushc(cmd.param);
             CallRTL(CODE._guardrec);
-            _mov(ecx, eax);
-            _pop(eax);
+            mov(ecx, eax);
+            pop(eax);
             test(ecx);
             jcc(jne, cmd.label)
 
         |CODE.opPACK:
-            REG.BinOp(R, reg1, reg2);
-            _push(reg2);
-            OutCode("DB0424"); // fild dword[esp]
-            OutByte(0DDH); OutByte(reg1); // fld qword[reg1]
-            OutCode("D9FD");   // fscale
-            OutByte(0DDH); OutByte(018H + reg1); // fstp qword[reg1]
-            OutCode("DB1C24"); // fistp dword[esp]
-            _pop(reg2);
-            reg1 := REG.Drop(R);
-            reg2 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            push(reg2);
+            OutByte3(0DBH, 004H, 024H);   // fild dword[esp]
+            OutByte2(0DDH, reg1);         // fld qword[reg1]
+            OutByte2(0D9H, 0FDH);         // fscale
+            OutByte2(0DDH, 018H + reg1);  // fstp qword[reg1]
+            OutByte3(0DBH, 01CH, 024H);   // fistp dword[esp]
+            pop(reg2);
+            drop;
+            drop
 
         |CODE.opPACKC:
-            REG.UnOp(R, reg1);
+            UnOp(reg1);
             pushc(cmd.param);
-            OutCode("DB0424"); // fild dword[esp]
-            OutByte(0DDH); OutByte(reg1); // fld qword[reg1]
-            OutCode("D9FD");   // fscale
-            OutByte(0DDH); OutByte(018H + reg1); // fstp qword[reg1]
-            OutCode("DB1C24"); // fistp dword[esp]
-            _pop(reg1);
-            reg1 := REG.Drop(R)
+            OutByte3(0DBH, 004H, 024H);   // fild dword[esp]
+            OutByte2(0DDH, reg1);         // fld qword[reg1]
+            OutByte2(0D9H, 0FDH);         // fscale
+            OutByte2(0DDH, 018H + reg1);  // fstp qword[reg1]
+            OutByte3(0DBH, 01CH, 024H);   // fistp dword[esp]
+            pop(reg1);
+            drop
 
         |CODE.opUNPK:
-            REG.BinOp(R, reg1, reg2);
-            OutByte(0DDH); OutByte(reg1); // fld qword[reg1]
-            OutCode("D9F4");   // fxtract
-            OutByte(0DDH); OutByte(018H + reg1); // fstp qword[reg1]
-            OutByte(0DBH); OutByte(018H + reg2); // fistp dword[reg2]
-            reg1 := REG.Drop(R);
-            reg2 := REG.Drop(R)
+            BinOp(reg1, reg2);
+            OutByte2(0DDH, reg1);         // fld qword[reg1]
+            OutByte2(0D9H, 0F4H);         // fxtract
+            OutByte2(0DDH, 018H + reg1);  // fstp qword[reg1]
+            OutByte2(0DBH, 018H + reg2);  // fistp dword[reg2]
+            drop;
+            drop
 
         |CODE.opPUSHF:
-            OutCode("83EC08");  // sub esp,8
-            OutCode("DD1C24")   // fstp qword[esp]
+            OutByte3(083H, 0ECH, 008H);   // sub esp,8
+            OutByte3(0DDH, 01CH, 024H)    // fstp qword[esp]
 
         |CODE.opLOADF:
-            REG.UnOp(R, reg1);
-            OutByte(0DDH); OutByte(reg1); // fld qword[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0DDH, reg1);         // fld qword[reg1]
+            drop
 
         |CODE.opCONSTF:
             IF cmd.float = 0.0 THEN
-                OutCode("D9EE"); // fldz
+                OutByte2(0D9H, 0EEH)      // fldz
             ELSIF cmd.float = 1.0 THEN
-                OutCode("D9E8"); // fld1
+                OutByte2(0D9H, 0E8H)      // fld1
             ELSIF cmd.float = -1.0 THEN
-                OutCode("D9E8"); // fld1
-                OutCode("D9E0")  // fchs
+                OutByte2(0D9H, 0E8H);     // fld1
+                OutByte2(0D9H, 0E0H)      // fchs
             ELSE
                 UTILS.splitf(cmd.float, a, b);
                 pushc(b);
                 pushc(a);
-                OutCode("DD0424"); // fld qword[esp]
-                OutCode("83C408")  // add esp,8
+                OutByte3(0DDH, 004H, 024H); // fld qword[esp]
+                OutByte3(083H, 0C4H, 008H)  // add esp,8
             END
 
         |CODE.opSAVEF:
-            REG.UnOp(R, reg1);
-            OutByte(0DDH); OutByte(018H + reg1); // fstp qword[reg1]
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            OutByte2(0DDH, 018H + reg1); // fstp qword[reg1]
+            drop
 
         |CODE.opADDF, CODE.opADDFI:
-            OutCode("DEC1")  // faddp st1, st
+            OutByte2(0DEH, 0C1H)  // faddp st1, st
 
         |CODE.opSUBF:
-            OutCode("DEE9")  // fsubp st1, st
+            OutByte2(0DEH, 0E9H)  // fsubp st1, st
 
         |CODE.opSUBFI:
-            OutCode("DEE1")  // fsubrp st1, st
+            OutByte2(0DEH, 0E1H)  // fsubrp st1, st
 
         |CODE.opMULF:
-            OutCode("DEC9")  // fmulp st1, st
+            OutByte2(0DEH, 0C9H)  // fmulp st1, st
 
         |CODE.opDIVF:
-            OutCode("DEF9")  // fdivp st1, st
+            OutByte2(0DEH, 0F9H)  // fdivp st1, st
 
         |CODE.opDIVFI:
-            OutCode("DEF1")  // fdivrp st1, st
+            OutByte2(0DEH, 0F1H)  // fdivrp st1, st
 
         |CODE.opUMINF:
-            OutCode("D9E0")  // fchs
+            OutByte2(0D9H, 0E0H)  // fchs
 
         |CODE.opFABS:
-            OutCode("D9E1")  // fabs
+            OutByte2(0D9H, 0E1H)  // fabs
 
         |CODE.opFLT:
-            REG.UnOp(R, reg1);
-            _push(reg1);
-            OutCode("DB0424"); // fild dword[esp]
-            _pop(reg1);
-            reg1 := REG.Drop(R)
+            UnOp(reg1);
+            push(reg1);
+            OutByte3(0DBH, 004H, 024H); // fild dword[esp]
+            pop(reg1);
+            drop
 
         |CODE.opFLOOR:
             reg1 := REG.GetAnyReg(R);
-            OutCode("83EC089BD97C24049BD97C24066681642404FFF366814C24040004D96C2404D9FCDB1C24");
-            (*
-                sub esp,8
-                fstcw word[esp+4]
-                fstcw word[esp+6]
-                and word[esp+4],1111001111111111b
-                or word[esp+4],0000010000000000b
-                fldcw word[esp+4]
-                frndint
-                fistp dword[esp]
-                *)
-            _pop(reg1);
-            OutCode("D96C240283C404")
-            (*
-                fldcw word[esp+2]
-                add esp,4
-                *)
+            OutByte3(083H, 0ECH, 008H);                                         // sub esp,8
+            OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 004H);                   // fstcw word[esp+4]
+            OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 006H);                   // fstcw word[esp+6]
+            OutByte2(066H, 081H); OutByte3(064H, 024H, 004H); OutWord(0F3FFH);  // and word[esp+4], 1111001111111111b
+            OutByte2(066H, 081H); OutByte3(04CH, 024H, 004H); OutWord(00400H);  // or  word[esp+4], 0000010000000000b
+            OutByte2(0D9H, 06CH); OutByte2(024H, 004H);                         // fldcw word[esp+4]
+            OutByte2(0D9H, 0FCH);                                               // frndint
+            OutByte3(0DBH, 01CH, 024);                                          // fistp dword[esp]
+            pop(reg1);
+            OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
+            OutByte3(083H, 0C4H, 004H)                                          // add esp,4
+
 
         |CODE.opEQF, CODE.opEQFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A060F94C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setz al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 006H);       // jp L
+            setcc(sete, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opNEF, CODE.opNEFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A060F95C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setnz al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 006H);       // jp L
+            setcc(setne, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opLTF, CODE.opGTFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A0E0F92C00F94C485C00F94C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setc al
-                setz ah
-                test eax,eax
-                setz al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 00EH);       // jp L
+            setcc(setc, al);
+            setcc(sete, ah);
+            test(eax);
+            setcc(sete, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opGTF, CODE.opLTFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A0F0F92C00F94C483F8010F94C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setc al
-                setz ah
-                cmp eax,1
-                sete al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 00FH);       // jp L
+            setcc(setc, al);
+            setcc(sete, ah);
+            cmprc(eax, 1);
+            setcc(sete, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opLEF, CODE.opGEFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A060F93C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setnc al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 006H);       // jp L
+            setcc(setnc, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opGEF, CODE.opLEFI:
             ASSERT(REG.GetReg(R, eax));
-            OutCode("DAE99BDFE09EB8000000007A100F92C00F94C400E03C010F94C083E001")
-            (*
-                fucompp
-                fstsw ax
-                sahf
-                mov eax,0
-                jp L
-                setc al
-                setz ah
-                add al,ah
-                cmp al,1
-                sete al
-                and eax,1
-                L:
-                *)
+            OutByte2(0DAH, 0E9H);       // fucompp
+            OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
+            OutByte(09EH);              // sahf
+            movrc(eax, 0);
+            OutByte2(07AH, 010H);       // jp L
+            setcc(setc, al);
+            setcc(sete, ah);
+            OutByte2(000H, 0E0H);       // add al,ah
+            OutByte2(03CH, 001H);       // cmp al,1
+            setcc(sete, al);
+            andrc(eax, 1)
+                                        // L:
+
 
         |CODE.opINF:
-            pushc(2146435072);
+            pushc(7FF00000H);
             pushc(0);
-            OutCode("DD0424"); //fld qword[esp]
-            OutCode("83C408"); //add esp, 8
+            OutByte3(0DDH, 004H, 024H);  // fld qword[esp]
+            OutByte3(083H, 0C4H, 008H)   // add esp, 8
 
         END;
 
@@ -1912,11 +1785,11 @@ BEGIN
         WriteLn("DllEntryPoint:");   *)
         dllinit := CODE.NewLabel();
         BIN.SetLabel(program, dllinit);
-        OutByte(55H); // push ebp
-        OutByte(89H); OutByte(0E5H); // mov ebp,esp
-        OutByte(0FFH); OutByte(75H); OutByte(16); // push dword[ebp+16]
-        OutByte(0FFH); OutByte(75H); OutByte(12); // push dword[ebp+12]
-        OutByte(0FFH); OutByte(75H); OutByte(8);  // push dword[ebp+8]
+        OutByte(55H);             // push ebp
+        OutByte2(89H, 0E5H);      // mov ebp,esp
+        OutByte3(0FFH, 75H, 16);  // push dword[ebp+16]
+        OutByte3(0FFH, 75H, 12);  // push dword[ebp+12]
+        OutByte3(0FFH, 75H, 8);   // push dword[ebp+8]
         CallRTL(CODE._dllentry);
         test(eax);
         jcc(je, dllret)
@@ -1930,27 +1803,22 @@ BEGIN
         BIN.SetLabel(program, dllinit)
     END;
 
-    OutCode("9BDBE3"); // finit
+    OutByte3(09BH, 0DBH, 0E3H); // finit
 
     IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN
-        BIN.PutCode(program, 068H); //push IMPORT
-        BIN.PutReloc(program, 6);
-        BIN.PutCode32LE(program, 0)
+        OutByte(068H);      // push IMPORT
+        Reloc(6, 0)
     ELSE
-        BIN.PutCode(program, 6AH);  //push 0
-        BIN.PutCode(program, 00H)
+        OutByte2(6AH, 00H)  // push 0
     END;
 
-    //push _data
-    BIN.PutCode(program, 068H);
-    BIN.PutReloc(program, 4);
-    BIN.PutCode32LE(program, 0);
+    OutByte(068H); // push _data
+    Reloc(4, 0);
 
     pushc(code.tcount);
-    //push _data + code.tcount * 4 + code.dcount
-    BIN.PutCode(program, 068H);
-    BIN.PutReloc(program, 4);
-    BIN.PutCode32LE(program, code.tcount * 4 + code.dcount);
+
+    OutByte(068H); // push _data + code.tcount * 4 + code.dcount
+    Reloc(4, code.tcount * 4 + code.dcount);
 
     CallRTL(CODE._init)
 END prolog;
@@ -1989,7 +1857,7 @@ BEGIN
         BIN.SetLabel(program, dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
-        OutCode("C20C00") // ret 12
+        OutByte3(0C2H, 00CH, 000H) // ret 12
     END;
 
     IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
@@ -2088,7 +1956,7 @@ BEGIN
 
     error := FALSE;
 
-    R := REG.Create(_push, _pop, _mov, _xch);
+    R := REG.Create(push, pop, mov, xchg);
 
     prolog(code, target, stack);
     translate(code);
