@@ -58,8 +58,8 @@ TYPE
         lpSecurityDescriptor:  INTEGER;
         bInheritHandle:        INTEGER
 
-    END;  
-    
+    END;
+
     TSystemTime = RECORD
 
         Year,
@@ -72,7 +72,7 @@ TYPE
         MSec:  WCHAR
 
     END;
-    
+
 
 
 VAR
@@ -117,28 +117,8 @@ PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]
 PROCEDURE [winapi, "kernel32.dll", "GetCurrentDirectoryA"]
     _GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "shell32.dll", "ShellExecuteA"]
-    ShellExecute* (hWnd, Operation, FileName, Parameters, Directory, ShowCmd: INTEGER): INTEGER;
-
-PROCEDURE [winapi, "kernel32.dll", "SetFilePointer"]
-    SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER; 
-
 PROCEDURE [winapi, "kernel32.dll", "GetSystemTime"]
     GetSystemTime (T: TSystemTime);
-
-
-PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    res := ShellExecute(0, 0, SYSTEM.ADR(FileName[0]), SYSTEM.ADR(Parameters[0]), 0, SW_SHOW);
-    IF res <= 32 THEN
-        res := 0
-    END
-
-    RETURN res
-END exec;
 
 
 PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
@@ -224,12 +204,12 @@ BEGIN
 END GetArg;
 
 
-PROCEDURE FileRead* (F, Buffer, Count: INTEGER): INTEGER;
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     res, n: INTEGER;
 
 BEGIN
-    IF ReadFile(F, Buffer, Count, n, NIL) = 0 THEN
+    IF ReadFile(F, SYSTEM.ADR(Buffer[0]), bytes, n, NIL) = 0 THEN
         res := -1
     ELSE
         res := n
@@ -239,12 +219,12 @@ BEGIN
 END FileRead;
 
 
-PROCEDURE FileWrite* (F, Buffer, Count: INTEGER): INTEGER;
+PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     res, n: INTEGER;
 
 BEGIN
-    IF WriteFile(F, Buffer, Count, n, NIL) = 0 THEN
+    IF WriteFile(F, SYSTEM.ADR(Buffer[0]), bytes, n, NIL) = 0 THEN
         res := -1
     ELSE
         res := n
@@ -274,11 +254,6 @@ BEGIN
 END FileOpen;
 
 
-PROCEDURE FileSeek* (F, Offset, Origin: INTEGER): INTEGER;
-    RETURN SetFilePointer(F, Offset, 0, Origin)
-END FileSeek;
-
-
 PROCEDURE OutChar* (c: CHAR);
 VAR
     count: INTEGER;
@@ -293,13 +268,13 @@ END GetTickCount;
 
 
 PROCEDURE letter (c: CHAR): BOOLEAN;
-    RETURN ("a" <= c) & (c <= "z") OR ("A" <= c) & (c <= "Z") OR (c = "_")
+    RETURN ("a" <= c) & (c <= "z") OR ("A" <= c) & (c <= "Z")
 END letter;
 
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
     RETURN ~(letter(path[0]) & (path[1] = ":"))
-END isRelative; 
+END isRelative;
 
 
 PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
@@ -314,7 +289,14 @@ BEGIN
     hour  := ORD(T.Hour);
     min   := ORD(T.Min);
     sec   := ORD(T.Sec)
-END now;
+END now;     
+
+
+PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x),     a);
+    SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
+END splitf;
 
 
 BEGIN
