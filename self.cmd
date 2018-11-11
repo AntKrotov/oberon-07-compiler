@@ -1,2 +1,2 @@
-Compiler.exe source\Compiler.ob07 source\Compiler.asm con
+Compiler.exe source\Compiler.ob07 source\Compiler.exe con
 @pause
