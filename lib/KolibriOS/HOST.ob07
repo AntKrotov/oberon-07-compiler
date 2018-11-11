@@ -61,46 +61,6 @@ PROCEDURE [stdcall, "Console.obj", "con_exit"] con_exit (bCloseWindow: BOOLEAN);
 PROCEDURE [stdcall, "Console.obj", "con_write_string"] con_write_string (string, length: INTEGER);
 
 
-PROCEDURE run (program: ARRAY OF CHAR; param: INTEGER): INTEGER;
-TYPE
-
-    info_struct = RECORD
-        subfunc : INTEGER;
-        flags   : INTEGER;
-        param   : INTEGER;
-        rsrvd1  : INTEGER;
-        rsrvd2  : INTEGER;
-        fname   : ARRAY 1024 OF CHAR
-    END;
-
-VAR
-    info: info_struct;
-
-BEGIN
-    info.subfunc := 7;
-    info.flags   := 0;
-    info.param   := param;
-    info.rsrvd1  := 0;
-    info.rsrvd2  := 0;
-    COPY(program, info.fname);
-    RETURN K.sysfunc2(70, SYSTEM.ADR(info))
-END run;
-
-
-PROCEDURE exec* (FileName, Parameters: ARRAY OF CHAR): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    res := run(FileName, SYSTEM.ADR(Parameters[0]));
-    IF res < 0 THEN
-        res := 0
-    END
-
-    RETURN res
-END exec;
-
-
 PROCEDURE ExitProcess* (p1: INTEGER);
 BEGIN
     IF Console THEN
@@ -218,29 +178,6 @@ BEGIN
 END Write;
 
 
-PROCEDURE Seek (F: FS; Offset, Origin: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-    fd: rFD;
-
-BEGIN
-
-    IF (F # NIL) & GetFileInfo(F.name, fd) & (BITS(fd.attr) * {4} = {}) THEN
-        CASE Origin OF
-        |SEEK_BEG: F.pos := Offset
-        |SEEK_CUR: F.pos := F.pos + Offset
-        |SEEK_END: F.pos := fd.size + Offset
-        ELSE
-        END;
-        res := F.pos
-    ELSE
-        res := -1
-    END
-
-    RETURN res
-END Seek;
-
-
 PROCEDURE Create (FName: ARRAY OF CHAR): FS;
 VAR
     F:    FS;
@@ -264,14 +201,14 @@ BEGIN
 END Create;
 
 
-PROCEDURE FileRead* (F, Buffer, Count: INTEGER): INTEGER;
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     n: INTEGER;
     fs: FS;
 
 BEGIN
     SYSTEM.GET(SYSTEM.ADR(F), fs);
-    n := Read(fs, Buffer, Count);
+    n := Read(fs, SYSTEM.ADR(Buffer[0]), bytes);
     IF n = 0 THEN
         n := -1
     END
@@ -280,14 +217,14 @@ BEGIN
 END FileRead;
 
 
-PROCEDURE FileWrite* (F, Buffer, Count: INTEGER): INTEGER;
+PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     n: INTEGER;
     fs: FS;
 
 BEGIN
     SYSTEM.GET(SYSTEM.ADR(F), fs);
-    n := Write(fs, Buffer, Count);
+    n := Write(fs, SYSTEM.ADR(Buffer[0]), bytes);
     IF n = 0 THEN
         n := -1
     END
@@ -328,16 +265,6 @@ BEGIN
     SYSTEM.GET(SYSTEM.ADR(fs), res)
     RETURN res
 END FileOpen;
-
-
-PROCEDURE FileSeek* (F, Offset, Origin: INTEGER): INTEGER;
-VAR
-    fs: FS;
-
-BEGIN
-    SYSTEM.GET(SYSTEM.ADR(F), fs)
-    RETURN Seek(fs, Offset, Origin)
-END FileSeek;
 
 
 PROCEDURE GetTickCount* (): INTEGER;
@@ -472,7 +399,7 @@ END GetCurrentDirectory;
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
     RETURN path[0] # slash
-END isRelative;   
+END isRelative;
 
 
 PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
@@ -514,7 +441,14 @@ BEGIN
     time  := time DIV 16;
 
     year := year + 2000
-END now;
+END now;  
+
+
+PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x),     a);
+    SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
+END splitf;
 
 
 BEGIN
