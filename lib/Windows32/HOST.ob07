@@ -80,7 +80,9 @@ VAR
     hConsoleOutput: INTEGER;
 
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
-    argc*: INTEGER;
+    argc*: INTEGER;       
+    
+    eol*: ARRAY 3 OF CHAR;
 
 
 PROCEDURE [winapi, "kernel32.dll", "GetTickCount"]
@@ -289,7 +291,7 @@ BEGIN
     hour  := ORD(T.Hour);
     min   := ORD(T.Min);
     sec   := ORD(T.Sec)
-END now;     
+END now;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
@@ -299,7 +301,8 @@ BEGIN
 END splitf;
 
 
-BEGIN
+BEGIN            
+    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     hConsoleOutput := GetStdHandle(-11);
     ParamParse
 END HOST.
