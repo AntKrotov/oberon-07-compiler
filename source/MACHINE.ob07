@@ -1,0 +1,100 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE MACHINE;
+
+
+VAR
+
+    target*,
+    native*:
+
+      RECORD
+
+          bit_depth*,
+          maxInt*,
+          minInt*,
+          maxSet*,
+          maxHex*:    INTEGER;
+
+          maxReal*:   REAL
+
+      END; 
+      
+    initialized: BOOLEAN;
+
+
+PROCEDURE SetBitDepth* (bit_depth: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    ASSERT((bit_depth = 32) OR (bit_depth = 64));
+
+    native.bit_depth := 0;
+    i := 1;
+    REPEAT
+        i := ROR(i, 1);
+        INC(native.bit_depth)
+    UNTIL i = 1;
+
+    native.maxSet      := native.bit_depth - 1;
+    native.maxHex      := native.bit_depth DIV 4;
+    native.minInt      := ROR(1, 1);
+    native.maxInt      := ROR(-2, 1);
+    native.maxReal     := 1.9;
+    PACK(native.maxReal, 1023);
+
+    bit_depth := MIN(native.bit_depth, bit_depth);
+
+    target.bit_depth   := bit_depth;
+    target.maxSet      := bit_depth - 1;
+    target.maxHex      := bit_depth DIV 4;
+    target.minInt      := ASR(native.minInt, native.bit_depth - bit_depth);
+    target.maxInt      := ASR(native.maxInt, native.bit_depth - bit_depth);
+    target.maxReal     := 1.9;
+    PACK(target.maxReal, 1023);
+    
+    initialized := TRUE
+
+END SetBitDepth;  
+
+
+PROCEDURE Byte* (n: INTEGER; idx: INTEGER): BYTE;
+BEGIN
+    WHILE idx > 0 DO
+        n := ASR(n, 8);
+        DEC(idx)
+    END
+
+    RETURN ORD(BITS(n) * {0..7})
+END Byte;
+
+
+PROCEDURE Align* (VAR bytes: INTEGER; align: INTEGER): BOOLEAN;
+VAR
+    res: BOOLEAN;
+
+BEGIN           
+    ASSERT(initialized);
+
+    IF bytes MOD align # 0 THEN
+        res  := native.maxInt - bytes >= align - (bytes MOD align);
+        IF res THEN
+            bytes := bytes + align - (bytes MOD align)
+        END
+    ELSE
+        res := TRUE
+    END
+
+    RETURN res
+END Align; 
+
+
+BEGIN
+    initialized := FALSE
+END MACHINE.

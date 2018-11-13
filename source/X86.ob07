@@ -7,12 +7,10 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, STRINGS, LISTS, BIN, PE := PE32, KOS;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, TARGETS, MACHINE;
 
 
 CONST
-
-    N = 3;
 
     eax = REG.R0; ecx = REG.R1; edx = REG.R2;
 
@@ -28,7 +26,6 @@ CONST
 TYPE
 
     COMMAND = CODE.COMMAND;
-    FILE = UTILS.FILE;
 
 
 VAR
@@ -45,13 +42,13 @@ VAR
     label_import:  INTEGER;
 
 
-PROCEDURE Byte (n: INTEGER): INTEGER;
-    RETURN ORD(BITS(n) * {0..7})
+PROCEDURE Byte (n: INTEGER): BYTE;
+    RETURN MACHINE.Byte(n, 0)
 END Byte;
 
 
 PROCEDURE Word (n: INTEGER): INTEGER;
-    RETURN ORD(BITS(n) * {0..15})
+    RETURN MACHINE.Byte(n, 0) + MACHINE.Byte(n, 1) * 256
 END Word;
 
 
@@ -1439,7 +1436,7 @@ BEGIN
         |CODE.opNEW:
             PushAll(1);
             n := cmd.param + 8;
-            ASSERT(UTILS.align(n, 32));
+            ASSERT(MACHINE.Align(n, 32));
             pushc(n);
             pushc(cmd.param2);
             CallRTL(CODE._new)
@@ -1778,7 +1775,7 @@ END translate;
 PROCEDURE prolog (code: CODE.CODES; target, stack: INTEGER);
 BEGIN
 
-    IF target = UTILS.tarDLL THEN   (*
+    IF target = TARGETS.DLL THEN   (*
         WriteLn("format PE GUI 4.0 DLL");
         WriteLn("entry DllEntryPoint");
         WriteLn("section '.text' code readable executable");
@@ -1794,7 +1791,7 @@ BEGIN
         test(eax);
         jcc(je, dllret)
 
-    ELSIF target = UTILS.tarOBJ THEN
+    ELSIF target = TARGETS.OBJ THEN
     (*    WriteLn("format MS COFF");
         WriteLn("public EXPORTS");
         WriteLn("section '.flat' code readable align 16");
@@ -1805,7 +1802,7 @@ BEGIN
 
     OutByte3(09BH, 0DBH, 0E3H); // finit
 
-    IF target IN {UTILS.tarKOS, UTILS.tarOBJ} THEN
+    IF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
         OutByte(068H);      // push IMPORT
         Reloc(6, 0)
     ELSE
@@ -1853,20 +1850,20 @@ VAR
 
 BEGIN
 
-    IF target = UTILS.tarDLL THEN
+    IF target = TARGETS.DLL THEN
         BIN.SetLabel(program, dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
         OutByte3(0C2H, 00CH, 000H) // ret 12
     END;
 
-    IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
+    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
         pushc(0);
         CallRTL(CODE._exit);
-    ELSIF target = UTILS.tarKOS THEN
+    ELSIF target = TARGETS.KOS THEN
         pushc(0);
         CallRTL(CODE._exit)
-    ELSIF target = UTILS.tarOBJ THEN
+    ELSIF target = TARGETS.OBJ THEN
         movrc(eax, 1);
         OutByte(0C3H); // ret
         dllver := CODE.NewLabel();
@@ -1914,7 +1911,7 @@ BEGIN
     BIN.PutData(program, 0);
 
     program.export := program.dcount;
-    IF target = UTILS.tarOBJ THEN
+    IF target = TARGETS.OBJ THEN
         BIN.Export(program, "lib_init", dllinit);
         BIN.Export(program, "version",  dllver);
     END;
@@ -1935,7 +1932,7 @@ BEGIN
         INC(code.gsize, n)
     END;
                            (*
-    IF target = UTILS.tarKOS THEN
+    IF target = TARGETS.KOS THEN
         WriteLn("align 16")
     ELSE
         WriteLn("section '.bss' data readable writeable")
@@ -1966,9 +1963,9 @@ BEGIN
 
     BIN.fixup(program);
 
-    IF target IN {UTILS.tarCON, UTILS.tarGUI, UTILS.tarDLL} THEN
-        PE.write(program, outname, target = UTILS.tarCON, target = UTILS.tarDLL)
-    ELSIF target = UTILS.tarKOS THEN
+    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
+        PE32.write(program, outname, target = TARGETS.CON, target = TARGETS.DLL)
+    ELSIF target = TARGETS.KOS THEN
         KOS.write(program, outname)
     END
 

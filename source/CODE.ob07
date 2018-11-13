@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, UTILS, PROG;
+IMPORT LISTS, SCAN, PROG, STRINGS;
 
 
 CONST
@@ -263,7 +263,7 @@ BEGIN
 
     idx := res;
 
-    n := UTILS.Utf8To16(s, wstr);
+    n := STRINGS.Utf8To16(s, wstr);
 
     i := 0;
     WHILE i < n DO

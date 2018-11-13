@@ -1,0 +1,15 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE VER;
+
+CONST
+
+    Major* = 0;
+    Minor* = 86;
+
+END VER.

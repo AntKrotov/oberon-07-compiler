@@ -7,7 +7,7 @@
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, UTILS, ERRORS;
+IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE;
 
 
 CONST
@@ -407,8 +407,8 @@ VAR
 BEGIN
     IF varIdent.offset = -1 THEN
         IF varIdent.global THEN
-            IF UTILS.align(program.gsize, varIdent.type.align) THEN
-                IF UTILS.native.maxInt - program.gsize >= varIdent.type.size THEN
+            IF MACHINE.Align(program.gsize, varIdent.type.align) THEN
+                IF MACHINE.native.maxInt - program.gsize >= varIdent.type.size THEN
                     varIdent.offset := program.gsize;
                     INC(program.gsize, varIdent.type.size)
                 END
@@ -416,9 +416,9 @@ BEGIN
         ELSE
             word := program.target.word;
             size := varIdent.type.size;
-            IF UTILS.align(size, word) THEN
+            IF MACHINE.Align(size, word) THEN
                 size := size DIV word;
-                IF UTILS.native.maxInt - program.locsize >= size THEN
+                IF MACHINE.native.maxInt - program.locsize >= size THEN
                     INC(program.locsize, size);
                     varIdent.offset := program.locsize;
                 END
@@ -437,9 +437,9 @@ VAR
 
 BEGIN
     INC(unit.scopeLvl);
-    
+
     res := unit.scopeLvl < MAXSCOPE;
-    
+
     IF res THEN
 
         unit.scopes[unit.scopeLvl] := proc;
@@ -451,7 +451,7 @@ BEGIN
 
         unit.idents.push(unit.idents, item)
     END
-    
+
     RETURN res
 END openScope;
 
@@ -829,12 +829,12 @@ BEGIN
     WHILE res & (item # NIL) & (item.type = NIL) DO
         item.type := type;
         IF ~self.noalign THEN
-            res := UTILS.align(self.size, type.align)
+            res := MACHINE.Align(self.size, type.align)
         ELSE
             res := TRUE
         END;
         item.offset := self.size;
-        res := res & (UTILS.native.maxInt - self.size >= type.size);
+        res := res & (MACHINE.native.maxInt - self.size >= type.size);
         IF res THEN
             INC(self.size, type.size)
         END;
@@ -919,7 +919,7 @@ VAR
 BEGIN
     ASSERT(type # NIL);
 
-    word := UTILS.target.bit_depth DIV 8;
+    word := MACHINE.target.bit_depth DIV 8;
 
     item := self.params.first;
 
@@ -949,7 +949,7 @@ BEGIN
                 END
             ELSE
                 size := type.size;
-                ASSERT(UTILS.align(size, word));
+                ASSERT(MACHINE.Align(size, word));
                 size := size DIV word
             END;
             param.offset := self.params.size + Dim(type) + FRAME;
@@ -1167,7 +1167,7 @@ VAR
     units:   UNITS;
 
 BEGIN
-    UTILS.init(bit_depth);
+    MACHINE.SetBitDepth(bit_depth);
     NEW(program);
     NEW(units);
     ASSERT(LISTS.create(units) = units);

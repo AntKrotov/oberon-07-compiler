@@ -1,0 +1,168 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE FILES;
+
+IMPORT UTILS;
+
+
+TYPE
+
+    FILE* = POINTER TO RECORD
+
+        ptr: INTEGER;
+
+        buffer: ARRAY 64*1024 OF BYTE;
+        count:  INTEGER
+
+    END;
+
+
+PROCEDURE copy (src: ARRAY OF BYTE; src_idx: INTEGER; VAR dst: ARRAY OF BYTE; dst_idx: INTEGER; bytes: INTEGER);
+BEGIN
+    WHILE bytes > 0 DO
+        dst[dst_idx] := src[src_idx];
+        INC(dst_idx);
+        INC(src_idx);
+        DEC(bytes)
+    END
+END copy;
+
+
+PROCEDURE flush (file: FILE): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF file # NIL THEN
+        res := UTILS.FileWrite(file.ptr, file.buffer, file.count);
+        IF res < 0 THEN
+            res := 0
+        END
+    ELSE
+        res := 0
+    END
+
+    RETURN res
+END flush;
+
+
+PROCEDURE fcreate* (name: ARRAY OF CHAR): FILE;
+VAR
+    file: FILE;
+    ptr:  INTEGER;
+
+BEGIN
+    ptr := UTILS.FileCreate(name);
+
+    IF ptr > 0 THEN
+        NEW(file);
+        file.ptr := ptr;
+        file.count := 0;
+    ELSE
+        file := NIL
+    END
+
+    RETURN file
+END fcreate;
+
+
+PROCEDURE fopen* (name: ARRAY OF CHAR): FILE;
+VAR
+    file: FILE;
+    ptr:  INTEGER;
+
+BEGIN
+    ptr := UTILS.FileOpen(name);
+
+    IF ptr > 0 THEN
+        NEW(file);
+        file.ptr := ptr;
+        file.count := -1
+    ELSE
+        file := NIL
+    END
+
+    RETURN file
+END fopen;
+
+
+PROCEDURE fclose* (VAR file: FILE);
+VAR
+    n: INTEGER;
+
+BEGIN
+    IF file # NIL THEN
+
+        IF file.count > 0 THEN
+            n := flush(file)
+        END;
+
+        file.count := -1;
+
+        UTILS.FileClose(file.ptr);
+        file.ptr := 0;
+        DISPOSE(file)
+    END
+END fclose;
+
+
+PROCEDURE fread* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF file # NIL THEN
+        res := UTILS.FileRead(file.ptr, chunk, MAX(MIN(bytes, LEN(chunk)), 0));
+        IF res < 0 THEN
+            res := 0
+        END
+    ELSE
+        res := 0
+    END
+
+    RETURN res
+END fread;
+
+
+PROCEDURE fwrite* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+VAR
+    free, n, k, res, idx: INTEGER;
+
+BEGIN
+    idx := 0;
+    res := 0;
+    IF (file # NIL) & (file.count >= 0) THEN
+
+        free := LEN(file.buffer) - file.count;
+        WHILE bytes > 0 DO
+            n := MIN(free, bytes);
+            copy(chunk, idx, file.buffer, file.count, n);
+            INC(res, n);
+            DEC(free, n);
+            DEC(bytes, n);
+            INC(idx, n);
+            INC(file.count, n);
+            IF free = 0 THEN
+                k := flush(file);
+                IF k # LEN(file.buffer) THEN
+                    bytes := 0;
+                    DEC(res, n)
+                ELSE
+                    file.count := 0;
+                    free := LEN(file.buffer)
+                END
+            END
+        END
+
+    END
+
+    RETURN res
+END fwrite;
+
+
+END FILES.

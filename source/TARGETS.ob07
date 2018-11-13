@@ -1,0 +1,11 @@
+﻿MODULE TARGETS;
+
+CONST
+
+    CON* = 1;
+    GUI* = 2;
+    DLL* = 3;
+    KOS* = 4;
+    OBJ* = 5;
+
+END TARGETS.

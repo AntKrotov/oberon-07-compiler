@@ -7,7 +7,7 @@
 
 MODULE ARITH;
 
-IMPORT BTREES, STRINGS, UTILS;
+IMPORT BTREES, STRINGS, MACHINE;
 
 
 CONST
@@ -33,6 +33,11 @@ TYPE
         string*:   BTREES.DATA
 
     END;
+
+
+VAR
+
+    digit: ARRAY 256 OF INTEGER;
 
 
 PROCEDURE Int* (v: VALUE): INTEGER;
@@ -80,13 +85,13 @@ VAR
 BEGIN
     error := FALSE;
 
-    IF (v.typ = tINTEGER) & ((v.int < UTILS.target.minInt) OR (v.int > UTILS.target.maxInt)) THEN
+    IF (v.typ = tINTEGER) & ((v.int < MACHINE.target.minInt) OR (v.int > MACHINE.target.maxInt)) THEN
         error := TRUE
     ELSIF (v.typ = tCHAR) & ((v.int < 0) OR (v.int > 255)) THEN
         error := TRUE
     ELSIF (v.typ = tWCHAR) & ((v.int < 0) OR (v.int > 65535)) THEN
         error := TRUE
-    ELSIF (v.typ = tREAL) & ((v.float < -UTILS.target.maxReal) OR (v.float > UTILS.target.maxReal)) THEN
+    ELSIF (v.typ = tREAL) & ((v.float < -MACHINE.target.maxReal) OR (v.float > MACHINE.target.maxReal)) THEN
         error := TRUE
     END
 
@@ -122,8 +127,8 @@ BEGIN
 
     i := 0;
     WHILE STRINGS.digit(s[i]) & (error = 0) DO
-        d := UTILS.digit[ORD(s[i])];
-        IF value <= (UTILS.native.maxInt - d) DIV 10 THEN
+        d := digit[ORD(s[i])];
+        IF value <= (MACHINE.native.maxInt - d) DIV 10 THEN
             value := value * 10 + d;
             INC(i)
         ELSE
@@ -159,12 +164,12 @@ BEGIN
     i := 0;
     WHILE (s[i] # "H") & (s[i] # "X") & (error = 0) DO
 
-        d := UTILS.digit[ORD(s[i])];
+        d := digit[ORD(s[i])];
         IF (n = -1) & (d # 0) THEN
             n := i
         END;
 
-        IF (n # -1) & (i - n + 1 > UTILS.native.maxHex) THEN
+        IF (n # -1) & (i - n + 1 > MACHINE.native.maxHex) THEN
             error := 2
         ELSE
             value := value * 16 + d;
@@ -204,7 +209,7 @@ VAR
     res: BOOLEAN;
 
 BEGIN
-    max := UTILS.native.maxReal;
+    max := MACHINE.native.maxReal;
 
     CASE op OF
     |"+":
@@ -273,7 +278,7 @@ BEGIN
 
     i := 0;
     WHILE (error = 0) & STRINGS.digit(s[i]) DO
-        IF opFloat2(value, 10.0, "*") & opFloat2(value, FLT(UTILS.digit[ORD(s[i])]), "+") THEN
+        IF opFloat2(value, 10.0, "*") & opFloat2(value, FLT(digit[ORD(s[i])]), "+") THEN
             INC(i)
         ELSE
             error := 4
@@ -283,7 +288,7 @@ BEGIN
     INC(i);
 
     WHILE (error = 0) & STRINGS.digit(s[i]) DO
-        IF opFloat2(value, FLT(UTILS.digit[ORD(s[i])]) / exp10, "+") & opFloat2(exp10, 10.0, "*") THEN
+        IF opFloat2(value, FLT(digit[ORD(s[i])]) / exp10, "+") & opFloat2(exp10, 10.0, "*") THEN
             INC(i)
         ELSE
             error := 4
@@ -300,8 +305,8 @@ BEGIN
     END;
 
     WHILE (error = 0) & STRINGS.digit(s[i]) DO
-        d := UTILS.digit[ORD(s[i])];
-        IF n <= (UTILS.native.maxInt - d) DIV 10 THEN
+        d := digit[ORD(s[i])];
+        IF n <= (MACHINE.native.maxInt - d) DIV 10 THEN
             n := n * 10 + d;
             INC(i)
         ELSE
@@ -361,9 +366,9 @@ VAR
 
 BEGIN
     IF (a > 0) & (b > 0) THEN
-        error := a > UTILS.native.maxInt - b
+        error := a > MACHINE.native.maxInt - b
     ELSIF (a < 0) & (b < 0) THEN
-        error := a < UTILS.native.minInt - b
+        error := a < MACHINE.native.minInt - b
     ELSE
         error := FALSE
     END;
@@ -384,11 +389,11 @@ VAR
 
 BEGIN
     IF (a > 0) & (b < 0) THEN
-        error := a > UTILS.native.maxInt + b
+        error := a > MACHINE.native.maxInt + b
     ELSIF (a < 0) & (b > 0) THEN
-        error := a < UTILS.native.minInt + b
+        error := a < MACHINE.native.minInt + b
     ELSIF (a = 0) & (b < 0) THEN
-        error := b = UTILS.native.minInt
+        error := b = MACHINE.native.minInt
     ELSE
         error := FALSE
     END;
@@ -430,8 +435,8 @@ VAR
     min, max: INTEGER;
 
 BEGIN
-    min := UTILS.native.minInt;
-    max := UTILS.native.maxInt;
+    min := MACHINE.native.minInt;
+    max := MACHINE.native.maxInt;
 
     IF ((a > 1) & (b > 1)) OR ((a < 0) & (b < 0)) THEN
         error := (a = min) OR (b = min) OR (ABS(a) > max DIV ABS(b))
@@ -439,7 +444,7 @@ BEGIN
     ELSIF ((a > 1) & (b < 0)) OR ((a < 0) & (b > 1)) THEN
         error := (a = min) OR (b = min);
         IF ~error THEN
-            IF lg2(ABS(a)) + lg2(ABS(b)) >= UTILS.native.bit_depth THEN
+            IF lg2(ABS(a)) + lg2(ABS(b)) >= MACHINE.native.bit_depth THEN
                 error := ABS(a) > max DIV ABS(b)
             END
         END
@@ -470,7 +475,7 @@ BEGIN
     |"-": success := subInt(a.int, b.int)
     |"*": success := mulInt(a.int, b.int)
     |"/": success := FALSE
-    |"D": IF (b.int # -1) OR (a.int # UTILS.native.minInt) THEN a.int := a.int DIV b.int ELSE success := FALSE END
+    |"D": IF (b.int # -1) OR (a.int # MACHINE.native.minInt) THEN a.int := a.int DIV b.int ELSE success := FALSE END
     |"M": a.int := a.int MOD b.int
     |"L": a.int := LSL(a.int, b.int)
     |"A": a.int := ASR(a.int, b.int)
@@ -551,7 +556,7 @@ VAR
 
 BEGIN
     v.typ := tINTEGER;
-    res := (FLT(UTILS.native.minInt) <= v.float) & (v.float <= FLT(UTILS.native.maxInt));
+    res := (FLT(MACHINE.native.minInt) <= v.float) & (v.float <= FLT(MACHINE.native.maxInt));
     IF res THEN
         v.int := FLOOR(v.float)
     END
@@ -699,7 +704,7 @@ BEGIN
 
     |"I":
         IF (v.typ = tINTEGER) & (v2.typ = tSET) THEN
-            IF range(v, 0, UTILS.target.maxSet) THEN
+            IF range(v, 0, MACHINE.target.maxSet) THEN
                 res := v.int IN v2.set
             ELSE
                 error := 2
@@ -749,4 +754,25 @@ BEGIN
 END setInt;
 
 
+PROCEDURE init;
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO LEN(digit) - 1 DO
+        digit[i] := -1
+    END;
+
+    FOR i := ORD("0") TO ORD("9") DO
+        digit[i] := i - ORD("0")
+    END;
+
+    FOR i := ORD("A") TO ORD("F") DO
+        digit[i] := i - ORD("A") + 10
+    END
+END init;
+
+
+BEGIN
+    init
 END ARITH.

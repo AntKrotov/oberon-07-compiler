@@ -7,26 +7,47 @@
 
 MODULE ERRORS;
 
-IMPORT UTILS;
+IMPORT C := CONSOLE, UTILS;
 
 
 PROCEDURE hintmsg* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
 BEGIN
     IF hint = 0 THEN
-        UTILS.OutString("  hint ("); UTILS.OutInt(line); UTILS.OutString(":"); UTILS.OutInt(col); UTILS.OutString(")");
-        UTILS.OutString(" variable "); UTILS.OutString(22X); UTILS.OutString(name); UTILS.OutString(22X); UTILS.OutString(" never used"); UTILS.OutLn
+        C.String("  hint ("); C.Int(line); C.String(":"); C.Int(col); C.String(")");
+        C.String(" variable "); C.String(22X); C.String(name); C.String(22X); C.String(" never used"); C.Ln
     END
 END hintmsg;
 
 
 PROCEDURE errormsg* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
 BEGIN
-    UTILS.OutString("error: ");  UTILS.OutInt(errno);     UTILS.OutLn;
-    UTILS.OutString("line:  ");  UTILS.OutInt(line);      UTILS.OutLn;
-    UTILS.OutString("col:   ");  UTILS.OutInt(col);       UTILS.OutLn;
-    UTILS.OutString("file:  ");  UTILS.OutString(fname);  UTILS.OutLn;
-    UTILS.exit(1)
+    C.String("error: ");  C.Int(errno);     C.Ln;
+    C.String("line:  ");  C.Int(line);      C.Ln;
+    C.String("col:   ");  C.Int(col);       C.Ln;
+    C.String("file:  ");  C.String(fname);  C.Ln;
+    UTILS.Exit(1)
 END errormsg;
+
+
+PROCEDURE error1* (s1: ARRAY OF CHAR);
+BEGIN
+    C.String(s1); C.Ln;
+    UTILS.Exit(1)
+END error1;
+
+
+PROCEDURE error3* (s1, s2, s3: ARRAY OF CHAR);
+BEGIN
+    C.String(s1); C.String(s2); C.String(s3); C.Ln;
+    UTILS.Exit(1)
+END error3;
+
+
+PROCEDURE error5* (s1, s2, s3, s4, s5: ARRAY OF CHAR);
+BEGIN
+    C.String(s1); C.String(s2); C.String(s3); C.String(s4); C.String(s5); C.Ln;
+    UTILS.Exit(1)
+END error5;
 
 
 END ERRORS.

@@ -7,12 +7,10 @@
 
 MODULE PARS;
 
-IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, UTILS;
+IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE;
 
 
 CONST
-
-    EXTLEN  = 10;
 
     eCONST*   =  1;  eTYPE*   =  2;  eVAR*     =  3;  eEXPR*    =  4;
     eVREC*    =  5;  ePROC*   =  6;  eVPAR*    =  7;  ePARAM*   =  8;
@@ -22,9 +20,7 @@ CONST
 
 TYPE
 
-    PATH* = UTILS.PATH;
-
-    EXT* = ARRAY EXTLEN OF CHAR;
+    PATH* = PATHS.PATH;
 
     PARSER* = POINTER TO rPARSER;
 
@@ -48,7 +44,7 @@ TYPE
         fname*:      PATH;
         path:        PATH;
         lib_path:    PATH;
-        ext:         EXT;
+        ext:         PATH;
         modname:     PATH;
         scanner:     SCAN.SCANNER;
         lex*:        SCAN.LEX;
@@ -63,7 +59,7 @@ TYPE
         designator*: EXPRPROC;
         chkreturn:   RETPROC;
 
-        create*:     PROCEDURE (path, lib_path: PATH; ext: EXT; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER
+        create*:     PROCEDURE (path, lib_path, ext: PATH; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER
 
     END;
 
@@ -651,7 +647,7 @@ BEGIN
         CODE.AddRec(t.base.num);
 
         IF ~t.noalign THEN
-            check1(UTILS.align(t.size, t.align), parser, 104);
+            check1(MACHINE.Align(t.size, t.align), parser, 104);
             check1(ARITH.setInt(typeSize, t.size), parser, 104)
         END;
 
@@ -997,11 +993,11 @@ BEGIN
         ImportList(parser)
     END;
 
-    UTILS.OutString("compiling "); UTILS.OutString(unit.name.s);
+    CONSOLE.String("compiling "); CONSOLE.String(unit.name.s);
     IF parser.unit.sysimport THEN
-        UTILS.OutString(" (SYSTEM)")
+        CONSOLE.String(" (SYSTEM)")
     END;
-    UTILS.OutLn;
+    CONSOLE.Ln;
 
     label := CODE.NewLabel();
     CODE.AddJmpCmd(CODE.opJMP, label);
@@ -1054,7 +1050,7 @@ BEGIN
 END open;
 
 
-PROCEDURE create* (path, lib_path: PATH; ext: EXT; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER;
+PROCEDURE create* (path, lib_path, ext: PATH; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER;
 VAR
     parser: PARSER;
 

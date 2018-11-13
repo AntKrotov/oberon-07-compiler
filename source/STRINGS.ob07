@@ -57,7 +57,7 @@ VAR
     minus: BOOLEAN;
 
 BEGIN
-    minus := x < 0; 
+    minus := x < 0;
     IF minus THEN
         x := -x
     END;
@@ -220,7 +220,59 @@ BEGIN
     END
 
     RETURN res
-END StrToVer;
+END StrToVer;  
+
+
+PROCEDURE Utf8To16* (src: ARRAY OF CHAR; VAR dst: ARRAY OF WCHAR): INTEGER;
+VAR
+    i, j, u, srclen, dstlen: INTEGER;
+    c: CHAR;
+
+BEGIN
+    srclen := LEN(src);
+    dstlen := LEN(dst);
+    i := 0;
+    j := 0;
+    WHILE (i < srclen) & (j < dstlen) & (src[i] # 0X) DO
+        c := src[i];
+        CASE c OF
+        |00X..7FX:
+            u := ORD(c)
+
+        |0C1X..0DFX:
+            u := LSL(ORD(c) - 0C0H, 6);
+            IF i + 1 < srclen THEN
+                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
+                INC(i)
+            END
+
+        |0E1X..0EFX:
+            u := LSL(ORD(c) - 0E0H, 12);
+            IF i + 1 < srclen THEN
+                u := u + ROR(LSL(ORD(src[i + 1]), 26), 20);
+                INC(i)
+            END;
+            IF i + 1 < srclen THEN
+                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
+                INC(i)
+            END
+(*
+        |0F1X..0F7X:
+        |0F9X..0FBX:
+        |0FDX:
+        *)
+        ELSE
+        END;
+        INC(i);
+        dst[j] := WCHR(u);
+        INC(j)
+    END;
+    IF j < dstlen THEN
+        dst[j] := WCHR(0)
+    END
+
+    RETURN j
+END Utf8To16;
 
 
 END STRINGS.

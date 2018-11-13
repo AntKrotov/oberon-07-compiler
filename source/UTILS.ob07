@@ -7,191 +7,45 @@
 
 MODULE UTILS;
 
-IMPORT HOST, STRINGS, UNIXTIME;
+IMPORT HOST, UNIXTIME;
 
 
 CONST
 
     slash* = HOST.slash;
 
-    OS* = HOST.OS;
-
-    tarCON* = 1; tarGUI* = 2; tarDLL* = 3; tarKOS* = 4; tarOBJ* = 5;
-
-    vMajor* = 0; vMinor* = 85;
-
-    PATHLEN = 2048;
-
-
-TYPE
-
-    PATH* = ARRAY PATHLEN OF CHAR;
-
-    FILE* = POINTER TO RECORD
-
-        ptr: INTEGER;
-
-        buffer: ARRAY 64*1024 OF BYTE;
-        count:  INTEGER
-
-    END;
-
 
 VAR
-
-    target*, native*: RECORD
-
-        bit_depth*, maxInt*, minInt*, maxSet*, maxHex*: INTEGER;
-        maxReal*: REAL
-
-    END;
 
     time*: INTEGER;
 
-    digit*: ARRAY 256 OF INTEGER;
+    eol*:  ARRAY 3 OF CHAR;
 
 
-PROCEDURE copy (src: ARRAY OF BYTE; src_idx: INTEGER; VAR dst: ARRAY OF BYTE; dst_idx: INTEGER; bytes: INTEGER);
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+    RETURN HOST.FileRead(F, Buffer, bytes)
+END FileRead;
+
+
+PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+    RETURN HOST.FileWrite(F, Buffer, bytes)
+END FileWrite;
+
+
+PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN HOST.FileCreate(FName)
+END FileCreate;
+
+
+PROCEDURE FileClose* (F: INTEGER);
 BEGIN
-    WHILE bytes > 0 DO
-        dst[dst_idx] := src[src_idx];
-        INC(dst_idx);
-        INC(src_idx);
-        DEC(bytes)
-    END
-END copy;
+    HOST.FileClose(F)
+END FileClose;
 
 
-PROCEDURE flush (file: FILE): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    IF file # NIL THEN
-        res := HOST.FileWrite(file.ptr, file.buffer, file.count);
-        IF res < 0 THEN
-            res := 0
-        END
-    ELSE
-        res := 0
-    END
-
-    RETURN res
-END flush;
-
-
-PROCEDURE fcreate* (name: ARRAY OF CHAR): FILE;
-VAR
-    file: FILE;
-    ptr:  INTEGER;
-
-BEGIN
-    ptr := HOST.FileCreate(name);
-
-    IF ptr > 0 THEN
-        NEW(file);
-        file.ptr := ptr;
-        file.count := 0;
-    ELSE
-        file := NIL
-    END
-
-    RETURN file
-END fcreate;
-
-
-PROCEDURE fopen* (name: ARRAY OF CHAR): FILE;
-VAR
-    file: FILE;
-    ptr:  INTEGER;
-
-BEGIN
-    ptr := HOST.FileOpen(name);
-
-    IF ptr > 0 THEN
-        NEW(file);
-        file.ptr := ptr;
-        file.count := -1
-    ELSE
-        file := NIL
-    END
-
-    RETURN file
-END fopen;
-
-
-PROCEDURE fclose* (VAR file: FILE);
-VAR
-    n: INTEGER;
-
-BEGIN
-    IF file # NIL THEN
-
-        IF file.count > 0 THEN
-            n := flush(file)
-        END;
-
-        file.count := -1;
-
-        HOST.FileClose(file.ptr);
-        file.ptr := 0;
-        DISPOSE(file)
-    END
-END fclose;
-
-
-PROCEDURE fread* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    IF file # NIL THEN
-        res := HOST.FileRead(file.ptr, chunk, MAX(MIN(bytes, LEN(chunk)), 0));
-        IF res < 0 THEN
-            res := 0
-        END
-    ELSE
-        res := 0
-    END
-
-    RETURN res
-END fread;
-
-
-PROCEDURE fwrite* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-VAR
-    free, n, k, res, idx: INTEGER;
-
-BEGIN
-    idx := 0;
-    res := 0;
-    IF (file # NIL) & (file.count >= 0) THEN
-
-        free := LEN(file.buffer) - file.count;
-        WHILE bytes > 0 DO
-            n := MIN(free, bytes);
-            copy(chunk, idx, file.buffer, file.count, n);
-            INC(res, n);
-            DEC(free, n);
-            DEC(bytes, n);
-            INC(idx, n);
-            INC(file.count, n);
-            IF free = 0 THEN
-                k := flush(file);
-                IF k # LEN(file.buffer) THEN
-                    bytes := 0;
-                    DEC(res, n)
-                ELSE
-                    file.count := 0;
-                    free := LEN(file.buffer)
-                END
-            END
-        END
-
-    END
-
-    RETURN res
-END fwrite;
+PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN HOST.FileOpen(FName)
+END FileOpen;
 
 
 PROCEDURE GetArg* (i: INTEGER; VAR str: ARRAY OF CHAR);
@@ -200,10 +54,10 @@ BEGIN
 END GetArg;
 
 
-PROCEDURE exit* (code: INTEGER);
+PROCEDURE Exit* (code: INTEGER);
 BEGIN
     HOST.ExitProcess(code)
-END exit;
+END Exit;
 
 
 PROCEDURE GetTickCount* (): INTEGER;
@@ -211,140 +65,16 @@ PROCEDURE GetTickCount* (): INTEGER;
 END GetTickCount;
 
 
-PROCEDURE OutString* (s: ARRAY OF CHAR);
-VAR
-    i: INTEGER;
-
+PROCEDURE OutChar* (c: CHAR);
 BEGIN
-    i := 0;
-    WHILE (i < LEN(s)) & (s[i] # 0X) DO
-        HOST.OutChar(s[i]);
-        INC(i)
-    END
-END OutString;
-
-
-PROCEDURE OutInt* (n: INTEGER);
-VAR
-    s: ARRAY 32 OF CHAR;
-
-BEGIN
-    STRINGS.IntToStr(n, s);
-    OutString(s)
-END OutInt;
-
-
-PROCEDURE OutInt2* (n: INTEGER);
-BEGIN
-    IF n < 10 THEN
-        OutString("0")
-    END;
-    OutInt(n)
-END OutInt2;
-
-
-PROCEDURE OutLn*;
-BEGIN
-    HOST.OutChar(0DX);
-    HOST.OutChar(0AX)
-END OutLn;
+    HOST.OutChar(c)
+END OutChar;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
 BEGIN
     HOST.splitf(x, a, b)
 END splitf;
-
-
-PROCEDURE align* (VAR size: INTEGER; align: INTEGER): BOOLEAN;
-VAR
-    res: BOOLEAN;
-
-BEGIN
-    IF size MOD align # 0 THEN
-        res  := native.maxInt - size >= align - (size MOD align);
-        IF res THEN
-            size := size + align - (size MOD align)
-        END
-    ELSE
-        res := TRUE
-    END
-
-    RETURN res
-END align;
-
-
-PROCEDURE split* (fname: ARRAY OF CHAR; VAR path, name, ext: ARRAY OF CHAR);
-VAR
-    pos1, pos2, len: INTEGER;
-
-BEGIN
-    len := LENGTH(fname);
-    pos1 := len - 1;
-    pos2 := len - 1;
-    STRINGS.search(fname, pos1, slash, FALSE);
-    STRINGS.search(fname, pos2,   ".", FALSE);
-
-    path := fname;
-    path[pos1 + 1] := 0X;
-
-    IF (pos2 = -1) OR (pos2 < pos1) THEN
-        pos2 := len
-    END;
-
-    INC(pos1);
-
-    STRINGS.copy(fname, name, pos1, 0, pos2 - pos1);
-    name[pos2 - pos1] := 0X;
-    STRINGS.copy(fname, ext, pos2, 0, len - pos2);
-    ext[len - pos2] := 0X;
-
-END split;
-
-
-PROCEDURE RelPath* (absolute, relative: ARRAY OF CHAR; VAR res: ARRAY OF CHAR);
-VAR
-    i, j: INTEGER;
-    error: BOOLEAN;
-
-BEGIN
-    COPY(absolute, res);
-    i := LENGTH(res) - 1;
-    WHILE (i >= 0) & (res[i] # slash) DO
-        DEC(i)
-    END;
-
-    INC(i);
-    res[i] := 0X;
-
-    error := FALSE;
-    j := 0;
-    WHILE ~error & (relative[j] # 0X) DO
-        IF (relative[j] = ".") & (relative[j + 1] = ".") & (relative[j + 2] = slash) & (i > 0) & (res[i - 1] = slash) THEN
-            DEC(i, 2);
-            WHILE (i >= 0) & (res[i] # slash) DO
-                DEC(i)
-            END;
-            IF i < 0 THEN
-                error := TRUE
-            ELSE
-                INC(i);
-                INC(j, 3)
-            END
-        ELSE
-            res[i] := relative[j];
-            INC(i);
-            INC(j)
-        END
-    END;
-
-    IF error THEN
-        COPY(relative, res)
-    ELSE
-        res[i] := 0X
-    END
-
-END RelPath;
 
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
@@ -358,114 +88,17 @@ BEGIN
 END GetCurrentDirectory;
 
 
-PROCEDURE Utf8To16* (src: ARRAY OF CHAR; VAR dst: ARRAY OF WCHAR): INTEGER;
-VAR
-    i, j, u, srclen, dstlen: INTEGER;
-    c: CHAR;
-
-BEGIN
-    srclen := LEN(src);
-    dstlen := LEN(dst);
-    i := 0;
-    j := 0;
-    WHILE (i < srclen) & (j < dstlen) & (src[i] # 0X) DO
-        c := src[i];
-        CASE c OF
-        |00X..7FX:
-            u := ORD(c)
-
-        |0C1X..0DFX:
-            u := LSL(ORD(c) - 0C0H, 6);
-            IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
-                INC(i)
-            END
-
-        |0E1X..0EFX:
-            u := LSL(ORD(c) - 0E0H, 12);
-            IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 20);
-                INC(i)
-            END;
-            IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
-                INC(i)
-            END
-(*
-        |0F1X..0F7X:
-        |0F9X..0FBX:
-        |0FDX:
-        *)
-        ELSE
-        END;
-        INC(i);
-        dst[j] := WCHR(u);
-        INC(j)
-    END;
-    IF j < dstlen THEN
-        dst[j] := WCHR(0)
-    END
-
-    RETURN j
-END Utf8To16;
-
-
-PROCEDURE unixtime* (): INTEGER;
+PROCEDURE UnixTime* (): INTEGER;
 VAR
     year, month, day, hour, min, sec: INTEGER;
 
 BEGIN
     HOST.now(year, month, day, hour, min, sec)
     RETURN UNIXTIME.time(year, month, day, hour, min, sec)
-END unixtime;
-
-
-PROCEDURE init* (bit_depth: INTEGER);
-VAR
-    i: INTEGER;
-
-BEGIN
-    ASSERT((bit_depth = 32) OR (bit_depth = 64));
-
-    native.bit_depth := 0;
-    i := 1;
-    REPEAT
-        i := ROR(i, 1);
-        INC(native.bit_depth)
-    UNTIL i = 1;
-
-    native.maxSet      := native.bit_depth - 1;
-    native.maxHex      := native.bit_depth DIV 4;
-    native.minInt      := ROR(1, 1);
-    native.maxInt      := ROR(-2, 1);
-    native.maxReal     := 1.9;
-    PACK(native.maxReal, 1023);
-
-    bit_depth := MIN(native.bit_depth, bit_depth);
-
-    target.bit_depth   := bit_depth;
-    target.maxSet      := bit_depth - 1;
-    target.maxHex      := bit_depth DIV 4;
-    target.minInt      := ASR(native.minInt, native.bit_depth - bit_depth);
-    target.maxInt      := ASR(native.maxInt, native.bit_depth - bit_depth);
-    target.maxReal     := 1.9;
-    PACK(target.maxReal, 1023);
-
-    FOR i := 0 TO LEN(digit) - 1 DO
-        digit[i] := -1
-    END;
-
-    FOR i := ORD("0") TO ORD("9") DO
-        digit[i] := i - ORD("0")
-    END;
-
-    FOR i := ORD("A") TO ORD("F") DO
-        digit[i] := i - ORD("A") + 10
-    END
-
-END init;
+END UnixTime;
 
 
 BEGIN
-    time := GetTickCount()
+    time := GetTickCount();
+    COPY(HOST.eol, eol)
 END UTILS.

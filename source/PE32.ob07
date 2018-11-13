@@ -7,7 +7,7 @@
 
 MODULE PE32;
 
-IMPORT BIN, LISTS, UTILS, WR := WRITER;
+IMPORT BIN, LISTS, UTILS, WR := WRITER, VER;
 
 
 CONST
@@ -78,7 +78,7 @@ TYPE
         SizeOfHeapReserve:            DWORD;
         SizeOfHeapCommit:             DWORD;
         LoaderFlags:                  DWORD;
-        NumberOfRvaAndSizes:          DWORD;  
+        NumberOfRvaAndSizes:          DWORD;
 
         DataDirectory: ARRAY IMAGE_NUMBEROF_DIRECTORY_ENTRIES OF IMAGE_DATA_DIRECTORY
 
@@ -378,7 +378,7 @@ VAR
 
 
     PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
-    BEGIN                
+    BEGIN
         WR.Write16LE(file, ORD(w), pos)
     END WriteWord;
 
@@ -446,8 +446,8 @@ VAR
 
         WriteWord(file, h.Magic,                        pos);
 
-        WR.WriteByte(file, h.MajorLinkerVersion,           pos);
-        WR.WriteByte(file, h.MinorLinkerVersion,           pos);
+        WR.WriteByte(file, h.MajorLinkerVersion,        pos);
+        WR.WriteByte(file, h.MinorLinkerVersion,        pos);
 
         WR.Write32LE(file, h.SizeOfCode,                pos);
         WR.Write32LE(file, h.SizeOfInitializedData,     pos);
@@ -518,7 +518,7 @@ BEGIN
         PEHeader.FileHeader.NumberOfSections :=  05X
     END;
 
-    PEHeader.FileHeader.TimeDateStamp         :=  UTILS.unixtime();
+    PEHeader.FileHeader.TimeDateStamp         :=  UTILS.UnixTime();
     PEHeader.FileHeader.PointerToSymbolTable  :=  0H;
     PEHeader.FileHeader.NumberOfSymbols       :=  0H;
     PEHeader.FileHeader.SizeOfOptionalHeader  :=  0E0X;
@@ -530,8 +530,8 @@ BEGIN
     END;
 
     PEHeader.OptionalHeader.Magic                        :=  010BX;
-    PEHeader.OptionalHeader.MajorLinkerVersion           :=  UTILS.vMajor;
-    PEHeader.OptionalHeader.MinorLinkerVersion           :=  UTILS.vMinor;
+    PEHeader.OptionalHeader.MajorLinkerVersion           :=  VER.Major;
+    PEHeader.OptionalHeader.MinorLinkerVersion           :=  VER.Minor;
     PEHeader.OptionalHeader.SizeOfCode                   :=  align(Size.Code, FileAlignment);
 //    PEHeader.OptionalHeader.SizeOfInitializedData        :=  0;
     PEHeader.OptionalHeader.SizeOfUninitializedData      :=  0;
@@ -694,7 +694,7 @@ BEGIN
     InitArray(msdos, n, "742062652072756E20696E20444F53206D6F64652E0D0A240000000000000000");
 
     File := WR.Create(FileName);
-         
+
     n := 0;
     WR.Write(File, msdos, LEN(msdos), n);
 

@@ -7,7 +7,7 @@
 
 MODULE TEXTDRV;
 
-IMPORT UTILS;
+IMPORT FILES;
 
 
 CONST
@@ -23,7 +23,7 @@ TYPE
 
         chunk:        ARRAY CHUNK OF BYTE;
         pos, size:    INTEGER;
-        file:         UTILS.FILE;
+        file:         FILES.FILE;
         utf8:         BOOLEAN;
         CR:           BOOLEAN;
 
@@ -61,7 +61,7 @@ END peak;
 PROCEDURE load (text: TEXT);
 BEGIN
     IF ~text.eof THEN
-        text.size := UTILS.fread(text.file, text.chunk, LEN(text.chunk));
+        text.size := FILES.fread(text.file, text.chunk, LEN(text.chunk));
         text.pos := 0;
         IF text.size = 0 THEN
             text.eof := TRUE;
@@ -147,7 +147,7 @@ BEGIN
     ASSERT(text # NIL);
 
     reset(text);
-    text.file := UTILS.fopen(name);
+    text.file := FILES.fopen(name);
     IF text.file # NIL THEN
         load(text);
         init(text)
@@ -175,7 +175,7 @@ PROCEDURE destroy* (VAR text: TEXT);
 BEGIN
     IF text # NIL THEN
         IF text.file # NIL THEN
-            UTILS.fclose(text.file)
+            FILES.fclose(text.file)
         END;
         DISPOSE(text)
     END

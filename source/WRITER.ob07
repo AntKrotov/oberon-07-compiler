@@ -7,24 +7,17 @@
 
 MODULE WRITER;
 
-IMPORT UTILS;
+IMPORT FILES, ERRORS, MACHINE;
 
 
 TYPE
 
-    FILE* = UTILS.FILE;
+    FILE* = FILES.FILE;
+    
+    
+VAR
 
-
-PROCEDURE error;
-BEGIN
-    UTILS.OutString("writing file error"); UTILS.OutLn;
-    UTILS.exit(1)
-END error;
-
-
-PROCEDURE Byte (n: INTEGER): BYTE;
-    RETURN ORD(BITS(n) * {0..7})
-END Byte;
+    counter*: INTEGER;
 
 
 PROCEDURE align (n, _align: INTEGER): INTEGER;
@@ -42,11 +35,12 @@ VAR
     n: INTEGER;
 
 BEGIN
-    n := UTILS.fwrite(file, chunk, bytes);
+    n := FILES.fwrite(file, chunk, bytes);
     IF n # bytes THEN
-        error
+        ERRORS.error1("writing file error")
     END;
-    INC(pos, n)
+    INC(pos, n);
+    INC(counter, n)
 END Write;
 
 
@@ -66,15 +60,15 @@ VAR
 
 BEGIN
     FOR i := 0 TO 3 DO
-        WriteByte(file, Byte(LSR(n, i * 8)), pos)
+        WriteByte(file, MACHINE.Byte(n, i), pos)
     END
 END Write32LE;
 
 
 PROCEDURE Write16LE* (file: FILE; n: INTEGER; VAR pos: INTEGER);
 BEGIN
-    WriteByte(file, Byte(n), pos);
-    WriteByte(file, Byte(LSR(n, 8)), pos)
+    WriteByte(file, MACHINE.Byte(n, 0), pos);
+    WriteByte(file, MACHINE.Byte(n, 1), pos)
 END Write16LE;
 
 
@@ -91,14 +85,16 @@ BEGIN
 END Padding;
 
 
-PROCEDURE Create* (FileName: ARRAY OF CHAR): FILE;
-    RETURN UTILS.fcreate(FileName)
+PROCEDURE Create* (FileName: ARRAY OF CHAR): FILE; 
+BEGIN 
+    counter := 0
+    RETURN FILES.fcreate(FileName)
 END Create;
 
 
 PROCEDURE Close* (VAR file: FILE);
 BEGIN
-    UTILS.fclose(file)
+    FILES.fclose(file)
 END Close;
 
 

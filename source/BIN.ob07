@@ -7,7 +7,7 @@
 
 MODULE BIN;
 
-IMPORT LISTS, UTILS;
+IMPORT LISTS, MACHINE;
 
 
 TYPE
@@ -116,11 +116,6 @@ BEGIN
 END PutData;
 
 
-PROCEDURE Byte (n: INTEGER): BYTE;
-    RETURN ORD(BITS(n) * {0..7})
-END Byte;
-
-
 PROCEDURE get32le* (array: ARRAY OF BYTE; idx: INTEGER): INTEGER;
 VAR
     b: BYTE;
@@ -135,7 +130,7 @@ BEGIN
         x := LSL(x, 8) + b
     END;
 
-    IF UTILS.native.bit_depth = 64 THEN
+    IF MACHINE.native.bit_depth = 64 THEN
         x := LSL(x, 16);
         x := LSL(x, 16);
         x := ASR(x, 16);
@@ -152,7 +147,7 @@ VAR
 
 BEGIN
     FOR i := 0 TO 3 DO
-        array[idx + i] := Byte(LSR(x, i * 8))
+        array[idx + i] := MACHINE.Byte(x, i)
     END
 END put32le;
 
