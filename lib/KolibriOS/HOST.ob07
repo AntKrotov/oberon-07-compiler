@@ -52,6 +52,8 @@ VAR
 
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
     argc*: INTEGER;
+    
+    eol*: ARRAY 3 OF CHAR;
 
 
 PROCEDURE [stdcall, "Console.obj", "con_init"] con_init (wnd_width, wnd_height, scr_width, scr_height, title: INTEGER);
@@ -441,7 +443,7 @@ BEGIN
     time  := time DIV 16;
 
     year := year + 2000
-END now;  
+END now;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
@@ -451,7 +453,8 @@ BEGIN
 END splitf;
 
 
-BEGIN
+BEGIN            
+    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     Console := API.import;
     IF Console THEN
         con_init(-1, -1, -1, -1, SYSTEM.SADR("Oberon-07 for KolibriOS"))
