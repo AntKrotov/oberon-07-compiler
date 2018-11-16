@@ -133,13 +133,13 @@ BEGIN
 END _rot;
 
 
-PROCEDURE [stdcall] _in* (s: SET; i: INTEGER): BOOLEAN;
-    RETURN (ASR(i, 5) = 0) & ODD(LSR(ORD(s), i))
+PROCEDURE [stdcall] _in* (s, i: INTEGER): BOOLEAN;
+    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
 END _in;
 
 
-PROCEDURE [stdcall] _in2* (i: INTEGER; s: SET): BOOLEAN;
-    RETURN (ASR(i, 5) = 0) & ODD(LSR(ORD(s), i))
+PROCEDURE [stdcall] _in2* (i, s: INTEGER): BOOLEAN;
+    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
 END _in2;
 
 
@@ -171,7 +171,7 @@ END _set;
 
 PROCEDURE [stdcall] _incl* (n: INTEGER; VAR s: SET);
 BEGIN
-    IF ASR(n, 5) = 0 THEN
+    IF LSR(n, 5) = 0 THEN
         s := s + BITS(LSL(1, n))
     END
 END _incl;
@@ -179,7 +179,7 @@ END _incl;
 
 PROCEDURE [stdcall] _excl* (n: INTEGER; VAR s: SET);
 BEGIN
-    IF ASR(n, 5) = 0 THEN
+    IF LSR(n, 5) = 0 THEN
         s := s - BITS(LSL(1, n))
     END
 END _excl;
@@ -276,7 +276,7 @@ END _dispose;
 PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
 VAR
     A, B: CHAR;
-    res: INTEGER;
+    res:  INTEGER;
 
 BEGIN
     res := 0;
@@ -309,7 +309,7 @@ BEGIN
         IF A # B THEN
             res := ORD(A) - ORD(B);
             n := 0
-        ELSIF A = WCHR(0) THEN
+        ELSIF A = 0X THEN
             n := 0
         END
     END
@@ -341,25 +341,30 @@ END _length;
 
 
 PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
-VAR
-    i, res: INTEGER;
-    w: WCHAR;
-
 BEGIN
-    i := 0; res := 0;
-    WHILE i < len DO
-        SYSTEM.GET(str, w);
-        IF w = WCHR(0) THEN
-            i := len
-        ELSE
-            INC(str, 2);
-            INC(res);
-            INC(i)
-        END
-    END
+    SYSTEM.CODE(
 
-    RETURN res
-END _lengthw;
+    08BH, 045H, 00CH,         (*  mov     eax, dword [ebp + 0Ch]  *)
+    08BH, 04DH, 008H,         (*  mov     ecx, dword [ebp + 08h]  *)
+    048H,                     (*  dec     eax                     *)
+    048H,                     (*  dec     eax                     *)
+                              (*  L1:                             *)
+    040H,                     (*  inc     eax                     *)
+    040H,                     (*  inc     eax                     *)
+    066H, 083H, 038H, 000H,   (*  cmp     word [eax], 0           *)
+    074H, 004H,               (*  jz      L2                      *)
+    0E2H, 0F6H,               (*  loop    L1                      *)
+    040H,                     (*  inc     eax                     *)
+    040H,                     (*  inc     eax                     *)
+                              (*  L2:                             *)
+    02BH, 045H, 00CH,         (*  sub     eax, dword [ebp + 0Ch]  *)
+    0D1H, 0E8H,               (*  shr     eax, 1                  *)
+    0C9H,                     (*  leave                           *)
+    0C2H, 008H, 000H          (*  ret     08h                     *)
+               )
+
+    RETURN 0
+END _lengthw; 
 
 
 PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): INTEGER;
@@ -488,10 +493,8 @@ END append;
 PROCEDURE [stdcall] _error* (module, err: INTEGER);
 VAR
     s, temp: ARRAY 1024 OF CHAR;
-    eol: ARRAY 3 OF CHAR;
 
 BEGIN
-    eol[0] := 0DX;  eol[1] := 0AX;  eol[2] := 0X;
 
     s := "";
     CASE err MOD 16 OF
@@ -505,9 +508,9 @@ BEGIN
     |8: append(s, "array assignment error")
     END;
 
-    append(s, eol);
+    append(s, API.eol);
 
-    append(s, "module: ");   PCharToStr(module, temp);     append(s, temp); append(s, eol);
+    append(s, "module: ");   PCharToStr(module, temp);     append(s, temp); append(s, API.eol);
     append(s, "line: ");     IntToStr(LSR(err, 4), temp);  append(s, temp);
 
     API.DebugMsg(SYSTEM.ADR(s[0]), name);
