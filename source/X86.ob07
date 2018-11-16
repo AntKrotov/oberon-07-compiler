@@ -1667,7 +1667,7 @@ BEGIN
             OutByte2(066H, 081H); OutByte3(04CH, 024H, 004H); OutWord(00400H);  // or  word[esp+4], 0000010000000000b
             OutByte2(0D9H, 06CH); OutByte2(024H, 004H);                         // fldcw word[esp+4]
             OutByte2(0D9H, 0FCH);                                               // frndint
-            OutByte3(0DBH, 01CH, 024);                                          // fistp dword[esp]
+            OutByte3(0DBH, 01CH, 024H);                                         // fistp dword[esp]
             pop(reg1);
             OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
             OutByte3(083H, 0C4H, 004H)                                          // add esp,4
