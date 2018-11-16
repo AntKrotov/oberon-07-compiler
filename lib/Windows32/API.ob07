@@ -7,7 +7,11 @@
 
 MODULE API;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM;  
+
+VAR
+
+    eol*: ARRAY 3 OF CHAR;
 
 
 PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
@@ -34,6 +38,8 @@ END _DISPOSE;
 
 
 PROCEDURE init* (ptr: INTEGER);
+BEGIN
+    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X
 END init;
 
 
