@@ -35,30 +35,88 @@ BEGIN
     END
 
     RETURN res
-END Target;
+END Target; 
+
+
+PROCEDURE keys (VAR StackSize, BaseAddress: INTEGER; VAR pic, reloc: BOOLEAN);
+VAR
+    param: PARS.PATH;
+    i:     INTEGER;
+    end:   BOOLEAN;
+    value: INTEGER;
+
+BEGIN
+    end := FALSE;
+    i := 4;
+    REPEAT
+        UTILS.GetArg(i, param); 
+
+        IF param = "-stk" THEN
+            INC(i);            
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
+                StackSize := value
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END;
+
+        ELSIF param = "-base" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) THEN
+                BaseAddress := ((value DIV 64) * 64) * 1024
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END;
+
+        ELSIF param = "-pic" THEN
+            pic := TRUE        
+
+        ELSIF param = "-reloc" THEN
+            reloc := TRUE          
+
+        ELSIF param = "" THEN
+            end := TRUE      
+
+        ELSE
+            ERRORS.error3("bad parameter: ", param, "")
+        END;    
+
+        INC(i)
+    UNTIL end
+
+END keys;
 
 
 PROCEDURE main;
 VAR
-    path:     PARS.PATH;
-    inname:   PARS.PATH;
-    ext:      PARS.PATH;
-    app_path: PARS.PATH;
-    lib_path: PARS.PATH;
-    modname:  PARS.PATH;
-    outname:  PARS.PATH;
-    param:    PARS.PATH;
-    temp:     PARS.PATH;
+    path:       PARS.PATH;
+    inname:     PARS.PATH;
+    ext:        PARS.PATH;
+    app_path:   PARS.PATH;
+    lib_path:   PARS.PATH;
+    modname:    PARS.PATH;
+    outname:    PARS.PATH;
+    param:      PARS.PATH;
+    temp:       PARS.PATH;
 
-    target:   INTEGER;
+    target:     INTEGER;
 
     major,
-    minor:    INTEGER;
-    stack:    INTEGER;
+    minor:      INTEGER;
 
-    time:     INTEGER;
+    time:       INTEGER;
+    
+    StackSize,
+    BaseAdr:    INTEGER;
+    pic, reloc: BOOLEAN;
 
 BEGIN
+    StackSize := 1;
+    pic := FALSE;
+    reloc := FALSE;
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
@@ -66,8 +124,13 @@ BEGIN
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
         CONSOLE.String("Akron Oberon-07/16 Compiler v"); CONSOLE.Int(VER.Major); CONSOLE.String("."); CONSOLE.Int2(VER.Minor); CONSOLE.Ln;
-        CONSOLE.String("Usage: Compiler <inputfile> <outputfile> <target> [stack size (Mb)]"); CONSOLE.Ln;
-        CONSOLE.String("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); CONSOLE.Ln;
+        CONSOLE.String("Usage: Compiler <main module> <output> <target> [optional settings]"); CONSOLE.Ln; CONSOLE.Ln;
+        CONSOLE.String("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); CONSOLE.Ln; CONSOLE.Ln;
+        CONSOLE.String("optional settings:"); CONSOLE.Ln;
+        CONSOLE.String(" -stk <size>       set size of stack in megabytes"); CONSOLE.Ln;
+        CONSOLE.String(" -base <address>   set base address of image in kilobytes"); CONSOLE.Ln;
+        CONSOLE.String(" -pic              generate position-independent code"); CONSOLE.Ln;
+        CONSOLE.String(" -reloc            make relocation table"); CONSOLE.Ln;
         UTILS.Exit(0)
     END;
 
@@ -101,7 +164,7 @@ BEGIN
 
     IF target = 0 THEN
         ERRORS.error1("bad parameter <target>")
-    END;
+    END; 
 
     PARS.program.dll := target IN {TARGETS.DLL, TARGETS.OBJ};
     PARS.program.obj := target = TARGETS.OBJ;
@@ -110,51 +173,31 @@ BEGIN
     STRINGS.append(lib_path, UTILS.slash);
 
     IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
-        stack := 1;
-
+        IF target = TARGETS.DLL THEN
+            BaseAdr := 10000000H
+        ELSE
+            BaseAdr := 400000H
+        END;
         STRINGS.append(lib_path, "Windows32");
-        STRINGS.append(lib_path, UTILS.slash);
-
-        IF target IN {TARGETS.CON, TARGETS.GUI} THEN
-            UTILS.GetArg(4, param);
-            IF param # "" THEN
-                IF ~(STRINGS.StrToInt(param, stack) & (1 <= stack) & (stack <= 32)) THEN
-                    stack := 1
-                END
-            END
-        END
+        STRINGS.append(lib_path, UTILS.slash)
 
     ELSIF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-        stack := 1;
         major := 1;
         minor := 0;
 
         STRINGS.append(lib_path, "KolibriOS");
-        STRINGS.append(lib_path, UTILS.slash);
-
-        UTILS.GetArg(4, param);
-        IF param # "" THEN
-            IF target = TARGETS.KOS THEN
-                IF ~(STRINGS.StrToInt(param, stack) & (1 <= stack) & (stack <= 32)) THEN
-                    stack := 1
-                END
-            ELSIF target = TARGETS.OBJ THEN
-                IF ~(STRINGS.StrToVer(param, major, minor) & (0 <= major) & (major <= 65535) & (0 <= minor) & (minor <= 65535)) THEN
-                    major := 1;
-                    minor := 0
-                END
-            END
-        END
-
-    END;
-
-    STATEMENTS.do(path, lib_path, modname, outname, EXT, target, major, minor, stack);
+        STRINGS.append(lib_path, UTILS.slash)
+    END;   
+    
+    keys(StackSize, BaseAdr, pic, reloc);
+    
+    STATEMENTS.do(path, lib_path, modname, outname, EXT, target, major, minor, StackSize, BaseAdr, pic, reloc);
 
     time := UTILS.GetTickCount() - UTILS.time;
 
     CONSOLE.Int(time DIV 100); CONSOLE.String("."); CONSOLE.Int2(time MOD 100); CONSOLE.String(" sec, ");
     CONSOLE.Int(WRITER.counter); CONSOLE.String(" bytes"); CONSOLE.Ln;
-    
+
     UTILS.Exit(0)
 END main;
 

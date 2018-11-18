@@ -304,7 +304,7 @@ BEGIN
         IF rel.opcode = 1 THEN
             L := get32le(program.code, rel.offset);
             put32le(program.code, rel.offset, program.labels[L] - rel.offset - 4)
-        ELSIF rel.opcode = 2 THEN
+        ELSIF rel.opcode IN {2, 10} THEN
             L := get32le(program.code, rel.offset);
             put32le(program.code, rel.offset, program.labels[L])
         END;

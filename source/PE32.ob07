@@ -266,6 +266,7 @@ VAR
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
     L:       INTEGER;
+    delta:   INTEGER;
 
     Reloc:   RELOC;
     RVACode: INTEGER;
@@ -286,9 +287,10 @@ BEGIN
     reloc := program.rel_list.first(BIN.RELOC);
     WHILE reloc # NIL DO
 
-        IF reloc.opcode # 1 THEN
-            L := BIN.get32le(program.code, reloc.offset);
+        L := BIN.get32le(program.code, reloc.offset);
+        delta := 3 - reloc.offset - Address.Code;
 
+        IF reloc.opcode IN {2..5} THEN
             oldRVA := RVA;
             RVA := RVACode + reloc.offset;
             ASSERT(RVA >= oldRVA);
@@ -307,12 +309,19 @@ BEGIN
         CASE reloc.opcode OF
         |1:
         |2:
-            iproc := BIN.GetIProc(program, L);
-            BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import)
+              iproc := BIN.GetIProc(program, L);
+              BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import)
 
-        |3: BIN.put32le(program.code, reloc.offset, L + Address.Bss)
-        |4: BIN.put32le(program.code, reloc.offset, L + Address.Data)
-        |5: BIN.put32le(program.code, reloc.offset, L + Address.Code)
+        |3:   BIN.put32le(program.code, reloc.offset, L + Address.Bss)
+        |4:   BIN.put32le(program.code, reloc.offset, L + Address.Data)
+        |5:   BIN.put32le(program.code, reloc.offset, L + Address.Code)
+
+        |7:   BIN.put32le(program.code, reloc.offset, L + Address.Data + delta)
+        |8:   BIN.put32le(program.code, reloc.offset, L + Address.Code + delta)
+        |9:   BIN.put32le(program.code, reloc.offset, L + Address.Bss  + delta)
+        |10:
+              iproc := BIN.GetIProc(program, L);
+              BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import + delta)
         END;
 
         reloc := reloc.next(BIN.RELOC)
@@ -353,7 +362,7 @@ BEGIN
 END InitArray;
 
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll: BOOLEAN);
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: INTEGER; console, dll, pic, reloc: BOOLEAN);
 VAR
     i, n: INTEGER;
 
@@ -512,11 +521,7 @@ BEGIN
 
     PEHeader.FileHeader.Machine := 014CX;
 
-    IF dll THEN
-        PEHeader.FileHeader.NumberOfSections :=  06X
-    ELSE
-        PEHeader.FileHeader.NumberOfSections :=  05X
-    END;
+    PEHeader.FileHeader.NumberOfSections := WCHR(4 + ORD(reloc) + ORD(dll));
 
     PEHeader.FileHeader.TimeDateStamp         :=  UTILS.UnixTime();
     PEHeader.FileHeader.PointerToSymbolTable  :=  0H;
@@ -529,22 +534,20 @@ BEGIN
         PEHeader.FileHeader.Characteristics :=  010EX
     END;
 
+    IF ~reloc & ~pic THEN
+        PEHeader.FileHeader.Characteristics := WCHR(ORD(PEHeader.FileHeader.Characteristics) + 1)
+    END;
+
     PEHeader.OptionalHeader.Magic                        :=  010BX;
     PEHeader.OptionalHeader.MajorLinkerVersion           :=  VER.Major;
     PEHeader.OptionalHeader.MinorLinkerVersion           :=  VER.Minor;
     PEHeader.OptionalHeader.SizeOfCode                   :=  align(Size.Code, FileAlignment);
-//    PEHeader.OptionalHeader.SizeOfInitializedData        :=  0;
+    PEHeader.OptionalHeader.SizeOfInitializedData        :=  0;
     PEHeader.OptionalHeader.SizeOfUninitializedData      :=  0;
     PEHeader.OptionalHeader.AddressOfEntryPoint          :=  SectionAlignment;
     PEHeader.OptionalHeader.BaseOfCode                   :=  SectionAlignment;
     PEHeader.OptionalHeader.BaseOfData                   :=  PEHeader.OptionalHeader.BaseOfCode + align(Size.Code, SectionAlignment);
-
-    IF dll THEN
-        PEHeader.OptionalHeader.ImageBase := 10000000H
-    ELSE
-        PEHeader.OptionalHeader.ImageBase := 400000H
-    END;
-
+    PEHeader.OptionalHeader.ImageBase                    :=  BaseAddress;
     PEHeader.OptionalHeader.SectionAlignment             :=  SectionAlignment;
     PEHeader.OptionalHeader.FileAlignment                :=  FileAlignment;
     PEHeader.OptionalHeader.MajorOperatingSystemVersion  :=  1X;
@@ -648,17 +651,19 @@ BEGIN
         R := R.next(RELOC)
     END;
 
-    SectionHeaders[relsec].Name                  :=  ".reloc";
-    SectionHeaders[relsec].VirtualSize           :=  Size.Reloc;
-    SectionHeaders[relsec].VirtualAddress        :=  align(SectionHeaders[relsec - 1].VirtualAddress + SectionHeaders[relsec - 1].VirtualSize, SectionAlignment);
-    SectionHeaders[relsec].SizeOfRawData         :=  align(Size.Reloc, FileAlignment);
-    SectionHeaders[relsec].PointerToRawData      :=  SectionHeaders[relsec - 1].PointerToRawData + SectionHeaders[relsec - 1].SizeOfRawData;
-    SectionHeaders[relsec].PointerToRelocations  :=  0;
-    SectionHeaders[relsec].PointerToLinenumbers  :=  0;
-    SectionHeaders[relsec].NumberOfRelocations   :=  0X;
-    SectionHeaders[relsec].NumberOfLinenumbers   :=  0X;
-    SectionHeaders[relsec].Characteristics       :=  SHC_reloc;
-
+    IF reloc THEN
+        SectionHeaders[relsec].Name                  :=  ".reloc";
+        SectionHeaders[relsec].VirtualSize           :=  Size.Reloc;
+        SectionHeaders[relsec].VirtualAddress        :=  align(SectionHeaders[relsec - 1].VirtualAddress + SectionHeaders[relsec - 1].VirtualSize,
+                                                                  SectionAlignment);
+        SectionHeaders[relsec].SizeOfRawData         :=  align(Size.Reloc, FileAlignment);
+        SectionHeaders[relsec].PointerToRawData      :=  SectionHeaders[relsec - 1].PointerToRawData + SectionHeaders[relsec - 1].SizeOfRawData;
+        SectionHeaders[relsec].PointerToRelocations  :=  0;
+        SectionHeaders[relsec].PointerToLinenumbers  :=  0;
+        SectionHeaders[relsec].NumberOfRelocations   :=  0X;
+        SectionHeaders[relsec].NumberOfLinenumbers   :=  0X;
+        SectionHeaders[relsec].Characteristics       :=  SHC_reloc
+    END;
 
     FOR i := 0 TO IMAGE_NUMBEROF_DIRECTORY_ENTRIES - 1 DO
         PEHeader.OptionalHeader.DataDirectory[i].VirtualAddress := 0;
@@ -673,15 +678,17 @@ BEGIN
     PEHeader.OptionalHeader.DataDirectory[1].VirtualAddress := SectionHeaders[3].VirtualAddress;
     PEHeader.OptionalHeader.DataDirectory[1].Size := SectionHeaders[3].VirtualSize;
 
-    PEHeader.OptionalHeader.DataDirectory[5].VirtualAddress := SectionHeaders[relsec].VirtualAddress;
-    PEHeader.OptionalHeader.DataDirectory[5].Size := SectionHeaders[relsec].VirtualSize;
-
-    PEHeader.OptionalHeader.SizeOfInitializedData :=
-        SectionHeaders[1].SizeOfRawData + SectionHeaders[3].SizeOfRawData + SectionHeaders[4].SizeOfRawData;
-
-    IF dll THEN
-        INC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[5].SizeOfRawData)
+    IF reloc THEN
+        PEHeader.OptionalHeader.DataDirectory[5].VirtualAddress := SectionHeaders[relsec].VirtualAddress;
+        PEHeader.OptionalHeader.DataDirectory[5].Size := SectionHeaders[relsec].VirtualSize
     END;
+
+    FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
+        INC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[i].SizeOfRawData)
+    END;
+
+    DEC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[0].SizeOfRawData);
+    DEC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[2].SizeOfRawData);
 
     FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
         INC(PEHeader.OptionalHeader.SizeOfImage, align(SectionHeaders[i].VirtualSize, SectionAlignment))
@@ -775,20 +782,21 @@ BEGIN
 
     END;
 
-    R := Relocations.first(RELOC);
-    WHILE R # NIL DO
-        WR.Write32LE(File, R.Page, n);
-        WR.Write32LE(File, R.Size, n);
-        FOR i := 0 TO (R.Size - 2 * SIZE_OF_DWORD) DIV 2 - 1 DO
-            WriteWord(File, R.reloc[i], n)
+    IF reloc THEN
+        R := Relocations.first(RELOC);
+        WHILE R # NIL DO
+            WR.Write32LE(File, R.Page, n);
+            WR.Write32LE(File, R.Size, n);
+            FOR i := 0 TO (R.Size - 2 * SIZE_OF_DWORD) DIV 2 - 1 DO
+                WriteWord(File, R.reloc[i], n)
+            END;
+            R := R.next(RELOC)
         END;
-        R := R.next(RELOC)
+
+        WR.Padding(File, FileAlignment, n)
     END;
 
-    WR.Padding(File, FileAlignment, n);
-
     WR.Close(File)
-
 END write;
 
 

@@ -2952,7 +2952,7 @@ BEGIN
 END setrtl;
 
 
-PROCEDURE do* (path, lib_path, modname, outname, ext: PARS.PATH; target, major, minor, stack: INTEGER);
+PROCEDURE do* (path, lib_path, modname, outname, ext: PARS.PATH; target, major, minor, stack, base: INTEGER; pic, reloc: BOOLEAN);
 VAR
     parser: PARS.PARSER;
 
@@ -2991,7 +2991,7 @@ BEGIN
 
     CODE.codes.gsize := PARS.program.gsize;
 
-    X86.CodeGen(CODE.codes, outname, target, stack, major * 65536 + minor)
+    X86.CodeGen(CODE.codes, outname, target, stack, base, major * 65536 + minor, pic, reloc)
 
 END do;
 

@@ -58,7 +58,8 @@ VAR
 
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
-    L:       INTEGER;
+    L:       INTEGER; 
+    delta:   INTEGER;
 
     File: FILE; pos: INTEGER;
 
@@ -120,24 +121,32 @@ BEGIN
     WHILE reloc # NIL DO
 
         L := BIN.get32le(program.code, reloc.offset);
+        delta := 3 - reloc.offset - text;
 
         CASE reloc.opcode OF
         |1:
         |2:
-            iproc := BIN.GetIProc(program, L);
-            BIN.put32le(program.code, reloc.offset, idata + iproc.label)
+              iproc := BIN.GetIProc(program, L);
+              BIN.put32le(program.code, reloc.offset, idata + iproc.label)
+        |3:   BIN.put32le(program.code, reloc.offset, L + bss)
+        |4:   BIN.put32le(program.code, reloc.offset, L + data)
+        |5:   BIN.put32le(program.code, reloc.offset, L + text)
+        |6:   BIN.put32le(program.code, reloc.offset, idata)
 
-        |3: BIN.put32le(program.code, reloc.offset, L + bss)
-        |4: BIN.put32le(program.code, reloc.offset, L + data)
-        |5: BIN.put32le(program.code, reloc.offset, L + text)
-        |6: BIN.put32le(program.code, reloc.offset, idata)
+        |7:   BIN.put32le(program.code, reloc.offset, L + data + delta)
+        |8:   BIN.put32le(program.code, reloc.offset, L + text + delta)
+        |9:   BIN.put32le(program.code, reloc.offset, L + bss  + delta)
+        |10:
+              iproc := BIN.GetIProc(program, L);
+              BIN.put32le(program.code, reloc.offset, idata + iproc.label + delta)
+        |11:  BIN.put32le(program.code, reloc.offset, idata + delta)
         END;
 
         reloc := reloc.next(BIN.RELOC)
     END;
 
     File := WR.Create(FileName);
-    
+
     pos := 0;
 
     FOR i := 0 TO 7 DO
