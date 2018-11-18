@@ -364,7 +364,7 @@ BEGIN
                )
 
     RETURN 0
-END _lengthw; 
+END _lengthw;
 
 
 PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): INTEGER;
@@ -630,9 +630,9 @@ BEGIN
 END _exit;
 
 
-PROCEDURE [stdcall] _init* (modname: INTEGER; _types: ARRAY OF INTEGER; ptr: INTEGER);
+PROCEDURE [stdcall] _init* (modname: INTEGER; _types: ARRAY OF INTEGER; import, code: INTEGER);
 BEGIN
-    API.init(ptr);
+    API.init(import, code);
 
     types := _types;
     name  := modname;

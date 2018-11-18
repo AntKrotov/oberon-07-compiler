@@ -31,9 +31,10 @@ VAR
 
     CriticalSection: CRITICAL_SECTION;
 
-    import*: BOOLEAN; 
-    
-    eol*: ARRAY 3 OF CHAR;
+    import*: BOOLEAN;
+
+    eol*:  ARRAY 3 OF CHAR;
+    base*: INTEGER;
 
 
 PROCEDURE [stdcall] zeromem* (dwords: INTEGER; adr: INTEGER);
@@ -277,9 +278,10 @@ BEGIN
 END imp_error;
 
 
-PROCEDURE init* (_import: INTEGER);
-BEGIN          
+PROCEDURE init* (_import, code: INTEGER);
+BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
+    base := code - 36;
     K.sysfunc2(68, 11);
     InitializeCriticalSection(CriticalSection);
     K._init;
