@@ -10,6 +10,23 @@ MODULE BIN;
 IMPORT LISTS, MACHINE;
 
 
+CONST
+
+    RJMP*     = 0;
+
+    RCODE*    = 1;
+    RDATA*    = 2;
+    RBSS*     = 3;
+    RIMP*     = 4;
+
+    PICCODE*  = 5;
+    PICDATA*  = 6;
+    PICBSS*   = 7;
+    PICIMP*   = 8;
+    
+    IMPTAB*   = 9;
+
+
 TYPE
 
     RELOC* = POINTER TO RECORD (LISTS.ITEM)
@@ -301,10 +318,10 @@ BEGIN
     rel := program.rel_list.first(RELOC);
     WHILE rel # NIL DO
 
-        IF rel.opcode = 1 THEN
+        IF rel.opcode = RJMP THEN
             L := get32le(program.code, rel.offset);
             put32le(program.code, rel.offset, program.labels[L] - rel.offset - 4)
-        ELSIF rel.opcode IN {2, 10} THEN
+        ELSIF rel.opcode IN {RIMP, PICIMP} THEN
             L := get32le(program.code, rel.offset);
             put32le(program.code, rel.offset, program.labels[L])
         END;

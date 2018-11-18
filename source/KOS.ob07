@@ -58,7 +58,7 @@ VAR
 
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
-    L:       INTEGER; 
+    L:       INTEGER;
     delta:   INTEGER;
 
     File: FILE; pos: INTEGER;
@@ -124,22 +124,37 @@ BEGIN
         delta := 3 - reloc.offset - text;
 
         CASE reloc.opcode OF
-        |1:
-        |2:
+        |BIN.RJMP:      
+
+        |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
               BIN.put32le(program.code, reloc.offset, idata + iproc.label)
-        |3:   BIN.put32le(program.code, reloc.offset, L + bss)
-        |4:   BIN.put32le(program.code, reloc.offset, L + data)
-        |5:   BIN.put32le(program.code, reloc.offset, L + text)
-        |6:   BIN.put32le(program.code, reloc.offset, idata)
 
-        |7:   BIN.put32le(program.code, reloc.offset, L + data + delta)
-        |8:   BIN.put32le(program.code, reloc.offset, L + text + delta)
-        |9:   BIN.put32le(program.code, reloc.offset, L + bss  + delta)
-        |10:
+        |BIN.RBSS:
+              BIN.put32le(program.code, reloc.offset, L + bss)
+
+        |BIN.RDATA:
+              BIN.put32le(program.code, reloc.offset, L + data)
+
+        |BIN.RCODE:
+              BIN.put32le(program.code, reloc.offset, L + text)
+
+        |BIN.PICDATA:
+              BIN.put32le(program.code, reloc.offset, L + data + delta)
+
+        |BIN.PICCODE:
+              BIN.put32le(program.code, reloc.offset, L + text + delta)
+
+        |BIN.PICBSS:
+              BIN.put32le(program.code, reloc.offset, L + bss  + delta)
+
+        |BIN.PICIMP:
               iproc := BIN.GetIProc(program, L);
               BIN.put32le(program.code, reloc.offset, idata + iproc.label + delta)
-        |11:  BIN.put32le(program.code, reloc.offset, idata + delta)
+
+        |BIN.IMPTAB:
+              BIN.put32le(program.code, reloc.offset, idata + delta)
+
         END;
 
         reloc := reloc.next(BIN.RELOC)

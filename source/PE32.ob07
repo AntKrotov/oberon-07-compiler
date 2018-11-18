@@ -290,7 +290,7 @@ BEGIN
         L := BIN.get32le(program.code, reloc.offset);
         delta := 3 - reloc.offset - Address.Code;
 
-        IF reloc.opcode IN {2..5} THEN
+        IF reloc.opcode IN {BIN.RIMP, BIN.RBSS, BIN.RDATA, BIN.RCODE} THEN
             oldRVA := RVA;
             RVA := RVACode + reloc.offset;
             ASSERT(RVA >= oldRVA);
@@ -304,24 +304,38 @@ BEGIN
 
             Reloc.reloc[(Reloc.Size - 2 * SIZE_OF_DWORD) DIV 2] := WCHR(RVA MOD 4096 + 3000H);
             INC(Reloc.Size, 2)
-        END;
+        END;   
+
 
         CASE reloc.opcode OF
-        |1:
-        |2:
+        |BIN.RJMP:  
+
+        |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
               BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import)
 
-        |3:   BIN.put32le(program.code, reloc.offset, L + Address.Bss)
-        |4:   BIN.put32le(program.code, reloc.offset, L + Address.Data)
-        |5:   BIN.put32le(program.code, reloc.offset, L + Address.Code)
+        |BIN.RBSS:
+              BIN.put32le(program.code, reloc.offset, L + Address.Bss)
 
-        |7:   BIN.put32le(program.code, reloc.offset, L + Address.Data + delta)
-        |8:   BIN.put32le(program.code, reloc.offset, L + Address.Code + delta)
-        |9:   BIN.put32le(program.code, reloc.offset, L + Address.Bss  + delta)
-        |10:
+        |BIN.RDATA:
+              BIN.put32le(program.code, reloc.offset, L + Address.Data)
+
+        |BIN.RCODE:
+              BIN.put32le(program.code, reloc.offset, L + Address.Code)
+
+        |BIN.PICDATA:
+              BIN.put32le(program.code, reloc.offset, L + Address.Data + delta)
+
+        |BIN.PICCODE:
+              BIN.put32le(program.code, reloc.offset, L + Address.Code + delta)
+
+        |BIN.PICBSS:
+              BIN.put32le(program.code, reloc.offset, L + Address.Bss  + delta)
+
+        |BIN.PICIMP:
               iproc := BIN.GetIProc(program, L);
               BIN.put32le(program.code, reloc.offset, iproc.FirstThunk * SIZE_OF_DWORD + Address.Import + delta)
+
         END;
 
         reloc := reloc.next(BIN.RELOC)

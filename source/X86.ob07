@@ -41,7 +41,7 @@ VAR
    // dllinit: INTEGER;
     label_import:  INTEGER;
 
-    pic: BOOLEAN;
+    //pic: BOOLEAN;
 
 
 PROCEDURE Byte (n: INTEGER): BYTE;
@@ -240,14 +240,14 @@ END log2;
 PROCEDURE jcc (opcode, label: INTEGER);
 BEGIN
     OutByte2(0FH, opcode); (* je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; *)
-    Reloc(1, label)
+    Reloc(BIN.RJMP, label)
 END jcc;
 
 
 PROCEDURE CallRTL (proc: INTEGER);
 BEGIN
     OutByte(0E8H);    // call rtl[proc]
-    Reloc(1, CODE.codes.rtl[proc])
+    Reloc(BIN.RJMP, CODE.codes.rtl[proc])
 END CallRTL;
 
 
@@ -276,7 +276,17 @@ BEGIN
 END PushAll;
 
 
-PROCEDURE translate (code: CODE.CODES);
+PROCEDURE Pic (reg, opcode, value: INTEGER);
+BEGIN
+    OutByte(0E8H); OutInt(0); // call L
+                              // L:
+    pop(reg);
+    OutByte2(081H, 0C0H + reg);  // add reg, ...
+    Reloc(opcode, value)
+END Pic;
+
+
+PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN);
 VAR
     cmd, next, next2: COMMAND;
 
@@ -293,25 +303,21 @@ BEGIN
 
         |CODE.opJMP:
             OutByte(0E9H);         // jmp L
-            Reloc(1, cmd.label)
+            Reloc(BIN.RJMP, cmd.label)
 
         |CODE.opCALL:
             OutByte(0E8H);         // call L
-            Reloc(1, cmd.label)
+            Reloc(BIN.RJMP, cmd.label)
 
         |CODE.opCALLI:
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.label
-                Reloc(10, cmd.label);
+                Pic(reg1, BIN.PICIMP, cmd.label);
                 OutByte2(0FFH, 010H + reg1);  // call dword[reg1]
                 drop
             ELSE
                 OutByte2(0FFH, 015H);  // call dword[L]
-                Reloc(2, cmd.label)
+                Reloc(BIN.RIMP, cmd.label)
             END
 
         |CODE.opCALLP:
@@ -438,38 +444,26 @@ BEGIN
 
             next := cmd.next(COMMAND);
             IF pic THEN
-
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICBSS, cmd.param);
                 IF next.opcode = CODE.opSAVEC THEN
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                    Reloc(9, cmd.param);
                     OutByte2(0C7H, reg1);  // mov dword[reg1], next.param
                     OutInt(next.param);
                     drop;
                     cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                    Reloc(9, cmd.param)
                 END
 
             ELSE
 
                 IF next.opcode = CODE.opSAVEC THEN
                     OutByte2(0C7H, 05H);  // mov dword[_bss + cmd.param], next.param
-                    Reloc(3, cmd.param);
+                    Reloc(BIN.RBSS, cmd.param);
                     OutInt(next.param);
                     cmd := next
                 ELSE
                     reg1 := REG.GetAnyReg(R);
                     OutByte(0B8H + reg1);  // mov reg1, _bss + cmd.param
-                    Reloc(3, cmd.param)
+                    Reloc(BIN.RBSS, cmd.param)
                 END
 
             END
@@ -504,33 +498,22 @@ BEGIN
         |CODE.opSADR:
             next := cmd.next(COMMAND);
             IF pic THEN
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICDATA, stroffs + cmd.param);
                 IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, stroffs + cmd.param
-                    Reloc(7, stroffs + cmd.param);
                     push(reg1);
                     drop;
                     cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, stroffs + cmd.param
-                    Reloc(7, stroffs + cmd.param)
                 END
             ELSE
                 IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
                     OutByte(068H);  // push _data + stroffs + cmd.param
-                    Reloc(4, stroffs + cmd.param);
+                    Reloc(BIN.RDATA, stroffs + cmd.param);
                     cmd := next
                 ELSE
                     reg1 := REG.GetAnyReg(R);
                     OutByte(0B8H + reg1);  // mov reg1, _data + stroffs + cmd.param
-                    Reloc(4, stroffs + cmd.param)
+                    Reloc(BIN.RDATA, stroffs + cmd.param)
                 END
             END
 
@@ -559,24 +542,13 @@ BEGIN
         |CODE.opGLOAD32:
             next := cmd.next(COMMAND);
             IF pic THEN
-
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICBSS, cmd.param);
                 IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                    Reloc(9, cmd.param);
                     OutByte2(0FFH, 30H + reg1);   // push dword[reg1]
                     drop;
                     cmd := next
                 ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg1);
-                    OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                    Reloc(9, cmd.param);
                     OutByte2(8BH, reg1 * 9)       // mov reg1, dword[reg1]
                 END
 
@@ -584,12 +556,12 @@ BEGIN
 
                 IF (next.opcode = CODE.opPARAM) & (next.param = 1) THEN
                     OutByte2(0FFH, 035H);  // push dword[_bss + cmd.param]
-                    Reloc(3, cmd.param);
+                    Reloc(BIN.RBSS, cmd.param);
                     cmd := next
                 ELSE
                     reg1 := REG.GetAnyReg(R);
                     OutByte2(08BH, 05H + reg1 * 8);  // mov reg1, dword[_bss + cmd.param]
-                    Reloc(3, cmd.param)
+                    Reloc(BIN.RBSS, cmd.param)
                 END
 
             END
@@ -627,18 +599,13 @@ BEGIN
             OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
 
         |CODE.opGLOAD8:
+            reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                Reloc(9, cmd.param);
+                Pic(reg1, BIN.PICBSS, cmd.param);
                 OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
             ELSE
-                reg1 := REG.GetAnyReg(R);
                 OutByte3(00FH, 0B6H, 05H + reg1 * 8);  // movzx reg1, byte[_bss + cmd.param]
-                Reloc(3, cmd.param)
+                Reloc(BIN.RBSS, cmd.param)
             END
 
         |CODE.opLLOAD8:
@@ -659,18 +626,13 @@ BEGIN
             OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
 
         |CODE.opGLOAD16:
+            reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);  // add reg1, cmd.param
-                Reloc(9, cmd.param);
+                Pic(reg1, BIN.PICBSS, cmd.param);
                 OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
             ELSE
-                reg1 := REG.GetAnyReg(R);
                 OutByte3(00FH, 0B7H, 05H + reg1 * 8);  // movzx reg1, word[_bss + cmd.param]
-                Reloc(3, cmd.param)
+                Reloc(BIN.RBSS, cmd.param)
             END
 
         |CODE.opLLOAD16:
@@ -811,16 +773,12 @@ BEGIN
             UnOp(reg1);
             IF pic THEN
                 reg2 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg2);
-                OutByte2(081H, 0C0H + reg2);  // add reg2, program.labels[cmd.param]
-                Reloc(8, program.labels[cmd.param]);
+                Pic(reg2, BIN.PICCODE, program.labels[cmd.param]);
                 OutByte2(089H, reg2 * 8 + reg1); // mov dword[reg1], reg2
                 drop
             ELSE
                 OutByte2(0C7H, reg1);  // mov dword[reg1], L
-                Reloc(5, program.labels[cmd.param])
+                Reloc(BIN.RCODE, program.labels[cmd.param])
             END;
             drop
 
@@ -828,48 +786,34 @@ BEGIN
             UnOp(reg1);
             IF pic THEN
                 reg2 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg2);
-                OutByte2(081H, 0C0H + reg2);  // add reg2, cmd.param
-                Reloc(10, cmd.param);
+                Pic(reg2, BIN.PICIMP, cmd.param);
                 OutByte2(0FFH, 30H + reg2);   // push dword[reg2]
                 OutByte2(08FH, reg1);         // pop dword[reg1]
                 drop
             ELSE
                 OutByte2(0FFH, 035H);  // push dword[L]
-                Reloc(2, cmd.param);
+                Reloc(BIN.RIMP, cmd.param);
                 OutByte2(08FH, reg1)   // pop dword[reg1]
             END;
             drop
 
         |CODE.opPUSHP:
+            reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);  // add reg1, program.labels[cmd.param]
-                Reloc(8, program.labels[cmd.param])
+                Pic(reg1, BIN.PICCODE, program.labels[cmd.param])
             ELSE
-                reg1 := REG.GetAnyReg(R);
                 OutByte(0B8H + reg1);  // mov reg1, L
-                Reloc(5, program.labels[cmd.param])
+                Reloc(BIN.RCODE, program.labels[cmd.param])
             END
 
         |CODE.opPUSHIP:
+            reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);     // add reg1, cmd.param
-                Reloc(10, cmd.param);
+                Pic(reg1, BIN.PICIMP, cmd.param);
                 OutByte2(08BH, reg1 * 9)         // mov reg1, dword[reg1]
             ELSE
-                reg1 := REG.GetAnyReg(R);
                 OutByte2(08BH, 05H + reg1 * 8);  // mov reg1, dword[L]
-                Reloc(2, cmd.param)
+                Reloc(BIN.RIMP, cmd.param)
             END
 
         |CODE.opNOT:
@@ -1119,15 +1063,11 @@ BEGIN
             push(reg1);
 
             IF pic THEN
-                OutByte(0E8H);
-                OutInt(0);
-                pop(reg1);
-                OutByte2(081H, 0C0H + reg1);  // add reg1, stroffs + cmd.param
-                Reloc(7, stroffs + cmd.param);
+                Pic(reg1, BIN.PICDATA, stroffs + cmd.param);
                 push(reg1)
             ELSE
                 OutByte(068H);  // push _data + stroffs + cmd.param
-                Reloc(4, stroffs + cmd.param);
+                Reloc(BIN.RDATA, stroffs + cmd.param);
             END;
 
             pushc(cmd.param2);
@@ -1667,31 +1607,23 @@ BEGIN
             |CODE.opEQP, CODE.opNEP:
                 IF pic THEN
                     reg2 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg2);
-                    OutByte2(081H, 0C0H + reg2);  // add reg2, program.labels[cmd.label]
-                    Reloc(8, program.labels[cmd.label]);
+                    Pic(reg2, BIN.PICCODE, program.labels[cmd.label]);
                     cmprr(reg1, reg2);
                     drop
                 ELSE
                     OutByte2(081H, 0F8H + reg1);  // cmp reg1, L
-                    Reloc(5, program.labels[cmd.label])
+                    Reloc(BIN.RCODE, program.labels[cmd.label])
                 END
 
             |CODE.opEQIP, CODE.opNEIP:
                 IF pic THEN
                     reg2 := REG.GetAnyReg(R);
-                    OutByte(0E8H);
-                    OutInt(0);
-                    pop(reg2);
-                    OutByte2(081H, 0C0H + reg2);      // add reg2, cmd.label
-                    Reloc(10, cmd.label);
+                    Pic(reg2, BIN.PICIMP, cmd.label);
                     OutByte2(03BH, reg1 * 8 + reg2);  //cmp reg1, dword [reg2]
                     drop
                 ELSE
                     OutByte2(3BH, 05H + reg1 * 8);    // cmp reg1, dword[L]
-                    Reloc(2, cmd.label)
+                    Reloc(BIN.RIMP, cmd.label)
                 END
 
             END;
@@ -1988,60 +1920,30 @@ BEGIN
     OutByte3(09BH, 0DBH, 0E3H); // finit
 
     reg1 := REG.GetAnyReg(R);
-    OutByte(0E8H);
-    OutInt(0);
-    pop(reg1);
-    OutByte2(081H, 0C0H + reg1);  // add reg1, 0
-    Reloc(8, 0);
+    Pic(reg1, BIN.PICCODE, 0);
     push(reg1);         // push CODE
     drop;
 
     IF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-        IF pic THEN
-            reg1 := REG.GetAnyReg(R);
-            OutByte(0E8H);
-            OutInt(0);
-            pop(reg1);
-            OutByte2(081H, 0C0H + reg1);  // add reg1, 0
-            Reloc(11, 0);
-            push(reg1);         // push IMPORT
-            drop
-        ELSE
-            OutByte(068H);      // push IMPORT
-            Reloc(6, 0)
-        END
+        reg1 := REG.GetAnyReg(R); 
+        Pic(reg1, BIN.IMPTAB, 0);
+        push(reg1);         // push IMPORT
+        drop
     ELSE
         OutByte2(6AH, 00H)  // push 0
     END;
 
-    IF pic THEN
-        reg1 := REG.GetAnyReg(R);
-        OutByte(0E8H);
-        OutInt(0);
-        pop(reg1);
-        OutByte2(081H, 0C0H + reg1);  // add reg1, 0
-        Reloc(7, 0);
-        push(reg1);    // push _data
-        drop
-    ELSE
-        OutByte(068H); // push _data
-        Reloc(4, 0)
-    END;
+    reg1 := REG.GetAnyReg(R); 
+    Pic(reg1, BIN.PICDATA, 0);
+    push(reg1);    // push _data
+    drop;
 
     pushc(code.tcount);
-    IF pic THEN
-        reg1 := REG.GetAnyReg(R);
-        OutByte(0E8H);
-        OutInt(0);
-        pop(reg1);
-        OutByte2(081H, 0C0H + reg1);  // add reg1, code.tcount * 4 + code.dcount
-        Reloc(7, code.tcount * 4 + code.dcount);
-        push(reg1);    // push _data + code.tcount * 4 + code.dcount
-        drop
-    ELSE
-        OutByte(068H); // push _data + code.tcount * 4 + code.dcount
-        Reloc(4, code.tcount * 4 + code.dcount)
-    END;
+
+    reg1 := REG.GetAnyReg(R);
+    Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
+    push(reg1);    // push _data + code.tcount * 4 + code.dcount
+    drop;
 
     CallRTL(CODE._init)
 END prolog;
@@ -2170,10 +2072,9 @@ BEGIN
 END epilog;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; PIC, RELOC: BOOLEAN);
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
 BEGIN
 
-    pic := PIC;
     program := BIN.create();
     dllret  := CODE.NewLabel();
     label_import  := CODE.NewLabel();
@@ -2184,7 +2085,7 @@ BEGIN
     R := REG.Create(push, pop, mov, xchg);
 
     prolog(code, target, stack);
-    translate(code);
+    translate(code, pic);
     epilog(code, outname, target, stack, ver);
 
     DISPOSE(R);
@@ -2192,10 +2093,10 @@ BEGIN
     BIN.fixup(program);
 
     IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
-        IF PIC THEN
-            RELOC := FALSE
+        IF pic THEN
+            reloc := FALSE
         END;
-        PE32.write(program, outname, base, target = TARGETS.CON, target = TARGETS.DLL, PIC, RELOC)
+        PE32.write(program, outname, base, target = TARGETS.CON, target = TARGETS.DLL, pic, reloc)
     ELSIF target = TARGETS.KOS THEN
         KOS.write(program, outname)
     END
