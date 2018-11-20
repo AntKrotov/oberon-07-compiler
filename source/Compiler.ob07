@@ -72,7 +72,7 @@ BEGIN
             IF param[0] = "-" THEN
                 DEC(i)
             END;
-            
+
         ELSIF param = "-ver" THEN
             INC(i);
             UTILS.GetArg(i, param);
@@ -138,10 +138,11 @@ BEGIN
         CONSOLE.String("Usage: Compiler <main module> <output> <target> [optional settings]"); CONSOLE.Ln; CONSOLE.Ln;
         CONSOLE.String("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); CONSOLE.Ln; CONSOLE.Ln;
         CONSOLE.String("optional settings:"); CONSOLE.Ln;
-        CONSOLE.String(" -stk <size>       set size of stack in megabytes"); CONSOLE.Ln;
-        CONSOLE.String(" -base <address>   set base address of image in kilobytes"); CONSOLE.Ln;
-        CONSOLE.String(" -pic              generate position-independent code"); CONSOLE.Ln;
-        CONSOLE.String(" -reloc            make relocation table"); CONSOLE.Ln;
+        CONSOLE.String(" -stk <size>         set size of stack in megabytes"); CONSOLE.Ln;
+        CONSOLE.String(" -base <address>     set base address of image in kilobytes"); CONSOLE.Ln;
+        CONSOLE.String(" -pic                generate position-independent code"); CONSOLE.Ln;
+        CONSOLE.String(" -reloc              make relocation table"); CONSOLE.Ln;
+        CONSOLE.String(" -ver <major.minor>  set version of program ('obj' only)"); CONSOLE.Ln;
         UTILS.Exit(0)
     END;
 

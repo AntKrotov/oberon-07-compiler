@@ -1899,20 +1899,19 @@ BEGIN
         CallRTL(CODE._dllentry);
         test(eax);
         jcc(je, dllret)
-
     ELSIF target = TARGETS.OBJ THEN
         dllinit := CODE.NewLabel();
         BIN.SetLabel(program, dllinit)
     END;
 
     OutByte3(09BH, 0DBH, 0E3H); // finit
-    
+
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICCODE, 0);
-        push(reg1);         // push CODE
+        push(reg1);     // push CODE
         drop
-    ELSE 
+    ELSE
         OutByte(068H);  // push CODE
         Reloc(BIN.RCODE, 0)
     END;
@@ -1920,7 +1919,7 @@ BEGIN
     IF target = TARGETS.KOS THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.IMPTAB, 0);
-        push(reg1);         // push IMPORT
+        push(reg1);     // push IMPORT
         drop
     ELSIF target = TARGETS.OBJ THEN
         OutByte(068H);  // push IMPORT
@@ -1928,23 +1927,23 @@ BEGIN
     ELSE
         OutByte2(6AH, 00H)  // push 0
     END;
-    
+
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICDATA, 0);
-        push(reg1);    // push _data
+        push(reg1);     // push _data
         drop
-    ELSE  
+    ELSE
         OutByte(068H);  // push _data
         Reloc(BIN.RDATA, 0)
     END;
 
     pushc(code.tcount);
-    
+
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
-        push(reg1);    // push _data + code.tcount * 4 + code.dcount
+        push(reg1);     // push _data + code.tcount * 4 + code.dcount
         drop
     ELSE
         OutByte(068H);  // push _data
@@ -2045,8 +2044,8 @@ BEGIN
     program := BIN.create();
     dllret  := CODE.NewLabel();
     label_import  := CODE.NewLabel();
-    stroffs := code.tcount * 4; 
-    
+    stroffs := code.tcount * 4;
+
     IF target = TARGETS.OBJ THEN
         pic := FALSE
     END;
