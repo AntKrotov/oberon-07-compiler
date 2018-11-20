@@ -1,0 +1,312 @@
+﻿MODULE MSCOFF;
+
+IMPORT BIN, PE32, KOS, WR := WRITER, UTILS;
+
+
+CONST
+
+    SIZE_OF_DWORD = 4;
+
+    (* SectionHeader.Characteristics *)
+
+    SHC_flat  = 040500020H;
+    SHC_data  = 0C0500040H;
+    SHC_bss   = 0C03000C0H;
+
+
+TYPE
+
+    FH = PE32.IMAGE_FILE_HEADER;
+
+    SH = PE32.IMAGE_SECTION_HEADER;
+    
+
+VAR
+
+    FileHeader: FH;
+
+    flat, data, edata, idata, bss: SH;
+    
+    
+PROCEDURE Reloc (program: BIN.PROGRAM; File: WR.FILE; VAR pos: INTEGER);
+VAR
+    reloc: BIN.RELOC;
+
+BEGIN
+    reloc := program.rel_list.first(BIN.RELOC);
+    WHILE reloc # NIL DO
+
+        CASE reloc.opcode OF
+        |BIN.RJMP:
+
+        |BIN.RIMP, BIN.IMPTAB:
+              WR.Write32LE(File, reloc.offset, pos);
+              WR.Write32LE(File, 4, pos);
+              WR.Write16LE(File, 6, pos)
+
+        |BIN.RBSS:
+              WR.Write32LE(File, reloc.offset, pos);
+              WR.Write32LE(File, 5, pos);
+              WR.Write16LE(File, 6, pos)
+
+        |BIN.RDATA:
+              WR.Write32LE(File, reloc.offset, pos);
+              WR.Write32LE(File, 2, pos);
+              WR.Write16LE(File, 6, pos)
+
+        |BIN.RCODE:
+              WR.Write32LE(File, reloc.offset, pos);
+              WR.Write32LE(File, 1, pos);
+              WR.Write16LE(File, 6, pos)
+
+        END;
+
+        reloc := reloc.next(BIN.RELOC)
+    END;
+END Reloc; 
+
+
+PROCEDURE RelocCount (program: BIN.PROGRAM): INTEGER;
+VAR
+    reloc:   BIN.RELOC;
+    iproc:   BIN.IMPRT;
+    res, L:  INTEGER;
+
+BEGIN
+    res := 0;
+    reloc := program.rel_list.first(BIN.RELOC);
+    WHILE reloc # NIL DO 
+        
+        IF reloc.opcode # BIN.RJMP THEN
+            INC(res)
+        END; 
+        
+        IF reloc.opcode = BIN.RIMP THEN
+            L := BIN.get32le(program.code, reloc.offset);
+            iproc := BIN.GetIProc(program, L);
+            BIN.put32le(program.code, reloc.offset, iproc.label)
+        END;
+
+        reloc := reloc.next(BIN.RELOC)
+    END
+    
+    RETURN res
+END RelocCount;
+
+
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; ver: INTEGER);
+VAR
+    File:  WR.FILE;
+    pos:   INTEGER;
+    exp:   BIN.EXPRT;
+    n, i:  INTEGER;
+
+    szversion: PE32.NAME;
+    
+    ImportTable: KOS.IMPORTTABLE;
+    ILen, LibCount: INTEGER;
+        
+
+    PROCEDURE ICount (ImportTable: KOS.IMPORTTABLE; ILen: INTEGER): INTEGER;
+    VAR
+        i, res: INTEGER;  
+
+    BEGIN         
+        res := 0;
+
+        FOR i := 0 TO ILen - 1 DO
+            IF ImportTable[i] # 0 THEN
+                INC(res)
+            END
+        END
+        
+        RETURN res
+    END ICount;  
+
+
+BEGIN
+
+    szversion := "version";
+    
+    ASSERT(LENGTH(szversion) = 7);
+    
+    KOS.Import(program, 0, 0, ImportTable, ILen, LibCount);
+
+    FileHeader.Machine               :=  014CX;
+    FileHeader.NumberOfSections      :=  5X;
+    FileHeader.TimeDateStamp         :=  UTILS.UnixTime();
+    //FileHeader.PointerToSymbolTable  :=  0;
+    FileHeader.NumberOfSymbols       :=  6;
+    FileHeader.SizeOfOptionalHeader  :=  0X;
+    FileHeader.Characteristics       :=  0184X;
+
+    flat.Name := ".flat";
+    flat.VirtualSize := 0;
+    flat.VirtualAddress := 0;
+    flat.SizeOfRawData := program.ccount;
+    flat.PointerToRawData := ORD(FileHeader.NumberOfSections) * PE32.SIZE_OF_IMAGE_SECTION_HEADER + PE32.SIZE_OF_IMAGE_FILE_HEADER;
+    //flat.PointerToRelocations := 0;
+    flat.PointerToLinenumbers := 0;
+    flat.NumberOfRelocations := WCHR(RelocCount(program));
+    flat.NumberOfLinenumbers := 0X;
+    flat.Characteristics := SHC_flat;
+    
+    data.Name := ".data";
+    data.VirtualSize := 0;
+    data.VirtualAddress := 0;
+    data.SizeOfRawData := program.dcount;
+    data.PointerToRawData := flat.PointerToRawData + flat.SizeOfRawData;
+    data.PointerToRelocations := 0;
+    data.PointerToLinenumbers := 0;
+    data.NumberOfRelocations := 0X;
+    data.NumberOfLinenumbers := 0X;
+    data.Characteristics := SHC_data;
+    
+    edata.Name := ".edata";
+    edata.VirtualSize := 0;
+    edata.VirtualAddress := 0;
+    edata.SizeOfRawData := ((program.exp_list.count(program.exp_list) + 1) * 2 + 1) * SIZE_OF_DWORD + LENGTH(szversion) + 1;
+    edata.PointerToRawData := data.PointerToRawData + data.SizeOfRawData;
+    //edata.PointerToRelocations := 0;
+    edata.PointerToLinenumbers := 0;
+    edata.NumberOfRelocations := WCHR(program.exp_list.count(program.exp_list) * 2 + 1);
+    edata.NumberOfLinenumbers := 0X;
+    edata.Characteristics := SHC_data;
+    
+    idata.Name := ".idata";
+    idata.VirtualSize := 0;
+    idata.VirtualAddress := 0;
+    idata.SizeOfRawData := ILen * SIZE_OF_DWORD;
+    idata.PointerToRawData := edata.PointerToRawData + edata.SizeOfRawData;
+    //idata.PointerToRelocations := 0;
+    idata.PointerToLinenumbers := 0;
+    idata.NumberOfRelocations := WCHR(ICount(ImportTable, ILen));
+    idata.NumberOfLinenumbers := 0X;
+    idata.Characteristics := SHC_data;
+
+    bss.Name := ".bss";
+    bss.VirtualSize := 0;
+    bss.VirtualAddress := 0;
+    bss.SizeOfRawData := program.bss;
+    bss.PointerToRawData := 0;
+    bss.PointerToRelocations := 0;
+    bss.PointerToLinenumbers := 0;
+    bss.NumberOfRelocations := 0X;
+    bss.NumberOfLinenumbers := 0X;
+    bss.Characteristics := SHC_bss;
+    
+    flat.PointerToRelocations := idata.PointerToRawData + idata.SizeOfRawData;
+    edata.PointerToRelocations := flat.PointerToRelocations + ORD(flat.NumberOfRelocations) * 10;
+    idata.PointerToRelocations := edata.PointerToRelocations + ORD(edata.NumberOfRelocations) * 10;
+    
+    FileHeader.PointerToSymbolTable := idata.PointerToRelocations + ORD(idata.NumberOfRelocations) * 10;
+      
+    File := WR.Create(FileName);
+    pos := 0;                   
+
+    PE32.WriteFileHeader(File, FileHeader, pos);
+
+    PE32.WriteSectionHeader(File, flat,  pos);
+    PE32.WriteSectionHeader(File, data,  pos);
+    PE32.WriteSectionHeader(File, edata, pos);
+    PE32.WriteSectionHeader(File, idata, pos);
+    PE32.WriteSectionHeader(File, bss,   pos);
+
+    WR.Write(File, program.code, program.ccount, pos);
+    WR.Write(File, program.data, program.dcount, pos);
+    
+    exp := program.exp_list.first(BIN.EXPRT);
+    WHILE exp # NIL DO  
+        WR.Write32LE(File, exp.nameoffs, pos);
+        WR.Write32LE(File, program.labels[exp.label], pos);
+        exp := exp.next(BIN.EXPRT)
+    END;
+    
+    WR.Write32LE(File, ((program.exp_list.count(program.exp_list) + 1) * 2 + 1) * SIZE_OF_DWORD, pos);
+    WR.Write32LE(File, ver, pos);
+
+    WR.Write32LE(File, 0, pos); 
+    
+    PE32.WriteName(File, szversion, pos);
+
+    FOR i := 0 TO ILen - 1 DO
+        WR.Write32LE(File, ImportTable[i], pos)
+    END;
+
+    Reloc(program, File, pos);
+                    
+    n := 0;
+    exp := program.exp_list.first(BIN.EXPRT);
+    WHILE exp # NIL DO
+        WR.Write32LE(File, n, pos);
+        WR.Write32LE(File, 2, pos);
+        WR.Write16LE(File, 6, pos);
+        INC(n, 4);
+        
+        WR.Write32LE(File, n, pos);
+        WR.Write32LE(File, 1, pos);
+        WR.Write16LE(File, 6, pos);
+        INC(n, 4);
+
+        exp := exp.next(BIN.EXPRT)
+    END;
+    
+    WR.Write32LE(File, n, pos);
+    WR.Write32LE(File, 3, pos);
+    WR.Write16LE(File, 6, pos);
+    
+    FOR i := 0 TO LibCount * 2 - 1 BY 2 DO
+        WR.Write32LE(File, i * SIZE_OF_DWORD, pos);
+        WR.Write32LE(File, 4, pos);
+        WR.Write16LE(File, 6, pos);
+            
+        WR.Write32LE(File, (i + 1) * SIZE_OF_DWORD, pos);
+        WR.Write32LE(File, 2, pos);
+        WR.Write16LE(File, 6, pos)
+    END;
+
+    FOR i := LibCount * 2 TO ILen - 1 DO
+        IF ImportTable[i] # 0 THEN
+            WR.Write32LE(File, i * SIZE_OF_DWORD, pos);
+            WR.Write32LE(File, 2, pos);
+            WR.Write16LE(File, 6, pos)
+        END
+    END;
+
+    PE32.WriteName(File, "EXPORTS", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 3, pos);
+    WR.Write16LE(File, 2, pos);
+    
+    PE32.WriteName(File, ".flat", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 1, pos);
+    WR.Write16LE(File, 3, pos);
+    
+    PE32.WriteName(File, ".data", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 2, pos);
+    WR.Write16LE(File, 3, pos);
+    
+    PE32.WriteName(File, ".edata", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 3, pos);
+    WR.Write16LE(File, 3, pos);
+    
+    PE32.WriteName(File, ".idata", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 4, pos);
+    WR.Write16LE(File, 3, pos);
+    
+    PE32.WriteName(File, ".bss", pos);
+    WR.Write32LE(File, 0, pos);
+    WR.Write32LE(File, 5, pos);
+    WR.Write16LE(File, 3, pos);
+    
+    WR.Write32LE(File, 4, pos);
+    
+    WR.Close(File)
+END write;
+
+
+END MSCOFF.

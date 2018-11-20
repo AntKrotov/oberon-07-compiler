@@ -35,24 +35,26 @@ BEGIN
     END
 
     RETURN res
-END Target; 
+END Target;
 
 
-PROCEDURE keys (VAR StackSize, BaseAddress: INTEGER; VAR pic, reloc: BOOLEAN);
+PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN);
 VAR
     param: PARS.PATH;
     i:     INTEGER;
     end:   BOOLEAN;
     value: INTEGER;
+    minor,
+    major: INTEGER;
 
 BEGIN
     end := FALSE;
     i := 4;
     REPEAT
-        UTILS.GetArg(i, param); 
+        UTILS.GetArg(i, param);
 
         IF param = "-stk" THEN
-            INC(i);            
+            INC(i);
             UTILS.GetArg(i, param);
             IF STRINGS.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
                 StackSize := value
@@ -70,19 +72,29 @@ BEGIN
             IF param[0] = "-" THEN
                 DEC(i)
             END;
+            
+        ELSIF param = "-ver" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToVer(param, major, minor) THEN
+                Version := major * 65536 + minor
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END;
 
         ELSIF param = "-pic" THEN
-            pic := TRUE        
+            pic := TRUE
 
         ELSIF param = "-reloc" THEN
-            reloc := TRUE          
+            reloc := TRUE
 
         ELSIF param = "" THEN
-            end := TRUE      
+            end := TRUE
 
         ELSE
             ERRORS.error3("bad parameter: ", param, "")
-        END;    
+        END;
 
         INC(i)
     UNTIL end
@@ -104,17 +116,16 @@ VAR
 
     target:     INTEGER;
 
-    major,
-    minor:      INTEGER;
-
     time:       INTEGER;
-    
+
     StackSize,
+    Version,
     BaseAdr:    INTEGER;
     pic, reloc: BOOLEAN;
 
 BEGIN
     StackSize := 1;
+    Version := 65536;
     pic := FALSE;
     reloc := FALSE;
 
@@ -158,13 +169,10 @@ BEGIN
     END;
 
     target := Target(param);
-    IF target = TARGETS.OBJ THEN
-        ERRORS.error1("'obj' not supported yet")
-    END;
 
     IF target = 0 THEN
         ERRORS.error1("bad parameter <target>")
-    END; 
+    END;
 
     PARS.program.dll := target IN {TARGETS.DLL, TARGETS.OBJ};
     PARS.program.obj := target = TARGETS.OBJ;
@@ -182,16 +190,14 @@ BEGIN
         STRINGS.append(lib_path, UTILS.slash)
 
     ELSIF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-        major := 1;
-        minor := 0;
-
         STRINGS.append(lib_path, "KolibriOS");
         STRINGS.append(lib_path, UTILS.slash)
-    END;   
-    
-    keys(StackSize, BaseAdr, pic, reloc);
-    
-    STATEMENTS.do(path, lib_path, modname, outname, EXT, target, major, minor, StackSize, BaseAdr, pic, reloc);
+
+    END;
+
+    keys(StackSize, BaseAdr, Version, pic, reloc);
+
+    STATEMENTS.do(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc);
 
     time := UTILS.GetTickCount() - UTILS.time;
 

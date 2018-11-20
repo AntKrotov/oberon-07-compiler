@@ -24,7 +24,9 @@ TYPE
         menuet01: ARRAY 9 OF CHAR;
         ver, start, size, mem, sp, param, path: INTEGER
 
-    END;
+    END; 
+    
+    IMPORTTABLE* = ARRAY 2048 OF INTEGER;
 
 
 PROCEDURE align (n, _align: INTEGER): INTEGER;
@@ -34,7 +36,50 @@ BEGIN
     END
 
     RETURN n
-END align;
+END align; 
+
+
+PROCEDURE Import* (program: BIN.PROGRAM; data, idata: INTEGER; VAR ImportTable: IMPORTTABLE; VAR len, libcount: INTEGER);
+VAR
+    i:       INTEGER;
+    import:  BIN.IMPRT;
+
+BEGIN
+    libcount  := 0;
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+        IF import.label = 0 THEN
+            INC(libcount)
+        END;
+        import := import.next(BIN.IMPRT)
+    END;
+
+    len := libcount * 2 + 2;
+
+    i := 0;
+    import := program.imp_list.first(BIN.IMPRT);
+    WHILE import # NIL DO
+
+        IF import.label = 0 THEN
+            ImportTable[len] := 0;
+            INC(len);
+            ImportTable[i] := idata + len * 4;
+            INC(i);
+            ImportTable[i] := import.nameoffs + data;
+            INC(i)
+        ELSE
+            ImportTable[len] := import.nameoffs + data;
+            import.label := len * 4;
+            INC(len)
+        END;
+
+        import := import.next(BIN.IMPRT)
+    END;
+    ImportTable[len] := 0;
+    ImportTable[i] := 0;
+    ImportTable[i + 1] := 0;
+    INC(len)
+END Import;
 
 
 PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
@@ -50,20 +95,19 @@ VAR
 
     base, text, data, idata, bss: INTEGER;
 
-    libcount: INTEGER;
-    import:   BIN.IMPRT;
-
-    ImportTable: ARRAY 2000 OF INTEGER; i: INTEGER;
-    procoffs: INTEGER;
-
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
     L:       INTEGER;
-    delta:   INTEGER;
+    delta:   INTEGER; 
+    
+    i: INTEGER;
 
     File: FILE; pos: INTEGER;
-
-
+     
+    ImportTable: IMPORTTABLE;
+    ILen, libcount: INTEGER;
+    
+    
 BEGIN
     base := 0;
 
@@ -71,46 +115,14 @@ BEGIN
     data  := align(text + program.ccount, FileAlignment);
     idata := align(data + program.dcount, FileAlignment);
 
-    libcount  := 0;
-    import := program.imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-        IF import.label = 0 THEN
-            INC(libcount)
-        END;
-        import := import.next(BIN.IMPRT)
-    END;
+    Import(program, data, idata, ImportTable, ILen, libcount);
 
-    procoffs := libcount * 2 + 2;
-
-    i := 0;
-    import := program.imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-
-        IF import.label = 0 THEN
-            ImportTable[procoffs] := 0;
-            INC(procoffs);
-            ImportTable[i] := idata + procoffs * 4;
-            INC(i);
-            ImportTable[i] := import.nameoffs + data;
-            INC(i)
-        ELSE
-            ImportTable[procoffs] := import.nameoffs + data;
-            import.label := procoffs * 4;
-            INC(procoffs)
-        END;
-
-        import := import.next(BIN.IMPRT)
-    END;
-    ImportTable[procoffs] := 0;
-    ImportTable[i] := 0;
-    ImportTable[i + 1] := 0;
-
-    bss := align(idata + (procoffs + 1) * 4, FileAlignment);
+    bss := align(idata + ILen * 4, FileAlignment);
 
     header.menuet01 := "MENUET01";
     header.ver      :=  1;
     header.start    :=  text;
-    header.size     :=  idata + (procoffs + 1) * 4 - base;
+    header.size     :=  idata + ILen * 4 - base;
     header.mem      :=  align(header.size + program.stack + program.bss + PARAM_SIZE * 2 + 4096, FileAlignment);
     header.sp       :=  base + header.mem - PARAM_SIZE * 2;
     header.param    :=  header.sp;
@@ -124,7 +136,7 @@ BEGIN
         delta := 3 - reloc.offset - text;
 
         CASE reloc.opcode OF
-        |BIN.RJMP:      
+        |BIN.RJMP:
 
         |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
@@ -182,7 +194,7 @@ BEGIN
     WR.Write(File, program.data, program.dcount, pos);
     WR.Padding(File, FileAlignment, pos);
 
-    FOR i := 0 TO procoffs DO
+    FOR i := 0 TO ILen - 1 DO
         WR.Write32LE(File, ImportTable[i], pos)
     END;
 

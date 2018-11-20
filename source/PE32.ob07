@@ -20,6 +20,10 @@ CONST
     IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16;
 
     IMAGE_SIZEOF_SHORT_NAME = 8;
+    
+    SIZE_OF_IMAGE_FILE_HEADER* = 20; 
+    
+    SIZE_OF_IMAGE_SECTION_HEADER* = 40;
 
     (* SectionHeader.Characteristics *)
 
@@ -37,6 +41,9 @@ TYPE
 
     WORD  = WCHAR;
     DWORD = INTEGER;
+
+    
+    NAME* = ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
 
 
     IMAGE_DATA_DIRECTORY = RECORD
@@ -85,15 +92,15 @@ TYPE
     END;
 
 
-    IMAGE_FILE_HEADER = RECORD
+    IMAGE_FILE_HEADER* = RECORD
 
-        Machine:               WORD;
-        NumberOfSections:      WORD;
-        TimeDateStamp:         DWORD;
-        PointerToSymbolTable:  DWORD;
-        NumberOfSymbols:       DWORD;
-        SizeOfOptionalHeader:  WORD;
-        Characteristics:       WORD
+        Machine*:               WORD;
+        NumberOfSections*:      WORD;
+        TimeDateStamp*:         DWORD;
+        PointerToSymbolTable*:  DWORD;
+        NumberOfSymbols*:       DWORD;
+        SizeOfOptionalHeader*:  WORD;
+        Characteristics*:       WORD
 
     END;
 
@@ -107,21 +114,21 @@ TYPE
     END;
 
 
-    IMAGE_SECTION_HEADER = RECORD
+    IMAGE_SECTION_HEADER* = RECORD
 
-        Name: ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
+        Name*: NAME;
 
-        VirtualSize,
-        VirtualAddress,
-        SizeOfRawData,
-        PointerToRawData,
-        PointerToRelocations,
-        PointerToLinenumbers:   DWORD;
+        VirtualSize*,
+        VirtualAddress*,
+        SizeOfRawData*,
+        PointerToRawData*,
+        PointerToRelocations*,
+        PointerToLinenumbers*:   DWORD;
 
-        NumberOfRelocations,
-        NumberOfLinenumbers:    WORD;
+        NumberOfRelocations*,
+        NumberOfLinenumbers*:    WORD;
 
-        Characteristics:        DWORD
+        Characteristics*:        DWORD
 
     END;
 
@@ -304,11 +311,11 @@ BEGIN
 
             Reloc.reloc[(Reloc.Size - 2 * SIZE_OF_DWORD) DIV 2] := WCHR(RVA MOD 4096 + 3000H);
             INC(Reloc.Size, 2)
-        END;   
+        END;
 
 
         CASE reloc.opcode OF
-        |BIN.RJMP:  
+        |BIN.RJMP:
 
         |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
@@ -376,6 +383,77 @@ BEGIN
 END InitArray;
 
 
+PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
+BEGIN
+    WR.Write16LE(file, ORD(w), pos)
+END WriteWord;  
+
+
+PROCEDURE WriteName* (File: FILE; name: NAME; VAR pos: INTEGER);
+VAR
+    i, nameLen: INTEGER;
+
+BEGIN
+    nameLen := LENGTH(name);
+
+    FOR i := 0 TO nameLen - 1 DO
+        WR.WriteByte(File, ORD(name[i]), pos)
+    END;
+
+    i := LEN(name) - nameLen;
+    WHILE i > 0 DO
+        WR.WriteByte(File, 0, pos);
+        DEC(i)
+    END
+
+END WriteName;
+
+
+PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER; VAR pos: INTEGER);
+VAR
+    i, nameLen: INTEGER;
+
+BEGIN
+    nameLen := LENGTH(h.Name);
+
+    FOR i := 0 TO nameLen - 1 DO
+        WR.WriteByte(file, ORD(h.Name[i]), pos)
+    END;
+
+    i := LEN(h.Name) - nameLen;
+    WHILE i > 0 DO
+        WR.WriteByte(file, 0, pos);
+        DEC(i)
+    END;
+
+    WR.Write32LE(file, h.VirtualSize,           pos);
+    WR.Write32LE(file, h.VirtualAddress,        pos);
+    WR.Write32LE(file, h.SizeOfRawData,         pos);
+    WR.Write32LE(file, h.PointerToRawData,      pos);
+    WR.Write32LE(file, h.PointerToRelocations,  pos);
+    WR.Write32LE(file, h.PointerToLinenumbers,  pos);
+
+    WriteWord(file, h.NumberOfRelocations,      pos);
+    WriteWord(file, h.NumberOfLinenumbers,      pos);
+
+    WR.Write32LE(file, h.Characteristics,       pos)
+END WriteSectionHeader;
+
+
+PROCEDURE WriteFileHeader* (file: FILE; h: IMAGE_FILE_HEADER; VAR pos: INTEGER);
+BEGIN
+    WriteWord(file, h.Machine,                  pos);
+    WriteWord(file, h.NumberOfSections,         pos);
+
+    WR.Write32LE(file, h.TimeDateStamp,         pos);
+    WR.Write32LE(file, h.PointerToSymbolTable,  pos);
+    WR.Write32LE(file, h.NumberOfSymbols,       pos);
+
+    WriteWord(file, h.SizeOfOptionalHeader,     pos);
+    WriteWord(file, h.Characteristics,          pos)
+END WriteFileHeader;
+
+
 PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: INTEGER; console, dll, pic, reloc: BOOLEAN);
 VAR
     i, n: INTEGER;
@@ -400,12 +478,6 @@ VAR
     relsec:  INTEGER;
 
 
-    PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
-    BEGIN
-        WR.Write16LE(file, ORD(w), pos)
-    END WriteWord;
-
-
     PROCEDURE WriteExportDir (file: FILE; e: IMAGE_EXPORT_DIRECTORY; VAR pos: INTEGER);
     BEGIN
         WR.Write32LE(file, e.Characteristics,        pos);
@@ -422,43 +494,6 @@ VAR
         WR.Write32LE(file, e.AddressOfNames,         pos);
         WR.Write32LE(file, e.AddressOfNameOrdinals,  pos)
     END WriteExportDir;
-
-
-    PROCEDURE WriteSectionHeader (file: FILE; h: IMAGE_SECTION_HEADER; VAR pos: INTEGER);
-    VAR
-        i: INTEGER;
-
-    BEGIN
-        FOR i := 0 TO LEN(h.Name) - 1 DO
-            WR.WriteByte(file, ORD(h.Name[i]), pos)
-        END;
-
-        WR.Write32LE(file, h.VirtualSize,           pos);
-        WR.Write32LE(file, h.VirtualAddress,        pos);
-        WR.Write32LE(file, h.SizeOfRawData,         pos);
-        WR.Write32LE(file, h.PointerToRawData,      pos);
-        WR.Write32LE(file, h.PointerToRelocations,  pos);
-        WR.Write32LE(file, h.PointerToLinenumbers,  pos);
-
-        WriteWord(file, h.NumberOfRelocations,      pos);
-        WriteWord(file, h.NumberOfLinenumbers,      pos);
-
-        WR.Write32LE(file, h.Characteristics,       pos)
-    END WriteSectionHeader;
-
-
-    PROCEDURE WriteFileHeader (file: FILE; h: IMAGE_FILE_HEADER; VAR pos: INTEGER);
-    BEGIN
-        WriteWord(file, h.Machine,                  pos);
-        WriteWord(file, h.NumberOfSections,         pos);
-
-        WR.Write32LE(file, h.TimeDateStamp,         pos);
-        WR.Write32LE(file, h.PointerToSymbolTable,  pos);
-        WR.Write32LE(file, h.NumberOfSymbols,       pos);
-
-        WriteWord(file, h.SizeOfOptionalHeader,     pos);
-        WriteWord(file, h.Characteristics,          pos)
-    END WriteFileHeader;
 
 
     PROCEDURE WriteOptHeader (file: FILE; h: IMAGE_OPTIONAL_HEADER; VAR pos: INTEGER);

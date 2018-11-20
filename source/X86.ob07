@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, TARGETS, MACHINE;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE;
 
 
 CONST
@@ -38,10 +38,8 @@ VAR
 
     program: BIN.PROGRAM;
     dllret:  INTEGER;
-   // dllinit: INTEGER;
+    dllinit: INTEGER;
     label_import:  INTEGER;
-
-    //pic: BOOLEAN;
 
 
 PROCEDURE Byte (n: INTEGER): BYTE;
@@ -1886,19 +1884,13 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (code: CODE.CODES; target, stack: INTEGER);
+PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack: INTEGER);
 VAR
     reg1: INTEGER;
 
 BEGIN
 
-    IF target = TARGETS.DLL THEN   (*
-        WriteLn("format PE GUI 4.0 DLL");
-        WriteLn("entry DllEntryPoint");
-        WriteLn("section '.text' code readable executable");
-        WriteLn("DllEntryPoint:");   *)
-        //dllinit := CODE.NewLabel();
-        //BIN.SetLabel(program, dllinit);
+    IF target = TARGETS.DLL THEN
         OutByte(55H);             // push ebp
         OutByte2(89H, 0E5H);      // mov ebp,esp
         OutByte3(0FFH, 75H, 16);  // push dword[ebp+16]
@@ -1909,41 +1901,55 @@ BEGIN
         jcc(je, dllret)
 
     ELSIF target = TARGETS.OBJ THEN
-    (*    WriteLn("format MS COFF");
-        WriteLn("public EXPORTS");
-        WriteLn("section '.flat' code readable align 16");
-        WriteLn("lib_init:");*)
-  //      dllinit := CODE.NewLabel();
-  //      BIN.SetLabel(program, dllinit)
+        dllinit := CODE.NewLabel();
+        BIN.SetLabel(program, dllinit)
     END;
 
     OutByte3(09BH, 0DBH, 0E3H); // finit
+    
+    IF pic THEN
+        reg1 := REG.GetAnyReg(R);
+        Pic(reg1, BIN.PICCODE, 0);
+        push(reg1);         // push CODE
+        drop
+    ELSE 
+        OutByte(068H);  // push CODE
+        Reloc(BIN.RCODE, 0)
+    END;
 
-    reg1 := REG.GetAnyReg(R);
-    Pic(reg1, BIN.PICCODE, 0);
-    push(reg1);         // push CODE
-    drop;
-
-    IF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-        reg1 := REG.GetAnyReg(R); 
+    IF target = TARGETS.KOS THEN
+        reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.IMPTAB, 0);
         push(reg1);         // push IMPORT
         drop
+    ELSIF target = TARGETS.OBJ THEN
+        OutByte(068H);  // push IMPORT
+        Reloc(BIN.IMPTAB, 0)
     ELSE
         OutByte2(6AH, 00H)  // push 0
     END;
-
-    reg1 := REG.GetAnyReg(R); 
-    Pic(reg1, BIN.PICDATA, 0);
-    push(reg1);    // push _data
-    drop;
+    
+    IF pic THEN
+        reg1 := REG.GetAnyReg(R);
+        Pic(reg1, BIN.PICDATA, 0);
+        push(reg1);    // push _data
+        drop
+    ELSE  
+        OutByte(068H);  // push _data
+        Reloc(BIN.RDATA, 0)
+    END;
 
     pushc(code.tcount);
-
-    reg1 := REG.GetAnyReg(R);
-    Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
-    push(reg1);    // push _data + code.tcount * 4 + code.dcount
-    drop;
+    
+    IF pic THEN
+        reg1 := REG.GetAnyReg(R);
+        Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
+        push(reg1);    // push _data + code.tcount * 4 + code.dcount
+        drop
+    ELSE
+        OutByte(068H);  // push _data
+        Reloc(BIN.RDATA, code.tcount * 4 + code.dcount)
+    END;
 
     CallRTL(CODE._init)
 END prolog;
@@ -1951,7 +1957,7 @@ END prolog;
 
 PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack, ver: INTEGER);
 VAR
-    i, n, dllver: INTEGER;
+    i, n: INTEGER;
     exp:  CODE.EXPORT_PROC;
 
 
@@ -1978,49 +1984,18 @@ VAR
 
 BEGIN
 
-    IF target = TARGETS.DLL THEN
+    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.KOS} THEN
+        pushc(0);
+        CallRTL(CODE._exit);
+    ELSIF target = TARGETS.DLL THEN
         BIN.SetLabel(program, dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
         OutByte3(0C2H, 00CH, 000H) // ret 12
-    END;
-
-    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
-        pushc(0);
-        CallRTL(CODE._exit);
-    ELSIF target = TARGETS.KOS THEN
-        pushc(0);
-        CallRTL(CODE._exit)
     ELSIF target = TARGETS.OBJ THEN
         movrc(eax, 1);
-        OutByte(0C3H); // ret
-        dllver := CODE.NewLabel();
-        BIN.SetLabel(program, dllver);
-   //     Write("_dllver: ");
-        OutInt(ver);
-    (*    WriteLn("align 16");
-        WriteLn("EXPORTS:");
-        WriteLn("dd szlib_init,lib_init");
-        Write("dd szVersion,"); WriteHexLn(ver);
-      *)
-        exp := code.export.first(CODE.EXPORT_PROC);
-        WHILE exp # NIL DO
-         //   Write("dd "); Write("N"); WriteHex(exp.label); Write(",L"); WriteHexLn(exp.label);
-            exp := exp.next(CODE.EXPORT_PROC)
-        END;
-
-     //   WriteLn("dd 0");
-
-        exp := code.export.first(CODE.EXPORT_PROC);
-        WHILE exp # NIL DO
-        //    Write("N"); WriteHex(exp.label); Write(" db '"); Write(exp.name); WriteLn("',0");
-            exp := exp.next(CODE.EXPORT_PROC)
-        END;
-
-     //   WriteLn("szlib_init db 'lib_init',0");
-     //   WriteLn("szVersion db 'version',0")
+        OutByte(0C3H)  // ret
     END;
-
 
     i := 0;
     WHILE i < code.tcount DO
@@ -2039,11 +2014,10 @@ BEGIN
     BIN.PutData(program, 0);
 
     program.export := program.dcount;
-(*    IF target = TARGETS.OBJ THEN
+    IF target = TARGETS.OBJ THEN
         BIN.Export(program, "lib_init", dllinit);
-        BIN.Export(program, "version",  dllver);
     END;
-  *)
+
     exp := code.export.first(CODE.EXPORT_PROC);
     WHILE exp # NIL DO
         BIN.Export(program, exp.name, exp.label);
@@ -2059,14 +2033,7 @@ BEGIN
     IF n > 0 THEN
         INC(code.gsize, n)
     END;
-                           (*
-    IF target = TARGETS.KOS THEN
-        WriteLn("align 16")
-    ELSE
-        WriteLn("section '.bss' data readable writeable")
-    END;
 
-    Write("_bss: rb ");  WriteHexLn(code.gsize);  *)
     BIN.SetParams(program, code.gsize, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
 
 END epilog;
@@ -2078,13 +2045,17 @@ BEGIN
     program := BIN.create();
     dllret  := CODE.NewLabel();
     label_import  := CODE.NewLabel();
-    stroffs := code.tcount * 4;
+    stroffs := code.tcount * 4; 
+    
+    IF target = TARGETS.OBJ THEN
+        pic := FALSE
+    END;
 
     error := FALSE;
 
     R := REG.Create(push, pop, mov, xchg);
 
-    prolog(code, target, stack);
+    prolog(code, pic, target, stack);
     translate(code, pic);
     epilog(code, outname, target, stack, ver);
 
@@ -2099,6 +2070,8 @@ BEGIN
         PE32.write(program, outname, base, target = TARGETS.CON, target = TARGETS.DLL, pic, reloc)
     ELSIF target = TARGETS.KOS THEN
         KOS.write(program, outname)
+    ELSIF target = TARGETS.OBJ THEN
+        MSCOFF.write(program, outname, ver)
     END
 
 END CodeGen;
