@@ -17,14 +17,17 @@ UTF-8 с BOM-сигнатурой.
       "gui" - Windows GUI
       "dll" - Windows DLL
       "kos" - KolibriOS
+      "obj" - KolibriOS DLL
   4) необязательные параметры-ключи
       -stk <size> размер стэка в мегабайтах (по умолчанию 1 Мб)
       -base <address> адрес загрузки исполняемого файла в килобайтах
       -pic генерировать позиционно-независимый код
-      -reloc добавить таблицу настройки адресов (relocation)
+      -reloc добавить таблицу перемещений (relocation)
+      -ver <major.minor> версия программы (только для obj)
 
       параметр -base выравнивается по границе 64 кб
       параметры -base и -reloc игнорируются для kos
+      параметры -base, -reloc и -pic игнорируются для obj
       если указан ключ -pic, то ключ -reloc игнорируется
       для dll необходимо указать ключ -pic либо -reloc
 
@@ -34,6 +37,7 @@ UTF-8 с BOM-сигнатурой.
   Compiler.exe "C:\example.ob07" "C:\example.dll" dll -pic
   Compiler.exe "C:\example.ob07" "C:\example.exe" gui -base 1024 -stk 4
   Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.kex" kos -stk 2
+  Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.obj" obj -ver 2.7
 
   В случае успешной компиляции, компилятор передает код завершения 0, иначе 1.
 При работе компилятора в KolibriOS, код завершения не передается.
@@ -367,4 +371,10 @@ SetDll назначает процедуры process_detach, thread_detach, thread_attach
 
   Разрешается экспортировать только процедуры. Для этого, процедура должна
 находиться в главном модуле программы, и ее имя должно быть отмечено символом
-экспорта ("*").
+экспорта ("*"). KolibriOS DLL всегда экспортируют идентификаторы "version"
+(версия программы) и "lib_init" - адрес процедуры инициализации DLL:
+
+        PROCEDURE [stdcall] lib_init (): INTEGER
+
+Эта процедура должна быть вызвана перед использованием DLL.
+Процедура всегда возвращает 1.
