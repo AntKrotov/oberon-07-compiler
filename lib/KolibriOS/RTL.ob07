@@ -17,7 +17,7 @@ CONST
     DLL_THREAD_DETACH   = 3;
     DLL_PROCESS_DETACH  = 0;
 
-    TYPES = 2048;
+    SIZE_OF_DWORD = 4;
 
 
 TYPE
@@ -27,8 +27,8 @@ TYPE
 
 VAR
 
-    types: ARRAY TYPES OF INTEGER;
     name:  INTEGER;
+    types: INTEGER;
 
     dll: RECORD
         process_detach,
@@ -260,7 +260,7 @@ BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
         SYSTEM.PUT(ptr, t);
-        INC(ptr, 4)
+        INC(ptr, SIZE_OF_DWORD)
     END
 END _new;
 
@@ -268,7 +268,7 @@ END _new;
 PROCEDURE [stdcall] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
-        ptr := API._DISPOSE(ptr - 4)
+        ptr := API._DISPOSE(ptr - SIZE_OF_DWORD)
     END
 END _dispose;
 
@@ -524,7 +524,7 @@ BEGIN
     (* r IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        t1 := types[t1]
+        SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
     END
 
     RETURN t1 = t0
@@ -539,10 +539,10 @@ BEGIN
     (* p IS t0 *)
 
     IF p # 0 THEN
-        DEC(p, 4);
+        DEC(p, SIZE_OF_DWORD);
         SYSTEM.GET(p, t1);
-        WHILE (t1 # 0) & (t1 # t0) DO
-            t1 := types[t1]
+        WHILE (t1 # 0) & (t1 # t0) DO 
+            SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
         END
     ELSE
         t1 := -1
@@ -557,7 +557,7 @@ BEGIN
     (* r:t1 IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        t1 := types[t1]
+        SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
     END
 
     RETURN t1 = t0
@@ -572,10 +572,10 @@ BEGIN
     (* p IS t0 *)
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        DEC(p, 4);
+        DEC(p, SIZE_OF_DWORD);
         SYSTEM.GET(p, t1);
         WHILE (t1 # t0) & (t1 # 0) DO
-            t1 := types[t1]
+            SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
         END
     ELSE
         t1 := t0
@@ -630,7 +630,7 @@ BEGIN
 END _exit;
 
 
-PROCEDURE [stdcall] _init* (modname: INTEGER; _types: ARRAY OF INTEGER; import, code: INTEGER);
+PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; import, code: INTEGER);
 BEGIN
     API.init(import, code);
 
