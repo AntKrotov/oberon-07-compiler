@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHUNKLISTS, PATHS, STRINGS;
 
 
 CONST
@@ -771,12 +771,12 @@ BEGIN
             UnOp(reg1);
             IF pic THEN
                 reg2 := REG.GetAnyReg(R);
-                Pic(reg2, BIN.PICCODE, program.labels[cmd.param]);
+                Pic(reg2, BIN.PICCODE, cmd.param);
                 OutByte2(089H, reg2 * 8 + reg1); // mov dword[reg1], reg2
                 drop
             ELSE
                 OutByte2(0C7H, reg1);  // mov dword[reg1], L
-                Reloc(BIN.RCODE, program.labels[cmd.param])
+                Reloc(BIN.RCODE, cmd.param)
             END;
             drop
 
@@ -798,10 +798,10 @@ BEGIN
         |CODE.opPUSHP:
             reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                Pic(reg1, BIN.PICCODE, program.labels[cmd.param])
+                Pic(reg1, BIN.PICCODE, cmd.param)
             ELSE
                 OutByte(0B8H + reg1);  // mov reg1, L
-                Reloc(BIN.RCODE, program.labels[cmd.param])
+                Reloc(BIN.RCODE, cmd.param)
             END
 
         |CODE.opPUSHIP:
@@ -1018,6 +1018,7 @@ BEGIN
 
         |CODE.opCASE:
             label := CODE.NewLabel();
+            BIN.NewLabel(program);
             cmprc(eax, cmd.param);
             jcc(jl, label);
             cmprc(eax, cmd.param2);
@@ -1605,12 +1606,12 @@ BEGIN
             |CODE.opEQP, CODE.opNEP:
                 IF pic THEN
                     reg2 := REG.GetAnyReg(R);
-                    Pic(reg2, BIN.PICCODE, program.labels[cmd.label]);
+                    Pic(reg2, BIN.PICCODE, cmd.label);
                     cmprr(reg1, reg2);
                     drop
                 ELSE
                     OutByte2(081H, 0F8H + reg1);  // cmp reg1, L
-                    Reloc(BIN.RCODE, program.labels[cmd.label])
+                    Reloc(BIN.RCODE, cmd.label)
                 END
 
             |CODE.opEQIP, CODE.opNEIP:
@@ -1886,9 +1887,13 @@ END translate;
 
 PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack: INTEGER);
 VAR
-    reg1: INTEGER;
+    reg1, entry: INTEGER;
 
 BEGIN
+
+    entry := CODE.NewLabel();
+    BIN.NewLabel(program);
+    BIN.SetLabel(program, entry);
 
     IF target = TARGETS.DLL THEN
         OutByte(55H);             // push ebp
@@ -1901,6 +1906,7 @@ BEGIN
         jcc(je, dllret)
     ELSIF target = TARGETS.OBJ THEN
         dllinit := CODE.NewLabel();
+        BIN.NewLabel(program);
         BIN.SetLabel(program, dllinit)
     END;
 
@@ -1908,12 +1914,12 @@ BEGIN
 
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
-        Pic(reg1, BIN.PICCODE, 0);
+        Pic(reg1, BIN.PICCODE, entry);
         push(reg1);     // push CODE
         drop
     ELSE
         OutByte(068H);  // push CODE
-        Reloc(BIN.RCODE, 0)
+        Reloc(BIN.RCODE, entry)
     END;
 
     IF target = TARGETS.KOS THEN
@@ -1943,7 +1949,7 @@ BEGIN
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
-        push(reg1);     // push _data + code.tcount * 4 + code.dcount
+        push(reg1);     // push _data + tcount * 4 + code.dcount
         drop
     ELSE
         OutByte(068H);  // push _data
@@ -1956,8 +1962,9 @@ END prolog;
 
 PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack, ver: INTEGER);
 VAR
-    i, n: INTEGER;
-    exp:  CODE.EXPORT_PROC;
+    i, n:  INTEGER;
+    exp:   CODE.EXPORT_PROC;
+    path, name, ext: PATHS.PATH;
 
 
     PROCEDURE import (imp: LISTS.LIST);
@@ -1996,23 +2003,21 @@ BEGIN
         OutByte(0C3H)  // ret
     END;
 
-    i := 0;
-    WHILE i < code.tcount DO
-        BIN.PutData32LE(program, code.types[i]);
-        INC(i)
+    FOR i := 0 TO code.tcount - 1 DO
+        BIN.PutData32LE(program, CHUNKLISTS.GetInt(code.types, i))
     END;
 
-    i := 0;
-    WHILE i < code.dcount DO
-        BIN.PutData(program, code.data[i]);
-        INC(i)
+    FOR i := 0 TO code.dcount - 1 DO
+        BIN.PutData(program, CHUNKLISTS.GetByte(code.data, i))
     END;
-
+    
     program.modname := program.dcount;
-    BIN.PutDataStr(program, modname);
+    
+    PATHS.split(modname, path, name, ext);
+    STRINGS.append(name, ext);
+    BIN.PutDataStr(program, name);
     BIN.PutData(program, 0);
 
-    program.export := program.dcount;
     IF target = TARGETS.OBJ THEN
         BIN.Export(program, "lib_init", dllinit);
     END;
@@ -2023,9 +2028,6 @@ BEGIN
         exp := exp.next(CODE.EXPORT_PROC)
     END;
 
-    program.exp_list.delete(program.exp_list, program.exp_list.first);
-
-    program.import := program.dcount;
     import(code.import);
 
     n := code.dmin - code.dcount;
@@ -2041,9 +2043,13 @@ END epilog;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
 BEGIN
 
-    program := BIN.create();
-    dllret  := CODE.NewLabel();
-    label_import  := CODE.NewLabel();
+    program := BIN.create(code.lcount + 10);
+
+    dllret := CODE.NewLabel();
+    BIN.NewLabel(program);
+    label_import := CODE.NewLabel();
+    BIN.NewLabel(program);
+
     stroffs := code.tcount * 4;
 
     IF target = TARGETS.OBJ THEN

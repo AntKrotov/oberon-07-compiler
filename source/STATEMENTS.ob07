@@ -2954,7 +2954,7 @@ END setrtl;
 
 PROCEDURE do* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN);
 VAR
-    parser: PARS.PARSER;
+    parser:   PARS.PARSER;
 
 BEGIN
     CODE.init;
@@ -2990,7 +2990,7 @@ BEGIN
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
     CODE.codes.gsize := PARS.program.gsize;
-
+    
     X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
 
 END do;

@@ -18,10 +18,11 @@ TYPE
 
         first*, last*: ITEM;
 
-        push*:   PROCEDURE (list: LIST; item: ITEM);
-        insert*: PROCEDURE (list: LIST; cur, nov: ITEM);
-        delete*: PROCEDURE (list: LIST; item: ITEM);
-        count*:  PROCEDURE (list: LIST): INTEGER
+        push*:    PROCEDURE (list: LIST; item: ITEM);
+        insert*:  PROCEDURE (list: LIST; cur, nov: ITEM);
+        insertL*: PROCEDURE (list: LIST; cur, nov: ITEM);
+        delete*:  PROCEDURE (list: LIST; item: ITEM);
+        count*:   PROCEDURE (list: LIST): INTEGER
 
     END;
 
@@ -53,7 +54,7 @@ BEGIN
 END push;
 
 
-PROCEDURE insert (list: LIST; cur, nov: ITEM);
+PROCEDURE insertR (list: LIST; cur, nov: ITEM);
 VAR
     next: ITEM;
 
@@ -73,7 +74,33 @@ BEGIN
         list.push(list, nov)
     END
 
-END insert;
+END insertR;
+
+
+PROCEDURE insertL (list: LIST; cur, nov: ITEM);
+VAR
+    prev: ITEM;
+
+BEGIN
+    ASSERT(list # NIL);
+    ASSERT(nov # NIL);
+    ASSERT(cur # NIL);
+
+    prev := cur.prev;
+
+    IF prev # NIL THEN
+        prev.next := nov;
+        nov.prev := prev;
+        cur.prev := nov;
+        nov.next := cur
+    ELSE                
+        nov.prev := NIL;
+        cur.prev := nov;
+        nov.next := cur;
+        list.first := nov
+    END
+
+END insertL;
 
 
 PROCEDURE delete (list: LIST; item: ITEM);
@@ -102,7 +129,7 @@ BEGIN
     END;
     DISPOSE(item)
 
-END delete;     
+END delete;
 
 
 PROCEDURE count (list: LIST): INTEGER;
@@ -110,16 +137,16 @@ VAR
     item: ITEM;
     res:  INTEGER;
 
-BEGIN      
+BEGIN
     ASSERT(list # NIL);
     res := 0;
 
     item := list.first;
-    WHILE item # NIL DO  
+    WHILE item # NIL DO
         INC(res);
         item := item.next
     END
-    
+
     RETURN res
 END count;
 
@@ -133,10 +160,11 @@ BEGIN
     list.first  := NIL;
     list.last   := NIL;
 
-    list.push   := push;
-    list.insert := insert;
-    list.delete := delete;
-    list.count  := count
+    list.push    := push;
+    list.insertL := insertL;
+    list.insert  := insertR;
+    list.delete  := delete;
+    list.count   := count
 
     RETURN list
 END create;

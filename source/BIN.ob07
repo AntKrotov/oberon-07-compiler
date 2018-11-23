@@ -7,7 +7,7 @@
 
 MODULE BIN;
 
-IMPORT LISTS, MACHINE;
+IMPORT LISTS, MACHINE, CHL := CHUNKLISTS;
 
 
 CONST
@@ -23,7 +23,7 @@ CONST
     PICDATA*  = 6;
     PICBSS*   = 7;
     PICIMP*   = 8;
-    
+
     IMPTAB*   = 9;
 
 
@@ -55,17 +55,25 @@ TYPE
 
     PROGRAM* = POINTER TO RECORD
 
-        code*:      ARRAY 2000000 OF BYTE;     ccount*: INTEGER;
-        data*:      ARRAY 1000000 OF BYTE;     dcount*: INTEGER;
-        labels*:    ARRAY  100000 OF INTEGER;
+        code*:      CHL.BYTELIST;
+        ccount*:    INTEGER;  
+
+        data*:      CHL.BYTELIST;
+        dcount*:    INTEGER;  
+
+        labels:     CHL.INTLIST;
         bss*:       INTEGER;
         stack*:     INTEGER;
         vmajor*,
         vminor*:    WCHAR;
 
-        modname*,
-        import*,
-        export*:    INTEGER;
+        modname*:   INTEGER;
+
+        import*:    CHL.BYTELIST;
+        icount*:    INTEGER;
+
+        export*:    CHL.BYTELIST;
+        ecount*:    INTEGER;
 
         rel_list*:  LISTS.LIST;
         imp_list*:  LISTS.LIST;
@@ -74,11 +82,10 @@ TYPE
     END;
 
 
-PROCEDURE create* (): PROGRAM;
+PROCEDURE create* (NumberOfLabels: INTEGER): PROGRAM;
 VAR
-    program: PROGRAM;
-    i: INTEGER;
-    empty: EXPRT;
+    program:  PROGRAM;
+    i:        INTEGER;
 
 BEGIN
     NEW(program);
@@ -86,20 +93,22 @@ BEGIN
     program.bss    := 0;
     program.ccount := 0;
     program.dcount := 0;
+    program.icount := 0;
+    program.ecount := 0;
 
-    FOR i := 0 TO LEN(program.labels) - 1 DO
-        program.labels[i] := 0
+    program.labels := CHL.CreateIntList();
+    FOR i := 0 TO NumberOfLabels - 1 DO
+        CHL.PushInt(program.labels, 0)
     END;
 
     program.rel_list := LISTS.create(NIL);
     program.imp_list := LISTS.create(NIL);
     program.exp_list := LISTS.create(NIL);
 
-    NEW(empty);
-    empty.label := 0;
-    empty.nameoffs := LEN(program.data) - 1;
-    program.data[LEN(program.data) - 1] := 0;
-    program.exp_list.push(program.exp_list, empty)
+    program.data   := CHL.CreateByteList();
+    program.code   := CHL.CreateByteList();
+    program.import := CHL.CreateByteList();
+    program.export := CHL.CreateByteList()
 
     RETURN program
 END create;
@@ -128,14 +137,13 @@ END PutReloc;
 
 PROCEDURE PutData* (program: PROGRAM; b: BYTE);
 BEGIN
-    program.data[program.dcount] := b;
+    CHL.PushByte(program.data, b);
     INC(program.dcount)
 END PutData;
 
 
-PROCEDURE get32le* (array: ARRAY OF BYTE; idx: INTEGER): INTEGER;
+PROCEDURE get32le* (array: CHL.BYTELIST; idx: INTEGER): INTEGER;
 VAR
-    b: BYTE;
     i: INTEGER;
     x: INTEGER;
 
@@ -143,8 +151,7 @@ BEGIN
     x := 0;
 
     FOR i := 3 TO 0 BY -1 DO
-        b := array[idx + i];
-        x := LSL(x, 8) + b
+        x := LSL(x, 8) + CHL.GetByte(array, idx + i)
     END;
 
     IF MACHINE.native.bit_depth = 64 THEN
@@ -158,20 +165,25 @@ BEGIN
 END get32le;
 
 
-PROCEDURE put32le* (VAR array: ARRAY OF BYTE; idx: INTEGER; x: INTEGER);
+PROCEDURE put32le* (array: CHL.BYTELIST; idx: INTEGER; x: INTEGER);
 VAR
     i: INTEGER;
 
 BEGIN
     FOR i := 0 TO 3 DO
-        array[idx + i] := MACHINE.Byte(x, i)
+        CHL.SetByte(array, idx + i, MACHINE.Byte(x, i))
     END
 END put32le;
 
 
-PROCEDURE PutData32LE* (program: PROGRAM; i: INTEGER);
+PROCEDURE PutData32LE* (program: PROGRAM; x: INTEGER);
+VAR
+    i: INTEGER;
+
 BEGIN
-    put32le(program.data, program.dcount, i);
+    FOR i := 0 TO 3 DO
+        CHL.PushByte(program.data, MACHINE.Byte(x, i))
+    END;
     INC(program.dcount, 4)
 END PutData32LE;
 
@@ -183,8 +195,7 @@ VAR
 BEGIN
     i := 0;
     WHILE s[i] # 0X DO
-        program.data[program.dcount] := ORD(s[i]);
-        INC(program.dcount);
+        PutData(program, ORD(s[i]));
         INC(i)
     END
 END PutDataStr;
@@ -192,46 +203,57 @@ END PutDataStr;
 
 PROCEDURE PutCode* (program: PROGRAM; b: BYTE);
 BEGIN
-    program.code[program.ccount] := b;
+    CHL.PushByte(program.code, b);
     INC(program.ccount)
 END PutCode;
 
 
-PROCEDURE PutCode32LE* (program: PROGRAM; i: INTEGER);
+PROCEDURE PutCode32LE* (program: PROGRAM; x: INTEGER);
+VAR
+    i: INTEGER;
+
 BEGIN
-    put32le(program.code, program.ccount, i);
+    FOR i := 0 TO 3 DO
+        CHL.PushByte(program.code, MACHINE.Byte(x, i))
+    END;
     INC(program.ccount, 4)
 END PutCode32LE;
 
 
 PROCEDURE SetLabel* (program: PROGRAM; label: INTEGER);
 BEGIN
-    program.labels[label] := program.ccount
+    CHL.SetInt(program.labels, label, program.ccount)
 END SetLabel;
 
 
 PROCEDURE Import* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
     imp: IMPRT;
+    i:   INTEGER;
 
 BEGIN
-    PutData(program, 0);
-    PutData(program, 0);
-    IF ODD(program.dcount) THEN
-        PutData(program, 0)
+    CHL.PushByte(program.import, 0); INC(program.icount);
+    CHL.PushByte(program.import, 0); INC(program.icount);
+
+    IF ODD(program.icount) THEN
+        CHL.PushByte(program.import, 0); INC(program.icount)
     END;
 
     NEW(imp);
-    imp.nameoffs := program.dcount;
+    imp.nameoffs := program.icount;
     imp.label := label;
     program.imp_list.push(program.imp_list, imp);
 
-    PutDataStr(program, name);
-    PutData(program, 0);
+    i := 0;
+    WHILE name[i] # 0X DO
+        CHL.PushByte(program.import, ORD(name[i])); INC(program.icount);
+        INC(i)
+    END;
+    CHL.PushByte(program.import, 0); INC(program.icount)
 END Import;
 
 
-PROCEDURE less (program: PROGRAM; a, b: EXPRT): BOOLEAN;
+PROCEDURE less (bytes: CHL.BYTELIST; a, b: EXPRT): BOOLEAN;
 VAR
     i, j: INTEGER;
 
@@ -239,34 +261,44 @@ BEGIN
     i := a.nameoffs;
     j := b.nameoffs;
 
-    WHILE (program.data[i] # 0) & (program.data[j] # 0) & (program.data[i] = program.data[j]) DO
+    WHILE (CHL.GetByte(bytes, i) # 0) & (CHL.GetByte(bytes, j) # 0) &
+          (CHL.GetByte(bytes, i) = CHL.GetByte(bytes, j)) DO
         INC(i);
         INC(j)
     END
 
-    RETURN program.data[i] < program.data[j]
+    RETURN CHL.GetByte(bytes, i) < CHL.GetByte(bytes, j)
 END less;
 
 
 PROCEDURE Export* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
     exp, cur: EXPRT;
+    i: INTEGER;
 
 BEGIN
     NEW(exp);
-    exp.nameoffs := program.dcount;
-    exp.label := program.labels[label];
-    PutDataStr(program, name);
-    PutData(program, 0);
+    exp.nameoffs := program.ecount;
+    exp.label := CHL.GetInt(program.labels, label);
+    
+    i := 0;
+    WHILE name[i] # 0X DO
+        CHL.PushByte(program.export, ORD(name[i])); INC(program.ecount);
+        INC(i)
+    END;
+    CHL.PushByte(program.export, 0); INC(program.ecount);
 
     cur := program.exp_list.first(EXPRT);
-    WHILE (cur # NIL) & less(program, cur, exp) DO
+    WHILE (cur # NIL) & less(program.export, cur, exp) DO
         cur := cur.next(EXPRT)
     END;
 
     IF cur # NIL THEN
-        cur := cur.prev(EXPRT);
-        program.exp_list.insert(program.exp_list, cur, exp)
+        IF cur.prev # NIL THEN
+            program.exp_list.insert(program.exp_list, cur.prev, exp)
+        ELSE
+            program.exp_list.insertL(program.exp_list, cur, exp)
+        END
     ELSE
         program.exp_list.push(program.exp_list, exp)
     END
@@ -296,6 +328,17 @@ BEGIN
 END GetIProc;
 
 
+PROCEDURE GetLabel* (program: PROGRAM; label: INTEGER): INTEGER;
+    RETURN CHL.GetInt(program.labels, label)
+END GetLabel;
+
+
+PROCEDURE NewLabel* (program: PROGRAM);
+BEGIN
+    CHL.PushInt(program.labels, 0)
+END NewLabel;
+
+
 PROCEDURE fixup* (program: PROGRAM);
 VAR
     rel:    RELOC;
@@ -309,7 +352,7 @@ BEGIN
     imp := program.imp_list.first(IMPRT);
     WHILE imp # NIL DO
         IF imp.label # 0 THEN
-            program.labels[imp.label] := nproc;
+            CHL.SetInt(program.labels, imp.label, nproc);
             INC(nproc)
         END;
         imp := imp.next(IMPRT)
@@ -320,10 +363,10 @@ BEGIN
 
         IF rel.opcode = RJMP THEN
             L := get32le(program.code, rel.offset);
-            put32le(program.code, rel.offset, program.labels[L] - rel.offset - 4)
+            put32le(program.code, rel.offset, GetLabel(program, L) - rel.offset - 4)
         ELSIF rel.opcode IN {RIMP, PICIMP} THEN
             L := get32le(program.code, rel.offset);
-            put32le(program.code, rel.offset, program.labels[L])
+            put32le(program.code, rel.offset, GetLabel(program, L))
         END;
 
         rel := rel.next(RELOC)

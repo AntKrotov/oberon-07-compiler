@@ -7,7 +7,7 @@
 
 MODULE PE32;
 
-IMPORT BIN, LISTS, UTILS, WR := WRITER, VER;
+IMPORT BIN, LISTS, UTILS, WR := WRITER, VER, CHL := CHUNKLISTS;
 
 
 CONST
@@ -20,9 +20,9 @@ CONST
     IMAGE_NUMBEROF_DIRECTORY_ENTRIES = 16;
 
     IMAGE_SIZEOF_SHORT_NAME = 8;
-    
-    SIZE_OF_IMAGE_FILE_HEADER* = 20; 
-    
+
+    SIZE_OF_IMAGE_FILE_HEADER* = 20;
+
     SIZE_OF_IMAGE_SECTION_HEADER* = 40;
 
     (* SectionHeader.Characteristics *)
@@ -42,7 +42,7 @@ TYPE
     WORD  = WCHAR;
     DWORD = INTEGER;
 
-    
+
     NAME* = ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
 
 
@@ -328,13 +328,13 @@ BEGIN
               BIN.put32le(program.code, reloc.offset, L + Address.Data)
 
         |BIN.RCODE:
-              BIN.put32le(program.code, reloc.offset, L + Address.Code)
+              BIN.put32le(program.code, reloc.offset, BIN.GetLabel(program, L) + Address.Code)
 
         |BIN.PICDATA:
               BIN.put32le(program.code, reloc.offset, L + Address.Data + delta)
 
         |BIN.PICCODE:
-              BIN.put32le(program.code, reloc.offset, L + Address.Code + delta)
+              BIN.put32le(program.code, reloc.offset, BIN.GetLabel(program, L) + Address.Code + delta)
 
         |BIN.PICBSS:
               BIN.put32le(program.code, reloc.offset, L + Address.Bss  + delta)
@@ -386,7 +386,7 @@ END InitArray;
 PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
 BEGIN
     WR.Write16LE(file, ORD(w), pos)
-END WriteWord;  
+END WriteWord;
 
 
 PROCEDURE WriteName* (File: FILE; name: NAME; VAR pos: INTEGER);
@@ -469,7 +469,7 @@ VAR
     File: FILE;
 
     import:       BIN.IMPRT;
-    ImportTable:  ARRAY 2000 OF DWORD;
+    ImportTable:  CHL.INTLIST;
 
     ExportDir:  IMAGE_EXPORT_DIRECTORY;
     export:     BIN.EXPRT;
@@ -654,9 +654,9 @@ BEGIN
     Size.Import := GetImportSize(program.imp_list);
 
     SectionHeaders[3].Name                  :=  ".idata";
-    SectionHeaders[3].VirtualSize           :=  Size.Import;
+    SectionHeaders[3].VirtualSize           :=  Size.Import + program.icount;
     SectionHeaders[3].VirtualAddress        :=  align(SectionHeaders[2].VirtualAddress + SectionHeaders[2].VirtualSize, SectionAlignment);
-    SectionHeaders[3].SizeOfRawData         :=  align(Size.Import, FileAlignment);
+    SectionHeaders[3].SizeOfRawData         :=  align(SectionHeaders[3].VirtualSize, FileAlignment);
     SectionHeaders[3].PointerToRawData      :=  SectionHeaders[2].PointerToRawData + SectionHeaders[2].SizeOfRawData;
     SectionHeaders[3].PointerToRelocations  :=  0;
     SectionHeaders[3].PointerToLinenumbers  :=  0;
@@ -676,9 +676,9 @@ BEGIN
         Size.Export := Export(program, SectionHeaders[1].VirtualAddress, ExportDir);
 
         SectionHeaders[4].Name                  :=  ".edata";
-        SectionHeaders[4].VirtualSize           :=  Size.Export;
+        SectionHeaders[4].VirtualSize           :=  Size.Export + program.ecount;
         SectionHeaders[4].VirtualAddress        :=  align(SectionHeaders[3].VirtualAddress + SectionHeaders[3].VirtualSize, SectionAlignment);
-        SectionHeaders[4].SizeOfRawData         :=  align(Size.Export, FileAlignment);
+        SectionHeaders[4].SizeOfRawData         :=  align(SectionHeaders[4].VirtualSize, FileAlignment);
         SectionHeaders[4].PointerToRawData      :=  SectionHeaders[3].PointerToRawData + SectionHeaders[3].SizeOfRawData;
         SectionHeaders[4].PointerToRelocations  :=  0;
         SectionHeaders[4].PointerToLinenumbers  :=  0;
@@ -762,43 +762,56 @@ BEGIN
 
     WR.Padding(File, FileAlignment, n);
 
-    WR.Write(File, program.code, program.ccount, n);
+    FOR i := 0 TO program.ccount - 1 DO
+        WR.WriteByte(File, CHL.GetByte(program.code, i), n)
+    END;
     WR.Padding(File, FileAlignment, n);
 
-    WR.Write(File, program.data, program.dcount, n);
+    FOR i := 0 TO program.dcount - 1 DO
+        WR.WriteByte(File, CHL.GetByte(program.data, i), n)
+    END;
     WR.Padding(File, FileAlignment, n);
+    
+    ImportTable := CHL.CreateIntList();
+    FOR i := 0 TO Size.Import DIV SIZE_OF_DWORD - 1 DO
+        CHL.PushInt(ImportTable, 0)
+    END;
 
     i := 0;
     import := program.imp_list.first(BIN.IMPRT);
     WHILE import # NIL DO
         IF import.label = 0 THEN
-            ImportTable[i + 0] := import.OriginalFirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress;
-            ImportTable[i + 1] := 0;
-            ImportTable[i + 2] := 0;
-            ImportTable[i + 3] := import.nameoffs + SectionHeaders[1].VirtualAddress;
-            ImportTable[i + 4] := import.FirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress;
+            CHL.SetInt(ImportTable, i + 0, import.OriginalFirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress);
+            CHL.SetInt(ImportTable, i + 1, 0);
+            CHL.SetInt(ImportTable, i + 2, 0);
+            CHL.SetInt(ImportTable, i + 3, import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress);
+            CHL.SetInt(ImportTable, i + 4, import.FirstThunk * SIZE_OF_DWORD + SectionHeaders[3].VirtualAddress);
             i := i + 5
         END;
         import := import.next(BIN.IMPRT)
-    END;
-
-    ImportTable[i + 0] := 0;
-    ImportTable[i + 1] := 0;
-    ImportTable[i + 2] := 0;
-    ImportTable[i + 3] := 0;
-    ImportTable[i + 4] := 0;
+    END;    
+    
+    CHL.SetInt(ImportTable, i + 0, 0);
+    CHL.SetInt(ImportTable, i + 1, 0);
+    CHL.SetInt(ImportTable, i + 2, 0);
+    CHL.SetInt(ImportTable, i + 3, 0);
+    CHL.SetInt(ImportTable, i + 4, 0);
 
     import := program.imp_list.first(BIN.IMPRT);
     WHILE import # NIL DO
         IF import.label # 0 THEN
-            ImportTable[import.OriginalFirstThunk] := import.nameoffs + SectionHeaders[1].VirtualAddress - 2;
-            ImportTable[import.FirstThunk]         := import.nameoffs + SectionHeaders[1].VirtualAddress - 2
+            CHL.SetInt(ImportTable, import.OriginalFirstThunk, import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress - 2);
+            CHL.SetInt(ImportTable, import.FirstThunk,         import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress - 2)
         END;
         import := import.next(BIN.IMPRT)
     END;
 
     FOR i := 0 TO Size.Import DIV SIZE_OF_DWORD - 1 DO
-        WR.Write32LE(File, ImportTable[i], n)
+        WR.Write32LE(File, CHL.GetInt(ImportTable, i), n)
+    END;
+
+    FOR i := 0 TO program.icount - 1 DO
+        WR.WriteByte(File, CHL.GetByte(program.import, i), n)
     END;
 
     WR.Padding(File, FileAlignment, n);
@@ -819,7 +832,7 @@ BEGIN
 
         export := program.exp_list.first(BIN.EXPRT);
         WHILE export # NIL DO
-            WR.Write32LE(File, export.nameoffs + SectionHeaders[1].VirtualAddress, n);
+            WR.Write32LE(File, export.nameoffs + Size.Export + SectionHeaders[4].VirtualAddress, n);
             export := export.next(BIN.EXPRT)
         END;
 
@@ -827,8 +840,11 @@ BEGIN
             WriteWord(File, WCHR(i), n)
         END;
 
-        WR.Padding(File, FileAlignment, n);
+        FOR i := 0 TO program.ecount - 1 DO
+            WR.WriteByte(File, CHL.GetByte(program.export, i), n)
+        END;
 
+        WR.Padding(File, FileAlignment, n)
     END;
 
     IF reloc THEN

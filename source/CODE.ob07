@@ -7,12 +7,10 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, PROG, STRINGS;
+IMPORT LISTS, SCAN, PROG, STRINGS, CHUNKLISTS;
 
 
 CONST
-
-    MAXRECORDS = PROG.MAXRECORDS;
 
     FREGS = 8;
 
@@ -161,6 +159,7 @@ TYPE
 
     END;
 
+
     CODES* = POINTER TO RECORD
 
         last:       COMMAND;
@@ -169,11 +168,11 @@ TYPE
         commands*:  LISTS.LIST;
         export*:    LISTS.LIST;
         import*:    LISTS.LIST;
-        types*:     ARRAY MAXRECORDS + 1 OF INTEGER;
-        data*:      ARRAY 1000000 OF BYTE;
+        types*:     CHUNKLISTS.INTLIST;
+        data*:      CHUNKLISTS.BYTELIST;
+        tcount*:    INTEGER;
         dcount*:    INTEGER;
         dmin*:      INTEGER;
-        tcount*:    INTEGER;
         lcount*:    INTEGER;
         gsize*:     INTEGER;
         rtl*:       ARRAY 32 OF INTEGER;
@@ -206,22 +205,27 @@ BEGIN
 END setlast;
 
 
+PROCEDURE PutByte (codes: CODES; b: BYTE);
+BEGIN
+    CHUNKLISTS.PushByte(codes.data, b);
+    INC(codes.dcount)
+END PutByte;
+
+
 PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 VAR
-    i, n, res, idx: INTEGER;
+    i, n, res: INTEGER;
 BEGIN
     res := codes.dcount;
-    idx := res;
+
     i := 0;
     n := LENGTH(s);
     WHILE i < n DO
-        codes.data[idx] := ORD(s[i]);
-        INC(i);
-        INC(idx)
-    END;
-    codes.data[idx] := 0;
-    INC(idx);
-    codes.dcount := idx
+        PutByte(codes, ORD(s[i]));
+        INC(i)
+    END;                          
+    
+    PutByte(codes, 0)
 
     RETURN res
 END putstr;
@@ -229,18 +233,14 @@ END putstr;
 
 PROCEDURE putstr1* (c: INTEGER): INTEGER;
 VAR
-    res, idx: INTEGER;
+    res: INTEGER;
 
 BEGIN
     IF codes.charoffs[c] = -1 THEN
         res := codes.dcount;
-        idx := res;
-        codes.data[idx] := c;
-        INC(idx);
-        codes.data[idx] := 0;
-        INC(idx);
-        codes.charoffs[c] := res;
-        codes.dcount := idx
+        PutByte(codes, c);
+        PutByte(codes, 0);
+        codes.charoffs[c] := res
     ELSE
         res := codes.charoffs[c]
     END
@@ -251,34 +251,27 @@ END putstr1;
 
 PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
 VAR
-    i, n, res, idx: INTEGER;
+    i, n, res: INTEGER;
 
 BEGIN
     res := codes.dcount;
 
-    IF ODD(res) THEN
-        codes.data[res] := 0;
+    IF ODD(res) THEN 
+        PutByte(codes, 0);
         INC(res)
     END;
-
-    idx := res;
 
     n := STRINGS.Utf8To16(s, wstr);
 
     i := 0;
     WHILE i < n DO
-        codes.data[idx] := ORD(wstr[i]) MOD 256;
-        INC(idx);
-        codes.data[idx] := ORD(wstr[i]) DIV 256;
-        INC(idx);
+        PutByte(codes, ORD(wstr[i]) MOD 256);
+        PutByte(codes, ORD(wstr[i]) DIV 256);
         INC(i)
-    END;
-    codes.data[idx] := 0;
-    INC(idx);
-    codes.data[idx] := 0;
-    INC(idx);
-
-    codes.dcount := idx
+    END;   
+    
+    PutByte(codes, 0);
+    PutByte(codes, 0)
 
     RETURN res
 END putstrW;
@@ -286,27 +279,22 @@ END putstrW;
 
 PROCEDURE putstrW1* (c: INTEGER): INTEGER;
 VAR
-    res, idx: INTEGER;
+    res: INTEGER;
 
 BEGIN
     IF codes.wcharoffs[c] = -1 THEN
         res := codes.dcount;
 
-        IF ODD(res) THEN
-            codes.data[res] := 0;
+        IF ODD(res) THEN     
+            PutByte(codes, 0);
             INC(res)
         END;
+        
+        PutByte(codes, c MOD 256);
+        PutByte(codes, c DIV 256);
+        PutByte(codes, 0);
+        PutByte(codes, 0);
 
-        idx := res;
-        codes.data[idx] := c MOD 256;
-        INC(idx);
-        codes.data[idx] := c DIV 256;
-        INC(idx);
-        codes.data[idx] := 0;
-        INC(idx);
-        codes.data[idx] := 0;
-        INC(idx);
-        codes.dcount := idx;
         codes.wcharoffs[c] := res
     ELSE
         res := codes.wcharoffs[c]
@@ -357,7 +345,7 @@ END popBegEnd;
 
 PROCEDURE AddRec* (base: INTEGER);
 BEGIN
-    codes.types[codes.tcount] := base;
+    CHUNKLISTS.PushInt(codes.types, base);
     INC(codes.tcount)
 END AddRec;
 
@@ -1033,8 +1021,8 @@ END DelImport;
 
 PROCEDURE init*;
 VAR
-    cmd: COMMAND;
-    i:   INTEGER;
+    cmd:    COMMAND;
+    i:      INTEGER;
 
 BEGIN
     NEW(codes);
@@ -1045,12 +1033,17 @@ BEGIN
     codes.commands := LISTS.create(NIL);
     codes.export   := LISTS.create(NIL);
     codes.import   := LISTS.create(NIL);
+    codes.types    := CHUNKLISTS.CreateIntList();
+    codes.data     := CHUNKLISTS.CreateByteList();
+
     commands := codes.commands;
     NEW(cmd); cmd.opcode := opNOP; commands.push(commands, cmd);
     codes.last := cmd;
     NEW(cmd); cmd.opcode := opNOP; commands.push(commands, cmd);
-    codes.tcount := 1;
-    codes.types[0] := 0;
+
+    codes.tcount := 0;
+    AddRec(0);
+
     codes.lcount := 0;
     codes.dcount := 0;
 

@@ -571,7 +571,6 @@ BEGIN
         t.closed := TRUE
 
     ELSIF parser.lex.typ = SCAN.lxRECORD THEN
-        check1(program.recCount < PROG.MAXRECORDS, parser, 101);
         getlex(parser);
 
         t := program.enterType(program, PROG.tRECORD, 0, 0, unit);

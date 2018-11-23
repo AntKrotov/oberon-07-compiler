@@ -13,7 +13,6 @@ IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE;
 CONST
 
     MAXARRDIM*  = 5;
-    MAXRECORDS* = 2047;
     MAXSCOPE    = 16;
 
     idNONE*    =  0;  idGUARD   =  1;  idMODULE* =  2;  idCONST*   =  3;
@@ -211,8 +210,7 @@ TYPE
 
     rPROGRAM = RECORD
 
-        records*:    ARRAY MAXRECORDS + 1 OF TYPE_;
-        recCount*:   INTEGER;
+        recCount:    INTEGER;
         units*:      UNITS;
         types*:      LISTS.LIST;
         sysunit*:    UNIT;
@@ -1003,8 +1001,7 @@ BEGIN
         t.closed := FALSE;
         IF typ = tRECORD THEN
             INC(program.recCount);
-            t.num := program.recCount;
-            program.records[program.recCount] := t
+            t.num := program.recCount
         END
     ELSE
         t.closed := TRUE
