@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, PROG, STRINGS, CHUNKLISTS;
+IMPORT LISTS, SCAN, PROG, STRINGS, CHL := CHUNKLISTS;
 
 
 CONST
@@ -62,7 +62,7 @@ CONST
     opGET* = 146; opSAVE16* = 147; opABS* = 148; opFABS* = 149; opFLOOR* = 150; opFLT* = 151;
     opODD* = 152; opORD* = 153; opASR* = 154; opLSL* = 155; opROR* = 156;
     opASR1* = 157; opLSL1* = 158; opROR1* = 159; opASR2* = 160; opLSL2* = 161; opROR2* = 162;
-    opPUSHP* = 163; opLADR* = 164; opTYPEG* = 165; opIS* = 166; opPUSHF* = 167; opVADR* = 168;
+    opPUSHP* = 163; opLADR* = 164; opTYPEGP* = 165; opIS* = 166; opPUSHF* = 167; opVADR* = 168;
     opPUSHT* = 169; opTYPEGR* = 170; opISREC* = 171; opCHKIDX* = 172; opPARAM* = 173;
     opCHKIDX2* = 174; opLEN* = 175; opROT* = 176; opSAVES* = 177; opSADR* = 178; opERR* = 179;
 
@@ -79,6 +79,8 @@ CONST
     opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
     opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
     opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+    
+    opTYPEGD* = 235;
 
 
     _move      *=   0;
@@ -168,10 +170,8 @@ TYPE
         commands*:  LISTS.LIST;
         export*:    LISTS.LIST;
         import*:    LISTS.LIST;
-        types*:     CHUNKLISTS.INTLIST;
-        data*:      CHUNKLISTS.BYTELIST;
-        tcount*:    INTEGER;
-        dcount*:    INTEGER;
+        types*:     CHL.INTLIST;
+        data*:      CHL.BYTELIST;
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         gsize*:     INTEGER;
@@ -207,8 +207,7 @@ END setlast;
 
 PROCEDURE PutByte (codes: CODES; b: BYTE);
 BEGIN
-    CHUNKLISTS.PushByte(codes.data, b);
-    INC(codes.dcount)
+    CHL.PushByte(codes.data, b)
 END PutByte;
 
 
@@ -216,15 +215,15 @@ PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 VAR
     i, n, res: INTEGER;
 BEGIN
-    res := codes.dcount;
+    res := CHL.Length(codes.data);
 
     i := 0;
     n := LENGTH(s);
     WHILE i < n DO
         PutByte(codes, ORD(s[i]));
         INC(i)
-    END;                          
-    
+    END;
+
     PutByte(codes, 0)
 
     RETURN res
@@ -237,7 +236,7 @@ VAR
 
 BEGIN
     IF codes.charoffs[c] = -1 THEN
-        res := codes.dcount;
+        res := CHL.Length(codes.data);
         PutByte(codes, c);
         PutByte(codes, 0);
         codes.charoffs[c] := res
@@ -254,9 +253,9 @@ VAR
     i, n, res: INTEGER;
 
 BEGIN
-    res := codes.dcount;
+    res := CHL.Length(codes.data);
 
-    IF ODD(res) THEN 
+    IF ODD(res) THEN
         PutByte(codes, 0);
         INC(res)
     END;
@@ -268,8 +267,8 @@ BEGIN
         PutByte(codes, ORD(wstr[i]) MOD 256);
         PutByte(codes, ORD(wstr[i]) DIV 256);
         INC(i)
-    END;   
-    
+    END;
+
     PutByte(codes, 0);
     PutByte(codes, 0)
 
@@ -283,13 +282,13 @@ VAR
 
 BEGIN
     IF codes.wcharoffs[c] = -1 THEN
-        res := codes.dcount;
+        res := CHL.Length(codes.data);
 
-        IF ODD(res) THEN     
+        IF ODD(res) THEN
             PutByte(codes, 0);
             INC(res)
         END;
-        
+
         PutByte(codes, c MOD 256);
         PutByte(codes, c DIV 256);
         PutByte(codes, 0);
@@ -306,7 +305,7 @@ END putstrW1;
 
 PROCEDURE SetMinDataSize* (size: INTEGER);
 BEGIN
-    codes.dmin := codes.dcount + size
+    codes.dmin := CHL.Length(codes.data) + size
 END SetMinDataSize;
 
 
@@ -345,14 +344,13 @@ END popBegEnd;
 
 PROCEDURE AddRec* (base: INTEGER);
 BEGIN
-    CHUNKLISTS.PushInt(codes.types, base);
-    INC(codes.tcount)
+    CHL.PushInt(codes.types, base)
 END AddRec;
 
 
 PROCEDURE insert (cur, nov: COMMAND);
 BEGIN
-    commands.insert(commands, cur, nov);
+    LISTS.insert(commands, cur, nov);
     codes.last := nov
 END insert;
 
@@ -372,7 +370,7 @@ END AddCmd;
 PROCEDURE NewLabel* (): INTEGER;
 BEGIN
     INC(codes.lcount)
-    RETURN codes.lcount
+    RETURN codes.lcount - 1
 END NewLabel;
 
 
@@ -396,7 +394,7 @@ END AddCmd0;
 
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
-    commands.delete(commands, cmd)
+    LISTS.delete(commands, cmd)
 END delete;
 
 
@@ -435,15 +433,11 @@ BEGIN
 END OnError;
 
 
-PROCEDURE TypeGuard* (rec: BOOLEAN; t: INTEGER; errlabel: INTEGER; line, error: INTEGER);
+PROCEDURE TypeGuard* (op, t: INTEGER; errlabel: INTEGER; line, error: INTEGER);
 VAR
     label: INTEGER;
 BEGIN
-    IF rec THEN
-        AddCmd(opTYPEGR, t)
-    ELSE
-        AddCmd(opTYPEG, t)
-    END;
+    AddCmd(op, t);
     label := NewLabel();
     AddJmpCmd(opJE, label);
     OnError(errlabel, line, error);
@@ -961,7 +955,7 @@ BEGIN
     NEW(exp);
     exp.label := label;
     exp.name  := name;
-    codes.export.push(codes.export, exp)
+    LISTS.push(codes.export, exp)
 END AddExp;
 
 
@@ -980,7 +974,7 @@ BEGIN
         NEW(lib);
         lib.name := dll;
         lib.procs := LISTS.create(NIL);
-        codes.import.push(codes.import, lib)
+        LISTS.push(codes.import, lib)
     END;
 
     p := lib.procs.first(IMPORT_PROC);
@@ -994,7 +988,7 @@ BEGIN
         p.label := NewLabel();
         p.lib   := lib;
         p.count := 1;
-        lib.procs.push(lib.procs, p)
+        LISTS.push(lib.procs, p)
     ELSE
         INC(p.count)
     END
@@ -1011,9 +1005,9 @@ BEGIN
     DEC(imp(IMPORT_PROC).count);
     IF imp(IMPORT_PROC).count = 0 THEN
         lib := imp(IMPORT_PROC).lib;
-        lib.procs.delete(lib.procs, imp);
+        LISTS.delete(lib.procs, imp);
         IF lib.procs.first = NIL THEN
-            codes.import.delete(codes.import, lib)
+            LISTS.delete(codes.import, lib)
         END
     END
 END DelImport;
@@ -1033,19 +1027,17 @@ BEGIN
     codes.commands := LISTS.create(NIL);
     codes.export   := LISTS.create(NIL);
     codes.import   := LISTS.create(NIL);
-    codes.types    := CHUNKLISTS.CreateIntList();
-    codes.data     := CHUNKLISTS.CreateByteList();
+    codes.types    := CHL.CreateIntList();
+    codes.data     := CHL.CreateByteList();
 
     commands := codes.commands;
-    NEW(cmd); cmd.opcode := opNOP; commands.push(commands, cmd);
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(commands, cmd);
     codes.last := cmd;
-    NEW(cmd); cmd.opcode := opNOP; commands.push(commands, cmd);
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(commands, cmd);
 
-    codes.tcount := 0;
     AddRec(0);
 
     codes.lcount := 0;
-    codes.dcount := 0;
 
     fregs := 0;
 

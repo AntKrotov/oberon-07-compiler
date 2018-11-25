@@ -61,7 +61,7 @@ END peak;
 PROCEDURE load (text: TEXT);
 BEGIN
     IF ~text.eof THEN
-        text.size := FILES.fread(text.file, text.chunk, LEN(text.chunk));
+        text.size := FILES.read(text.file, text.chunk, LEN(text.chunk));
         text.pos := 0;
         IF text.size = 0 THEN
             text.eof := TRUE;
@@ -147,7 +147,7 @@ BEGIN
     ASSERT(text # NIL);
 
     reset(text);
-    text.file := FILES.fopen(name);
+    text.file := FILES.open(name);
     IF text.file # NIL THEN
         load(text);
         init(text)
@@ -175,7 +175,7 @@ PROCEDURE destroy* (VAR text: TEXT);
 BEGIN
     IF text # NIL THEN
         IF text.file # NIL THEN
-            FILES.fclose(text.file)
+            FILES.close(text.file)
         END;
         DISPOSE(text)
     END

@@ -51,7 +51,7 @@ BEGIN
 END flush;
 
 
-PROCEDURE fcreate* (name: ARRAY OF CHAR): FILE;
+PROCEDURE create* (name: ARRAY OF CHAR): FILE;
 VAR
     file: FILE;
     ptr:  INTEGER;
@@ -68,10 +68,10 @@ BEGIN
     END
 
     RETURN file
-END fcreate;
+END create;
 
 
-PROCEDURE fopen* (name: ARRAY OF CHAR): FILE;
+PROCEDURE open* (name: ARRAY OF CHAR): FILE;
 VAR
     file: FILE;
     ptr:  INTEGER;
@@ -88,10 +88,10 @@ BEGIN
     END
 
     RETURN file
-END fopen;
+END open;
 
 
-PROCEDURE fclose* (VAR file: FILE);
+PROCEDURE close* (VAR file: FILE);
 VAR
     n: INTEGER;
 
@@ -108,10 +108,10 @@ BEGIN
         file.ptr := 0;
         DISPOSE(file)
     END
-END fclose;
+END close;
 
 
-PROCEDURE fread* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+PROCEDURE read* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
@@ -126,10 +126,10 @@ BEGIN
     END
 
     RETURN res
-END fread;
+END read;
 
 
-PROCEDURE fwrite* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+PROCEDURE write* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
     free, n, k, res, idx: INTEGER;
 
@@ -162,7 +162,33 @@ BEGIN
     END
 
     RETURN res
-END fwrite;
+END write;
+
+
+PROCEDURE WriteByte* (file: FILE; byte: BYTE): BOOLEAN;
+VAR
+    res: BOOLEAN;
+
+BEGIN
+    res := TRUE;
+    IF (file # NIL) & (file.count >= 0) THEN
+        IF file.count = LEN(file.buffer) THEN
+            IF flush(file) # LEN(file.buffer) THEN
+                res := FALSE
+            ELSE
+                file.buffer[0] := byte;
+                file.count := 1
+            END
+        ELSE
+            file.buffer[file.count] := byte;
+            INC(file.count)
+        END
+    ELSE
+        res := FALSE
+    END
+
+    RETURN res
+END WriteByte;
 
 
 END FILES.

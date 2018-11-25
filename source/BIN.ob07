@@ -12,8 +12,6 @@ IMPORT LISTS, MACHINE, CHL := CHUNKLISTS;
 
 CONST
 
-    RJMP*     = 0;
-
     RCODE*    = 1;
     RDATA*    = 2;
     RBSS*     = 3;
@@ -56,25 +54,15 @@ TYPE
     PROGRAM* = POINTER TO RECORD
 
         code*:      CHL.BYTELIST;
-        ccount*:    INTEGER;  
-
         data*:      CHL.BYTELIST;
-        dcount*:    INTEGER;  
-
         labels:     CHL.INTLIST;
         bss*:       INTEGER;
         stack*:     INTEGER;
         vmajor*,
         vminor*:    WCHAR;
-
         modname*:   INTEGER;
-
         import*:    CHL.BYTELIST;
-        icount*:    INTEGER;
-
         export*:    CHL.BYTELIST;
-        ecount*:    INTEGER;
-
         rel_list*:  LISTS.LIST;
         imp_list*:  LISTS.LIST;
         exp_list*:  LISTS.LIST
@@ -90,11 +78,7 @@ VAR
 BEGIN
     NEW(program);
 
-    program.bss    := 0;
-    program.ccount := 0;
-    program.dcount := 0;
-    program.icount := 0;
-    program.ecount := 0;
+    program.bss := 0;
 
     program.labels := CHL.CreateIntList();
     FOR i := 0 TO NumberOfLabels - 1 DO
@@ -130,15 +114,14 @@ VAR
 BEGIN
     NEW(cmd);
     cmd.opcode := opcode;
-    cmd.offset := program.ccount;
-    program.rel_list.push(program.rel_list, cmd)
+    cmd.offset := CHL.Length(program.code);
+    LISTS.push(program.rel_list, cmd)
 END PutReloc;
 
 
 PROCEDURE PutData* (program: PROGRAM; b: BYTE);
 BEGIN
-    CHL.PushByte(program.data, b);
-    INC(program.dcount)
+    CHL.PushByte(program.data, b)
 END PutData;
 
 
@@ -183,8 +166,7 @@ VAR
 BEGIN
     FOR i := 0 TO 3 DO
         CHL.PushByte(program.data, MACHINE.Byte(x, i))
-    END;
-    INC(program.dcount, 4)
+    END
 END PutData32LE;
 
 
@@ -203,8 +185,7 @@ END PutDataStr;
 
 PROCEDURE PutCode* (program: PROGRAM; b: BYTE);
 BEGIN
-    CHL.PushByte(program.code, b);
-    INC(program.ccount)
+    CHL.PushByte(program.code, b)
 END PutCode;
 
 
@@ -215,14 +196,13 @@ VAR
 BEGIN
     FOR i := 0 TO 3 DO
         CHL.PushByte(program.code, MACHINE.Byte(x, i))
-    END;
-    INC(program.ccount, 4)
+    END
 END PutCode32LE;
 
 
-PROCEDURE SetLabel* (program: PROGRAM; label: INTEGER);
+PROCEDURE SetLabel* (program: PROGRAM; label, offset: INTEGER);
 BEGIN
-    CHL.SetInt(program.labels, label, program.ccount)
+    CHL.SetInt(program.labels, label, offset)
 END SetLabel;
 
 
@@ -232,24 +212,24 @@ VAR
     i:   INTEGER;
 
 BEGIN
-    CHL.PushByte(program.import, 0); INC(program.icount);
-    CHL.PushByte(program.import, 0); INC(program.icount);
+    CHL.PushByte(program.import, 0);
+    CHL.PushByte(program.import, 0);
 
-    IF ODD(program.icount) THEN
-        CHL.PushByte(program.import, 0); INC(program.icount)
+    IF ODD(CHL.Length(program.import)) THEN
+        CHL.PushByte(program.import, 0)
     END;
 
     NEW(imp);
-    imp.nameoffs := program.icount;
+    imp.nameoffs := CHL.Length(program.import);
     imp.label := label;
-    program.imp_list.push(program.imp_list, imp);
+    LISTS.push(program.imp_list, imp);
 
     i := 0;
     WHILE name[i] # 0X DO
-        CHL.PushByte(program.import, ORD(name[i])); INC(program.icount);
+        CHL.PushByte(program.import, ORD(name[i]));
         INC(i)
     END;
-    CHL.PushByte(program.import, 0); INC(program.icount)
+    CHL.PushByte(program.import, 0)
 END Import;
 
 
@@ -278,15 +258,15 @@ VAR
 
 BEGIN
     NEW(exp);
-    exp.nameoffs := program.ecount;
+    exp.nameoffs := CHL.Length(program.export);
     exp.label := CHL.GetInt(program.labels, label);
-    
+
     i := 0;
     WHILE name[i] # 0X DO
-        CHL.PushByte(program.export, ORD(name[i])); INC(program.ecount);
+        CHL.PushByte(program.export, ORD(name[i]));
         INC(i)
     END;
-    CHL.PushByte(program.export, 0); INC(program.ecount);
+    CHL.PushByte(program.export, 0);
 
     cur := program.exp_list.first(EXPRT);
     WHILE (cur # NIL) & less(program.export, cur, exp) DO
@@ -295,12 +275,12 @@ BEGIN
 
     IF cur # NIL THEN
         IF cur.prev # NIL THEN
-            program.exp_list.insert(program.exp_list, cur.prev, exp)
+            LISTS.insert(program.exp_list, cur.prev, exp)
         ELSE
-            program.exp_list.insertL(program.exp_list, cur, exp)
+            LISTS.insertL(program.exp_list, cur, exp)
         END
     ELSE
-        program.exp_list.push(program.exp_list, exp)
+        LISTS.push(program.exp_list, exp)
     END
 
 END Export;
@@ -361,10 +341,7 @@ BEGIN
     rel := program.rel_list.first(RELOC);
     WHILE rel # NIL DO
 
-        IF rel.opcode = RJMP THEN
-            L := get32le(program.code, rel.offset);
-            put32le(program.code, rel.offset, GetLabel(program, L) - rel.offset - 4)
-        ELSIF rel.opcode IN {RIMP, PICIMP} THEN
+        IF rel.opcode IN {RIMP, PICIMP} THEN
             L := get32le(program.code, rel.offset);
             put32le(program.code, rel.offset, GetLabel(program, L))
         END;

@@ -38,10 +38,10 @@ BEGIN
 END Target;
 
 
-PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN);
+PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
 VAR
     param: PARS.PATH;
-    i:     INTEGER;
+    i, j:  INTEGER;
     end:   BOOLEAN;
     value: INTEGER;
     minor,
@@ -61,7 +61,7 @@ BEGIN
             END;
             IF param[0] = "-" THEN
                 DEC(i)
-            END;
+            END
 
         ELSIF param = "-base" THEN
             INC(i);
@@ -71,7 +71,29 @@ BEGIN
             END;
             IF param[0] = "-" THEN
                 DEC(i)
-            END;
+            END
+
+        ELSIF param = "-nochk" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+
+            IF param[0] = "-" THEN
+                DEC(i)
+            ELSE
+                j := 0;
+                WHILE param[j] # 0X DO
+
+                    IF    param[j] = "p" THEN
+                        EXCL(checking, STATEMENTS.chkPTR)
+                    ELSIF param[j] = "t" THEN
+                        EXCL(checking, STATEMENTS.chkGUARD)
+                    ELSIF param[j] = "i" THEN
+                        EXCL(checking, STATEMENTS.chkIDX)
+                    END;
+
+                    INC(j)
+                END
+            END
 
         ELSIF param = "-ver" THEN
             INC(i);
@@ -81,7 +103,7 @@ BEGIN
             END;
             IF param[0] = "-" THEN
                 DEC(i)
-            END;
+            END
 
         ELSIF param = "-pic" THEN
             pic := TRUE
@@ -122,12 +144,14 @@ VAR
     Version,
     BaseAdr:    INTEGER;
     pic, reloc: BOOLEAN;
+    checking:   SET;
 
 BEGIN
     StackSize := 1;
     Version := 65536;
     pic := FALSE;
     reloc := FALSE;
+    checking := {STATEMENTS.chkIDX, STATEMENTS.chkGUARD, STATEMENTS.chkPTR};
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
@@ -136,19 +160,21 @@ BEGIN
     IF inname = "" THEN
         CONSOLE.String("Akron Oberon-07/16 Compiler v"); CONSOLE.Int(VER.Major); CONSOLE.String("."); CONSOLE.Int2(VER.Minor); CONSOLE.Ln;
         CONSOLE.String("Usage: Compiler <main module> <output> <target> [optional settings]"); CONSOLE.Ln; CONSOLE.Ln;
-        CONSOLE.String("target = 'con' | 'gui' | 'dll' | 'kos' | 'obj'"); CONSOLE.Ln; CONSOLE.Ln;
+        CONSOLE.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); CONSOLE.Ln; CONSOLE.Ln;
         CONSOLE.String("optional settings:"); CONSOLE.Ln;
-        CONSOLE.String(" -stk <size>         set size of stack in megabytes"); CONSOLE.Ln;
-        CONSOLE.String(" -base <address>     set base address of image in kilobytes"); CONSOLE.Ln;
-        CONSOLE.String(" -pic                generate position-independent code"); CONSOLE.Ln;
-        CONSOLE.String(" -reloc              make relocation table"); CONSOLE.Ln;
-        CONSOLE.String(" -ver <major.minor>  set version of program ('obj' only)"); CONSOLE.Ln;
+        CONSOLE.String("  -stk <size>         set size of stack in megabytes"); CONSOLE.Ln;
+        CONSOLE.String("  -base <address>     set base address of image in kilobytes"); CONSOLE.Ln;
+        CONSOLE.String("  -pic                generate position-independent code"); CONSOLE.Ln;
+        CONSOLE.String("  -reloc              make relocation table"); CONSOLE.Ln;
+        CONSOLE.String('  -ver <major.minor>  set version of program ("obj" only)'); CONSOLE.Ln;
+        CONSOLE.String('  -nochk <"pti">      disable runtime checking (pointers, types, indexes)'); CONSOLE.Ln;
+        CONSOLE.Ln;
         UTILS.Exit(0)
     END;
 
     PATHS.split(inname, path, modname, ext);
     IF ext # EXT THEN
-        ERRORS.error3("inputfile name extension must be '", EXT, "'")
+        ERRORS.error3('inputfile name extension must be "', EXT, '"')
     END;
     IF PATHS.isRelative(path) THEN
         PATHS.RelPath(app_path, path, temp);
@@ -196,9 +222,9 @@ BEGIN
 
     END;
 
-    keys(StackSize, BaseAdr, Version, pic, reloc);
+    keys(StackSize, BaseAdr, Version, pic, reloc, checking);
 
-    STATEMENTS.do(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc);
+    STATEMENTS.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
 
     time := UTILS.GetTickCount() - UTILS.time;
 

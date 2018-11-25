@@ -448,7 +448,7 @@ BEGIN
         res := PROG.stdcall
     ELSIF parser.lex.s = "winapi" THEN
         res := PROG.winapi
-    ELSIF parser.lex.s = "cdecl" THEN
+    ELSIF (parser.lex.s = "ccall") OR (parser.lex.s = "cdecl") THEN
         res := PROG.cdecl
     ELSIF parser.lex.s = "kosapi" THEN
         res := PROG.kosapi

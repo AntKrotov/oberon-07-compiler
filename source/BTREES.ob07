@@ -16,7 +16,7 @@ TYPE
 
     TREE* = POINTER TO rTREE;
 
-    rDATA* = RECORD
+    rDATA = RECORD
 
     END;
 
@@ -32,14 +32,12 @@ TYPE
 
     rTREE = RECORD (rNODE)
 
-        cmp: CMP;
-
-        add*: PROCEDURE (tree: TREE; data: DATA; VAR newnode: BOOLEAN): NODE
+        cmp: CMP
 
     END;
 
 
-PROCEDURE add (tree: TREE; data: DATA; VAR newnode: BOOLEAN): NODE;
+PROCEDURE add* (tree: TREE; data: DATA; VAR newnode: BOOLEAN): NODE;
 VAR
     node: NODE;
     rescmp: INTEGER;
@@ -110,8 +108,7 @@ BEGIN
     tree.data  := data;
     tree.left  := NIL;
     tree.right := NIL;
-    tree.cmp   := cmp;
-    tree.add   := add
+    tree.cmp   := cmp
 
     RETURN tree
 END create;

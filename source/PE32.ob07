@@ -185,7 +185,7 @@ BEGIN
     ExportDir.MinorVersion           :=  0X;
     ExportDir.Name                   :=  program.modname + DataRVA;
     ExportDir.Base                   :=  0;
-    ExportDir.NumberOfFunctions      :=  program.exp_list.count(program.exp_list);
+    ExportDir.NumberOfFunctions      :=  LISTS.count(program.exp_list);
     ExportDir.NumberOfNames          :=  ExportDir.NumberOfFunctions;
     ExportDir.AddressOfFunctions     :=  SIZE_OF_IMAGE_EXPORT_DIRECTORY;
     ExportDir.AddressOfNames         :=  ExportDir.AddressOfFunctions + ExportDir.NumberOfFunctions * SIZE_OF_DWORD;
@@ -285,7 +285,7 @@ BEGIN
     RVACode := Address.Code - PEHeader.OptionalHeader.ImageBase;
 
     NEW(Reloc);
-    Relocations.push(Relocations, Reloc);
+    LISTS.push(Relocations, Reloc);
     Reloc.Page := RVACode;
     Reloc.Size := 2 * SIZE_OF_DWORD;
 
@@ -304,7 +304,7 @@ BEGIN
 
             IF Reloc.Page DIV 4096 # RVA DIV 4096 THEN
                 NEW(Reloc);
-                Relocations.push(Relocations, Reloc);
+                LISTS.push(Relocations, Reloc);
                 Reloc.Page := (RVA DIV 4096) * 4096;
                 Reloc.Size := 2 * SIZE_OF_DWORD
             END;
@@ -315,7 +315,6 @@ BEGIN
 
 
         CASE reloc.opcode OF
-        |BIN.RJMP:
 
         |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
@@ -383,13 +382,13 @@ BEGIN
 END InitArray;
 
 
-PROCEDURE WriteWord (file: FILE; w: WORD; VAR pos: INTEGER);
+PROCEDURE WriteWord (file: FILE; w: WORD);
 BEGIN
-    WR.Write16LE(file, ORD(w), pos)
+    WR.Write16LE(file, ORD(w))
 END WriteWord;
 
 
-PROCEDURE WriteName* (File: FILE; name: NAME; VAR pos: INTEGER);
+PROCEDURE WriteName* (File: FILE; name: NAME);
 VAR
     i, nameLen: INTEGER;
 
@@ -397,19 +396,19 @@ BEGIN
     nameLen := LENGTH(name);
 
     FOR i := 0 TO nameLen - 1 DO
-        WR.WriteByte(File, ORD(name[i]), pos)
+        WR.WriteByte(File, ORD(name[i]))
     END;
 
     i := LEN(name) - nameLen;
     WHILE i > 0 DO
-        WR.WriteByte(File, 0, pos);
+        WR.WriteByte(File, 0);
         DEC(i)
     END
 
 END WriteName;
 
 
-PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER; VAR pos: INTEGER);
+PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER);
 VAR
     i, nameLen: INTEGER;
 
@@ -417,40 +416,40 @@ BEGIN
     nameLen := LENGTH(h.Name);
 
     FOR i := 0 TO nameLen - 1 DO
-        WR.WriteByte(file, ORD(h.Name[i]), pos)
+        WR.WriteByte(file, ORD(h.Name[i]))
     END;
 
     i := LEN(h.Name) - nameLen;
     WHILE i > 0 DO
-        WR.WriteByte(file, 0, pos);
+        WR.WriteByte(file, 0);
         DEC(i)
     END;
 
-    WR.Write32LE(file, h.VirtualSize,           pos);
-    WR.Write32LE(file, h.VirtualAddress,        pos);
-    WR.Write32LE(file, h.SizeOfRawData,         pos);
-    WR.Write32LE(file, h.PointerToRawData,      pos);
-    WR.Write32LE(file, h.PointerToRelocations,  pos);
-    WR.Write32LE(file, h.PointerToLinenumbers,  pos);
+    WR.Write32LE(file, h.VirtualSize);
+    WR.Write32LE(file, h.VirtualAddress);
+    WR.Write32LE(file, h.SizeOfRawData);
+    WR.Write32LE(file, h.PointerToRawData);
+    WR.Write32LE(file, h.PointerToRelocations);
+    WR.Write32LE(file, h.PointerToLinenumbers);
 
-    WriteWord(file, h.NumberOfRelocations,      pos);
-    WriteWord(file, h.NumberOfLinenumbers,      pos);
+    WriteWord(file, h.NumberOfRelocations);
+    WriteWord(file, h.NumberOfLinenumbers);
 
-    WR.Write32LE(file, h.Characteristics,       pos)
+    WR.Write32LE(file, h.Characteristics)
 END WriteSectionHeader;
 
 
-PROCEDURE WriteFileHeader* (file: FILE; h: IMAGE_FILE_HEADER; VAR pos: INTEGER);
+PROCEDURE WriteFileHeader* (file: FILE; h: IMAGE_FILE_HEADER);
 BEGIN
-    WriteWord(file, h.Machine,                  pos);
-    WriteWord(file, h.NumberOfSections,         pos);
+    WriteWord(file, h.Machine);
+    WriteWord(file, h.NumberOfSections);
 
-    WR.Write32LE(file, h.TimeDateStamp,         pos);
-    WR.Write32LE(file, h.PointerToSymbolTable,  pos);
-    WR.Write32LE(file, h.NumberOfSymbols,       pos);
+    WR.Write32LE(file, h.TimeDateStamp);
+    WR.Write32LE(file, h.PointerToSymbolTable);
+    WR.Write32LE(file, h.NumberOfSymbols);
 
-    WriteWord(file, h.SizeOfOptionalHeader,     pos);
-    WriteWord(file, h.Characteristics,          pos)
+    WriteWord(file, h.SizeOfOptionalHeader);
+    WriteWord(file, h.Characteristics)
 END WriteFileHeader;
 
 
@@ -478,88 +477,88 @@ VAR
     relsec:  INTEGER;
 
 
-    PROCEDURE WriteExportDir (file: FILE; e: IMAGE_EXPORT_DIRECTORY; VAR pos: INTEGER);
+    PROCEDURE WriteExportDir (file: FILE; e: IMAGE_EXPORT_DIRECTORY);
     BEGIN
-        WR.Write32LE(file, e.Characteristics,        pos);
-        WR.Write32LE(file, e.TimeDateStamp,          pos);
+        WR.Write32LE(file, e.Characteristics);
+        WR.Write32LE(file, e.TimeDateStamp);
 
-        WriteWord(file, e.MajorVersion,              pos);
-        WriteWord(file, e.MinorVersion,              pos);
+        WriteWord(file, e.MajorVersion);
+        WriteWord(file, e.MinorVersion);
 
-        WR.Write32LE(file, e.Name,                   pos);
-        WR.Write32LE(file, e.Base,                   pos);
-        WR.Write32LE(file, e.NumberOfFunctions,      pos);
-        WR.Write32LE(file, e.NumberOfNames,          pos);
-        WR.Write32LE(file, e.AddressOfFunctions,     pos);
-        WR.Write32LE(file, e.AddressOfNames,         pos);
-        WR.Write32LE(file, e.AddressOfNameOrdinals,  pos)
+        WR.Write32LE(file, e.Name);
+        WR.Write32LE(file, e.Base);
+        WR.Write32LE(file, e.NumberOfFunctions);
+        WR.Write32LE(file, e.NumberOfNames);
+        WR.Write32LE(file, e.AddressOfFunctions);
+        WR.Write32LE(file, e.AddressOfNames);
+        WR.Write32LE(file, e.AddressOfNameOrdinals)
     END WriteExportDir;
 
 
-    PROCEDURE WriteOptHeader (file: FILE; h: IMAGE_OPTIONAL_HEADER; VAR pos: INTEGER);
+    PROCEDURE WriteOptHeader (file: FILE; h: IMAGE_OPTIONAL_HEADER);
     VAR
         i: INTEGER;
 
     BEGIN
 
-        WriteWord(file, h.Magic,                        pos);
+        WriteWord(file, h.Magic);
 
-        WR.WriteByte(file, h.MajorLinkerVersion,        pos);
-        WR.WriteByte(file, h.MinorLinkerVersion,        pos);
+        WR.WriteByte(file, h.MajorLinkerVersion);
+        WR.WriteByte(file, h.MinorLinkerVersion);
 
-        WR.Write32LE(file, h.SizeOfCode,                pos);
-        WR.Write32LE(file, h.SizeOfInitializedData,     pos);
-        WR.Write32LE(file, h.SizeOfUninitializedData,   pos);
-        WR.Write32LE(file, h.AddressOfEntryPoint,       pos);
-        WR.Write32LE(file, h.BaseOfCode,                pos);
-        WR.Write32LE(file, h.BaseOfData,                pos);
-        WR.Write32LE(file, h.ImageBase,                 pos);
-        WR.Write32LE(file, h.SectionAlignment,          pos);
-        WR.Write32LE(file, h.FileAlignment,             pos);
+        WR.Write32LE(file, h.SizeOfCode);
+        WR.Write32LE(file, h.SizeOfInitializedData);
+        WR.Write32LE(file, h.SizeOfUninitializedData);
+        WR.Write32LE(file, h.AddressOfEntryPoint);
+        WR.Write32LE(file, h.BaseOfCode);
+        WR.Write32LE(file, h.BaseOfData);
+        WR.Write32LE(file, h.ImageBase);
+        WR.Write32LE(file, h.SectionAlignment);
+        WR.Write32LE(file, h.FileAlignment);
 
-        WriteWord(file, h.MajorOperatingSystemVersion,  pos);
-        WriteWord(file, h.MinorOperatingSystemVersion,  pos);
-        WriteWord(file, h.MajorImageVersion,            pos);
-        WriteWord(file, h.MinorImageVersion,            pos);
-        WriteWord(file, h.MajorSubsystemVersion,        pos);
-        WriteWord(file, h.MinorSubsystemVersion,        pos);
+        WriteWord(file, h.MajorOperatingSystemVersion);
+        WriteWord(file, h.MinorOperatingSystemVersion);
+        WriteWord(file, h.MajorImageVersion);
+        WriteWord(file, h.MinorImageVersion);
+        WriteWord(file, h.MajorSubsystemVersion);
+        WriteWord(file, h.MinorSubsystemVersion);
 
-        WR.Write32LE(file, h.Win32VersionValue,         pos);
-        WR.Write32LE(file, h.SizeOfImage,               pos);
-        WR.Write32LE(file, h.SizeOfHeaders,             pos);
-        WR.Write32LE(file, h.CheckSum,                  pos);
+        WR.Write32LE(file, h.Win32VersionValue);
+        WR.Write32LE(file, h.SizeOfImage);
+        WR.Write32LE(file, h.SizeOfHeaders);
+        WR.Write32LE(file, h.CheckSum);
 
-        WriteWord(file, h.Subsystem,                    pos);
-        WriteWord(file, h.DllCharacteristics,           pos);
+        WriteWord(file, h.Subsystem);
+        WriteWord(file, h.DllCharacteristics);
 
-        WR.Write32LE(file, h.SizeOfStackReserve,        pos);
-        WR.Write32LE(file, h.SizeOfStackCommit,         pos);
-        WR.Write32LE(file, h.SizeOfHeapReserve,         pos);
-        WR.Write32LE(file, h.SizeOfHeapCommit,          pos);
-        WR.Write32LE(file, h.LoaderFlags,               pos);
-        WR.Write32LE(file, h.NumberOfRvaAndSizes,       pos);
+        WR.Write32LE(file, h.SizeOfStackReserve);
+        WR.Write32LE(file, h.SizeOfStackCommit);
+        WR.Write32LE(file, h.SizeOfHeapReserve);
+        WR.Write32LE(file, h.SizeOfHeapCommit);
+        WR.Write32LE(file, h.LoaderFlags);
+        WR.Write32LE(file, h.NumberOfRvaAndSizes);
 
         FOR i := 0 TO LEN(h.DataDirectory) - 1 DO
-            WR.Write32LE(file, h.DataDirectory[i].VirtualAddress, pos);
-            WR.Write32LE(file, h.DataDirectory[i].Size, pos)
+            WR.Write32LE(file, h.DataDirectory[i].VirtualAddress);
+            WR.Write32LE(file, h.DataDirectory[i].Size)
         END
 
     END WriteOptHeader;
 
 
-    PROCEDURE WritePEHeader (file: FILE; h: IMAGE_NT_HEADERS; VAR pos: INTEGER);
+    PROCEDURE WritePEHeader (file: FILE; h: IMAGE_NT_HEADERS);
     BEGIN
-        WR.Write(file, h.Signature, LEN(h.Signature),  pos);
-        WriteFileHeader(file, h.FileHeader,            pos);
-        WriteOptHeader(file, h.OptionalHeader,         pos)
+        WR.Write(file, h.Signature, LEN(h.Signature));
+        WriteFileHeader(file, h.FileHeader);
+        WriteOptHeader(file, h.OptionalHeader)
     END WritePEHeader;
 
 
 BEGIN
     Relocations := LISTS.create(NIL);
 
-    Size.Code  := program.ccount;
-    Size.Data  := program.dcount;
+    Size.Code  := CHL.Length(program.code);
+    Size.Data  := CHL.Length(program.data);
     Size.Bss   := program.bss;
     Size.Stack := program.stack;
 
@@ -654,7 +653,7 @@ BEGIN
     Size.Import := GetImportSize(program.imp_list);
 
     SectionHeaders[3].Name                  :=  ".idata";
-    SectionHeaders[3].VirtualSize           :=  Size.Import + program.icount;
+    SectionHeaders[3].VirtualSize           :=  Size.Import + CHL.Length(program.import);
     SectionHeaders[3].VirtualAddress        :=  align(SectionHeaders[2].VirtualAddress + SectionHeaders[2].VirtualSize, SectionAlignment);
     SectionHeaders[3].SizeOfRawData         :=  align(SectionHeaders[3].VirtualSize, FileAlignment);
     SectionHeaders[3].PointerToRawData      :=  SectionHeaders[2].PointerToRawData + SectionHeaders[2].SizeOfRawData;
@@ -676,7 +675,7 @@ BEGIN
         Size.Export := Export(program, SectionHeaders[1].VirtualAddress, ExportDir);
 
         SectionHeaders[4].Name                  :=  ".edata";
-        SectionHeaders[4].VirtualSize           :=  Size.Export + program.ecount;
+        SectionHeaders[4].VirtualSize           :=  Size.Export + CHL.Length(program.export);
         SectionHeaders[4].VirtualAddress        :=  align(SectionHeaders[3].VirtualAddress + SectionHeaders[3].VirtualSize, SectionAlignment);
         SectionHeaders[4].SizeOfRawData         :=  align(SectionHeaders[4].VirtualSize, FileAlignment);
         SectionHeaders[4].PointerToRawData      :=  SectionHeaders[3].PointerToRawData + SectionHeaders[3].SizeOfRawData;
@@ -751,27 +750,22 @@ BEGIN
 
     File := WR.Create(FileName);
 
-    n := 0;
-    WR.Write(File, msdos, LEN(msdos), n);
+    WR.Write(File, msdos, LEN(msdos));
 
-    WritePEHeader(File, PEHeader, n);
+    WritePEHeader(File, PEHeader);
 
     FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
-        WriteSectionHeader(File, SectionHeaders[i], n)
+        WriteSectionHeader(File, SectionHeaders[i])
     END;
 
-    WR.Padding(File, FileAlignment, n);
+    WR.Padding(File, FileAlignment);
 
-    FOR i := 0 TO program.ccount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.code, i), n)
-    END;
-    WR.Padding(File, FileAlignment, n);
+    CHL.WriteToFile(File, program.code);
+    WR.Padding(File, FileAlignment);
 
-    FOR i := 0 TO program.dcount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.data, i), n)
-    END;
-    WR.Padding(File, FileAlignment, n);
-    
+    CHL.WriteToFile(File, program.data);
+    WR.Padding(File, FileAlignment);
+
     ImportTable := CHL.CreateIntList();
     FOR i := 0 TO Size.Import DIV SIZE_OF_DWORD - 1 DO
         CHL.PushInt(ImportTable, 0)
@@ -789,8 +783,8 @@ BEGIN
             i := i + 5
         END;
         import := import.next(BIN.IMPRT)
-    END;    
-    
+    END;
+
     CHL.SetInt(ImportTable, i + 0, 0);
     CHL.SetInt(ImportTable, i + 1, 0);
     CHL.SetInt(ImportTable, i + 2, 0);
@@ -807,14 +801,11 @@ BEGIN
     END;
 
     FOR i := 0 TO Size.Import DIV SIZE_OF_DWORD - 1 DO
-        WR.Write32LE(File, CHL.GetInt(ImportTable, i), n)
+        WR.Write32LE(File, CHL.GetInt(ImportTable, i))
     END;
 
-    FOR i := 0 TO program.icount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.import, i), n)
-    END;
-
-    WR.Padding(File, FileAlignment, n);
+    CHL.WriteToFile(File, program.import);
+    WR.Padding(File, FileAlignment);
 
     IF dll THEN
 
@@ -822,43 +813,40 @@ BEGIN
         INC(ExportDir.AddressOfNames,        SectionHeaders[4].VirtualAddress);
         INC(ExportDir.AddressOfNameOrdinals, SectionHeaders[4].VirtualAddress);
 
-        WriteExportDir(File, ExportDir, n);
+        WriteExportDir(File, ExportDir);
 
         export := program.exp_list.first(BIN.EXPRT);
         WHILE export # NIL DO
-            WR.Write32LE(File, export.label + SectionHeaders[0].VirtualAddress, n);
+            WR.Write32LE(File, export.label + SectionHeaders[0].VirtualAddress);
             export := export.next(BIN.EXPRT)
         END;
 
         export := program.exp_list.first(BIN.EXPRT);
         WHILE export # NIL DO
-            WR.Write32LE(File, export.nameoffs + Size.Export + SectionHeaders[4].VirtualAddress, n);
+            WR.Write32LE(File, export.nameoffs + Size.Export + SectionHeaders[4].VirtualAddress);
             export := export.next(BIN.EXPRT)
         END;
 
         FOR i := 0 TO ExportDir.NumberOfFunctions - 1 DO
-            WriteWord(File, WCHR(i), n)
+            WriteWord(File, WCHR(i))
         END;
 
-        FOR i := 0 TO program.ecount - 1 DO
-            WR.WriteByte(File, CHL.GetByte(program.export, i), n)
-        END;
-
-        WR.Padding(File, FileAlignment, n)
+        CHL.WriteToFile(File, program.export);
+        WR.Padding(File, FileAlignment)
     END;
 
     IF reloc THEN
         R := Relocations.first(RELOC);
         WHILE R # NIL DO
-            WR.Write32LE(File, R.Page, n);
-            WR.Write32LE(File, R.Size, n);
+            WR.Write32LE(File, R.Page);
+            WR.Write32LE(File, R.Size);
             FOR i := 0 TO (R.Size - 2 * SIZE_OF_DWORD) DIV 2 - 1 DO
-                WriteWord(File, R.reloc[i], n)
+                WriteWord(File, R.reloc[i])
             END;
             R := R.next(RELOC)
         END;
 
-        WR.Padding(File, FileAlignment, n)
+        WR.Padding(File, FileAlignment)
     END;
 
     WR.Close(File)

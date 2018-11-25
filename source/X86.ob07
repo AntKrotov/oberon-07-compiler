@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHUNKLISTS, PATHS, STRINGS;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS;
 
 
 CONST
@@ -23,9 +23,65 @@ CONST
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
 
 
+    CODECHUNK = 16;
+
+
 TYPE
 
     COMMAND = CODE.COMMAND;
+
+
+    ANYCODE = POINTER TO RECORD (LISTS.ITEM)
+
+        offset: INTEGER
+
+    END;
+
+    TCODE = POINTER TO RECORD (ANYCODE)
+
+        code:    ARRAY CODECHUNK OF BYTE;
+        length:  INTEGER
+
+    END;
+
+    LABEL = POINTER TO RECORD (ANYCODE)
+
+        label: INTEGER
+
+    END;
+
+    JUMP = POINTER TO RECORD (ANYCODE)
+
+        label, diff: INTEGER;
+        short: BOOLEAN
+
+    END;
+
+    JMP = POINTER TO RECORD (JUMP)
+
+    END;
+
+    JCC = POINTER TO RECORD (JUMP)
+
+        jmp: INTEGER
+
+    END;
+
+    CALL = POINTER TO RECORD (JUMP)
+
+    END;
+
+    RELOC = POINTER TO RECORD (ANYCODE)
+
+        op, value: INTEGER
+
+    END;
+
+    INT = POINTER TO RECORD (ANYCODE)
+
+        value: INTEGER
+
+    END;
 
 
 VAR
@@ -37,9 +93,10 @@ VAR
     stroffs: INTEGER;
 
     program: BIN.PROGRAM;
-    dllret:  INTEGER;
-    dllinit: INTEGER;
-    label_import:  INTEGER;
+
+    dllret, dllinit, label_import: INTEGER;
+
+    CodeList: LISTS.LIST;
 
 
 PROCEDURE Byte (n: INTEGER): BYTE;
@@ -53,10 +110,38 @@ END Word;
 
 
 PROCEDURE OutByte (n: INTEGER);
+VAR
+    c: TCODE;
+    last: ANYCODE;
+
 BEGIN
     ASSERT((0 <= n) & (n <= 255));
-    BIN.PutCode(program, n)
+
+    last := CodeList.last(ANYCODE);
+
+    IF (last IS TCODE) & (last(TCODE).length < CODECHUNK) THEN
+        c := last(TCODE);
+        c.code[c.length] := n;
+        INC(c.length)
+    ELSE
+        NEW(c);
+        c.code[0] := n;
+        c.length  := 1;
+        LISTS.push(CodeList, c)
+    END
+
 END OutByte;
+
+
+PROCEDURE OutInt (n: INTEGER);
+VAR
+    int: INT;
+
+BEGIN
+    NEW(int);
+    int.value := n;
+    LISTS.push(CodeList, int)
+END OutInt;
 
 
 PROCEDURE OutByte2 (a, b: INTEGER);
@@ -74,24 +159,11 @@ BEGIN
 END OutByte3;
 
 
-PROCEDURE OutInt (n: INTEGER);
-BEGIN
-    BIN.PutCode32LE(program, n)
-END OutInt;
-
-
 PROCEDURE OutWord (n: INTEGER);
 BEGIN
     ASSERT((0 <= n) & (n <= 65535));
     OutByte2(n MOD 256, n DIV 256)
 END OutWord;
-
-
-PROCEDURE Reloc (op, value: INTEGER);
-BEGIN
-    BIN.PutReloc(program, op);
-    OutInt(value)
-END Reloc;
 
 
 PROCEDURE isByte (n: INTEGER): BOOLEAN;
@@ -235,18 +307,175 @@ BEGIN
 END log2;
 
 
-PROCEDURE jcc (opcode, label: INTEGER);
+PROCEDURE Reloc (op, value: INTEGER);
+VAR
+    reloc: RELOC;
+
 BEGIN
-    OutByte2(0FH, opcode); (* je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; *)
-    Reloc(BIN.RJMP, label)
+    NEW(reloc);
+    reloc.op := op;
+    reloc.value := value;
+    LISTS.push(CodeList, reloc)
+END Reloc;
+
+
+PROCEDURE jcc (opcode, label: INTEGER);
+VAR
+    j: JCC;
+
+BEGIN
+    NEW(j);
+    j.label := label;
+    j.jmp   := opcode;
+    j.short := FALSE;
+    LISTS.push(CodeList, j)
 END jcc;
 
 
-PROCEDURE CallRTL (proc: INTEGER);
+PROCEDURE jmp (label: INTEGER);
+VAR
+    j: JMP;
+
 BEGIN
-    OutByte(0E8H);    // call rtl[proc]
-    Reloc(BIN.RJMP, CODE.codes.rtl[proc])
+    NEW(j);
+    j.label := label;
+    j.short := FALSE;
+    LISTS.push(CodeList, j)
+END jmp;
+
+
+PROCEDURE call (label: INTEGER);
+VAR
+    c: CALL;
+
+BEGIN
+    NEW(c);
+    c.label := label;
+    c.short := TRUE;
+    LISTS.push(CodeList, c)
+END call;
+
+
+PROCEDURE CallRTL (proc: INTEGER);
+VAR
+    c: CALL;
+
+BEGIN
+    NEW(c);
+    c.label := CODE.codes.rtl[proc];
+    c.short := TRUE;
+    LISTS.push(CodeList, c)
 END CallRTL;
+
+
+PROCEDURE SetLabel (label: INTEGER);
+VAR
+    L: LABEL;
+
+BEGIN
+    NEW(L);
+    L.label := label;
+    LISTS.push(CodeList, L)
+END SetLabel;
+
+
+PROCEDURE fixup;
+VAR
+    code:      ANYCODE;
+    count, i:  INTEGER;
+    shorted:   BOOLEAN;
+    jump:      JUMP;
+
+BEGIN
+
+    REPEAT
+
+        shorted := FALSE;
+        count := 0;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+            code.offset := count;
+
+            CASE code OF
+            |TCODE:  INC(count, code.length)
+            |LABEL:  BIN.SetLabel(program, code.label, count)
+            |JMP:    IF code.short THEN INC(count, 2) ELSE INC(count, 5) END; code.offset := count
+            |JCC:    IF code.short THEN INC(count, 2) ELSE INC(count, 6) END; code.offset := count
+            |CALL:   INC(count, 5); code.offset := count
+            |RELOC:  INC(count, 4)
+            |INT:    INC(count, 4)
+            END;
+
+            code := code.next(ANYCODE)
+        END;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+
+            IF code IS JUMP THEN
+                jump := code(JUMP);
+                jump.diff := BIN.GetLabel(program, jump.label) - code.offset;
+                IF ~jump.short & isByte(jump.diff) THEN
+                    jump.short := TRUE;
+                    shorted := TRUE
+                END
+            END;
+
+            code := code.next(ANYCODE)
+        END
+
+    UNTIL ~shorted;
+
+    code := CodeList.first(ANYCODE);
+    WHILE code # NIL DO
+
+        CASE code OF
+
+        |TCODE:
+                FOR i := 0 TO code.length - 1 DO
+                    BIN.PutCode(program, code.code[i])
+                END
+
+        |LABEL:
+                BIN.SetLabel(program, code.label, code.offset)
+
+        |JMP:
+                IF code.short THEN
+                    BIN.PutCode(program, 0EBH);
+                    BIN.PutCode(program, code.diff)
+                ELSE
+                    BIN.PutCode(program, 0E9H);
+                    BIN.PutCode32LE(program, code.diff)
+                END
+
+        |JCC:
+                IF code.short THEN
+                    BIN.PutCode(program, code.jmp - 16);
+                    BIN.PutCode(program, code.diff)
+                ELSE
+                    BIN.PutCode(program, 0FH);
+                    BIN.PutCode(program, code.jmp);
+                    BIN.PutCode32LE(program, code.diff)
+                END
+
+        |CALL:
+                BIN.PutCode(program, 0E8H);
+                BIN.PutCode32LE(program, code.diff)
+
+        |RELOC:
+                BIN.PutReloc(program, code.op);
+                BIN.PutCode32LE(program, code.value)
+
+        |INT:
+                BIN.PutCode32LE(program, code.value)
+
+        END;
+
+        code := code.next(ANYCODE)
+    END
+
+END fixup;
 
 
 PROCEDURE drop;
@@ -284,6 +513,13 @@ BEGIN
 END Pic;
 
 
+PROCEDURE NewLabel (): INTEGER;
+BEGIN
+    BIN.NewLabel(program)
+    RETURN CODE.NewLabel()
+END NewLabel;
+
+
 PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN);
 VAR
     cmd, next, next2: COMMAND;
@@ -300,12 +536,10 @@ BEGIN
         CASE cmd.opcode OF
 
         |CODE.opJMP:
-            OutByte(0E9H);         // jmp L
-            Reloc(BIN.RJMP, cmd.label)
+            jmp(cmd.label)
 
         |CODE.opCALL:
-            OutByte(0E8H);         // call L
-            Reloc(BIN.RJMP, cmd.label)
+            call(cmd.label)
 
         |CODE.opCALLI:
             IF pic THEN
@@ -434,7 +668,7 @@ BEGIN
 
         |CODE.opLABEL,
          CODE.opPROC:
-            BIN.SetLabel(program, cmd.param) // L:
+            SetLabel(cmd.param) // L:
 
         |CODE.opNOP:
 
@@ -1017,13 +1251,12 @@ BEGIN
             jcc(je, cmd.label)
 
         |CODE.opCASE:
-            label := CODE.NewLabel();
-            BIN.NewLabel(program);
+            label := NewLabel();
             cmprc(eax, cmd.param);
             jcc(jl, label);
             cmprc(eax, cmd.param2);
             jcc(jle, cmd.label);
-            BIN.SetLabel(program, label)
+            SetLabel(label)
 
         |CODE.opCODE:
             OutByte(Byte(cmd.param))
@@ -1074,15 +1307,21 @@ BEGIN
 
         |CODE.opCHKIDX:
             UnOp(reg1);
-            cmprc(reg1, cmd.param);
-            jcc(jb, cmd.label)
+            IF cmd.param # -1 THEN
+                cmprc(reg1, cmd.param);
+                jcc(jb, cmd.label)
+            END
 
         |CODE.opCHKIDX2:
             BinOp(reg1, reg2);
-            cmprr(reg2, reg1);
+            IF cmd.param # -1 THEN
+                cmprr(reg2, reg1);
+            END;
             mov(reg1, reg2);
             drop;
-            jcc(jb, cmd.label)
+            IF cmd.param # -1 THEN
+                jcc(jb, cmd.label)
+            END
 
         |CODE.opLEN:
             n := cmd.param;
@@ -1647,25 +1886,35 @@ BEGIN
             CallRTL(CODE._isrec);
             ASSERT(REG.GetReg(R, eax))
 
-        |CODE.opTYPEGR:
-            PushAll(1);
-            pushc(cmd.param);
-            CallRTL(CODE._guardrec);
-            ASSERT(REG.GetReg(R, eax))
-
         |CODE.opIS:
             PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._is);
             ASSERT(REG.GetReg(R, eax))
 
-        |CODE.opTYPEG:
+        |CODE.opTYPEGR:
+            PushAll(1);
+            pushc(cmd.param);
+            CallRTL(CODE._guardrec);
+            ASSERT(REG.GetReg(R, eax))
+
+        |CODE.opTYPEGP:
             UnOp(reg2);
             reg1 := REG.GetAnyReg(R);
             mov(reg1, reg2);
             PushAll(1);
             pushc(cmd.param);
             CallRTL(CODE._guard);
+            ASSERT(REG.GetReg(R, eax))
+            
+        |CODE.opTYPEGD:
+            UnOp(reg2);
+            reg1 := REG.GetAnyReg(R);
+            mov(reg1, reg2); 
+            OutByte3(08BH, 040H + reg1 * 9, 0FCH);  // mov reg1, dword[reg1 - 4]
+            PushAll(1);
+            pushc(cmd.param);
+            CallRTL(CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCASET:
@@ -1887,13 +2136,12 @@ END translate;
 
 PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack: INTEGER);
 VAR
-    reg1, entry: INTEGER;
+    reg1, entry, tcount, dcount: INTEGER;
 
 BEGIN
 
-    entry := CODE.NewLabel();
-    BIN.NewLabel(program);
-    BIN.SetLabel(program, entry);
+    entry := NewLabel();
+    SetLabel(entry);
 
     IF target = TARGETS.DLL THEN
         OutByte(55H);             // push ebp
@@ -1905,9 +2153,8 @@ BEGIN
         test(eax);
         jcc(je, dllret)
     ELSIF target = TARGETS.OBJ THEN
-        dllinit := CODE.NewLabel();
-        BIN.NewLabel(program);
-        BIN.SetLabel(program, dllinit)
+        dllinit := NewLabel();
+        SetLabel(dllinit)
     END;
 
     OutByte3(09BH, 0DBH, 0E3H); // finit
@@ -1944,16 +2191,19 @@ BEGIN
         Reloc(BIN.RDATA, 0)
     END;
 
-    pushc(code.tcount);
+    tcount := CHL.Length(code.types);
+    dcount := CHL.Length(code.data);
+
+    pushc(tcount);
 
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
-        Pic(reg1, BIN.PICDATA, code.tcount * 4 + code.dcount);
-        push(reg1);     // push _data + tcount * 4 + code.dcount
+        Pic(reg1, BIN.PICDATA, tcount * 4 + dcount);
+        push(reg1);     // push _data + tcount * 4 + dcount
         drop
     ELSE
         OutByte(068H);  // push _data
-        Reloc(BIN.RDATA, code.tcount * 4 + code.dcount)
+        Reloc(BIN.RDATA, tcount * 4 + dcount)
     END;
 
     CallRTL(CODE._init)
@@ -1965,6 +2215,8 @@ VAR
     i, n:  INTEGER;
     exp:   CODE.EXPORT_PROC;
     path, name, ext: PATHS.PATH;
+
+    tcount, dcount: INTEGER;
 
 
     PROCEDURE import (imp: LISTS.LIST);
@@ -1994,7 +2246,7 @@ BEGIN
         pushc(0);
         CallRTL(CODE._exit);
     ELSIF target = TARGETS.DLL THEN
-        BIN.SetLabel(program, dllret);
+        SetLabel(dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
         OutByte3(0C2H, 00CH, 000H) // ret 12
@@ -2003,19 +2255,24 @@ BEGIN
         OutByte(0C3H)  // ret
     END;
 
-    FOR i := 0 TO code.tcount - 1 DO
-        BIN.PutData32LE(program, CHUNKLISTS.GetInt(code.types, i))
+    fixup;
+
+    tcount := CHL.Length(code.types);
+    dcount := CHL.Length(code.data);
+
+    FOR i := 0 TO tcount - 1 DO
+        BIN.PutData32LE(program, CHL.GetInt(code.types, i))
     END;
 
-    FOR i := 0 TO code.dcount - 1 DO
-        BIN.PutData(program, CHUNKLISTS.GetByte(code.data, i))
+    FOR i := 0 TO dcount - 1 DO
+        BIN.PutData(program, CHL.GetByte(code.data, i))
     END;
-    
-    program.modname := program.dcount;
-    
+
+    program.modname := CHL.Length(program.data);
+
     PATHS.split(modname, path, name, ext);
-    STRINGS.append(name, ext);
     BIN.PutDataStr(program, name);
+    BIN.PutDataStr(program, ext);
     BIN.PutData(program, 0);
 
     IF target = TARGETS.OBJ THEN
@@ -2030,7 +2287,7 @@ BEGIN
 
     import(code.import);
 
-    n := code.dmin - code.dcount;
+    n := code.dmin - CHL.Length(code.data);
     IF n > 0 THEN
         INC(code.gsize, n)
     END;
@@ -2043,14 +2300,14 @@ END epilog;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
 BEGIN
 
-    program := BIN.create(code.lcount + 10);
+    CodeList := LISTS.create(NIL);
 
-    dllret := CODE.NewLabel();
-    BIN.NewLabel(program);
-    label_import := CODE.NewLabel();
-    BIN.NewLabel(program);
+    program := BIN.create(code.lcount);
 
-    stroffs := code.tcount * 4;
+    dllret := NewLabel();
+    label_import := NewLabel();
+
+    stroffs := CHL.Length(code.types) * 4;
 
     IF target = TARGETS.OBJ THEN
         pic := FALSE
@@ -2063,8 +2320,6 @@ BEGIN
     prolog(code, pic, target, stack);
     translate(code, pic);
     epilog(code, outname, target, stack, ver);
-
-    DISPOSE(R);
 
     BIN.fixup(program);
 

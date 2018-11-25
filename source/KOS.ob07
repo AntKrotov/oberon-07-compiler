@@ -7,7 +7,7 @@
 
 MODULE KOS;
 
-IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS;
+IMPORT BIN, WR := WRITER, LISTS, CHL := CHUNKLISTS;
 
 
 CONST
@@ -55,8 +55,8 @@ BEGIN
     END;
 
     len  := libcount * 2 + 2;
-    size := (program.imp_list.count(program.imp_list) + len + 1) * SIZE_OF_DWORD;
-    
+    size := (LISTS.count(program.imp_list) + len + 1) * SIZE_OF_DWORD;
+
     ImportTable := CHL.CreateIntList();
     FOR i := 0 TO size DIV SIZE_OF_DWORD - 1 DO
         CHL.PushInt(ImportTable, 0)
@@ -85,7 +85,7 @@ BEGIN
     CHL.SetInt(ImportTable, i, 0);
     CHL.SetInt(ImportTable, i + 1, 0);
     INC(len);
-    size := size + program.icount
+    size := size + CHL.Length(program.import)
 END Import;
 
 
@@ -109,18 +109,24 @@ VAR
 
     i: INTEGER;
 
-    File: FILE; pos: INTEGER;
+    File: FILE;
 
     ImportTable: CHL.INTLIST;
     ILen, libcount, isize: INTEGER;
+
+    icount, dcount, ccount: INTEGER;
 
 
 BEGIN
     base := 0;
 
+    icount := CHL.Length(program.import);
+    dcount := CHL.Length(program.data);
+    ccount := CHL.Length(program.code);
+
     text  := base + HEADER_SIZE;
-    data  := align(text + program.ccount, FileAlignment);
-    idata := align(data + program.dcount, FileAlignment);
+    data  := align(text + ccount, FileAlignment);
+    idata := align(data + dcount, FileAlignment);
 
     Import(program, idata, ImportTable, ILen, libcount, isize);
 
@@ -143,7 +149,6 @@ BEGIN
         delta := 3 - reloc.offset - text;
 
         CASE reloc.opcode OF
-        |BIN.RJMP:
 
         |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
@@ -181,36 +186,29 @@ BEGIN
 
     File := WR.Create(FileName);
 
-    pos := 0;
-
     FOR i := 0 TO 7 DO
-        WR.WriteByte(File, ORD(header.menuet01[i]), pos)
+        WR.WriteByte(File, ORD(header.menuet01[i]))
     END;
 
-    WR.Write32LE(File, header.ver,    pos);
-    WR.Write32LE(File, header.start,  pos);
-    WR.Write32LE(File, header.size,   pos);
-    WR.Write32LE(File, header.mem,    pos);
-    WR.Write32LE(File, header.sp,     pos);
-    WR.Write32LE(File, header.param,  pos);
-    WR.Write32LE(File, header.path,   pos);
+    WR.Write32LE(File, header.ver);
+    WR.Write32LE(File, header.start);
+    WR.Write32LE(File, header.size);
+    WR.Write32LE(File, header.mem);
+    WR.Write32LE(File, header.sp);
+    WR.Write32LE(File, header.param);
+    WR.Write32LE(File, header.path);
+    
+    CHL.WriteToFile(File, program.code);
+    WR.Padding(File, FileAlignment);
 
-    FOR i := 0 TO program.ccount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.code, i), pos)
-    END;
-    WR.Padding(File, FileAlignment, pos);
-
-    FOR i := 0 TO program.dcount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.data, i), pos)
-    END;
-    WR.Padding(File, FileAlignment, pos);
+    CHL.WriteToFile(File, program.data);
+    WR.Padding(File, FileAlignment);
 
     FOR i := 0 TO ILen - 1 DO
-        WR.Write32LE(File, CHL.GetInt(ImportTable, i), pos)
-    END;
-    FOR i := 0 TO program.icount - 1 DO
-        WR.WriteByte(File, CHL.GetByte(program.import, i), pos)
-    END;
+        WR.Write32LE(File, CHL.GetInt(ImportTable, i))
+    END;      
+    
+    CHL.WriteToFile(File, program.import);
 
     WR.Close(File)
 

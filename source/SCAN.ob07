@@ -47,7 +47,7 @@ TYPE
 
     LEXSTR* = ARRAY LEXLEN OF CHAR;
 
-    IDENT* = POINTER TO RECORD (BTREES.rDATA)
+    IDENT* = POINTER TO RECORD (BTREES.DATA)
 
         s*: LEXSTR;
         offset*, offsetW*: INTEGER
@@ -148,7 +148,7 @@ VAR
 
 BEGIN
     vocabulary.ident.s := s;
-    node := vocabulary.idents.add(vocabulary.idents, vocabulary.ident, newnode);
+    node := BTREES.add(vocabulary.idents, vocabulary.ident, newnode);
     ident := node.data(IDENT);
     IF newnode THEN
         NEW(vocabulary.ident);

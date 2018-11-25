@@ -7,7 +7,7 @@
 
 MODULE CHUNKLISTS;
 
-IMPORT LISTS;
+IMPORT LISTS, WR := WRITER;
 
 
 CONST
@@ -18,9 +18,15 @@ CONST
 
 TYPE
 
-    BYTELIST* = POINTER TO RECORD (LISTS.LIST) END;
+    ANYLIST = POINTER TO RECORD (LISTS.LIST)
 
-    BYTECHUNK* = POINTER TO RECORD (LISTS.ITEM)
+        length: INTEGER
+
+    END;
+
+    BYTELIST* = POINTER TO RECORD (ANYLIST) END;
+
+    BYTECHUNK = POINTER TO RECORD (LISTS.ITEM)
 
         data:   ARRAY LENOFBYTECHUNK OF BYTE;
         count:  INTEGER
@@ -28,9 +34,9 @@ TYPE
     END;
 
 
-    INTLIST* = POINTER TO RECORD (LISTS.LIST) END;
+    INTLIST* = POINTER TO RECORD (ANYLIST) END;
 
-    INTCHUNK* = POINTER TO RECORD (LISTS.ITEM)
+    INTCHUNK = POINTER TO RECORD (LISTS.ITEM)
 
         data:   ARRAY LENOFINTCHUNK OF INTEGER;
         count:  INTEGER
@@ -102,12 +108,27 @@ BEGIN
     IF chunk.count = LENOFBYTECHUNK THEN
         NEW(chunk);
         chunk.count := 0;
-        list.push(list, chunk)
+        LISTS.push(list, chunk)
     END;
 
     chunk.data[chunk.count] := byte;
-    INC(chunk.count)
+    INC(chunk.count);
+
+    INC(list.length)
 END PushByte;
+
+
+PROCEDURE WriteToFile* (file: WR.FILE; list: BYTELIST);
+VAR
+    chunk: BYTECHUNK;
+
+BEGIN              
+    chunk := list.first(BYTECHUNK);
+    WHILE chunk # NIL DO
+        WR.Write(file, chunk.data, chunk.count);
+        chunk := chunk.next(BYTECHUNK)
+    END
+END WriteToFile;
 
 
 PROCEDURE CreateByteList* (): BYTELIST;
@@ -119,10 +140,11 @@ VAR
 BEGIN
     NEW(bytelist);
     list := LISTS.create(bytelist);
+    bytelist.length := 0;
 
     NEW(chunk);
     chunk.count := 0;
-    list.push(list, chunk)
+    LISTS.push(list, chunk)
 
     RETURN list(BYTELIST)
 END CreateByteList;
@@ -192,11 +214,13 @@ BEGIN
     IF chunk.count = LENOFINTCHUNK THEN
         NEW(chunk);
         chunk.count := 0;
-        list.push(list, chunk)
+        LISTS.push(list, chunk)
     END;
 
     chunk.data[chunk.count] := int;
-    INC(chunk.count)
+    INC(chunk.count);
+
+    INC(list.length)
 END PushInt;
 
 
@@ -209,13 +233,19 @@ VAR
 BEGIN
     NEW(intlist);
     list := LISTS.create(intlist);
+    intlist.length := 0;
 
     NEW(chunk);
     chunk.count := 0;
-    list.push(list, chunk)
+    LISTS.push(list, chunk)
 
     RETURN list(INTLIST)
 END CreateIntList;
+
+
+PROCEDURE Length* (list: ANYLIST): INTEGER;
+    RETURN list.length
+END Length;
 
 
 END CHUNKLISTS.

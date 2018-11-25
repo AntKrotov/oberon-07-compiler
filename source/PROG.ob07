@@ -315,11 +315,11 @@ BEGIN
             proc.processed := FALSE;
             proc.using := LISTS.create(NIL);
             procs := unit.program.procs;
-            procs.push(procs, proc);
+            LISTS.push(procs, proc);
             item.proc := proc
         END;
 
-        unit.idents.push(unit.idents, item)
+        LISTS.push(unit.idents, item)
     ELSE
         item := NIL
     END
@@ -348,7 +348,7 @@ BEGIN
         IF cur = NIL THEN
             NEW(proc);
             proc.proc := call_proc;
-            procs.push(procs, proc)
+            LISTS.push(procs, proc)
         END
     END
 END UseProc;
@@ -447,7 +447,7 @@ BEGIN
         item.name := NIL;
         item.typ  := idGUARD;
 
-        unit.idents.push(unit.idents, item)
+        LISTS.push(unit.idents, item)
     END
 
     RETURN res
@@ -468,11 +468,11 @@ BEGIN
         IF (del.typ = idVAR) & (del.offset = -1) THEN
             ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
         END;
-        unit.idents.delete(unit.idents, del)
+        LISTS.delete(unit.idents, del)
     END;
 
     IF (item # NIL) & (item.typ = idGUARD) THEN
-        unit.idents.delete(unit.idents, item)
+        LISTS.delete(unit.idents, item)
     END;
 
     DEC(unit.scopeLvl)
@@ -497,7 +497,7 @@ BEGIN
     newptr.linked     := FALSE;
     newptr.notRecord  := FALSE;
 
-    unit.frwPointers.push(unit.frwPointers, newptr)
+    LISTS.push(unit.frwPointers, newptr)
 END frwptr;
 
 
@@ -736,7 +736,7 @@ BEGIN
 
     unit.gscope := unit.idents.last(IDENT);
 
-    units.push(units, unit);
+    LISTS.push(units, unit);
 
     unit.scopeLvl := 0;
     unit.scopes[0] := NIL;
@@ -801,7 +801,7 @@ BEGIN
         field.type   := NIL;
         field.offset := self.size;
 
-        self.fields.push(self.fields, field)
+        LISTS.push(self.fields, field)
     END
 
     RETURN res
@@ -877,7 +877,7 @@ BEGIN
         param.type := NIL;
         param.vPar := vPar;
 
-        self.params.push(self.params, param)
+        LISTS.push(self.params, param)
     END
 
     RETURN res
@@ -1007,7 +1007,7 @@ BEGIN
         t.closed := TRUE
     END;
 
-    program.types.push(program.types, t)
+    LISTS.push(program.types, t)
 
     RETURN t
 END enterType;
@@ -1101,9 +1101,10 @@ END createSysUnit;
 
 PROCEDURE DelUnused* (program: PROGRAM; DelImport: DELIMPORT);
 VAR
-    proc:      PROC;
-    flag:      BOOLEAN;
-    beg, end:  LISTS.ITEM;
+    proc:   PROC;
+    flag:   BOOLEAN;
+    beg,
+    end:    LISTS.ITEM;
 
 
     PROCEDURE process (proc: PROC);

@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, ERRORS, MACHINE;
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, ERRORS, MACHINE, CONSOLE;
 
 
 CONST
@@ -22,6 +22,8 @@ CONST
 
     errASSERT = 1;  errPTR = 2;  errDIV  = 3;  errPROC = 4;
     errGUARD  = 5;  errIDX = 6;  errCASE = 7;  errCOPY = 8;
+
+    chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2;
 
 
 TYPE
@@ -38,6 +40,8 @@ TYPE
 VAR
 
     begcall, endcall: CODE.COMMAND;
+
+    checking: SET;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -1218,10 +1222,13 @@ BEGIN
     IF load THEN
         CODE.load(e.type.size)
     END;
-    label := CODE.NewLabel();
-    CODE.AddJmpCmd(CODE.opJNZ, label);
-    CODE.OnError(PARS.errlabel, pos.line, error);
-    CODE.SetLabel(label)
+
+    IF chkPTR IN checking THEN
+        label := CODE.NewLabel();
+        CODE.AddJmpCmd(CODE.opJNZ, label);
+        CODE.OnError(PARS.errlabel, pos.line, error);
+        CODE.SetLabel(label)
+    END
 END deref;
 
 
@@ -1286,12 +1293,18 @@ VAR
         last:   CODE.COMMAND;
 
     BEGIN
-        label := CODE.NewLabel();
-        CODE.AddCmd0(CODE.opCHKIDX2);
-        last := CODE.getlast();
-        last.label := label;
-        CODE.OnError(PARS.errlabel, pos.line, errIDX);
-        CODE.SetLabel(label);
+
+        IF chkIDX IN checking THEN
+            label := CODE.NewLabel();
+            CODE.AddCmd(CODE.opCHKIDX2, 0);
+            last := CODE.getlast();
+            last.label := label;
+            CODE.OnError(PARS.errlabel, pos.line, errIDX);
+            CODE.SetLabel(label)
+        ELSE
+            CODE.AddCmd(CODE.opCHKIDX2, -1)
+        END;
+
         type := PROG.OpenBase(e.type);
         IF type.size # 1 THEN
             CODE.AddCmd(CODE.opMULC, type.size)
@@ -1371,12 +1384,16 @@ BEGIN
                 END
             ELSE
                 IF e.type.length > 0 THEN
-                    label := CODE.NewLabel();
-                    CODE.AddCmd(CODE.opCHKIDX, e.type.length);
-                    last := CODE.getlast();
-                    last.label := label;
-                    CODE.OnError(PARS.errlabel, pos.line, errIDX);
-                    CODE.SetLabel(label);
+                    IF chkIDX IN checking THEN
+                        label := CODE.NewLabel();
+                        CODE.AddCmd(CODE.opCHKIDX, e.type.length);
+                        last := CODE.getlast();
+                        last.label := label;
+                        CODE.OnError(PARS.errlabel, pos.line, errIDX);
+                        CODE.SetLabel(label)
+                    ELSE
+                        CODE.AddCmd(CODE.opCHKIDX, -1)
+                    END;
                     IF e.type.base.size # 1 THEN
                         CODE.AddCmd(CODE.opMULC, e.type.base.size)
                     END;
@@ -1415,16 +1432,20 @@ BEGIN
         PARS.check(t.obj = eTYPE, parser, pos, 79);
 
         IF e.type.typ = PROG.tRECORD THEN
-            PARS.check(t.type.typ = PROG.tRECORD,  parser, pos, 80);
-            IF e.ident = NIL THEN
-                CODE.TypeGuard(FALSE, t.type.num, PARS.errlabel, pos.line, errGUARD)
-            ELSE
-                CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);
-                CODE.TypeGuard(TRUE, t.type.num, PARS.errlabel, pos.line, errGUARD)
-            END
+            PARS.check(t.type.typ = PROG.tRECORD, parser, pos, 80);
+            IF chkGUARD IN checking THEN
+                IF e.ident = NIL THEN 
+                    CODE.TypeGuard(CODE.opTYPEGD, t.type.num, PARS.errlabel, pos.line, errGUARD)
+                ELSE
+                    CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);
+                    CODE.TypeGuard(CODE.opTYPEGR, t.type.num, PARS.errlabel, pos.line, errGUARD)
+                END
+            END;
         ELSE
             PARS.check(t.type.typ = PROG.tPOINTER, parser, pos, 81);
-            CODE.TypeGuard(FALSE, t.type.base.num, PARS.errlabel, pos.line, errGUARD)
+            IF chkGUARD IN checking THEN
+                CODE.TypeGuard(CODE.opTYPEGP, t.type.base.num, PARS.errlabel, pos.line, errGUARD)
+            END
         END;
 
         PARS.check(PROG.isBaseOf(e.type, t.type), parser, pos, 82);
@@ -2609,7 +2630,7 @@ VAR
             END
         END;
 
-        labels.push(labels, label)
+        LISTS.push(labels, label)
     END LabelRange;
 
 
@@ -2952,11 +2973,12 @@ BEGIN
 END setrtl;
 
 
-PROCEDURE do* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN);
+PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
 VAR
     parser:   PARS.PARSER;
 
 BEGIN
+    checking := chk;
     CODE.init;
 
     parser := PARS.create(path, lib_path, ext, StatSeq, expression, designator, chkreturn);
@@ -2990,10 +3012,10 @@ BEGIN
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
     CODE.codes.gsize := PARS.program.gsize;
-    
+
     X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
 
-END do;
+END compile;
 
 
 END STATEMENTS.

@@ -16,13 +16,7 @@ TYPE
 
     rLIST = RECORD
 
-        first*, last*: ITEM;
-
-        push*:    PROCEDURE (list: LIST; item: ITEM);
-        insert*:  PROCEDURE (list: LIST; cur, nov: ITEM);
-        insertL*: PROCEDURE (list: LIST; cur, nov: ITEM);
-        delete*:  PROCEDURE (list: LIST; item: ITEM);
-        count*:   PROCEDURE (list: LIST): INTEGER
+        first*, last*: ITEM
 
     END;
 
@@ -33,7 +27,7 @@ TYPE
     END;
 
 
-PROCEDURE push (list: LIST; item: ITEM);
+PROCEDURE push* (list: LIST; item: ITEM);
 BEGIN
     ASSERT(list # NIL);
     ASSERT(item # NIL);
@@ -54,7 +48,7 @@ BEGIN
 END push;
 
 
-PROCEDURE insertR (list: LIST; cur, nov: ITEM);
+PROCEDURE insert* (list: LIST; cur, nov: ITEM);
 VAR
     next: ITEM;
 
@@ -71,13 +65,13 @@ BEGIN
         cur.next := nov;
         nov.prev := cur
     ELSE
-        list.push(list, nov)
+        push(list, nov)
     END
 
-END insertR;
+END insert;
 
 
-PROCEDURE insertL (list: LIST; cur, nov: ITEM);
+PROCEDURE insertL* (list: LIST; cur, nov: ITEM);
 VAR
     prev: ITEM;
 
@@ -93,7 +87,7 @@ BEGIN
         nov.prev := prev;
         cur.prev := nov;
         nov.next := cur
-    ELSE                
+    ELSE
         nov.prev := NIL;
         cur.prev := nov;
         nov.next := cur;
@@ -103,7 +97,7 @@ BEGIN
 END insertL;
 
 
-PROCEDURE delete (list: LIST; item: ITEM);
+PROCEDURE delete* (list: LIST; item: ITEM);
 VAR
     prev, next: ITEM;
 
@@ -132,7 +126,7 @@ BEGIN
 END delete;
 
 
-PROCEDURE count (list: LIST): INTEGER;
+PROCEDURE count* (list: LIST): INTEGER;
 VAR
     item: ITEM;
     res:  INTEGER;
@@ -158,13 +152,7 @@ BEGIN
     END;
 
     list.first  := NIL;
-    list.last   := NIL;
-
-    list.push    := push;
-    list.insertL := insertL;
-    list.insert  := insertR;
-    list.delete  := delete;
-    list.count   := count
+    list.last   := NIL
 
     RETURN list
 END create;
