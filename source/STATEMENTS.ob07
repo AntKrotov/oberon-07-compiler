@@ -1391,8 +1391,6 @@ BEGIN
                         last.label := label;
                         CODE.OnError(PARS.errlabel, pos.line, errIDX);
                         CODE.SetLabel(label)
-                    ELSE
-                        CODE.AddCmd(CODE.opCHKIDX, -1)
                     END;
                     IF e.type.base.size # 1 THEN
                         CODE.AddCmd(CODE.opMULC, e.type.base.size)
@@ -1434,7 +1432,7 @@ BEGIN
         IF e.type.typ = PROG.tRECORD THEN
             PARS.check(t.type.typ = PROG.tRECORD, parser, pos, 80);
             IF chkGUARD IN checking THEN
-                IF e.ident = NIL THEN 
+                IF e.ident = NIL THEN
                     CODE.TypeGuard(CODE.opTYPEGD, t.type.num, PARS.errlabel, pos.line, errGUARD)
                 ELSE
                     CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);

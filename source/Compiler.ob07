@@ -7,7 +7,7 @@
 
 MODULE Compiler;
 
-IMPORT STATEMENTS, TARGETS, PARS, UTILS, PATHS, CONSOLE, ERRORS, STRINGS, VER, WRITER;
+IMPORT ST := STATEMENTS, TARGETS, PARS, UTILS, PATHS, CONSOLE, ERRORS, STRINGS, VER, WRITER;
 
 
 CONST
@@ -84,11 +84,11 @@ BEGIN
                 WHILE param[j] # 0X DO
 
                     IF    param[j] = "p" THEN
-                        EXCL(checking, STATEMENTS.chkPTR)
+                        EXCL(checking, ST.chkPTR)
                     ELSIF param[j] = "t" THEN
-                        EXCL(checking, STATEMENTS.chkGUARD)
+                        EXCL(checking, ST.chkGUARD)
                     ELSIF param[j] = "i" THEN
-                        EXCL(checking, STATEMENTS.chkIDX)
+                        EXCL(checking, ST.chkIDX)
                     END;
 
                     INC(j)
@@ -151,7 +151,7 @@ BEGIN
     Version := 65536;
     pic := FALSE;
     reloc := FALSE;
-    checking := {STATEMENTS.chkIDX, STATEMENTS.chkGUARD, STATEMENTS.chkPTR};
+    checking := {ST.chkIDX, ST.chkGUARD, ST.chkPTR};
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
@@ -224,7 +224,7 @@ BEGIN
 
     keys(StackSize, BaseAdr, Version, pic, reloc, checking);
 
-    STATEMENTS.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
+    ST.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
 
     time := UTILS.GetTickCount() - UTILS.time;
 

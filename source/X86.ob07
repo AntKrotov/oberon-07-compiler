@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS, CONSOLE;
 
 
 CONST
@@ -357,14 +357,8 @@ END call;
 
 
 PROCEDURE CallRTL (proc: INTEGER);
-VAR
-    c: CALL;
-
 BEGIN
-    NEW(c);
-    c.label := CODE.codes.rtl[proc];
-    c.short := TRUE;
-    LISTS.push(CodeList, c)
+    call(CODE.codes.rtl[proc])
 END CallRTL;
 
 
@@ -1307,20 +1301,20 @@ BEGIN
 
         |CODE.opCHKIDX:
             UnOp(reg1);
-            IF cmd.param # -1 THEN
-                cmprc(reg1, cmd.param);
-                jcc(jb, cmd.label)
-            END
+            cmprc(reg1, cmd.param);
+            jcc(jb, cmd.label)
 
         |CODE.opCHKIDX2:
             BinOp(reg1, reg2);
             IF cmd.param # -1 THEN
                 cmprr(reg2, reg1);
-            END;
-            mov(reg1, reg2);
-            drop;
-            IF cmd.param # -1 THEN
+                mov(reg1, reg2);
+                drop;
                 jcc(jb, cmd.label)
+            ELSE
+                INCL(R.regs, reg1);
+                DEC(R.top);
+                R.stk[R.top] := reg2
             END
 
         |CODE.opLEN:
@@ -1899,20 +1893,17 @@ BEGIN
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGP:
-            UnOp(reg2);
-            reg1 := REG.GetAnyReg(R);
-            mov(reg1, reg2);
-            PushAll(1);
+            UnOp(reg1);
+            PushAll(0);
+            push(reg1);
             pushc(cmd.param);
             CallRTL(CODE._guard);
             ASSERT(REG.GetReg(R, eax))
-            
+
         |CODE.opTYPEGD:
-            UnOp(reg2);
-            reg1 := REG.GetAnyReg(R);
-            mov(reg1, reg2); 
-            OutByte3(08BH, 040H + reg1 * 9, 0FCH);  // mov reg1, dword[reg1 - 4]
-            PushAll(1);
+            UnOp(reg1);
+            PushAll(0);
+            OutByte3(0FFH, 070H + reg1, 0FCH);  // push dword[reg1 - 4]
             pushc(cmd.param);
             CallRTL(CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
