@@ -24,6 +24,7 @@ UTF-8 с BOM-сигнатурой.
       -pic генерировать позиционно-независимый код
       -reloc добавить таблицу перемещений (relocation)
       -ver <major.minor> версия программы (только для obj)
+      -nochk <"pti"> отключить проверку указателей, типов, индексов
 
       параметр -base выравнивается по границе 64 кб
       параметры -base и -reloc игнорируются для kos
@@ -31,11 +32,24 @@ UTF-8 с BOM-сигнатурой.
       если указан ключ -pic, то ключ -reloc игнорируется
       для dll необходимо указать ключ -pic либо -reloc
 
+      параметр -nochk задается в виде строки из символов:
+      "p" - указатели
+      "t" - типы
+      "i" - индексы
+      в любом порядке. 
+      Наличие в строке того или иного символа отключает 
+      соответствующую проверку.
+
+      Например: -nochk it - отключить проверку индексов и охрану типа,
+      но сохранить проверку указателей и процедурных переменных на NIL.
+      -nochk pit - отключить все отключаемые проверки.
+
   Например:
 
   Compiler.exe "C:\example.ob07" "C:\example.exe" con -reloc -stk 1
   Compiler.exe "C:\example.ob07" "C:\example.dll" dll -pic
   Compiler.exe "C:\example.ob07" "C:\example.exe" gui -base 1024 -stk 4
+  Compiler.exe "C:\example.ob07" "C:\example.exe" con -nochk pti
   Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.kex" kos -stk 2
   Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.obj" obj -ver 2.7
 
@@ -177,10 +191,10 @@ UTF-8 с BOM-сигнатурой.
         Системные флаги
 
   При объявлении процедурных типов и глобальных процедур, после ключевого
-слова PROCEDURE может быть указан флаг соглашения вызова: [stdcall], [cdecl],
-[winapi] или [kosapi]. Например:
+слова PROCEDURE может быть указан флаг соглашения вызова: [stdcall], 
+[ccall] (или [cdecl]), [winapi], [kosapi]. Например:
 
-        PROCEDURE [cdecl] MyProc (x, y, z: INTEGER): INTEGER;
+        PROCEDURE [ccall] MyProc (x, y, z: INTEGER): INTEGER;
 
   Если указан флаг [winapi] или [kosapi], то принимается соглашение stdcall и
 процедуру-функцию можно вызвать как собственно процедуру, вне выражения.
@@ -287,7 +301,7 @@ Oberon-реализациях выполнение такой операции приводит к ошибке времени
 
   PROCEDURE [callconv, "library", "function"] proc_name (FormalParam): Type;
 
-  - callconv -- соглашение вызова (stdcall, cdecl, winapi, kosapi)
+  - callconv -- соглашение вызова (stdcall, ccall (cdecl), winapi, kosapi)
   - "library" -- имя файла динамической библиотеки
   - "function" -- имя импортируемой процедуры
 
