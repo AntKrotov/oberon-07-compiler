@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, PROG, STRINGS, CHL := CHUNKLISTS;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS;
 
 
 CONST
@@ -79,7 +79,7 @@ CONST
     opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
     opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
     opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
-    
+
     opTYPEGD* = 235;
 
 
@@ -119,14 +119,17 @@ CONST
 
 TYPE
 
-    COMMAND* = POINTER TO rCOMMAND;
+    COMMAND* = POINTER TO RECORD (LISTS.ITEM)
 
-    rCOMMAND = RECORD (LISTS.ITEM)
-
-        opcode*:  BYTE;
+        opcode*:  INTEGER;
         label*:   INTEGER;
         param*:   INTEGER;
-        param2*:  INTEGER;
+        param2*:  INTEGER
+
+    END;
+
+    COMMANDF* = POINTER TO RECORD (COMMAND)
+
         float*:   REAL
 
     END;
@@ -174,11 +177,16 @@ TYPE
         data*:      CHL.BYTELIST;
         dmin*:      INTEGER;
         lcount*:    INTEGER;
-        gsize*:     INTEGER;
+        bss*:       INTEGER;
         rtl*:       ARRAY 32 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
-        wcharoffs:  ARRAY 65536 OF INTEGER
+        wcharoffs:  ARRAY 65536 OF INTEGER;
+
+        fregs:      INTEGER;
+        wstr:       ARRAY 4*1024 OF WCHAR;
+
+        errlabel*:  INTEGER
 
     END;
 
@@ -186,12 +194,6 @@ TYPE
 VAR
 
     codes*: CODES;
-
-    commands:  LISTS.LIST;
-
-    fregs: INTEGER;
-
-    wstr: ARRAY 16*1024 OF WCHAR;
 
 
 PROCEDURE getlast* (): COMMAND;
@@ -260,12 +262,12 @@ BEGIN
         INC(res)
     END;
 
-    n := STRINGS.Utf8To16(s, wstr);
+    n := STRINGS.Utf8To16(s, codes.wstr);
 
     i := 0;
     WHILE i < n DO
-        PutByte(codes, ORD(wstr[i]) MOD 256);
-        PutByte(codes, ORD(wstr[i]) DIV 256);
+        PutByte(codes, ORD(codes.wstr[i]) MOD 256);
+        PutByte(codes, ORD(codes.wstr[i]) DIV 256);
         INC(i)
     END;
 
@@ -350,7 +352,7 @@ END AddRec;
 
 PROCEDURE insert (cur, nov: COMMAND);
 BEGIN
-    LISTS.insert(commands, cur, nov);
+    LISTS.insert(codes.commands, cur, nov);
     codes.last := nov
 END insert;
 
@@ -380,6 +382,13 @@ BEGIN
 END SetLabel;
 
 
+PROCEDURE SetErrLabel*;
+BEGIN
+    codes.errlabel := NewLabel();
+    SetLabel(codes.errlabel)
+END SetErrLabel;
+
+
 PROCEDURE SetProcLabel* (label: INTEGER);
 BEGIN
     AddCmd(opPROC, label)
@@ -394,7 +403,7 @@ END AddCmd0;
 
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
-    LISTS.delete(commands, cmd)
+    LISTS.delete(codes.commands, cmd)
 END delete;
 
 
@@ -426,21 +435,21 @@ BEGIN
 END AddJmpCmd;
 
 
-PROCEDURE OnError* (errlabel: INTEGER; line, error: INTEGER);
+PROCEDURE OnError* (line, error: INTEGER);
 BEGIN
     AddCmd(opERRC, LSL(line, 4) + error);
-    AddJmpCmd(opJMP, errlabel)
+    AddJmpCmd(opJMP, codes.errlabel)
 END OnError;
 
 
-PROCEDURE TypeGuard* (op, t: INTEGER; errlabel: INTEGER; line, error: INTEGER);
+PROCEDURE TypeGuard* (op, t: INTEGER; line, error: INTEGER);
 VAR
     label: INTEGER;
 BEGIN
     AddCmd(op, t);
     label := NewLabel();
     AddJmpCmd(opJE, label);
-    OnError(errlabel, line, error);
+    OnError(line, error);
     SetLabel(label)
 END TypeGuard;
 
@@ -467,8 +476,8 @@ END New;
 PROCEDURE fcmp* (opcode: BYTE);
 BEGIN
     AddCmd(opcode, 0);
-    DEC(fregs, 2);
-    ASSERT(fregs >= 0)
+    DEC(codes.fregs, 2);
+    ASSERT(codes.fregs >= 0)
 END fcmp;
 
 
@@ -746,40 +755,40 @@ END SysPut;
 PROCEDURE savef*;
 BEGIN
     AddCmd0(opSAVEF);
-    DEC(fregs);
-    ASSERT(fregs >= 0)
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
 END savef;
 
 
 PROCEDURE pushf*;
 BEGIN
     AddCmd0(opPUSHF);
-    DEC(fregs);
-    ASSERT(fregs >= 0)
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
 END pushf;
 
 
 PROCEDURE loadf* (): BOOLEAN;
 BEGIN
     AddCmd0(opLOADF);
-    INC(fregs)
-    RETURN fregs < FREGS
+    INC(codes.fregs)
+    RETURN codes.fregs < FREGS
 END loadf;
 
 
 PROCEDURE inf* (): BOOLEAN;
 BEGIN
     AddCmd0(opINF);
-    INC(fregs)
-    RETURN fregs < FREGS
+    INC(codes.fregs)
+    RETURN codes.fregs < FREGS
 END inf;
 
 
 PROCEDURE fbinop* (opcode: BYTE);
 BEGIN
     AddCmd0(opcode);
-    DEC(fregs);
-    ASSERT(fregs > 0)
+    DEC(codes.fregs);
+    ASSERT(codes.fregs > 0)
 END fbinop;
 
 
@@ -803,16 +812,16 @@ END abs;
 PROCEDURE floor*;
 BEGIN
     AddCmd0(opFLOOR);
-    DEC(fregs);
-    ASSERT(fregs >= 0)
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
 END floor;
 
 
 PROCEDURE flt* (): BOOLEAN;
 BEGIN
     AddCmd0(opFLT);
-    INC(fregs)
-    RETURN fregs < FREGS
+    INC(codes.fregs)
+    RETURN codes.fregs < FREGS
 END flt;
 
 
@@ -874,11 +883,16 @@ END len;
 
 
 PROCEDURE Float* (r: REAL);
+VAR
+    cmd: COMMANDF;
+
 BEGIN
-    AddCmd0(opCONSTF);
-    codes.last.float := r;
-    INC(fregs);
-    ASSERT(fregs <= FREGS)
+    NEW(cmd);
+    cmd.opcode := opCONSTF;
+    cmd.float := r;
+    insert(codes.last, cmd);
+    INC(codes.fregs);
+    ASSERT(codes.fregs <= FREGS)
 END Float;
 
 
@@ -886,33 +900,33 @@ PROCEDURE precall* (flt: BOOLEAN): INTEGER;
 VAR
     res: INTEGER;
 BEGIN
-    res := fregs;
+    res := codes.fregs;
     AddCmd(opPRECALL, res);
     codes.last.param2 := ORD(flt);
-    fregs := 0
+    codes.fregs := 0
     RETURN res
 END precall;
 
 
-PROCEDURE resf* (_fregs: INTEGER): BOOLEAN;
+PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
 BEGIN
-    AddCmd(opRESF, _fregs);
-    fregs := _fregs + 1
-    RETURN fregs < FREGS
+    AddCmd(opRESF, fregs);
+    codes.fregs := fregs + 1
+    RETURN codes.fregs < FREGS
 END resf;
 
 
-PROCEDURE res* (_fregs: INTEGER);
+PROCEDURE res* (fregs: INTEGER);
 BEGIN
-    AddCmd(opRES, _fregs);
-    fregs := _fregs
+    AddCmd(opRES, fregs);
+    codes.fregs := fregs
 END res;
 
 
 PROCEDURE retf*;
 BEGIN
-    DEC(fregs);
-    ASSERT(fregs = 0)
+    DEC(codes.fregs);
+    ASSERT(codes.fregs = 0)
 END retf;
 
 
@@ -1030,16 +1044,15 @@ BEGIN
     codes.types    := CHL.CreateIntList();
     codes.data     := CHL.CreateByteList();
 
-    commands := codes.commands;
-    NEW(cmd); cmd.opcode := opNOP; LISTS.push(commands, cmd);
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
     codes.last := cmd;
-    NEW(cmd); cmd.opcode := opNOP; LISTS.push(commands, cmd);
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
 
     AddRec(0);
 
     codes.lcount := 0;
 
-    fregs := 0;
+    codes.fregs := 0;
 
     FOR i := 0 TO LEN(codes.charoffs) - 1 DO
         codes.charoffs[i] := -1
@@ -1048,6 +1061,7 @@ BEGIN
     FOR i := 0 TO LEN(codes.wcharoffs) - 1 DO
         codes.wcharoffs[i] := -1
     END
+
 END init;
 
 

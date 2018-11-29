@@ -28,13 +28,6 @@ TYPE
     SH = PE32.IMAGE_SECTION_HEADER;
 
 
-VAR
-
-    FileHeader: FH;
-
-    flat, data, edata, idata, bss: SH;
-
-
 PROCEDURE WriteReloc (File: WR.FILE; VirtualAddress, SymbolTableIndex, Type: INTEGER);
 BEGIN
     WR.Write32LE(File, VirtualAddress);
@@ -116,7 +109,11 @@ VAR
 
     ExpCount: INTEGER;
 
-    icount, ecount, dcount, ccount: INTEGER;
+    icount, ecount, dcount, ccount: INTEGER; 
+    
+    FileHeader: FH;
+
+    flat, data, edata, idata, bss: SH;
 
 
     PROCEDURE ICount (ImportTable: CHL.INTLIST; ILen: INTEGER): INTEGER;
@@ -237,7 +234,7 @@ BEGIN
     PE32.WriteSectionHeader(File, edata);
     PE32.WriteSectionHeader(File, idata);
     PE32.WriteSectionHeader(File, bss);
-    
+
     CHL.WriteToFile(File, program.code);
     CHL.WriteToFile(File, program.data);
 
@@ -258,8 +255,8 @@ BEGIN
 
     FOR i := 0 TO ILen - 1 DO
         WR.Write32LE(File, CHL.GetInt(ImportTable, i))
-    END; 
-    
+    END;
+
     CHL.WriteToFile(File, program.import);
 
     Reloc(program, File);

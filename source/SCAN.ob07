@@ -7,7 +7,7 @@
 
 MODULE SCAN;
 
-IMPORT TEXTDRV, BTREES, ARITH, S := STRINGS;
+IMPORT TEXTDRV, BTREES, ARITH, S := STRINGS, LISTS;
 
 
 CONST
@@ -64,7 +64,7 @@ TYPE
 
         s*:              LEXSTR;
         length*:         INTEGER;
-        typ*:            INTEGER;
+        sym*:            INTEGER;
         pos*:            POSITION;
         ident*:          IDENT;
         string*:         IDENT;
@@ -75,12 +75,10 @@ TYPE
 
     END;
 
-    SCANNER* = POINTER TO RECORD
+    SCANNER* = POINTER TO RECORD (LISTS.ITEM)
 
         text:            TEXTDRV.TEXT;
-        range:           BOOLEAN;
-
-        getlex*:         PROCEDURE (scanner: SCANNER; VAR lex: LEX)
+        range:           BOOLEAN
 
     END;
 
@@ -100,6 +98,8 @@ VAR
 
     END;
 
+    scanners: LISTS.LIST;
+
 
 PROCEDURE nodecmp (a, b: BTREES.DATA): INTEGER;
     RETURN ORD(a(IDENT).s > b(IDENT).s) - ORD(a(IDENT).s < b(IDENT).s)
@@ -115,7 +115,7 @@ BEGIN
     R := LEN(vocabulary.KW) - 1;
     M := (L + R) DIV 2;
 
-    WHILE R - L > 1 DO
+    WHILE L # M DO
         IF lex.s > vocabulary.KW[M] THEN
             L := M;
             M := (L + R) DIV 2
@@ -123,18 +123,20 @@ BEGIN
             R := M;
             M := (L + R) DIV 2
         ELSE
-            lex.typ := lxKW + M;
+            lex.sym := lxKW + M;
             L := M;
             R := M
         END
     END;
 
-    IF lex.s = vocabulary.KW[L] THEN
-        lex.typ := lxKW + L
-    END;
+    IF L # R THEN
+        IF lex.s = vocabulary.KW[L] THEN
+            lex.sym := lxKW + L
+        END;
 
-    IF lex.s = vocabulary.KW[R] THEN
-        lex.typ := lxKW + R
+        IF lex.s = vocabulary.KW[R] THEN
+            lex.sym := lxKW + R
+        END
     END
 
 END key;
@@ -177,24 +179,23 @@ VAR
     c: CHAR;
 
 BEGIN
-    ASSERT(S.letter(text.peak(text)));
-
     c := text.peak(text);
+    ASSERT(S.letter(c));
 
     WHILE S.letter(c) OR S.digit(c) DO
         putchar(lex, c);
-        text.next(text);
+        text.nextc(text);
         c := text.peak(text)
     END;
 
     IF lex.over THEN
-        lex.typ := lxERROR06
+        lex.sym := lxERROR06
     ELSE
-        lex.typ := lxIDENT;
+        lex.sym := lxIDENT;
         key(lex)
     END;
 
-    IF lex.typ = lxIDENT THEN
+    IF lex.sym = lxIDENT THEN
         lex.ident := enterid(lex.s)
     END
 
@@ -208,80 +209,81 @@ VAR
     error: INTEGER;
 
 BEGIN
-    ASSERT(S.digit(text.peak(text)));
+    c := text.peak(text);
+    ASSERT(S.digit(c));
+
     error := 0;
 
     range := FALSE;
 
-    lex.typ := lxINTEGER;
+    lex.sym := lxINTEGER;
     hex := FALSE;
-    c := text.peak(text);
 
     WHILE S.digit(c) DO
         putchar(lex, c);
-        text.next(text);
+        text.nextc(text);
         c := text.peak(text)
     END;
 
     WHILE S.hexdigit(c) DO
         putchar(lex, c);
-        text.next(text);
+        text.nextc(text);
         c := text.peak(text);
         hex := TRUE
     END;
 
     IF c = "H" THEN
         putchar(lex, c);
-        text.next(text);
-        lex.typ := lxHEX
+        text.nextc(text);
+        lex.sym := lxHEX
 
     ELSIF c = "X" THEN
         putchar(lex, c);
-        text.next(text);
-        lex.typ := lxCHAR
+        text.nextc(text);
+        lex.sym := lxCHAR
 
     ELSIF c = "." THEN
 
         IF hex THEN
-            lex.typ := lxERROR01
+            lex.sym := lxERROR01
         ELSE
 
-            text.next(text);
+            text.nextc(text);
             c := text.peak(text);
 
             IF c # "." THEN
                 putchar(lex, ".");
-                lex.typ := lxFLOAT
+                lex.sym := lxFLOAT
             ELSE
-                lex.typ := lxINTEGER;
+                lex.sym := lxINTEGER;
                 range := TRUE
             END;
 
             WHILE S.digit(c) DO
                 putchar(lex, c);
-                text.next(text);
+                text.nextc(text);
                 c := text.peak(text)
             END;
 
             IF c = "E" THEN
 
                 putchar(lex, c);
-                text.next(text);
+                text.nextc(text);
                 c := text.peak(text);
                 IF (c = "+") OR (c = "-") THEN
                     putchar(lex, c);
-                    text.next(text);
+                    text.nextc(text);
                     c := text.peak(text)
                 END;
 
                 IF S.digit(c) THEN
                     WHILE S.digit(c) DO
                         putchar(lex, c);
-                        text.next(text);
+                        text.nextc(text);
                         c := text.peak(text)
                     END
                 ELSE
-                    lex.typ := lxERROR02
+                    lex.sym := lxERROR02
                 END
 
             END
@@ -291,30 +293,30 @@ BEGIN
     ELSE
 
         IF hex THEN
-            lex.typ := lxERROR01
+            lex.sym := lxERROR01
         END
 
     END;
 
-    IF lex.over & (lex.typ >= 0) THEN
-        lex.typ := lxERROR07
+    IF lex.over & (lex.sym >= 0) THEN
+        lex.sym := lxERROR07
     END;
 
-    IF lex.typ = lxINTEGER THEN
+    IF lex.sym = lxINTEGER THEN
         ARITH.iconv(lex.s, lex.value, error)
-    ELSIF (lex.typ = lxHEX) OR (lex.typ = lxCHAR) THEN
+    ELSIF (lex.sym = lxHEX) OR (lex.sym = lxCHAR) THEN
         ARITH.hconv(lex.s, lex.value, error)
-    ELSIF lex.typ = lxFLOAT THEN
+    ELSIF lex.sym = lxFLOAT THEN
         ARITH.fconv(lex.s, lex.value, error)
     END;
 
     CASE error OF
     |0:
-    |1: lex.typ := lxERROR08
-    |2: lex.typ := lxERROR09
-    |3: lex.typ := lxERROR10
-    |4: lex.typ := lxERROR11
-    |5: lex.typ := lxERROR12
+    |1: lex.sym := lxERROR08
+    |2: lex.sym := lxERROR09
+    |3: lex.sym := lxERROR10
+    |4: lex.sym := lxERROR11
+    |5: lex.sym := lxERROR12
     END
 
 END number;
@@ -331,35 +333,35 @@ BEGIN
 
     ASSERT((quot = '"') OR (quot = "'"));
 
-    text.next(text);
+    text.nextc(text);
     c := text.peak(text);
     c1 := c;
     n := 0;
 
     WHILE (c # quot) & (c # 0X) & ~text.eol & ~text.eof DO
         putchar(lex, c);
-        text.next(text);
+        text.nextc(text);
         c := text.peak(text);
         INC(n)
     END;
 
     IF c = quot THEN
-        text.next(text);
+        text.nextc(text);
         IF lex.over THEN
-            lex.typ := lxERROR05
+            lex.sym := lxERROR05
         ELSE
             IF n # 1 THEN
-                lex.typ := lxSTRING
+                lex.sym := lxSTRING
             ELSE
-                lex.typ := lxCHAR;
+                lex.sym := lxCHAR;
                 ARITH.setChar(lex.value, ORD(c1))
             END
         END
     ELSE
-        lex.typ := lxERROR03
+        lex.sym := lxERROR03
     END;
 
-    IF lex.typ = lxSTRING THEN
+    IF lex.sym = lxSTRING THEN
         lex.string := enterid(lex.s);
         lex.value.typ := ARITH.tSTRING;
         lex.value.string := lex.string
@@ -380,7 +382,7 @@ BEGIN
     REPEAT
 
         c := text.peak(text);
-        text.next(text);
+        text.nextc(text);
 
         IF c = "*" THEN
             IF cond = 1 THEN
@@ -417,135 +419,135 @@ BEGIN
     END;
 
     putchar(lex, c);
-    text.next(text);
+    text.nextc(text);
 
     CASE c OF
     |"+":
-        lex.typ := lxPLUS
+        lex.sym := lxPLUS
 
     |"-":
-        lex.typ := lxMINUS
+        lex.sym := lxMINUS
 
     |"*":
-        lex.typ := lxMUL
+        lex.sym := lxMUL
 
     |"/":
-        lex.typ := lxSLASH;
+        lex.sym := lxSLASH;
 
         IF text.peak(text) = "/" THEN
-            lex.typ := lxCOMMENT;
+            lex.sym := lxCOMMENT;
             REPEAT
-                text.next(text)
+                text.nextc(text)
             UNTIL text.eol OR text.eof
         END
 
     |"~":
-        lex.typ := lxNOT
+        lex.sym := lxNOT
 
     |"&":
-        lex.typ := lxAND
+        lex.sym := lxAND
 
     |".":
         IF range THEN
 
             putchar(lex, ".");
-            lex.typ := lxRANGE;
+            lex.sym := lxRANGE;
             range := FALSE;
             DEC(lex.pos.col)
 
         ELSE
 
-            lex.typ := lxPOINT;
+            lex.sym := lxPOINT;
             c := text.peak(text);
 
             IF c = "." THEN
-                lex.typ := lxRANGE;
+                lex.sym := lxRANGE;
                 putchar(lex, c);
-                text.next(text)
+                text.nextc(text)
             END
 
         END
 
     |",":
-        lex.typ := lxCOMMA
+        lex.sym := lxCOMMA
 
     |";":
-        lex.typ := lxSEMI
+        lex.sym := lxSEMI
 
     |"|":
-        lex.typ := lxBAR
+        lex.sym := lxBAR
 
     |"(":
-        lex.typ := lxLROUND;
+        lex.sym := lxLROUND;
         c := text.peak(text);
 
         IF c = "*" THEN
-            lex.typ := lxCOMMENT;
+            lex.sym := lxCOMMENT;
             putchar(lex, c);
-            text.next(text);
+            text.nextc(text);
             comment(text)
         END
 
     |"[":
-        lex.typ := lxLSQUARE
+        lex.sym := lxLSQUARE
 
     |"{":
-        lex.typ := lxLCURLY
+        lex.sym := lxLCURLY
 
     |"^":
-        lex.typ := lxCARET
+        lex.sym := lxCARET
 
     |"=":
-        lex.typ := lxEQ
+        lex.sym := lxEQ
 
     |"#":
-        lex.typ := lxNE
+        lex.sym := lxNE
 
     |"<":
-        lex.typ := lxLT;
+        lex.sym := lxLT;
         c := text.peak(text);
 
         IF c = "=" THEN
-            lex.typ := lxLE;
+            lex.sym := lxLE;
             putchar(lex, c);
-            text.next(text)
+            text.nextc(text)
         END
 
     |">":
-        lex.typ := lxGT;
+        lex.sym := lxGT;
         c := text.peak(text);
 
         IF c = "=" THEN
-            lex.typ := lxGE;
+            lex.sym := lxGE;
             putchar(lex, c);
-            text.next(text)
+            text.nextc(text)
         END
 
     |":":
-        lex.typ := lxCOLON;
+        lex.sym := lxCOLON;
         c := text.peak(text);
 
         IF c = "=" THEN
-            lex.typ := lxASSIGN;
+            lex.sym := lxASSIGN;
             putchar(lex, c);
-            text.next(text)
+            text.nextc(text)
         END
 
     |")":
-        lex.typ := lxRROUND
+        lex.sym := lxRROUND
 
     |"]":
-        lex.typ := lxRSQUARE
+        lex.sym := lxRSQUARE
 
     |"}":
-        lex.typ := lxRCURLY
+        lex.sym := lxRCURLY
 
     END
 
 END delimiter;
 
 
-PROCEDURE getlex (scanner: SCANNER; VAR lex: LEX);
+PROCEDURE Next* (scanner: SCANNER; VAR lex: LEX);
 VAR
     c: CHAR;
     text: TEXTDRV.TEXT;
@@ -558,13 +560,13 @@ BEGIN
         c := text.peak(text);
 
         WHILE S.space(c) DO
-            text.next(text);
+            text.nextc(text);
             c := text.peak(text)
         END;
 
         lex.s[0]     := 0X;
         lex.length   := 0;
-        lex.typ      := lxUNDEF;
+        lex.sym      := lxUNDEF;
         lex.pos.line := text.line;
         lex.pos.col  := text.col;
         lex.ident    := NIL;
@@ -579,25 +581,42 @@ BEGIN
         ELSIF vocabulary.delimiters[ORD(c)] THEN
             delimiter(text, lex, scanner.range)
         ELSIF c = 0X THEN
-            lex.typ := lxEOF;
+            lex.sym := lxEOF;
             IF text.eof THEN
                 INC(lex.pos.col)
             END
         ELSE
             putchar(lex, c);
-            text.next(text);
-            lex.typ := lxERROR04
+            text.nextc(text);
+            lex.sym := lxERROR04
         END;
 
-        IF lex.typ < 0 THEN
-            lex.error := -lex.typ
+        IF lex.sym < 0 THEN
+            lex.error := -lex.sym
         ELSE
             lex.error := 0
         END
 
-    UNTIL lex.typ # lxCOMMENT
+    UNTIL lex.sym # lxCOMMENT
 
-END getlex;
+END Next;
+
+
+PROCEDURE NewScanner (): SCANNER;
+VAR
+    scan: SCANNER;
+    s:    LISTS.ITEM;
+
+BEGIN
+    s := LISTS.pop(scanners);
+    IF s = NIL THEN
+        NEW(scan)
+    ELSE
+        scan := s(SCANNER)
+    END
+
+    RETURN scan
+END NewScanner;
 
 
 PROCEDURE open* (name: ARRAY OF CHAR): SCANNER;
@@ -608,10 +627,9 @@ VAR
 BEGIN
     text := TEXTDRV.create();
     IF text.open(text, name) THEN
-        NEW(scanner);
+        scanner := NewScanner();
         scanner.text   := text;
-        scanner.range  := FALSE;
-        scanner.getlex := getlex
+        scanner.range  := FALSE
     ELSE
         scanner := NIL;
         TEXTDRV.destroy(text)
@@ -627,7 +645,9 @@ BEGIN
         IF scanner.text # NIL THEN
             TEXTDRV.destroy(scanner.text)
         END;
-        DISPOSE(scanner)
+
+        LISTS.push(scanners, scanner);
+        scanner := NIL
     END
 END close;
 
@@ -644,6 +664,7 @@ VAR
     END enterkw;
 
 BEGIN
+    scanners := LISTS.create(NIL);
 
     FOR i := 0 TO 255 DO
         vocabulary.delimiters[i] := FALSE
@@ -651,7 +672,7 @@ BEGIN
 
     delim := "+-*/~&.,;|([{^=#<>:)]}";
 
-    FOR i := 0 TO 21 DO
+    FOR i := 0 TO LEN(delim) - 2 DO
         vocabulary.delimiters[ORD(delim[i])] := TRUE
     END;
 

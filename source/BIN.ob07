@@ -100,6 +100,9 @@ END create;
 
 PROCEDURE SetParams* (program: PROGRAM; bss, stack: INTEGER; vmajor, vminor: WCHAR);
 BEGIN
+    IF bss = 0 THEN
+        bss := 4
+    END;
     program.bss    := bss;
     program.stack  := stack;
     program.vmajor := vmajor;

@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, ERRORS, MACHINE, CONSOLE;
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, ERRORS, MACHINE;
 
 
 CONST
@@ -20,10 +20,13 @@ CONST
     eSTFUNC  =  PARS.eSTFUNC;  eSYSFUNC  =  PARS.eSYSFUNC;  eSYSPROC  =  PARS.eSYSPROC;
     eIMP     =  PARS.eIMP;
 
-    errASSERT = 1;  errPTR = 2;  errDIV  = 3;  errPROC = 4;
-    errGUARD  = 5;  errIDX = 6;  errCASE = 7;  errCOPY = 8;
+    errASSERT = 1;  errPTR  =  2;  errDIV  =  3;  errPROC = 4;
+    errGUARD  = 5;  errIDX  =  6;  errCASE =  7;  errCOPY = 8;
+    errCHR    = 9;  errWCHR = 10;  errBYTE = 11;
 
-    chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2;
+    chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2; chkCHR* = 3; chkWCHR* = 4; chkBYTE* = 5;
+
+    chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
 
 
 TYPE
@@ -144,6 +147,18 @@ PROCEDURE isNil (e: PARS.EXPR): BOOLEAN;
 END isNil;
 
 
+PROCEDURE getpos (parser: PARS.PARSER; VAR pos: SCAN.POSITION);
+BEGIN
+    pos := parser.lex.pos
+END getpos;
+
+
+PROCEDURE NextPos (parser: PARS.PARSER; VAR pos: SCAN.POSITION);
+BEGIN
+    PARS.NextPos(parser, pos)
+END NextPos;
+
+
 PROCEDURE strlen (e: PARS.EXPR): INTEGER;
 VAR
     res: INTEGER;
@@ -224,7 +239,11 @@ BEGIN
         IF arrcomp(e.type, t) THEN
             res := TRUE
         ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
-            res := TRUE
+            IF (e.obj = eCONST) & (t.typ = PROG.tBYTE) THEN
+                res := ARITH.range(e.value, 0, 255)
+            ELSE
+                res := TRUE
+            END
         ELSIF isSet(e) & (t.typ = PROG.tSET) THEN
             res := TRUE
         ELSIF isBoolean(e) & (t.typ = PROG.tBOOLEAN) THEN
@@ -307,6 +326,21 @@ BEGIN
 END StringW;
 
 
+PROCEDURE CheckRange (range, line, errno: INTEGER);
+VAR
+    label: INTEGER;
+    last:  CODE.COMMAND;
+
+BEGIN
+    label := CODE.NewLabel();
+    CODE.AddCmd(CODE.opCHKIDX, range);
+    last := CODE.getlast();
+    last.label := label;
+    CODE.OnError(line, errno);
+    CODE.SetLabel(label)
+END CheckRange;
+
+
 PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 VAR
     res:    BOOLEAN;
@@ -331,7 +365,7 @@ BEGIN
             CODE.AddCmd(CODE.opCOPYA, t.base.size);
             label := CODE.NewLabel();
             CODE.AddJmpCmd(CODE.opJE, label);
-            CODE.OnError(PARS.errlabel, line, errCOPY);
+            CODE.OnError(line, errCOPY);
             CODE.SetLabel(label)
         ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
             IF t.typ = PROG.tINTEGER THEN
@@ -342,8 +376,14 @@ BEGIN
                 END
             ELSE
                 IF e.obj = eCONST THEN
-                    CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
+                    res := ARITH.range(e.value, 0, 255);
+                    IF res THEN
+                        CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
+                    END
                 ELSE
+                    IF chkBYTE IN checking THEN
+                        CheckRange(256, line, errBYTE)
+                    END;
                     CODE.AddCmd0(CODE.opSAVE8)
                 END
             END
@@ -571,6 +611,9 @@ BEGIN
             ELSIF isExpr(e) & (e.type.typ = PROG.tREAL) THEN
                 CODE.pushf
             ELSE
+                IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN checking) THEN
+                    CheckRange(256, pos.line, errBYTE)
+                END;
                 CODE.AddCmd(CODE.opPARAM, 1)
             END
         END
@@ -587,7 +630,6 @@ VAR
     label: INTEGER;
     n, i:  INTEGER;
     code:  ARITH.VALUE;
-    byte:  INTEGER;
     e1:    PARS.EXPR;
     wchar: BOOLEAN;
 
@@ -622,7 +664,7 @@ VAR
 BEGIN
     ASSERT(e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC});
 
-    pos := parser.lex.pos;
+    getpos(parser, pos);
     proc := e.stproc;
 
     IF e.obj IN {eSTPROC, eSYSPROC} THEN
@@ -633,21 +675,20 @@ BEGIN
             PARS.check(isBoolean(e), parser, pos, 66);
             IF e.obj = eCONST THEN
                 IF ~ARITH.getBool(e.value) THEN
-                    CODE.OnError(PARS.errlabel, pos.line, errASSERT)
+                    CODE.OnError(pos.line, errASSERT)
                 END
             ELSE
                 label := CODE.NewLabel();
                 CODE.AddJmpCmd(CODE.opJE, label);
-                CODE.OnError(PARS.errlabel, pos.line, errASSERT);
+                CODE.OnError(pos.line, errASSERT);
                 CODE.SetLabel(label)
             END
 
         |PROG.stINC, PROG.stDEC:
             varparam(parser, pos, isInt, TRUE, e);
             IF e.type.typ = PROG.tINTEGER THEN
-                IF parser.lex.typ = SCAN.lxCOMMA THEN
-                    PARS.getlex(parser);
-                    pos := parser.lex.pos;
+                IF parser.sym = SCAN.lxCOMMA THEN
+                    NextPos(parser, pos);
                     parser.expression(parser, e2);
                     PARS.check(isInt(e2), parser, pos, 66);
                     IF e2.obj = eCONST THEN
@@ -658,10 +699,9 @@ BEGIN
                 ELSE
                     CODE.AddCmd0(CODE.opINC1 + ORD(proc = PROG.stDEC))
                 END
-            ELSE
-                IF parser.lex.typ = SCAN.lxCOMMA THEN
-                    PARS.getlex(parser);
-                    pos := parser.lex.pos;
+            ELSE  (* e.type.typ = PROG.tBYTE *)
+                IF parser.sym = SCAN.lxCOMMA THEN
+                    NextPos(parser, pos);
                     parser.expression(parser, e2);
                     PARS.check(isInt(e2), parser, pos, 66);
                     IF e2.obj = eCONST THEN
@@ -677,8 +717,7 @@ BEGIN
         |PROG.stINCL, PROG.stEXCL:
             varparam(parser, pos, isSet, TRUE, e);
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             parser.expression(parser, e2);
             PARS.check(isInt(e2), parser, pos, 66);
 
@@ -700,8 +739,7 @@ BEGIN
         |PROG.stPACK:
             varparam(parser, pos, isReal, TRUE, e);
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             parser.expression(parser, e2);
             PARS.check(isInt(e2), parser, pos, 66);
             IF e2.obj = eCONST THEN
@@ -713,8 +751,7 @@ BEGIN
         |PROG.stUNPK:
             varparam(parser, pos, isReal, TRUE, e);
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             varparam(parser, pos, isInteger, TRUE, e2);
             CODE.AddCmd0(CODE.opUNPK)
 
@@ -733,8 +770,7 @@ BEGIN
             END;
 
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
 
             IF wchar THEN
                 varparam(parser, pos, isCharArrayW, TRUE, e1)
@@ -772,8 +808,7 @@ BEGIN
                 LoadConst(e)
             END;
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             IF proc = PROG.sysGET THEN
                 parser.designator(parser, e2);
                 PARS.check(isVar(e2), parser, pos, 93);
@@ -825,8 +860,7 @@ BEGIN
                     LoadConst(e)
                 END;
                 PARS.checklex(parser, SCAN.lxCOMMA);
-                PARS.getlex(parser);
-                pos := parser.lex.pos
+                NextPos(parser, pos)
             END;
 
             parser.expression(parser, e);
@@ -846,8 +880,7 @@ BEGIN
                     DEC(n)
                 END;
                 PARS.checklex(parser, SCAN.lxCOMMA);
-                PARS.getlex(parser);
-                pos := parser.lex.pos
+                NextPos(parser, pos)
             END;
 
             parser.expression(parser, e);
@@ -859,18 +892,17 @@ BEGIN
 
         |PROG.sysCODE:
             REPEAT
-                pos := parser.lex.pos;
+                getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, parser, pos, 43);
-                byte := ARITH.getInt(code);
-                PARS.check((0 <= byte) & (byte <= 255), parser, pos, 42);
-                IF parser.lex.typ = SCAN.lxCOMMA THEN
-                    PARS.getlex(parser)
+                PARS.check(ARITH.range(code, 0, 255), parser, pos, 42);
+                IF parser.sym = SCAN.lxCOMMA THEN
+                    PARS.Next(parser)
                 ELSE
                     PARS.checklex(parser, SCAN.lxRROUND)
                 END;
-                CODE.AddCmd(CODE.opCODE, byte)
-            UNTIL parser.lex.typ = SCAN.lxRROUND
+                CODE.AddCmd(CODE.opCODE, ARITH.getInt(code))
+            UNTIL parser.sym = SCAN.lxRROUND
 
         END;
 
@@ -893,8 +925,7 @@ BEGIN
             parser.expression(parser, e);
             PARS.check(isInt(e), parser, pos, 66);
             PARS.checklex(parser, SCAN.lxCOMMA);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             parser.expression(parser, e2);
             PARS.check(isInt(e2), parser, pos, 66);
             e.type := PARS.program.stTypes.tINTEGER;
@@ -919,7 +950,11 @@ BEGIN
                 ARITH.setChar(e.value, ARITH.getInt(e.value));
                 PARS.check(ARITH.check(e.value), parser, pos, 107)
             ELSE
-                CODE.AddCmd0(CODE.opCHR)
+                IF chkCHR IN checking THEN
+                    CheckRange(256, pos.line, errCHR)
+                ELSE
+                    CODE.AddCmd0(CODE.opCHR)
+                END
             END
 
         |PROG.stWCHR:
@@ -928,9 +963,13 @@ BEGIN
             e.type := PARS.program.stTypes.tWCHAR;
             IF e.obj = eCONST THEN
                 ARITH.setWChar(e.value, ARITH.getInt(e.value));
-                PARS.check(ARITH.check(e.value), parser, pos, 107)
+                PARS.check(ARITH.check(e.value), parser, pos, 101)
             ELSE
-                CODE.AddCmd0(CODE.opWCHR)
+                IF chkWCHR IN checking THEN
+                    CheckRange(65536, pos.line, errWCHR)
+                ELSE
+                    CODE.AddCmd0(CODE.opWCHR)
+                END
             END
 
         |PROG.stFLOOR:
@@ -1076,7 +1115,7 @@ BEGIN
     END;
 
     PARS.checklex(parser, SCAN.lxRROUND);
-    PARS.getlex(parser);
+    PARS.Next(parser);
 
     IF e.obj # eCONST THEN
         e.obj := eEXPR
@@ -1093,16 +1132,16 @@ VAR
     pos:   SCAN.POSITION;
 
 BEGIN
-    ASSERT(parser.lex.typ = SCAN.lxLROUND);
+    ASSERT(parser.sym = SCAN.lxLROUND);
 
     IF (e.obj IN {ePROC, eIMP}) OR isExpr(e) THEN
         proc := e.type;
         PARS.check1(proc.typ = PROG.tPROCEDURE, parser, 86);
-        PARS.getlex(parser);
+        PARS.Next(parser);
 
         param := proc.params.first;
         WHILE param # NIL DO
-            pos := parser.lex.pos;
+            getpos(parser, pos);
 
             CODE.setlast(begcall);
 
@@ -1115,18 +1154,18 @@ BEGIN
             param := param.next;
             IF param # NIL THEN
                 PARS.checklex(parser, SCAN.lxCOMMA);
-                PARS.getlex(parser)
+                PARS.Next(parser)
             END
         END;
 
         PARS.checklex(parser, SCAN.lxRROUND);
-        PARS.getlex(parser);
+        PARS.Next(parser);
 
         e.obj := eEXPR;
         e.type := proc.base
 
     ELSIF e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC} THEN
-        PARS.getlex(parser);
+        PARS.Next(parser);
         stProc(parser, e)
     ELSE
         PARS.check1(FALSE, parser, 86)
@@ -1143,20 +1182,18 @@ VAR
 
 BEGIN
     PARS.checklex(parser, SCAN.lxIDENT);
-    pos := parser.lex.pos;
+    getpos(parser, pos);
     import := FALSE;
     ident := parser.unit.idents.get(parser.unit, parser.lex.ident, FALSE);
     PARS.check1(ident # NIL, parser, 48);
     IF ident.typ = PROG.idMODULE THEN
-        PARS.getlex(parser);
-        PARS.checklex(parser, SCAN.lxPOINT);
-        PARS.getlex(parser);
-        PARS.checklex(parser, SCAN.lxIDENT);
+        PARS.ExpectSym(parser, SCAN.lxPOINT);
+        PARS.ExpectSym(parser, SCAN.lxIDENT);
         ident := ident.unit.idents.get(ident.unit, parser.lex.ident, FALSE);
         PARS.check1((ident # NIL) & ident.export, parser, 48);
         import := TRUE
     END;
-    PARS.getlex(parser);
+    PARS.Next(parser);
 
     e.readOnly := FALSE;
     e.ident := ident;
@@ -1226,7 +1263,7 @@ BEGIN
     IF chkPTR IN checking THEN
         label := CODE.NewLabel();
         CODE.AddJmpCmd(CODE.opJNZ, label);
-        CODE.OnError(PARS.errlabel, pos.line, error);
+        CODE.OnError(pos.line, error);
         CODE.SetLabel(label)
     END
 END deref;
@@ -1237,8 +1274,6 @@ VAR
     field:  PROG.FIELD;
     pos:    SCAN.POSITION;
     t, idx: PARS.EXPR;
-    label:  INTEGER;
-    last:   CODE.COMMAND;
 
 
     PROCEDURE LoadAdr (e: PARS.EXPR);
@@ -1299,7 +1334,7 @@ VAR
             CODE.AddCmd(CODE.opCHKIDX2, 0);
             last := CODE.getlast();
             last.label := label;
-            CODE.OnError(PARS.errlabel, pos.line, errIDX);
+            CODE.OnError(pos.line, errIDX);
             CODE.SetLabel(label)
         ELSE
             CODE.AddCmd(CODE.opCHKIDX2, -1)
@@ -1337,14 +1372,13 @@ BEGIN
         LoadAdr(e)
     END;
 
-    WHILE parser.lex.typ = SCAN.lxPOINT DO
-        pos := parser.lex.pos;
+    WHILE parser.sym = SCAN.lxPOINT DO
+        getpos(parser, pos);
         PARS.check1(isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}), parser, 73);
         IF e.type.typ = PROG.tPOINTER THEN
             deref(pos, e, TRUE, errPTR)
         END;
-        PARS.getlex(parser);
-        PARS.checklex(parser, SCAN.lxIDENT);
+        PARS.ExpectSym(parser, SCAN.lxIDENT);
         IF e.type.typ = PROG.tPOINTER THEN
             e.type := e.type.base;
             e.readOnly := FALSE
@@ -1358,16 +1392,15 @@ BEGIN
         IF field.offset # 0 THEN
             CODE.AddCmd(CODE.opADDR, field.offset)
         END;
-        PARS.getlex(parser);
+        PARS.Next(parser);
         e.ident := NIL
 
-    ELSIF parser.lex.typ = SCAN.lxLSQUARE DO
+    ELSIF parser.sym = SCAN.lxLSQUARE DO
 
         REPEAT
 
             PARS.check1(isArr(e), parser, 75);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             parser.expression(parser, idx);
             PARS.check(isInt(idx), parser, pos, 76);
 
@@ -1385,12 +1418,7 @@ BEGIN
             ELSE
                 IF e.type.length > 0 THEN
                     IF chkIDX IN checking THEN
-                        label := CODE.NewLabel();
-                        CODE.AddCmd(CODE.opCHKIDX, e.type.length);
-                        last := CODE.getlast();
-                        last.label := label;
-                        CODE.OnError(PARS.errlabel, pos.line, errIDX);
-                        CODE.SetLabel(label)
+                        CheckRange(e.type.length, pos.line, errIDX)
                     END;
                     IF e.type.base.size # 1 THEN
                         CODE.AddCmd(CODE.opMULC, e.type.base.size)
@@ -1403,29 +1431,28 @@ BEGIN
 
             e.type := e.type.base
 
-        UNTIL parser.lex.typ # SCAN.lxCOMMA;
+        UNTIL parser.sym # SCAN.lxCOMMA;
 
         PARS.checklex(parser, SCAN.lxRSQUARE);
-        PARS.getlex(parser);
+        PARS.Next(parser);
         e.ident := NIL
 
-    ELSIF parser.lex.typ = SCAN.lxCARET DO
-        pos := parser.lex.pos;
+    ELSIF parser.sym = SCAN.lxCARET DO
+        getpos(parser, pos);
         PARS.check1(isPtr(e), parser, 77);
         deref(pos, e, TRUE, errPTR);
         e.type := e.type.base;
         e.readOnly := FALSE;
-        PARS.getlex(parser);
+        PARS.Next(parser);
         e.ident := NIL;
         e.obj := eVREC
 
-    ELSIF (parser.lex.typ = SCAN.lxLROUND) & isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}) DO
+    ELSIF (parser.sym = SCAN.lxLROUND) & isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}) DO
 
         IF e.type.typ = PROG.tRECORD THEN
             PARS.check1(e.obj = eVREC, parser, 78)
         END;
-        PARS.getlex(parser);
-        pos := parser.lex.pos;
+        NextPos(parser, pos);
         qualident(parser, t);
         PARS.check(t.obj = eTYPE, parser, pos, 79);
 
@@ -1433,16 +1460,16 @@ BEGIN
             PARS.check(t.type.typ = PROG.tRECORD, parser, pos, 80);
             IF chkGUARD IN checking THEN
                 IF e.ident = NIL THEN
-                    CODE.TypeGuard(CODE.opTYPEGD, t.type.num, PARS.errlabel, pos.line, errGUARD)
+                    CODE.TypeGuard(CODE.opTYPEGD, t.type.num, pos.line, errGUARD)
                 ELSE
                     CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);
-                    CODE.TypeGuard(CODE.opTYPEGR, t.type.num, PARS.errlabel, pos.line, errGUARD)
+                    CODE.TypeGuard(CODE.opTYPEGR, t.type.num, pos.line, errGUARD)
                 END
             END;
         ELSE
             PARS.check(t.type.typ = PROG.tPOINTER, parser, pos, 81);
             IF chkGUARD IN checking THEN
-                CODE.TypeGuard(CODE.opTYPEGP, t.type.base.num, PARS.errlabel, pos.line, errGUARD)
+                CODE.TypeGuard(CODE.opTYPEGP, t.type.base.num, pos.line, errGUARD)
             END
         END;
 
@@ -1451,7 +1478,7 @@ BEGIN
         e.type := t.type;
 
         PARS.checklex(parser, SCAN.lxRROUND);
-        PARS.getlex(parser)
+        PARS.Next(parser)
 
     END
 
@@ -1469,24 +1496,24 @@ VAR
     error:     INTEGER;
 
 
-    PROCEDURE relation (lextyp: INTEGER): BOOLEAN;
-        RETURN (lextyp = SCAN.lxEQ) OR (lextyp = SCAN.lxNE) OR
-               (lextyp = SCAN.lxLT) OR (lextyp = SCAN.lxLE) OR
-               (lextyp = SCAN.lxGT) OR (lextyp = SCAN.lxGE) OR
-               (lextyp = SCAN.lxIN) OR (lextyp = SCAN.lxIS)
+    PROCEDURE relation (sym: INTEGER): BOOLEAN;
+        RETURN (sym = SCAN.lxEQ) OR (sym = SCAN.lxNE) OR
+               (sym = SCAN.lxLT) OR (sym = SCAN.lxLE) OR
+               (sym = SCAN.lxGT) OR (sym = SCAN.lxGE) OR
+               (sym = SCAN.lxIN) OR (sym = SCAN.lxIS)
     END relation;
 
 
-    PROCEDURE AddOperator (lextyp: INTEGER): BOOLEAN;
-        RETURN (lextyp = SCAN.lxPLUS) OR (lextyp = SCAN.lxMINUS) OR
-               (lextyp = SCAN.lxOR)
+    PROCEDURE AddOperator (sym: INTEGER): BOOLEAN;
+        RETURN (sym = SCAN.lxPLUS) OR (sym = SCAN.lxMINUS) OR
+               (sym = SCAN.lxOR)
     END AddOperator;
 
 
-    PROCEDURE MulOperator (lextyp: INTEGER): BOOLEAN;
-        RETURN (lextyp = SCAN.lxMUL) OR (lextyp = SCAN.lxSLASH) OR
-               (lextyp = SCAN.lxDIV) OR (lextyp = SCAN.lxMOD) OR
-               (lextyp = SCAN.lxAND)
+    PROCEDURE MulOperator (sym: INTEGER): BOOLEAN;
+        RETURN (sym = SCAN.lxMUL) OR (sym = SCAN.lxSLASH) OR
+               (sym = SCAN.lxDIV) OR (sym = SCAN.lxMOD) OR
+               (sym = SCAN.lxAND)
     END MulOperator;
 
 
@@ -1498,7 +1525,7 @@ VAR
 
     BEGIN
         range := FALSE;
-        pos := parser.lex.pos;
+        getpos(parser, pos);
         expression(parser, e1);
         PARS.check(isInt(e1), parser, pos, 76);
 
@@ -1506,11 +1533,10 @@ VAR
             PARS.check(ARITH.range(e1.value, 0, MACHINE.target.maxSet), parser, pos, 44)
         END;
 
-        range := parser.lex.typ = SCAN.lxRANGE;
+        range := parser.sym = SCAN.lxRANGE;
 
         IF range THEN
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             expression(parser, e2);
             PARS.check(isInt(e2), parser, pos, 76);
 
@@ -1551,14 +1577,14 @@ VAR
         e1: PARS.EXPR;
 
     BEGIN
-        ASSERT(parser.lex.typ = SCAN.lxLCURLY);
+        ASSERT(parser.sym = SCAN.lxLCURLY);
 
         e.obj := eCONST;
         e.type := PARS.program.stTypes.tSET;
         ARITH.emptySet(e.value);
 
-        PARS.getlex(parser);
-        IF parser.lex.typ # SCAN.lxRCURLY THEN
+        PARS.Next(parser);
+        IF parser.sym # SCAN.lxRCURLY THEN
             element(parser, e1);
 
             IF e1.obj = eCONST THEN
@@ -1567,8 +1593,8 @@ VAR
                 e.obj := eEXPR
             END;
 
-            WHILE parser.lex.typ = SCAN.lxCOMMA DO
-                PARS.getlex(parser);
+            WHILE parser.sym = SCAN.lxCOMMA DO
+                PARS.Next(parser);
                 element(parser, e1);
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
                     ARITH.opSet(e.value, e1.value, "+")
@@ -1585,13 +1611,13 @@ VAR
             END;
             PARS.checklex(parser, SCAN.lxRCURLY)
         END;
-        PARS.getlex(parser);
+        PARS.Next(parser);
     END set;
 
 
     PROCEDURE factor (parser: PARS.PARSER; VAR e: PARS.EXPR);
     VAR
-        lextyp: INTEGER;
+        sym:    INTEGER;
         pos:    SCAN.POSITION;
         e1:     PARS.EXPR;
         cconv:  INTEGER;
@@ -1612,30 +1638,30 @@ VAR
 
 
     BEGIN
-        lextyp := parser.lex.typ;
+        sym := parser.sym;
 
-        IF (lextyp = SCAN.lxINTEGER) OR (lextyp = SCAN.lxHEX) OR (lextyp = SCAN.lxFLOAT) OR (lextyp = SCAN.lxCHAR) OR (lextyp = SCAN.lxSTRING) THEN
+        IF (sym = SCAN.lxINTEGER) OR (sym = SCAN.lxHEX) OR (sym = SCAN.lxFLOAT) OR (sym = SCAN.lxCHAR) OR (sym = SCAN.lxSTRING) THEN
             e.obj := eCONST;
             e.value := parser.lex.value;
             e.type := PARS.program.getType(PARS.program, e.value.typ);
-            PARS.getlex(parser)
+            PARS.Next(parser)
 
-        ELSIF lextyp = SCAN.lxNIL THEN
+        ELSIF sym = SCAN.lxNIL THEN
             e.obj   := eCONST;
             e.type  := PARS.program.stTypes.tNIL;
-            PARS.getlex(parser)
+            PARS.Next(parser)
 
-        ELSIF (lextyp = SCAN.lxTRUE) OR (lextyp = SCAN.lxFALSE) THEN
+        ELSIF (sym = SCAN.lxTRUE) OR (sym = SCAN.lxFALSE) THEN
             e.obj   := eCONST;
-            ARITH.setbool(e.value, lextyp = SCAN.lxTRUE);
+            ARITH.setbool(e.value, sym = SCAN.lxTRUE);
             e.type  := PARS.program.stTypes.tBOOLEAN;
-            PARS.getlex(parser)
+            PARS.Next(parser)
 
-        ELSIF lextyp = SCAN.lxLCURLY THEN
+        ELSIF sym = SCAN.lxLCURLY THEN
             set(parser, e)
 
-        ELSIF lextyp = SCAN.lxIDENT THEN
-            pos := parser.lex.pos;
+        ELSIF sym = SCAN.lxIDENT THEN
+            getpos(parser, pos);
 
             CODE.pushBegEnd(begcall, endcall);
 
@@ -1643,7 +1669,7 @@ VAR
             IF isVar(e) THEN
                 LoadVar(e, parser, pos)
             END;
-            IF parser.lex.typ = SCAN.lxLROUND THEN
+            IF parser.sym = SCAN.lxLROUND THEN
                 e1 := e;
                 ActualParameters(parser, e);
 
@@ -1693,18 +1719,17 @@ VAR
             END;
             CODE.popBegEnd(begcall, endcall)
 
-        ELSIF lextyp = SCAN.lxLROUND THEN
-            PARS.getlex(parser);
+        ELSIF sym = SCAN.lxLROUND THEN
+            PARS.Next(parser);
             expression(parser, e);
             PARS.checklex(parser, SCAN.lxRROUND);
-            PARS.getlex(parser);
+            PARS.Next(parser);
             IF isExpr(e) & (e.obj # eCONST) THEN
                 e.obj := eEXPR
             END
 
-        ELSIF lextyp = SCAN.lxNOT THEN
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+        ELSIF sym = SCAN.lxNOT THEN
+            NextPos(parser, pos);
             factor(parser, e);
             PARS.check(isBoolean(e), parser, pos, 72);
             IF e.obj # eCONST THEN
@@ -1733,10 +1758,10 @@ VAR
         factor(parser, e);
         label := -1;
 
-        WHILE MulOperator(parser.lex.typ) DO
-            op  := parser.lex.typ;
-            pos := parser.lex.pos;
-            PARS.getlex(parser);
+        WHILE MulOperator(parser.sym) DO
+            op  := parser.sym;
+            getpos(parser, pos);
+            PARS.Next(parser);
 
             IF op = SCAN.lxAND THEN
                 IF ~parser.constexp THEN
@@ -1849,13 +1874,13 @@ VAR
                         CODE.AddJmpCmd(CODE.opJNZ, label1)
                     END;
                     IF e.obj = eCONST THEN
-                        CODE.OnError(PARS.errlabel, pos.line, errDIV);
+                        CODE.OnError(pos.line, errDIV);
                         CODE.SetLabel(label1);
                         CODE.AddCmd(CODE.opDIVL + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
                         CODE.AddCmd(CODE.opDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
                     ELSE
-                        CODE.OnError(PARS.errlabel, pos.line, errDIV);
+                        CODE.OnError(pos.line, errDIV);
                         CODE.SetLabel(label1);
                         CODE.AddCmd0(CODE.opDIV  + ORD(op = SCAN.lxMOD))
                     END;
@@ -1895,12 +1920,12 @@ VAR
         label: INTEGER;
 
     BEGIN
-        plus  := parser.lex.typ = SCAN.lxPLUS;
-        minus := parser.lex.typ = SCAN.lxMINUS;
+        plus  := parser.sym = SCAN.lxPLUS;
+        minus := parser.sym = SCAN.lxMINUS;
 
         IF plus OR minus THEN
-            pos := parser.lex.pos;
-            PARS.getlex(parser)
+            getpos(parser, pos);
+            PARS.Next(parser)
         END;
 
         term(parser, e);
@@ -1928,11 +1953,11 @@ VAR
 
         label := -1;
 
-        WHILE AddOperator(parser.lex.typ) DO
+        WHILE AddOperator(parser.sym) DO
 
-            op  := parser.lex.typ;
-            pos := parser.lex.pos;
-            PARS.getlex(parser);
+            op  := parser.sym;
+            getpos(parser, pos);
+            PARS.Next(parser);
 
             IF op = SCAN.lxOR THEN
 
@@ -2111,15 +2136,15 @@ VAR
 
 
 BEGIN
-    pos0 := parser.lex.pos;
+    getpos(parser, pos0);
     SimpleExpression(parser, e);
-    IF relation(parser.lex.typ) THEN
+    IF relation(parser.sym) THEN
         IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
             CODE.AddCmd(CODE.opCONST, e.type.length)
         END;
-        op  := parser.lex.typ;
-        pos := parser.lex.pos;
-        PARS.getlex(parser);
+        op  := parser.sym;
+        getpos(parser, pos);
+        PARS.Next(parser);
 
         pos1 := parser.lex.pos;
         SimpleExpression(parser, e1);
@@ -2376,27 +2401,26 @@ VAR
     cconv:  INTEGER;
 
 BEGIN
-    pos := parser.lex.pos;
+    getpos(parser, pos);
 
     CODE.pushBegEnd(begcall, endcall);
 
     designator(parser, e);
 
-    IF parser.lex.typ = SCAN.lxASSIGN THEN
+    IF parser.sym = SCAN.lxASSIGN THEN
         line := parser.lex.pos.line;
         PARS.check(isVar(e), parser, pos, 93);
         PARS.check(~e.readOnly, parser, pos, 94);
-        PARS.getlex(parser);
-        pos := parser.lex.pos;
+        NextPos(parser, pos);
         expression(parser, e1);
         PARS.check(assign(e1, e.type, line), parser, pos, 91);
         IF e1.obj = ePROC THEN
             PARS.check(e1.ident.global, parser, pos, 85)
         END;
         call := FALSE
-    ELSIF parser.lex.typ = SCAN.lxEQ THEN
+    ELSIF parser.sym = SCAN.lxEQ THEN
         PARS.check1(FALSE, parser, 96)
-    ELSIF parser.lex.typ = SCAN.lxLROUND THEN
+    ELSIF parser.sym = SCAN.lxLROUND THEN
         e1 := e;
         ActualParameters(parser, e1);
         PARS.check((e1.type = NIL) OR (e.type.call IN {PROG.winapi, PROG.kosapi}), parser, pos, 92);
@@ -2458,8 +2482,7 @@ BEGIN
     END;
 
     REPEAT
-        PARS.getlex(parser);
-        pos := parser.lex.pos;
+        NextPos(parser, pos);
 
         label := CODE.NewLabel();
 
@@ -2480,24 +2503,24 @@ BEGIN
             PARS.checklex(parser, SCAN.lxDO)
         END;
 
-        PARS.getlex(parser);
+        PARS.Next(parser);
         parser.StatSeq(parser);
 
         CODE.AddJmpCmd(CODE.opJMP, L);
         CODE.SetLabel(label)
 
-    UNTIL parser.lex.typ # SCAN.lxELSIF;
+    UNTIL parser.sym # SCAN.lxELSIF;
 
     IF if THEN
-        IF parser.lex.typ = SCAN.lxELSE THEN
-            PARS.getlex(parser);
+        IF parser.sym = SCAN.lxELSE THEN
+            PARS.Next(parser);
             parser.StatSeq(parser)
         END;
         CODE.SetLabel(L)
     END;
 
     PARS.checklex(parser, SCAN.lxEND);
-    PARS.getlex(parser)
+    PARS.Next(parser)
 END IfStatement;
 
 
@@ -2511,11 +2534,10 @@ BEGIN
     label := CODE.NewLabel();
     CODE.SetLabel(label);
 
-    PARS.getlex(parser);
+    PARS.Next(parser);
     parser.StatSeq(parser);
     PARS.checklex(parser, SCAN.lxUNTIL);
-    PARS.getlex(parser);
-    pos := parser.lex.pos;
+    NextPos(parser, pos);
     expression(parser, e);
     PARS.check(isBoolean(e), parser, pos, 72);
 
@@ -2545,14 +2567,13 @@ VAR
 
     PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR type: PROG.TYPE_): INTEGER;
     VAR
-        lex, a: INTEGER;
+        a:      INTEGER;
         label:  PARS.EXPR;
         pos:    SCAN.POSITION;
         L:      ARITH.VALUE;
 
     BEGIN
-        lex := parser.lex.typ;
-        pos := parser.lex.pos;
+        getpos(parser, pos);
         type := NIL;
 
         IF isChar(caseExpr) THEN
@@ -2594,14 +2615,13 @@ VAR
         pos, pos1: SCAN.POSITION;
 
     BEGIN
-        NEW(label);
-        pos1 := parser.lex.pos;
+        NEW(label); 
+        getpos(parser, pos1);
         label.a := Label(parser, caseExpr, label.type);
 
-        IF parser.lex.typ = SCAN.lxRANGE THEN
+        IF parser.sym = SCAN.lxRANGE THEN
             PARS.check1(isInt(caseExpr) OR isChar(caseExpr) OR isCharW(caseExpr), parser, 53);
-            PARS.getlex(parser);
-            pos := parser.lex.pos;
+            NextPos(parser, pos);
             label.b := Label(parser, caseExpr, label.type);
             PARS.check(label.a <= label.b, parser, pos, 103)
         ELSE
@@ -2640,9 +2660,9 @@ VAR
         exit := FALSE;
         REPEAT
             LabelRange(parser, caseExpr, labels, L);
-            IF parser.lex.typ = SCAN.lxCOMMA THEN
+            IF parser.sym = SCAN.lxCOMMA THEN
                 PARS.check1(isInt(caseExpr) OR isChar(caseExpr) OR isCharW(caseExpr), parser, 53);
-                PARS.getlex(parser)
+                PARS.Next(parser)
             ELSE
                 exit := TRUE
             END
@@ -2652,18 +2672,18 @@ VAR
 
     PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; labels: LISTS.LIST; end: INTEGER);
     VAR
-        lex:     INTEGER;
+        sym:     INTEGER;
         t:       PROG.TYPE_;
         L1, L2:  INTEGER;
 
     BEGIN
-        lex := parser.lex.typ;
-        IF lex # SCAN.lxBAR THEN
+        sym := parser.sym;
+        IF sym # SCAN.lxBAR THEN
             L1 := CODE.NewLabel();
             L2 := CODE.NewLabel();
             CaseLabelList(parser, caseExpr, labels, L1);
             PARS.checklex(parser, SCAN.lxCOLON);
-            PARS.getlex(parser);
+            PARS.Next(parser);
             IF isPtr(caseExpr) OR isRec(caseExpr) THEN
                 t := caseExpr.type;
                 caseExpr.ident.type := labels.last(LABEL).type
@@ -2684,8 +2704,7 @@ VAR
 
 BEGIN
     end := CODE.NewLabel();
-    PARS.getlex(parser);
-    pos := parser.lex.pos;
+    NextPos(parser, pos);
     expression(parser, e);
     PARS.check(isInt(e) OR isChar(e) OR isCharW(e) OR isPtr(e) OR isRec(e), parser, pos, 95);
     IF isPtr(e) OR isRec(e) THEN
@@ -2709,26 +2728,26 @@ BEGIN
     END;
 
     PARS.checklex(parser, SCAN.lxOF);
-    PARS.getlex(parser);
+    PARS.Next(parser);
 
     CODE.AddCmd0(CODE.opSWITCH);
 
     labels := LISTS.create(labels);
     case(parser, e, labels, end);
-    WHILE parser.lex.typ = SCAN.lxBAR DO
-        PARS.getlex(parser);
+    WHILE parser.sym = SCAN.lxBAR DO
+        PARS.Next(parser);
         case(parser, e, labels, end)
     END;
 
-    IF parser.lex.typ = SCAN.lxELSE THEN
-        PARS.getlex(parser);
+    IF parser.sym = SCAN.lxELSE THEN
+        PARS.Next(parser);
         parser.StatSeq(parser)
     ELSE
-        CODE.OnError(PARS.errlabel, parser.lex.pos.line, errCASE)
+        CODE.OnError(pos.line, errCASE)
     END;
 
     PARS.checklex(parser, SCAN.lxEND);
-    PARS.getlex(parser);
+    PARS.Next(parser);
     CODE.SetLabel(end);
     CODE.AddCmd0(CODE.opENDSW)
 END CaseStatement;
@@ -2748,8 +2767,7 @@ BEGIN
     L1 := CODE.NewLabel();
     L2 := CODE.NewLabel();
 
-    PARS.getlex(parser);
-    PARS.checklex(parser, SCAN.lxIDENT);
+    PARS.ExpectSym(parser, SCAN.lxIDENT);
     ident := parser.unit.idents.get(parser.unit, parser.lex.ident, TRUE);
     PARS.check1(ident # NIL, parser, 48);
     PARS.check1(ident.typ = PROG.idVAR, parser, 93);
@@ -2763,10 +2781,8 @@ BEGIN
         CODE.AddCmd(CODE.opLADR, -offset)
     END;
 
-    PARS.getlex(parser);
-    PARS.checklex(parser, SCAN.lxASSIGN);
-    PARS.getlex(parser);
-    pos := parser.lex.pos;
+    PARS.ExpectSym(parser, SCAN.lxASSIGN);
+    NextPos(parser, pos);
     expression(parser, e);
     PARS.check(isInt(e), parser, pos, 76);
 
@@ -2782,14 +2798,12 @@ BEGIN
     CODE.load(ident.type.size);
 
     PARS.checklex(parser, SCAN.lxTO);
-    PARS.getlex(parser);
-    pos := parser.lex.pos;
+    NextPos(parser, pos);
     expression(parser, e);
     PARS.check(isInt(e), parser, pos, 76);
 
-    IF parser.lex.typ = SCAN.lxBY THEN
-        PARS.getlex(parser);
-        pos := parser.lex.pos;
+    IF parser.sym = SCAN.lxBY THEN
+        NextPos(parser, pos);
         PARS.ConstExpression(parser, step);
         PARS.check(step.typ = ARITH.tINTEGER, parser, pos, 76);
         st := ARITH.getInt(step);
@@ -2815,7 +2829,7 @@ BEGIN
     CODE.AddJmpCmd(CODE.opJNE, L2);
 
     PARS.checklex(parser, SCAN.lxDO);
-    PARS.getlex(parser);
+    PARS.Next(parser);
     parser.StatSeq(parser);
 
     IF ident.global THEN
@@ -2839,7 +2853,7 @@ BEGIN
     CODE.AddJmpCmd(CODE.opJMP, L1);
 
     PARS.checklex(parser, SCAN.lxEND);
-    PARS.getlex(parser);
+    PARS.Next(parser);
 
     CODE.SetLabel(L2);
 
@@ -2848,22 +2862,22 @@ END ForStatement;
 
 PROCEDURE statement (parser: PARS.PARSER);
 VAR
-    lex:    INTEGER;
+    sym: INTEGER;
 
 BEGIN
-    lex := parser.lex.typ;
+    sym := parser.sym;
 
-    IF lex = SCAN.lxIDENT THEN
+    IF sym = SCAN.lxIDENT THEN
         ElementaryStatement(parser)
-    ELSIF lex = SCAN.lxIF THEN
+    ELSIF sym = SCAN.lxIF THEN
         IfStatement(parser, TRUE)
-    ELSIF lex = SCAN.lxWHILE THEN
+    ELSIF sym = SCAN.lxWHILE THEN
         IfStatement(parser, FALSE)
-    ELSIF lex = SCAN.lxREPEAT THEN
+    ELSIF sym = SCAN.lxREPEAT THEN
         RepeatStatement(parser)
-    ELSIF lex = SCAN.lxCASE THEN
+    ELSIF sym = SCAN.lxCASE THEN
         CaseStatement(parser)
-    ELSIF lex = SCAN.lxFOR THEN
+    ELSIF sym = SCAN.lxFOR THEN
         ForStatement(parser)
     END
 END statement;
@@ -2872,20 +2886,18 @@ END statement;
 PROCEDURE StatSeq (parser: PARS.PARSER);
 BEGIN
     statement(parser);
-    WHILE parser.lex.typ = SCAN.lxSEMI DO
-        PARS.getlex(parser);
+    WHILE parser.sym = SCAN.lxSEMI DO
+        PARS.Next(parser);
         statement(parser)
     END
 END StatSeq;
 
 
-PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_): BOOLEAN;
+PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN.POSITION): BOOLEAN;
 VAR
     res: BOOLEAN;
-    pos: SCAN.POSITION;
 
 BEGIN
-    pos := parser.lex.pos;
     res := assigncomp(e, t);
     IF res THEN
         IF e.obj = eCONST THEN
@@ -2896,6 +2908,8 @@ BEGIN
             ELSE
                 LoadConst(e)
             END
+        ELSIF (e.type.typ = PROG.tINTEGER) & (t.typ = PROG.tBYTE) & (chkBYTE IN checking) THEN
+            CheckRange(256, pos.line, errBYTE)
         ELSIF e.obj = ePROC THEN
             PARS.check(e.ident.global, parser, pos, 85);
             CODE.PushProc(e.ident.proc.label)
@@ -2919,10 +2933,15 @@ VAR
 
     PROCEDURE getproc (rtl: PROG.UNIT; name: SCAN.LEXSTR; idx: INTEGER);
     VAR
-        id:  PROG.IDENT;
+        id:    PROG.IDENT;
+
     BEGIN
         id := rtl.idents.get(rtl, SCAN.enterid(name), FALSE);
-        IF (id # NIL) & (id.proc # NIL) THEN
+
+        IF (id # NIL) & (id.import # NIL) THEN
+            CODE.codes.rtl[idx] := -id.import(CODE.IMPORT_PROC).label;
+            id.proc.used := TRUE
+        ELSIF (id # NIL) & (id.proc # NIL) THEN
             CODE.codes.rtl[idx] := id.proc.label;
             id.proc.used := TRUE
         ELSE
@@ -3009,7 +3028,7 @@ BEGIN
 
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
-    CODE.codes.gsize := PARS.program.gsize;
+    CODE.codes.bss := PARS.program.bss;
 
     X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
 

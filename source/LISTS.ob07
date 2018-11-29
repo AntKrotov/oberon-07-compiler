@@ -10,19 +10,15 @@ MODULE LISTS;
 
 TYPE
 
-    LIST* = POINTER TO rLIST;
+    ITEM* = POINTER TO RECORD
 
-    ITEM* = POINTER TO rITEM;
-
-    rLIST = RECORD
-
-        first*, last*: ITEM
+        prev*, next*: ITEM
 
     END;
 
-    rITEM = RECORD
+    LIST* = POINTER TO RECORD
 
-        prev*, next*: ITEM
+        first*, last*: ITEM
 
     END;
 
@@ -46,6 +42,32 @@ BEGIN
         list.last := item
     END
 END push;
+
+
+PROCEDURE pop* (list: LIST): ITEM;
+VAR
+    last: ITEM;
+
+BEGIN
+    ASSERT(list # NIL);
+
+    last := list.last;
+
+    IF last # NIL THEN
+        IF last = list.first THEN
+            list.first := NIL;
+            list.last := NIL
+        ELSE
+            list.last := last.prev;
+            list.last.next := NIL
+        END;
+
+        last.next := NIL;
+        last.prev := NIL
+    END
+
+    RETURN last
+END pop;
 
 
 PROCEDURE insert* (list: LIST; cur, nov: ITEM);
@@ -120,8 +142,7 @@ BEGIN
     ELSIF (next # NIL) & (prev = NIL) THEN
         next.prev := NIL;
         list.first := next
-    END;
-    DISPOSE(item)
+    END
 
 END delete;
 

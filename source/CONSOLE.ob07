@@ -43,7 +43,7 @@ END Int2;
 
 
 PROCEDURE Ln*;
-BEGIN   
+BEGIN
     String(UTILS.eol)
 END Ln;
 

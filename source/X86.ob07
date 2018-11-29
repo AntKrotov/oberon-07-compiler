@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS, CONSOLE;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS;
 
 
 CONST
@@ -23,7 +23,7 @@ CONST
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
 
 
-    CODECHUNK = 16;
+    CODECHUNK = 8;
 
 
 TYPE
@@ -77,24 +77,12 @@ TYPE
 
     END;
 
-    INT = POINTER TO RECORD (ANYCODE)
-
-        value: INTEGER
-
-    END;
-
 
 VAR
 
-    error:   BOOLEAN;
-
-    R:       REG.REGS;
-
-    stroffs: INTEGER;
+    R: REG.REGS;
 
     program: BIN.PROGRAM;
-
-    dllret, dllinit, label_import: INTEGER;
 
     CodeList: LISTS.LIST;
 
@@ -134,13 +122,11 @@ END OutByte;
 
 
 PROCEDURE OutInt (n: INTEGER);
-VAR
-    int: INT;
-
 BEGIN
-    NEW(int);
-    int.value := n;
-    LISTS.push(CodeList, int)
+    OutByte(MACHINE.Byte(n, 0));
+    OutByte(MACHINE.Byte(n, 1));
+    OutByte(MACHINE.Byte(n, 2));
+    OutByte(MACHINE.Byte(n, 3))
 END OutInt;
 
 
@@ -286,6 +272,12 @@ BEGIN
 END setcc;
 
 
+PROCEDURE drop;
+BEGIN
+    REG.Drop(R)
+END drop;
+
+
 PROCEDURE log2 (x: INTEGER): INTEGER;
 VAR
     n: INTEGER;
@@ -356,9 +348,38 @@ BEGIN
 END call;
 
 
-PROCEDURE CallRTL (proc: INTEGER);
+PROCEDURE Pic (reg, opcode, value: INTEGER);
 BEGIN
-    call(CODE.codes.rtl[proc])
+    OutByte(0E8H); OutInt(0); // call L
+                              // L:
+    pop(reg);
+    OutByte2(081H, 0C0H + reg);  // add reg, ...
+    Reloc(opcode, value)
+END Pic;
+
+
+PROCEDURE CallRTL (pic: BOOLEAN; proc: INTEGER);
+VAR
+    label: INTEGER;
+    reg1:  INTEGER;
+
+BEGIN                        
+    label := CODE.codes.rtl[proc];
+
+    IF label < 0 THEN
+        label := -label;
+        IF pic THEN
+            reg1 := REG.GetAnyReg(R);
+            Pic(reg1, BIN.PICIMP, label);
+            OutByte2(0FFH, 010H + reg1);  // call dword[reg1]
+            drop
+        ELSE
+            OutByte2(0FFH, 015H);  // call dword[label]
+            Reloc(BIN.RIMP, label)
+        END
+    ELSE
+        call(label)
+    END
 END CallRTL;
 
 
@@ -398,7 +419,6 @@ BEGIN
             |JCC:    IF code.short THEN INC(count, 2) ELSE INC(count, 6) END; code.offset := count
             |CALL:   INC(count, 5); code.offset := count
             |RELOC:  INC(count, 4)
-            |INT:    INC(count, 4)
             END;
 
             code := code.next(ANYCODE)
@@ -437,7 +457,7 @@ BEGIN
         |JMP:
                 IF code.short THEN
                     BIN.PutCode(program, 0EBH);
-                    BIN.PutCode(program, code.diff)
+                    BIN.PutCode(program, Byte(code.diff))
                 ELSE
                     BIN.PutCode(program, 0E9H);
                     BIN.PutCode32LE(program, code.diff)
@@ -446,7 +466,7 @@ BEGIN
         |JCC:
                 IF code.short THEN
                     BIN.PutCode(program, code.jmp - 16);
-                    BIN.PutCode(program, code.diff)
+                    BIN.PutCode(program, Byte(code.diff))
                 ELSE
                     BIN.PutCode(program, 0FH);
                     BIN.PutCode(program, code.jmp);
@@ -461,21 +481,12 @@ BEGIN
                 BIN.PutReloc(program, code.op);
                 BIN.PutCode32LE(program, code.value)
 
-        |INT:
-                BIN.PutCode32LE(program, code.value)
-
         END;
 
         code := code.next(ANYCODE)
     END
 
 END fixup;
-
-
-PROCEDURE drop;
-BEGIN
-    REG.Drop(R)
-END drop;
 
 
 PROCEDURE UnOp (VAR reg: INTEGER);
@@ -497,16 +508,6 @@ BEGIN
 END PushAll;
 
 
-PROCEDURE Pic (reg, opcode, value: INTEGER);
-BEGIN
-    OutByte(0E8H); OutInt(0); // call L
-                              // L:
-    pop(reg);
-    OutByte2(081H, 0C0H + reg);  // add reg, ...
-    Reloc(opcode, value)
-END Pic;
-
-
 PROCEDURE NewLabel (): INTEGER;
 BEGIN
     BIN.NewLabel(program)
@@ -514,13 +515,15 @@ BEGIN
 END NewLabel;
 
 
-PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN);
+PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN; stroffs: INTEGER);
 VAR
     cmd, next, next2: COMMAND;
 
     reg1, reg2: INTEGER;
 
     n, a, b, label: INTEGER;
+
+    float: REAL;
 
 BEGIN
     cmd := code.commands.first(COMMAND);
@@ -1278,7 +1281,7 @@ BEGIN
                 push(reg2);
                 push(reg1);
                 pushc(8);
-                CallRTL(CODE._move)
+                CallRTL(pic, CODE._move)
 
             END
 
@@ -1297,7 +1300,7 @@ BEGIN
             END;
 
             pushc(cmd.param2);
-            CallRTL(CODE._move)
+            CallRTL(pic, CODE._move)
 
         |CODE.opCHKIDX:
             UnOp(reg1);
@@ -1450,12 +1453,12 @@ BEGIN
 
         |CODE.opLENGTH:
             PushAll(2);
-            CallRTL(CODE._length);
+            CallRTL(pic, CODE._length);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opLENGTHW:
             PushAll(2);
-            CallRTL(CODE._lengthw);
+            CallRTL(pic, CODE._lengthw);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCHR:
@@ -1562,66 +1565,66 @@ BEGIN
 
         |CODE.opIN:
             PushAll(2);
-            CallRTL(CODE._in);
+            CallRTL(pic, CODE._in);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINR:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._in);
+            CallRTL(pic, CODE._in);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINL:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._in2);
+            CallRTL(pic, CODE._in2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSET:
             PushAll(2);
-            CallRTL(CODE._set);
+            CallRTL(pic, CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSETR:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._set);
+            CallRTL(pic, CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSETL:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._set2);
+            CallRTL(pic, CODE._set2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opRSET1:
             UnOp(reg1);
             PushAll(1);
             push(reg1);
-            CallRTL(CODE._set);
+            CallRTL(pic, CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opINCL:
             PushAll(2);
-            CallRTL(CODE._incl)
+            CallRTL(pic, CODE._incl)
 
         |CODE.opEXCL:
             PushAll(2);
-            CallRTL(CODE._excl)
+            CallRTL(pic, CODE._excl)
 
         |CODE.opINCLC:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._incl)
+            CallRTL(pic, CODE._incl)
 
         |CODE.opEXCLC:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._excl)
+            CallRTL(pic, CODE._excl)
 
         |CODE.opDIV:
             PushAll(2);
-            CallRTL(CODE._div);
+            CallRTL(pic, CODE._div);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opDIVR:
@@ -1664,7 +1667,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     pushc(cmd.param);
-                    CallRTL(CODE._div);
+                    CallRTL(pic, CODE._div);
                     ASSERT(REG.GetReg(R, eax))
                 END
             END
@@ -1672,12 +1675,12 @@ BEGIN
         |CODE.opDIVL:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._div2);
+            CallRTL(pic, CODE._div2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opMOD:
             PushAll(2);
-            CallRTL(CODE._mod);
+            CallRTL(pic, CODE._mod);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opMODR:
@@ -1713,7 +1716,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     pushc(cmd.param);
-                    CallRTL(CODE._mod);
+                    CallRTL(pic, CODE._mod);
                     ASSERT(REG.GetReg(R, eax))
                 END
             END
@@ -1721,11 +1724,11 @@ BEGIN
         |CODE.opMODL:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._mod2);
+            CallRTL(pic, CODE._mod2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opERR:
-            CallRTL(CODE._error)
+            CallRTL(pic, CODE._error)
 
         |CODE.opABS:
             UnOp(reg1);
@@ -1737,33 +1740,33 @@ BEGIN
         |CODE.opCOPY:
             PushAll(2);
             pushc(cmd.param);
-            CallRTL(CODE._move)
+            CallRTL(pic, CODE._move)
 
         |CODE.opMOVE:
             PushAll(3);
-            CallRTL(CODE._move2)
+            CallRTL(pic, CODE._move2)
 
         |CODE.opCOPYA:
             PushAll(4);
             pushc(cmd.param);
-            CallRTL(CODE._arrcpy);
+            CallRTL(pic, CODE._arrcpy);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCOPYS:
             PushAll(4);
             pushc(cmd.param);
-            CallRTL(CODE._strcpy)
+            CallRTL(pic, CODE._strcpy)
 
         |CODE.opCOPYS2:
             PushAll(4);
             pushc(cmd.param);
-            CallRTL(CODE._strcpy2)
+            CallRTL(pic, CODE._strcpy2)
 
         |CODE.opROT:
             PushAll(0);
             OutByte(54H);  // push esp
             pushc(cmd.param);
-            CallRTL(CODE._rot)
+            CallRTL(pic, CODE._rot)
 
         |CODE.opNEW:
             PushAll(1);
@@ -1771,11 +1774,11 @@ BEGIN
             ASSERT(MACHINE.Align(n, 32));
             pushc(n);
             pushc(cmd.param2);
-            CallRTL(CODE._new)
+            CallRTL(pic, CODE._new)
 
         |CODE.opDISP:
             PushAll(1);
-            CallRTL(CODE._dispose)
+            CallRTL(pic, CODE._dispose)
 
         |CODE.opEQS, CODE.opNES, CODE.opLTS,
          CODE.opLES, CODE.opGTS, CODE.opGES:
@@ -1788,7 +1791,7 @@ BEGIN
             |CODE.opGTS: pushc(4)
             |CODE.opGES: pushc(5)
             END;
-            CallRTL(CODE._strcmp);
+            CallRTL(pic, CODE._strcmp);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQS2, CODE.opNES2, CODE.opLTS2,
@@ -1802,7 +1805,7 @@ BEGIN
             |CODE.opGTS2: pushc(4)
             |CODE.opGES2: pushc(5)
             END;
-            CallRTL(CODE._strcmp2);
+            CallRTL(pic, CODE._strcmp2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQSW, CODE.opNESW, CODE.opLTSW,
@@ -1816,7 +1819,7 @@ BEGIN
             |CODE.opGTSW: pushc(4)
             |CODE.opGESW: pushc(5)
             END;
-            CallRTL(CODE._strcmpw);
+            CallRTL(pic, CODE._strcmpw);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQSW2, CODE.opNESW2, CODE.opLTSW2,
@@ -1830,7 +1833,7 @@ BEGIN
             |CODE.opGTSW2: pushc(4)
             |CODE.opGESW2: pushc(5)
             END;
-            CallRTL(CODE._strcmpw2);
+            CallRTL(pic, CODE._strcmpw2);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opEQP, CODE.opNEP, CODE.opEQIP, CODE.opNEIP:
@@ -1877,19 +1880,19 @@ BEGIN
         |CODE.opISREC:
             PushAll(2);
             pushc(cmd.param);
-            CallRTL(CODE._isrec);
+            CallRTL(pic, CODE._isrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opIS:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._is);
+            CallRTL(pic, CODE._is);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGR:
             PushAll(1);
             pushc(cmd.param);
-            CallRTL(CODE._guardrec);
+            CallRTL(pic, CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGP:
@@ -1897,7 +1900,7 @@ BEGIN
             PushAll(0);
             push(reg1);
             pushc(cmd.param);
-            CallRTL(CODE._guard);
+            CallRTL(pic, CODE._guard);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opTYPEGD:
@@ -1905,14 +1908,14 @@ BEGIN
             PushAll(0);
             OutByte3(0FFH, 070H + reg1, 0FCH);  // push dword[reg1 - 4]
             pushc(cmd.param);
-            CallRTL(CODE._guardrec);
+            CallRTL(pic, CODE._guardrec);
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCASET:
             push(eax);
             push(eax);
             pushc(cmd.param);
-            CallRTL(CODE._guardrec);
+            CallRTL(pic, CODE._guardrec);
             mov(ecx, eax);
             pop(eax);
             test(ecx);
@@ -1960,15 +1963,16 @@ BEGIN
             drop
 
         |CODE.opCONSTF:
-            IF cmd.float = 0.0 THEN
+            float := cmd(CODE.COMMANDF).float;
+            IF float = 0.0 THEN
                 OutByte2(0D9H, 0EEH)      // fldz
-            ELSIF cmd.float = 1.0 THEN
+            ELSIF float = 1.0 THEN
                 OutByte2(0D9H, 0E8H)      // fld1
-            ELSIF cmd.float = -1.0 THEN
+            ELSIF float = -1.0 THEN
                 OutByte2(0D9H, 0E8H);     // fld1
                 OutByte2(0D9H, 0E0H)      // fchs
             ELSE
-                UTILS.splitf(cmd.float, a, b);
+                UTILS.splitf(float, a, b);
                 pushc(b);
                 pushc(a);
                 OutByte3(0DDH, 004H, 024H); // fld qword[esp]
@@ -2125,7 +2129,7 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack: INTEGER);
+PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack, dllinit, dllret: INTEGER);
 VAR
     reg1, entry, tcount, dcount: INTEGER;
 
@@ -2140,15 +2144,12 @@ BEGIN
         OutByte3(0FFH, 75H, 16);  // push dword[ebp+16]
         OutByte3(0FFH, 75H, 12);  // push dword[ebp+12]
         OutByte3(0FFH, 75H, 8);   // push dword[ebp+8]
-        CallRTL(CODE._dllentry);
+        CallRTL(pic, CODE._dllentry);
         test(eax);
         jcc(je, dllret)
     ELSIF target = TARGETS.OBJ THEN
-        dllinit := NewLabel();
         SetLabel(dllinit)
     END;
-
-    OutByte3(09BH, 0DBH, 0E3H); // finit
 
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
@@ -2197,11 +2198,11 @@ BEGIN
         Reloc(BIN.RDATA, tcount * 4 + dcount)
     END;
 
-    CallRTL(CODE._init)
+    CallRTL(pic, CODE._init)
 END prolog;
 
 
-PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack, ver: INTEGER);
+PROCEDURE epilog (code: CODE.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret: INTEGER);
 VAR
     i, n:  INTEGER;
     exp:   CODE.EXPORT_PROC;
@@ -2235,7 +2236,7 @@ BEGIN
 
     IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.KOS} THEN
         pushc(0);
-        CallRTL(CODE._exit);
+        CallRTL(pic, CODE._exit);
     ELSIF target = TARGETS.DLL THEN
         SetLabel(dllret);
         movrc(eax, 1);
@@ -2280,37 +2281,36 @@ BEGIN
 
     n := code.dmin - CHL.Length(code.data);
     IF n > 0 THEN
-        INC(code.gsize, n)
+        INC(code.bss, n)
     END;
 
-    BIN.SetParams(program, code.gsize, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    BIN.SetParams(program, code.bss, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
 
 END epilog;
 
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
+VAR
+    dllret, dllinit: INTEGER;
+
 BEGIN
 
     CodeList := LISTS.create(NIL);
 
     program := BIN.create(code.lcount);
 
-    dllret := NewLabel();
-    label_import := NewLabel();
-
-    stroffs := CHL.Length(code.types) * 4;
+    dllinit := NewLabel();
+    dllret  := NewLabel();
 
     IF target = TARGETS.OBJ THEN
         pic := FALSE
     END;
 
-    error := FALSE;
-
     R := REG.Create(push, pop, mov, xchg);
 
-    prolog(code, pic, target, stack);
-    translate(code, pic);
-    epilog(code, outname, target, stack, ver);
+    prolog(code, pic, target, stack, dllinit, dllret);
+    translate(code, pic, CHL.Length(code.types) * 4);
+    epilog(code, pic, outname, target, stack, ver, dllinit, dllret);
 
     BIN.fixup(program);
 

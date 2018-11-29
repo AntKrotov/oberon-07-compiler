@@ -7,7 +7,7 @@
 
 MODULE Compiler;
 
-IMPORT ST := STATEMENTS, TARGETS, PARS, UTILS, PATHS, CONSOLE, ERRORS, STRINGS, VER, WRITER;
+IMPORT ST := STATEMENTS, TARGETS, PARS, UTILS, PATHS, C := CONSOLE, ERRORS, STRINGS, VER, WRITER;
 
 
 CONST
@@ -89,6 +89,18 @@ BEGIN
                         EXCL(checking, ST.chkGUARD)
                     ELSIF param[j] = "i" THEN
                         EXCL(checking, ST.chkIDX)
+                    ELSIF param[j] = "b" THEN
+                        EXCL(checking, ST.chkBYTE)
+                    ELSIF param[j] = "c" THEN
+                        EXCL(checking, ST.chkCHR)
+                    ELSIF param[j] = "w" THEN
+                        EXCL(checking, ST.chkWCHR)
+                    ELSIF param[j] = "r" THEN
+                        EXCL(checking, ST.chkCHR);
+                        EXCL(checking, ST.chkWCHR);
+                        EXCL(checking, ST.chkBYTE)
+                    ELSIF param[j] = "a" THEN
+                        checking := {}
                     END;
 
                     INC(j)
@@ -151,24 +163,24 @@ BEGIN
     Version := 65536;
     pic := FALSE;
     reloc := FALSE;
-    checking := {ST.chkIDX, ST.chkGUARD, ST.chkPTR};
+    checking := ST.chkALL;
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
 
     UTILS.GetArg(1, inname);
     IF inname = "" THEN
-        CONSOLE.String("Akron Oberon-07/16 Compiler v"); CONSOLE.Int(VER.Major); CONSOLE.String("."); CONSOLE.Int2(VER.Minor); CONSOLE.Ln;
-        CONSOLE.String("Usage: Compiler <main module> <output> <target> [optional settings]"); CONSOLE.Ln; CONSOLE.Ln;
-        CONSOLE.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); CONSOLE.Ln; CONSOLE.Ln;
-        CONSOLE.String("optional settings:"); CONSOLE.Ln;
-        CONSOLE.String("  -stk <size>         set size of stack in megabytes"); CONSOLE.Ln;
-        CONSOLE.String("  -base <address>     set base address of image in kilobytes"); CONSOLE.Ln;
-        CONSOLE.String("  -pic                generate position-independent code"); CONSOLE.Ln;
-        CONSOLE.String("  -reloc              make relocation table"); CONSOLE.Ln;
-        CONSOLE.String('  -ver <major.minor>  set version of program ("obj" only)'); CONSOLE.Ln;
-        CONSOLE.String('  -nochk <"pti">      disable runtime checking (pointers, types, indexes)'); CONSOLE.Ln;
-        CONSOLE.Ln;
+        C.String("Akron Oberon-07/16 Compiler v"); C.Int(VER.Major); C.String("."); C.Int2(VER.Minor); C.Ln; C.Ln;
+        C.String("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln; C.Ln;
+        C.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); C.Ln; C.Ln;
+        C.String("optional settings:"); C.Ln; C.Ln;
+        C.String("  -stk <size>            set size of stack in megabytes"); C.Ln; C.Ln;
+        C.String("  -base <address>        set base address of image in kilobytes"); C.Ln; C.Ln;
+        C.String("  -pic                   generate position-independent code"); C.Ln; C.Ln;
+        C.String("  -reloc                 make relocation table"); C.Ln; C.Ln;
+        C.String('  -ver <major.minor>     set version of program ("obj" only)'); C.Ln; C.Ln;
+        C.String('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,'); C.Ln;
+        C.String('                         BYTE, CHR, WCHR)'); C.Ln; C.Ln;
         UTILS.Exit(0)
     END;
 
@@ -228,11 +240,12 @@ BEGIN
 
     time := UTILS.GetTickCount() - UTILS.time;
 
-    CONSOLE.Int(time DIV 100); CONSOLE.String("."); CONSOLE.Int2(time MOD 100); CONSOLE.String(" sec, ");
-    CONSOLE.Int(WRITER.counter); CONSOLE.String(" bytes"); CONSOLE.Ln;
+    C.Int(time DIV 100); C.String("."); C.Int2(time MOD 100); C.String(" sec, ");
+    C.Int(WRITER.counter); C.String(" bytes"); C.Ln;
 
     UTILS.Exit(0)
 END main;
+
 
 BEGIN
     main

@@ -7,7 +7,7 @@
 
 MODULE TEXTDRV;
 
-IMPORT FILES;
+IMPORT FILES, LISTS;
 
 
 CONST
@@ -19,7 +19,7 @@ CONST
 
 TYPE
 
-    TEXT* = POINTER TO RECORD
+    TEXT* = POINTER TO RECORD (LISTS.ITEM)
 
         chunk:        ARRAY CHUNK OF BYTE;
         pos, size:    INTEGER;
@@ -33,9 +33,14 @@ TYPE
 
         open*:        PROCEDURE (text: TEXT; name: ARRAY OF CHAR): BOOLEAN;
         peak*:        PROCEDURE (text: TEXT): CHAR;
-        next*:        PROCEDURE (text: TEXT)
+        nextc*:       PROCEDURE (text: TEXT)
 
     END;
+
+
+VAR
+
+    texts: LISTS.LIST;
 
 
 PROCEDURE reset (text: TEXT);
@@ -157,15 +162,32 @@ BEGIN
 END open;
 
 
+PROCEDURE NewText (): TEXT;
+VAR
+    text: TEXT;
+    t:    LISTS.ITEM;
+
+BEGIN
+    t := LISTS.pop(texts);
+    IF t = NIL THEN
+        NEW(text)
+    ELSE
+        text := t(TEXT)
+    END
+
+    RETURN text
+END NewText;
+
+
 PROCEDURE create* (): TEXT;
 VAR
     text: TEXT;
 BEGIN
-    NEW(text);
+    text := NewText();
     reset(text);
-    text.open := open;
-    text.peak := peak;
-    text.next := next
+    text.open  := open;
+    text.peak  := peak;
+    text.nextc := next
 
     RETURN text
 END create;
@@ -177,9 +199,13 @@ BEGIN
         IF text.file # NIL THEN
             FILES.close(text.file)
         END;
-        DISPOSE(text)
+
+        LISTS.push(texts, text);
+        text := NIL
     END
 END destroy;
 
 
+BEGIN
+    texts := LISTS.create(NIL)
 END TEXTDRV.

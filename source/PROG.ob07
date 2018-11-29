@@ -74,7 +74,7 @@ TYPE
     END;
 
     PROC* = POINTER TO RECORD (LISTS.ITEM)
-
+            
         label*:      INTEGER;
         used*:       BOOLEAN;
         processed*:  BOOLEAN;
@@ -215,7 +215,7 @@ TYPE
         types*:      LISTS.LIST;
         sysunit*:    UNIT;
         rtl*:        UNIT;
-        gsize*:      INTEGER;
+        bss*:        INTEGER;
         locsize*:    INTEGER;
 
         procs*:      LISTS.LIST;
@@ -245,17 +245,84 @@ TYPE
     DELIMPORT = PROCEDURE (import: LISTS.ITEM);
 
 
-PROCEDURE close (unit: UNIT);
+VAR
+
+    idents: LISTS.LIST;
+
+
+PROCEDURE NewIdent (): IDENT;
 VAR
     ident: IDENT;
+    id:    LISTS.ITEM;
+
+BEGIN
+    id := LISTS.pop(idents);
+    IF id = NIL THEN
+        NEW(ident)
+    ELSE
+        ident := id(IDENT)
+    END
+
+    RETURN ident
+END NewIdent;
+
+
+PROCEDURE getOffset* (program: PROGRAM; varIdent: IDENT): INTEGER;
+VAR
+    word: INTEGER;
+    size: INTEGER;
+
+BEGIN
+    IF varIdent.offset = -1 THEN
+        IF varIdent.global THEN
+            IF MACHINE.Align(program.bss, varIdent.type.align) THEN
+                IF MACHINE.native.maxInt - program.bss >= varIdent.type.size THEN
+                    varIdent.offset := program.bss;
+                    INC(program.bss, varIdent.type.size)
+                END
+            END
+        ELSE
+            word := program.target.word;
+            size := varIdent.type.size;
+            IF MACHINE.Align(size, word) THEN
+                size := size DIV word;
+                IF MACHINE.native.maxInt - program.locsize >= size THEN
+                    INC(program.locsize, size);
+                    varIdent.offset := program.locsize;
+                END
+            END
+        END
+    END
+
+    RETURN varIdent.offset
+END getOffset;
+
+
+PROCEDURE close (unit: UNIT);
+VAR
+    ident, prev: IDENT;
+    offset: INTEGER;
 
 BEGIN
     ident := unit.idents.last(IDENT);
     WHILE (ident # NIL) & (ident.typ # idGUARD) DO
         IF (ident.typ = idVAR) & (ident.offset = -1) THEN
-            ERRORS.hintmsg(ident.name.s, ident.pos.line, ident.pos.col, 0)
+            ERRORS.hintmsg(ident.name.s, ident.pos.line, ident.pos.col, 0);
+            IF ident.export THEN
+                offset := getOffset(unit.program, ident)
+            END
         END;
         ident := ident.prev(IDENT)
+    END;
+
+    ident := unit.idents.last(IDENT);
+    WHILE ident # NIL DO
+        prev := ident.prev(IDENT);
+        IF ~ident.export THEN
+            LISTS.delete(unit.idents, ident);
+            LISTS.push(idents, ident)
+        END;
+        ident := prev
     END;
 
     unit.closed := TRUE
@@ -292,7 +359,7 @@ BEGIN
     res := unique(unit, ident);
 
     IF res THEN
-        NEW(item);
+        item := NewIdent();
 
         item.name   := ident;
         item.typ    := typ;
@@ -397,37 +464,6 @@ BEGIN
 END getIdent;
 
 
-PROCEDURE getOffset* (program: PROGRAM; varIdent: IDENT): INTEGER;
-VAR
-    word: INTEGER;
-    size: INTEGER;
-
-BEGIN
-    IF varIdent.offset = -1 THEN
-        IF varIdent.global THEN
-            IF MACHINE.Align(program.gsize, varIdent.type.align) THEN
-                IF MACHINE.native.maxInt - program.gsize >= varIdent.type.size THEN
-                    varIdent.offset := program.gsize;
-                    INC(program.gsize, varIdent.type.size)
-                END
-            END
-        ELSE
-            word := program.target.word;
-            size := varIdent.type.size;
-            IF MACHINE.Align(size, word) THEN
-                size := size DIV word;
-                IF MACHINE.native.maxInt - program.locsize >= size THEN
-                    INC(program.locsize, size);
-                    varIdent.offset := program.locsize;
-                END
-            END
-        END
-    END
-
-    RETURN varIdent.offset
-END getOffset;
-
-
 PROCEDURE openScope (unit: UNIT; proc: PROC): BOOLEAN;
 VAR
     item: IDENT;
@@ -443,6 +479,7 @@ BEGIN
         unit.scopes[unit.scopeLvl] := proc;
 
         NEW(item);
+        item := NewIdent();
 
         item.name := NIL;
         item.typ  := idGUARD;
@@ -468,11 +505,13 @@ BEGIN
         IF (del.typ = idVAR) & (del.offset = -1) THEN
             ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
         END;
-        LISTS.delete(unit.idents, del)
+        LISTS.delete(unit.idents, del);
+        LISTS.push(idents, del)
     END;
 
     IF (item # NIL) & (item.typ = idGUARD) THEN
-        LISTS.delete(unit.idents, item)
+        LISTS.delete(unit.idents, item);
+        LISTS.push(idents, item)
     END;
 
     DEC(unit.scopeLvl)
@@ -1120,9 +1159,9 @@ VAR
             used_proc := used_proc.next
         END
 
-    END process;
-
-
+    END process; 
+    
+    
 BEGIN
 
     REPEAT
@@ -1165,6 +1204,8 @@ VAR
     units:   UNITS;
 
 BEGIN
+    idents := LISTS.create(NIL);
+
     MACHINE.SetBitDepth(bit_depth);
     NEW(program);
     NEW(units);
@@ -1175,7 +1216,7 @@ BEGIN
     program.target.adr       := bit_depth DIV 8;
 
     program.recCount := -1;
-    program.gsize := 0;
+    program.bss := 0;
 
     program.units := units;
     program.types := LISTS.create(NIL);

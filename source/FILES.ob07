@@ -7,12 +7,12 @@
 
 MODULE FILES;
 
-IMPORT UTILS;
+IMPORT UTILS, LISTS;
 
 
 TYPE
 
-    FILE* = POINTER TO RECORD
+    FILE* = POINTER TO RECORD (LISTS.ITEM)
 
         ptr: INTEGER;
 
@@ -20,6 +20,10 @@ TYPE
         count:  INTEGER
 
     END;
+
+VAR
+
+    files: LISTS.LIST;
 
 
 PROCEDURE copy (src: ARRAY OF BYTE; src_idx: INTEGER; VAR dst: ARRAY OF BYTE; dst_idx: INTEGER; bytes: INTEGER);
@@ -51,6 +55,23 @@ BEGIN
 END flush;
 
 
+PROCEDURE NewFile (): FILE;
+VAR
+    file: FILE;
+    f:    LISTS.ITEM;
+
+BEGIN
+    f := LISTS.pop(files);
+    IF f = NIL THEN
+        NEW(file)
+    ELSE
+        file := f(FILE)
+    END
+
+    RETURN file
+END NewFile;
+
+
 PROCEDURE create* (name: ARRAY OF CHAR): FILE;
 VAR
     file: FILE;
@@ -60,9 +81,9 @@ BEGIN
     ptr := UTILS.FileCreate(name);
 
     IF ptr > 0 THEN
-        NEW(file);
+        file := NewFile();
         file.ptr := ptr;
-        file.count := 0;
+        file.count := 0
     ELSE
         file := NIL
     END
@@ -80,7 +101,7 @@ BEGIN
     ptr := UTILS.FileOpen(name);
 
     IF ptr > 0 THEN
-        NEW(file);
+        file := NewFile();
         file.ptr := ptr;
         file.count := -1
     ELSE
@@ -106,7 +127,9 @@ BEGIN
 
         UTILS.FileClose(file.ptr);
         file.ptr := 0;
-        DISPOSE(file)
+
+        LISTS.push(files, file);
+        file := NIL
     END
 END close;
 
@@ -191,4 +214,6 @@ BEGIN
 END WriteByte;
 
 
+BEGIN
+    files := LISTS.create(NIL)
 END FILES.
