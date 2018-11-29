@@ -367,9 +367,10 @@ BEGIN
 END _lengthw;
 
 
-PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): INTEGER;
+PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
-    res: INTEGER;
+    res:  INTEGER;
+    bRes: BOOLEAN;
 
 BEGIN
 
@@ -379,26 +380,27 @@ BEGIN
     END;
 
     CASE op OF
-    |0: res := ORD(res =  0)
-    |1: res := ORD(res #  0)
-    |2: res := ORD(res <  0)
-    |3: res := ORD(res <= 0)
-    |4: res := ORD(res >  0)
-    |5: res := ORD(res >= 0)
+    |0: bRes := res =  0
+    |1: bRes := res #  0
+    |2: bRes := res <  0
+    |3: bRes := res <= 0
+    |4: bRes := res >  0
+    |5: bRes := res >= 0
     END
 
-    RETURN res
+    RETURN bRes
 END _strcmp;
 
 
-PROCEDURE [stdcall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): INTEGER;
+PROCEDURE [stdcall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
     RETURN _strcmp(op, len2, str2, len1, str1)
 END _strcmp2;
 
 
-PROCEDURE [stdcall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): INTEGER;
+PROCEDURE [stdcall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
-    res: INTEGER;
+    res:  INTEGER;
+    bRes: BOOLEAN;
 
 BEGIN
 
@@ -408,19 +410,19 @@ BEGIN
     END;
 
     CASE op OF
-    |0: res := ORD(res =  0)
-    |1: res := ORD(res #  0)
-    |2: res := ORD(res <  0)
-    |3: res := ORD(res <= 0)
-    |4: res := ORD(res >  0)
-    |5: res := ORD(res >= 0)
+    |0: bRes := res =  0
+    |1: bRes := res #  0
+    |2: bRes := res <  0
+    |3: bRes := res <= 0
+    |4: bRes := res >  0
+    |5: bRes := res >= 0
     END
 
-    RETURN res
+    RETURN bRes
 END _strcmpw;
 
 
-PROCEDURE [stdcall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): INTEGER;
+PROCEDURE [stdcall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
     RETURN _strcmpw(op, len2, str2, len1, str1)
 END _strcmpw2;
 
@@ -498,14 +500,17 @@ BEGIN
 
     s := "";
     CASE err MOD 16 OF
-    |1: append(s, "assertion failure")
-    |2: append(s, "NIL dereference")
-    |3: append(s, "division by zero")
-    |4: append(s, "NIL procedure call")
-    |5: append(s, "type guard error")
-    |6: append(s, "index out of range")
-    |7: append(s, "invalid CASE")
-    |8: append(s, "array assignment error")
+    | 1: append(s, "assertion failure")
+    | 2: append(s, "NIL dereference")
+    | 3: append(s, "division by zero")
+    | 4: append(s, "NIL procedure call")
+    | 5: append(s, "type guard error")
+    | 6: append(s, "index out of range")
+    | 7: append(s, "invalid CASE")
+    | 8: append(s, "array assignment error")
+    | 9: append(s, "CHR out of range")
+    |10: append(s, "WCHR out of range")
+    |11: append(s, "BYTE out of range")
     END;
 
     append(s, API.eol);
@@ -541,7 +546,7 @@ BEGIN
     IF p # 0 THEN
         DEC(p, SIZE_OF_DWORD);
         SYSTEM.GET(p, t1);
-        WHILE (t1 # 0) & (t1 # t0) DO 
+        WHILE (t1 # 0) & (t1 # t0) DO
             SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
         END
     ELSE
@@ -632,6 +637,7 @@ END _exit;
 
 PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; import, code: INTEGER);
 BEGIN
+    SYSTEM.CODE(09BH, 0DBH, 0E3H); (* finit *)
     API.init(import, code);
 
     types := _types;
