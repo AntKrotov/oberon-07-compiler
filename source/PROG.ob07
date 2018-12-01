@@ -74,14 +74,14 @@ TYPE
     END;
 
     PROC* = POINTER TO RECORD (LISTS.ITEM)
-            
+
         label*:      INTEGER;
         used*:       BOOLEAN;
         processed*:  BOOLEAN;
         import*:     LISTS.ITEM;
         using*:      LISTS.LIST;
-        beg*,
-        end*:        LISTS.ITEM
+        enter*,
+        leave*:      LISTS.ITEM
 
     END;
 
@@ -1159,9 +1159,9 @@ VAR
             used_proc := used_proc.next
         END
 
-    END process; 
-    
-    
+    END process;
+
+
 BEGIN
 
     REPEAT
@@ -1184,8 +1184,8 @@ BEGIN
     WHILE proc # NIL DO
         IF ~proc.used THEN
             IF proc.import = NIL THEN
-                beg := proc.beg.prev;
-                end := proc.end.next;
+                beg := proc.enter.prev;
+                end := proc.leave.next;
                 beg.next := end;
                 end.prev := beg
             ELSE

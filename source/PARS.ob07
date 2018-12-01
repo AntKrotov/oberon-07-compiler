@@ -137,7 +137,7 @@ VAR
     err: INTEGER;
 
 BEGIN
-    
+
     IF parser.sym # sym THEN
 
         CASE sym OF
@@ -166,7 +166,7 @@ BEGIN
 
         check1(FALSE, parser, err)
     END
-END checklex;  
+END checklex;
 
 
 PROCEDURE ExpectSym* (parser: PARSER; sym: INTEGER);
@@ -868,9 +868,8 @@ VAR
             b := DeclarationSequence(parser);
 
             program.locsize := 0;
-            CODE.SetProcLabel(label);
-            proc.proc.beg := CODE.getlast();
-            enter := CODE.Enter();
+            enter := CODE.Enter(label);
+            proc.proc.enter := enter;
 
             IF parser.sym = SCAN.lxBEGIN THEN
                 Next(parser);
@@ -886,9 +885,8 @@ VAR
                 check1(parser.sym # SCAN.lxRETURN, parser, 70)
             END;
 
-            CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), t.params.size * ORD(t.call # PROG.cdecl));
-            proc.proc.end := CODE.getlast();
-            enter.param := program.locsize;
+            proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), t.params.size * ORD(t.call # PROG.cdecl));
+            enter.param2 := program.locsize;
             checklex(parser, SCAN.lxEND)
         END;
 

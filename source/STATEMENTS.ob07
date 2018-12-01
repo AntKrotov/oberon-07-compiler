@@ -329,13 +329,10 @@ END StringW;
 PROCEDURE CheckRange (range, line, errno: INTEGER);
 VAR
     label: INTEGER;
-    last:  CODE.COMMAND;
 
 BEGIN
     label := CODE.NewLabel();
-    CODE.AddCmd(CODE.opCHKIDX, range);
-    last := CODE.getlast();
-    last.label := label;
+    CODE.AddCmd2(CODE.opCHKIDX, label, range);
     CODE.OnError(line, errno);
     CODE.SetLabel(label)
 END CheckRange;
@@ -1325,15 +1322,12 @@ VAR
         label:  INTEGER;
         type:   PROG.TYPE_;
         n, offset, k: INTEGER;
-        last:   CODE.COMMAND;
 
     BEGIN
 
         IF chkIDX IN checking THEN
             label := CODE.NewLabel();
-            CODE.AddCmd(CODE.opCHKIDX2, 0);
-            last := CODE.getlast();
-            last.label := label;
+            CODE.AddCmd2(CODE.opCHKIDX2, label, 0);
             CODE.OnError(pos.line, errIDX);
             CODE.SetLabel(label)
         ELSE
@@ -2615,7 +2609,7 @@ VAR
         pos, pos1: SCAN.POSITION;
 
     BEGIN
-        NEW(label); 
+        NEW(label);
         getpos(parser, pos1);
         label.a := Label(parser, caseExpr, label.type);
 
