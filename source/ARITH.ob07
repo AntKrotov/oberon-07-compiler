@@ -7,7 +7,7 @@
 
 MODULE ARITH;
 
-IMPORT BTREES, STRINGS, MACHINE;
+IMPORT AVLTREES, STRINGS, MACHINE;
 
 
 CONST
@@ -30,7 +30,7 @@ TYPE
         set:       SET;
         bool:      BOOLEAN;
 
-        string*:   BTREES.DATA
+        string*:   AVLTREES.DATA
 
     END;
 

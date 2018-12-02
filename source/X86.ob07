@@ -522,7 +522,7 @@ VAR
     reg1, reg2: INTEGER;
 
     n, a, b, label: INTEGER;
-    
+
     param1, param2, param3: INTEGER;
 
     float: REAL;
@@ -531,7 +531,7 @@ BEGIN
     cmd := code.commands.first(COMMAND);
 
     WHILE cmd # NIL DO
-    
+
         param1 := cmd.param1;
         param2 := cmd.param2;
         param3 := cmd.param3;
@@ -1250,18 +1250,19 @@ BEGIN
             drop
 
         |CODE.opENDSW:
-
-        |CODE.opCASE1:
-            cmprc(eax, param2);
-            jcc(je, param1)
-
-        |CODE.opCASE:
-            label := NewLabel();
-            cmprc(eax, param2);
-            jcc(jl, label);
-            cmprc(eax, param3);
-            jcc(jle, param1);
-            SetLabel(label)
+        
+        |CODE.opCASEL:
+            cmprc(eax, param1);
+            jcc(jl, param2)
+            
+        |CODE.opCASER:
+            cmprc(eax, param1);
+            jcc(jg, param2) 
+            
+        |CODE.opCASELR:
+            cmprc(eax, param1);
+            jcc(jl, param2);
+            jcc(jg, param3)
 
         |CODE.opCODE:
             OutByte(Byte(param2))

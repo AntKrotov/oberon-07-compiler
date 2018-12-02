@@ -40,7 +40,7 @@ CONST
 
     opINC1B* = 71; opDEC1B* = 72; opINCCB* = 73; opDECCB* = 74; opINCB* = 75; opDECB* = 76;
 
-    opCASE* = 77; opCASE1* = 78; opCODE* = 79;
+    opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
 
     opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
     opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
@@ -78,7 +78,9 @@ CONST
 
     opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
     opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234; 
+    
+    opCODE* = 235;
 
 
     _move      *=   0;
@@ -937,21 +939,29 @@ BEGIN
 END drop;
 
 
-PROCEDURE case* (a, b, label: INTEGER);
+PROCEDURE caselr* (a, L, R: INTEGER);
 BEGIN
-    AddCmd0(opCASE);
-    codes.last.param1 := label;
-    codes.last.param2 := a;
-    codes.last.param3 := b
-END case;
+    AddCmd0(opCASELR);
+    codes.last.param1 := a;
+    codes.last.param2 := L;
+    codes.last.param3 := R
+END caselr;
 
 
-PROCEDURE case1* (a, label: INTEGER);
+PROCEDURE casel* (a, L: INTEGER);
 BEGIN
-    AddCmd0(opCASE1);
-    codes.last.param1 := label;
-    codes.last.param2 := a
-END case1;
+    AddCmd0(opCASEL);
+    codes.last.param1 := a;
+    codes.last.param2 := L
+END casel;
+
+
+PROCEDURE caser* (b, R: INTEGER);
+BEGIN
+    AddCmd0(opCASER);
+    codes.last.param1 := b;
+    codes.last.param2 := R
+END caser;
 
 
 PROCEDURE caset* (a, label: INTEGER);

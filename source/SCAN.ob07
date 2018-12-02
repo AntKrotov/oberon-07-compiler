@@ -7,7 +7,7 @@
 
 MODULE SCAN;
 
-IMPORT TEXTDRV, BTREES, ARITH, S := STRINGS, LISTS;
+IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, LISTS;
 
 
 CONST
@@ -47,7 +47,7 @@ TYPE
 
     LEXSTR* = ARRAY LEXLEN OF CHAR;
 
-    IDENT* = POINTER TO RECORD (BTREES.DATA)
+    IDENT* = POINTER TO RECORD (AVL.DATA)
 
         s*: LEXSTR;
         offset*, offsetW*: INTEGER
@@ -93,7 +93,7 @@ VAR
 
         delimiters:  ARRAY 256 OF BOOLEAN;
 
-        idents:      BTREES.TREE;
+        idents:      AVL.NODE;
         ident:       IDENT
 
     END;
@@ -101,7 +101,7 @@ VAR
     scanners: LISTS.LIST;
 
 
-PROCEDURE nodecmp (a, b: BTREES.DATA): INTEGER;
+PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
     RETURN ORD(a(IDENT).s > b(IDENT).s) - ORD(a(IDENT).s < b(IDENT).s)
 END nodecmp;
 
@@ -145,20 +145,19 @@ END key;
 PROCEDURE enterid* (s: LEXSTR): IDENT;
 VAR
     newnode: BOOLEAN;
-    node:    BTREES.NODE;
-    ident:   IDENT;
+    node:    AVL.NODE;
 
 BEGIN
     vocabulary.ident.s := s;
-    node := BTREES.add(vocabulary.idents, vocabulary.ident, newnode);
-    ident := node.data(IDENT);
+    vocabulary.idents := AVL.insert(vocabulary.idents, vocabulary.ident, nodecmp, newnode, node);
+
     IF newnode THEN
         NEW(vocabulary.ident);
         vocabulary.ident.offset  := -1;
         vocabulary.ident.offsetW := -1
     END
 
-    RETURN ident
+    RETURN node.data(IDENT)
 END enterid;
 
 
@@ -715,12 +714,7 @@ BEGIN
     vocabulary.ident.s       := "";
     vocabulary.ident.offset  := -1;
     vocabulary.ident.offsetW := -1;
-    vocabulary.idents  := BTREES.create(vocabulary.ident, nodecmp);
-
-    NEW(vocabulary.ident);
-    vocabulary.ident.offset  := -1;
-    vocabulary.ident.offsetW := -1;
-
+    vocabulary.idents  := NIL
 END init;
 
 
