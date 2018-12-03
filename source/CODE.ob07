@@ -78,8 +78,8 @@ CONST
 
     opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
     opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234; 
-    
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+
     opCODE* = 235;
 
 
@@ -123,7 +123,12 @@ TYPE
 
         opcode*:  INTEGER;
         param1*:  INTEGER;
-        param2*:  INTEGER;
+        param2*:  INTEGER
+
+    END;
+    
+    COMMAND3* = POINTER TO RECORD (COMMAND)
+
         param3*:  INTEGER
 
     END;
@@ -364,14 +369,14 @@ BEGIN
 END AddCmd;
 
 
-PROCEDURE AddCmd2* (opcode: INTEGER; label, param: INTEGER);
+PROCEDURE AddCmd2* (opcode: INTEGER; param1, param2: INTEGER);
 VAR
     cmd: COMMAND;
 BEGIN
     NEW(cmd);
     cmd.opcode := opcode;
-    cmd.param1 := label;
-    cmd.param2 := param;
+    cmd.param1 := param1;
+    cmd.param2 := param2;
     insert(codes.last, cmd)
 END AddCmd2;
 
@@ -426,8 +431,7 @@ BEGIN
         END
     END;
 
-    AddCmd(opcode, label);
-    codes.last.param1 := label;
+    AddCmd2(opcode, label, label);
 
     IF not THEN
         delete(prev)
@@ -469,8 +473,7 @@ END TypeCheckRec;
 
 PROCEDURE New* (size, typenum: INTEGER);
 BEGIN
-    AddCmd(opNEW, size);
-    codes.last.param3 := typenum
+    AddCmd2(opNEW, typenum, size)
 END New;
 
 
@@ -797,8 +800,7 @@ END fbinop;
 
 PROCEDURE saves* (offset, length: INTEGER);
 BEGIN
-    AddCmd(opSAVES, offset);
-    codes.last.param3 := length
+    AddCmd2(opSAVES, length, offset)
 END saves;
 
 
@@ -904,8 +906,7 @@ VAR
     res: INTEGER;
 BEGIN
     res := codes.fregs;
-    AddCmd(opPRECALL, res);
-    codes.last.param3 := ORD(flt);
+    AddCmd2(opPRECALL, ORD(flt), res);
     codes.fregs := 0
     RETURN res
 END precall;
@@ -939,36 +940,28 @@ BEGIN
 END drop;
 
 
-PROCEDURE caselr* (a, L, R: INTEGER);
+PROCEDURE case* (a, b, L, R: INTEGER);
+VAR
+    cmd: COMMAND3;
+
 BEGIN
-    AddCmd0(opCASELR);
-    codes.last.param1 := a;
-    codes.last.param2 := L;
-    codes.last.param3 := R
-END caselr;
-
-
-PROCEDURE casel* (a, L: INTEGER);
-BEGIN
-    AddCmd0(opCASEL);
-    codes.last.param1 := a;
-    codes.last.param2 := L
-END casel;
-
-
-PROCEDURE caser* (b, R: INTEGER);
-BEGIN
-    AddCmd0(opCASER);
-    codes.last.param1 := b;
-    codes.last.param2 := R
-END caser;
+    IF a = b THEN
+        NEW(cmd);
+        cmd.opcode := opCASELR;
+        cmd.param1 := a;
+        cmd.param2 := L;
+        cmd.param3 := R;
+        insert(codes.last, cmd)
+    ELSE
+        AddCmd2(opCASEL, a, L);
+        AddCmd2(opCASER, b, R)
+    END
+END case;
 
 
 PROCEDURE caset* (a, label: INTEGER);
 BEGIN
-    AddCmd0(opCASET);
-    codes.last.param1 := label;
-    codes.last.param2 := a
+    AddCmd2(opCASET, label, a)
 END caset;
 
 

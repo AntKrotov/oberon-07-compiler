@@ -7,7 +7,7 @@
 
 MODULE PARS;
 
-IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE;
+IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE, C := COLLECTIONS;
 
 
 CONST
@@ -39,7 +39,7 @@ TYPE
     EXPRPROC  = PROCEDURE (parser: PARSER; VAR e: EXPR);
     RETPROC   = PROCEDURE (parser: PARSER; e: EXPR; t: PROG.TYPE_; pos: SCAN.POSITION): BOOLEAN;
 
-    rPARSER = RECORD (LISTS.ITEM)
+    rPARSER = RECORD (C.ITEM)
 
         fname*:      PATH;
         path:        PATH;
@@ -69,7 +69,7 @@ VAR
 
     program*:  PROG.PROGRAM;
 
-    parsers: LISTS.LIST;
+    parsers: C.COLLECTION;
 
 
 PROCEDURE destroy* (VAR parser: PARSER);
@@ -78,7 +78,7 @@ BEGIN
         SCAN.close(parser.scanner)
     END;
 
-    LISTS.push(parsers, parser);
+    C.push(parsers, parser);
     parser := NIL
 END destroy;
 
@@ -1044,15 +1044,15 @@ END open;
 
 PROCEDURE NewParser (): PARSER;
 VAR
-    pars: PARSER;
-    p:    LISTS.ITEM;
+    pars:  PARSER;
+    citem: C.ITEM;
 
 BEGIN
-    p := LISTS.pop(parsers);
-    IF p = NIL THEN
+    citem := C.pop(parsers);
+    IF citem = NIL THEN
         NEW(pars)
     ELSE
-        pars := p(PARSER)
+        pars := citem(PARSER)
     END
 
     RETURN pars
@@ -1090,5 +1090,5 @@ END create;
 
 BEGIN
     program := PROG.create(32);
-    parsers := LISTS.create(NIL)
+    parsers := C.create()
 END PARS.

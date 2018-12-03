@@ -7,7 +7,7 @@
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE;
+IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS;
 
 
 CONST
@@ -247,20 +247,20 @@ TYPE
 
 VAR
 
-    idents: LISTS.LIST;
+    idents: C.COLLECTION;
 
 
 PROCEDURE NewIdent (): IDENT;
 VAR
     ident: IDENT;
-    id:    LISTS.ITEM;
+    citem: C.ITEM;
 
 BEGIN
-    id := LISTS.pop(idents);
-    IF id = NIL THEN
+    citem := C.pop(idents);
+    IF citem = NIL THEN
         NEW(ident)
     ELSE
-        ident := id(IDENT)
+        ident := citem(IDENT)
     END
 
     RETURN ident
@@ -320,7 +320,7 @@ BEGIN
         prev := ident.prev(IDENT);
         IF ~ident.export THEN
             LISTS.delete(unit.idents, ident);
-            LISTS.push(idents, ident)
+            C.push(idents, ident)
         END;
         ident := prev
     END;
@@ -506,12 +506,12 @@ BEGIN
             ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
         END;
         LISTS.delete(unit.idents, del);
-        LISTS.push(idents, del)
+        C.push(idents, del)
     END;
 
     IF (item # NIL) & (item.typ = idGUARD) THEN
         LISTS.delete(unit.idents, item);
-        LISTS.push(idents, item)
+        C.push(idents, item)
     END;
 
     DEC(unit.scopeLvl)
@@ -1204,7 +1204,7 @@ VAR
     units:   UNITS;
 
 BEGIN
-    idents := LISTS.create(NIL);
+    idents := C.create();
 
     MACHINE.SetBitDepth(bit_depth);
     NEW(program);

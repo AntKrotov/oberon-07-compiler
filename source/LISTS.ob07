@@ -7,10 +7,12 @@
 
 MODULE LISTS;
 
+IMPORT C := COLLECTIONS;
+
 
 TYPE
 
-    ITEM* = POINTER TO RECORD
+    ITEM* = POINTER TO RECORD (C.ITEM)
 
         prev*, next*: ITEM
 

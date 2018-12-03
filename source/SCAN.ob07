@@ -7,7 +7,7 @@
 
 MODULE SCAN;
 
-IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, LISTS;
+IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, C := COLLECTIONS;
 
 
 CONST
@@ -75,7 +75,7 @@ TYPE
 
     END;
 
-    SCANNER* = POINTER TO RECORD (LISTS.ITEM)
+    SCANNER* = POINTER TO RECORD (C.ITEM)
 
         text:            TEXTDRV.TEXT;
         range:           BOOLEAN
@@ -98,7 +98,7 @@ VAR
 
     END;
 
-    scanners: LISTS.LIST;
+    scanners: C.COLLECTION;
 
 
 PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
@@ -603,15 +603,15 @@ END Next;
 
 PROCEDURE NewScanner (): SCANNER;
 VAR
-    scan: SCANNER;
-    s:    LISTS.ITEM;
+    scan:  SCANNER;
+    citem: C.ITEM;
 
 BEGIN
-    s := LISTS.pop(scanners);
-    IF s = NIL THEN
+    citem := C.pop(scanners);
+    IF citem = NIL THEN
         NEW(scan)
     ELSE
-        scan := s(SCANNER)
+        scan := citem(SCANNER)
     END
 
     RETURN scan
@@ -645,7 +645,7 @@ BEGIN
             TEXTDRV.destroy(scanner.text)
         END;
 
-        LISTS.push(scanners, scanner);
+        C.push(scanners, scanner);
         scanner := NIL
     END
 END close;
@@ -663,7 +663,7 @@ VAR
     END enterkw;
 
 BEGIN
-    scanners := LISTS.create(NIL);
+    scanners := C.create();
 
     FOR i := 0 TO 255 DO
         vocabulary.delimiters[i] := FALSE

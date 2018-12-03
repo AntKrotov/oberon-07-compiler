@@ -5,14 +5,16 @@
     All rights reserved.
 *)
 
-MODULE AVLTREES;
+MODULE AVLTREES; 
+
+IMPORT C := COLLECTIONS;
 
 
 TYPE
 
-    DATA* = POINTER TO RECORD END;
+    DATA* = POINTER TO RECORD (C.ITEM) END;
 
-    NODE* = POINTER TO RECORD
+    NODE* = POINTER TO RECORD (C.ITEM)
 
         data*: DATA;
 
@@ -24,19 +26,33 @@ TYPE
 
     CMP* = PROCEDURE (a, b: DATA): INTEGER;
 
+    DESTRUCTOR* = PROCEDURE (VAR data: DATA);
+
+
+VAR
+
+    nodes: C.COLLECTION;
+
 
 PROCEDURE NewNode (data: DATA): NODE;
 VAR
-    res: NODE;
+    node:  NODE;
+    citem: C.ITEM;
 
-BEGIN
-    NEW(res);
-    res.data := data;
-    res.left := NIL;
-    res.right := NIL;
-    res.height := 1
+BEGIN  
+    citem := C.pop(nodes);
+    IF citem = NIL THEN
+        NEW(node)
+    ELSE
+        node := citem(NODE)
+    END;
 
-    RETURN res
+    node.data := data;
+    node.left := NIL;
+    node.right := NIL;
+    node.height := 1
+
+    RETURN node
 END NewNode;
 
 
@@ -125,7 +141,7 @@ END balance;
 
 PROCEDURE insert* (p: NODE; data: DATA; cmp: CMP; VAR newnode: BOOLEAN; VAR node: NODE): NODE;
 VAR
-    res: NODE; 
+    res: NODE;
     rescmp: INTEGER;
 
 BEGIN
@@ -133,7 +149,7 @@ BEGIN
         res := NewNode(data);
         node := res;
         newnode := TRUE
-    ELSE            
+    ELSE
 
         rescmp := cmp(data, p.data);
         IF rescmp < 0 THEN
@@ -154,4 +170,28 @@ BEGIN
 END insert;
 
 
+PROCEDURE destroy* (VAR node: NODE; destructor: DESTRUCTOR);
+VAR
+    left, right: NODE;
+
+BEGIN
+    IF node # NIL THEN
+        left  := node.left;
+        right := node.right;
+
+        IF destructor # NIL THEN
+            destructor(node.data)
+        END; 
+        
+        C.push(nodes, node);
+        node := NIL;
+
+        destroy(left, destructor);
+        destroy(right, destructor)
+    END
+END destroy;
+
+
+BEGIN
+    nodes := C.create()
 END AVLTREES.

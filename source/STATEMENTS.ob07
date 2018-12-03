@@ -9,7 +9,8 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, ERRORS, MACHINE, AVL := AVLTREES;
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86,
+    ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS;
 
 
 CONST
@@ -33,10 +34,23 @@ TYPE
 
     isXXX = PROCEDURE (e: PARS.EXPR): BOOLEAN;
 
-    CASE_DATA = POINTER TO RECORD (AVL.DATA)
+    RANGE = RECORD
 
-        a, b:   INTEGER;
-        L, L0:  INTEGER
+        a, b: INTEGER
+
+    END;
+
+    CASE_LABEL = POINTER TO rCASE_LABEL;
+
+    rCASE_LABEL = RECORD (AVL.DATA)
+
+        range: RANGE;
+
+        variant, self: INTEGER;
+
+        type: PROG.TYPE_;
+
+        prev: CASE_LABEL
 
     END;
 
@@ -46,6 +60,8 @@ VAR
     begcall, endcall: CODE.COMMAND;
 
     checking: SET;
+
+    CaseLabels: C.COLLECTION;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -2547,44 +2563,40 @@ END RepeatStatement;
 
 
 PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
-    RETURN ORD(a(CASE_DATA).a > b(CASE_DATA).a) - ORD(a(CASE_DATA).a < b(CASE_DATA).a)
+VAR
+   La, Ra, Lb, Rb, res: INTEGER;
+
+BEGIN
+    La := a(CASE_LABEL).range.a;
+    Ra := a(CASE_LABEL).range.b;
+    Lb := b(CASE_LABEL).range.a;
+    Rb := b(CASE_LABEL).range.b;
+    IF (Ra < Lb) OR (La > Rb) THEN
+        res := ORD(La > Lb) - ORD(La < Lb)
+    ELSE
+        res := 0
+    END
+
+    RETURN res
 END LabelCmp;
 
 
-PROCEDURE CaseStatement (parser: PARS.PARSER);
-TYPE
-    LABEL = POINTER TO RECORD (LISTS.ITEM)
-        a, b:   INTEGER;
-        L, L0:  INTEGER;
-        type:   PROG.TYPE_
-    END;
+PROCEDURE DestroyLabel (VAR label: AVL.DATA);
+BEGIN                 
+    C.push(CaseLabels, label);
+    label := NIL
+END DestroyLabel;
 
+
+PROCEDURE CaseStatement (parser: PARS.PARSER);
 VAR
     e:      PARS.EXPR;
     pos:    SCAN.POSITION;
-    labels: LISTS.LIST;
-    label:  LABEL;
-    end:    INTEGER;
-    table:  INTEGER;
-    else:   INTEGER;
-
-    root, node: AVL.NODE;
-    newnode: BOOLEAN;
 
 
-    PROCEDURE CreateNodeData (label: LABEL): CASE_DATA;
-    VAR
-        res: CASE_DATA;
-
-    BEGIN
-        NEW(res);
-        res.a  := label.a;
-        res.b  := label.b;
-        res.L  := label.L;
-        res.L0 := label.L0
-
-        RETURN res
-    END CreateNodeData;
+    PROCEDURE isRecPtr (caseExpr: PARS.EXPR): BOOLEAN;
+        RETURN isRec(caseExpr) OR isPtr(caseExpr)
+    END isRecPtr;
 
 
     PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR type: PROG.TYPE_): INTEGER;
@@ -2592,29 +2604,29 @@ VAR
         a:      INTEGER;
         label:  PARS.EXPR;
         pos:    SCAN.POSITION;
-        L:      ARITH.VALUE;
+        value:  ARITH.VALUE;
 
     BEGIN
         getpos(parser, pos);
         type := NIL;
 
         IF isChar(caseExpr) THEN
-            PARS.ConstExpression(parser, L);
-            PARS.check(L.typ = ARITH.tCHAR, parser, pos, 99);
-            a := ARITH.getInt(L)
+            PARS.ConstExpression(parser, value);
+            PARS.check(value.typ = ARITH.tCHAR, parser, pos, 99);
+            a := ARITH.getInt(value)
         ELSIF isCharW(caseExpr) THEN
-            PARS.ConstExpression(parser, L);
-            IF (L.typ = ARITH.tSTRING) & (_length(L.string(SCAN.IDENT).s) = 1) & (LENGTH(L.string(SCAN.IDENT).s) > 1) THEN
-                ASSERT(ARITH.setInt(L, StrToWChar(L.string(SCAN.IDENT).s)))
+            PARS.ConstExpression(parser, value);
+            IF (value.typ = ARITH.tSTRING) & (_length(value.string(SCAN.IDENT).s) = 1) & (LENGTH(value.string(SCAN.IDENT).s) > 1) THEN
+                ASSERT(ARITH.setInt(value, StrToWChar(value.string(SCAN.IDENT).s)))
             ELSE
-                PARS.check(L.typ IN {ARITH.tWCHAR, ARITH.tCHAR}, parser, pos, 99)
+                PARS.check(value.typ IN {ARITH.tWCHAR, ARITH.tCHAR}, parser, pos, 99)
             END;
-            a := ARITH.getInt(L)
+            a := ARITH.getInt(value)
         ELSIF isInt(caseExpr) THEN
-            PARS.ConstExpression(parser, L);
-            PARS.check(L.typ = ARITH.tINTEGER, parser, pos, 99);
-            a := ARITH.getInt(L)
-        ELSIF isRec(caseExpr) OR isPtr(caseExpr) THEN
+            PARS.ConstExpression(parser, value);
+            PARS.check(value.typ = ARITH.tINTEGER, parser, pos, 99);
+            a := ARITH.getInt(value)
+        ELSIF isRecPtr(caseExpr) THEN
             qualident(parser, label);
             PARS.check(label.obj = eTYPE, parser, pos, 79);
             PARS.check(PROG.isBaseOf(caseExpr.type, label.type), parser, pos, 99);
@@ -2630,84 +2642,106 @@ VAR
     END Label;
 
 
-    PROCEDURE LabelRange (parser: PARS.PARSER; caseExpr: PARS.EXPR; labels: LISTS.LIST; L: INTEGER);
-    VAR
-        label:     LABEL;
-        item:      LABEL;
-        pos, pos1: SCAN.POSITION;
-
+    PROCEDURE CheckType (node: AVL.NODE; type: PROG.TYPE_; parser: PARS.PARSER; pos: SCAN.POSITION);
     BEGIN
-        NEW(label);
-        label.L := L;
-        label.L0 := CODE.NewLabel();
+        IF node # NIL THEN
+            PARS.check(~(PROG.isBaseOf(node.data(CASE_LABEL).type, type) OR PROG.isBaseOf(type, node.data(CASE_LABEL).type)), parser, pos, 100);
+            CheckType(node.left, type, parser, pos);
+            CheckType(node.right, type, parser, pos)
+        END
+    END CheckType;
+
+
+    PROCEDURE LabelRange (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; variant: INTEGER): AVL.NODE;
+    VAR
+        label:     CASE_LABEL;
+        citem:     C.ITEM;
+        pos, pos1: SCAN.POSITION;
+        node:      AVL.NODE;
+        newnode:   BOOLEAN;
+        range:     RANGE;
+
+    BEGIN     
+        citem := C.pop(CaseLabels);
+        IF citem = NIL THEN
+            NEW(label)
+        ELSE
+            label := citem(CASE_LABEL)
+        END;
+
+        label.variant := variant;
+        label.self := CODE.NewLabel();
 
         getpos(parser, pos1);
-        label.a := Label(parser, caseExpr, label.type);
+        range.a := Label(parser, caseExpr, label.type);
 
         IF parser.sym = SCAN.lxRANGE THEN
-            PARS.check1(isInt(caseExpr) OR isChar(caseExpr) OR isCharW(caseExpr), parser, 53);
+            PARS.check1(~isRecPtr(caseExpr), parser, 53);
             NextPos(parser, pos);
-            label.b := Label(parser, caseExpr, label.type);
-            PARS.check(label.a <= label.b, parser, pos, 103)
+            range.b := Label(parser, caseExpr, label.type);
+            PARS.check(range.a <= range.b, parser, pos, 103)
         ELSE
-            label.b := label.a
+            range.b := range.a
         END;
 
-        item := labels.first(LABEL);
-        WHILE item # NIL DO
-            IF isInt(caseExpr) OR isChar(caseExpr) OR isCharW(caseExpr) THEN
-                PARS.check((item.b < label.a) OR (label.b < item.a), parser, pos1, 100)
-            ELSE
-                PARS.check(~(PROG.isBaseOf(item.type, label.type) OR PROG.isBaseOf(label.type, item.type)), parser, pos1, 100)
-            END;
-            item := item.next(LABEL)
-        END;
+        label.range := range;
 
-        LISTS.push(labels, label)
+        IF isRecPtr(caseExpr) THEN
+            CheckType(tree, label.type, parser, pos1)
+        END;
+        tree := AVL.insert(tree, label, LabelCmp, newnode, node);
+        PARS.check(newnode, parser, pos1, 100)
+
+        RETURN node
+
     END LabelRange;
 
 
-    PROCEDURE CaseLabelList (parser: PARS.PARSER; caseExpr: PARS.EXPR; labels: LISTS.LIST; L: INTEGER);
+    PROCEDURE CaseLabelList (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; variant: INTEGER): AVL.NODE;
     VAR
         exit: BOOLEAN;
+        res:  AVL.NODE;
 
     BEGIN
         exit := FALSE;
         REPEAT
-            LabelRange(parser, caseExpr, labels, L);
+            res := LabelRange(parser, caseExpr, tree, variant);
             IF parser.sym = SCAN.lxCOMMA THEN
-                PARS.check1(isInt(caseExpr) OR isChar(caseExpr) OR isCharW(caseExpr), parser, 53);
+                PARS.check1(~isRecPtr(caseExpr), parser, 53);
                 PARS.Next(parser)
             ELSE
                 exit := TRUE
             END
         UNTIL exit
+
+        RETURN res
     END CaseLabelList;
 
 
-    PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; labels: LISTS.LIST; end: INTEGER);
+    PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; end: INTEGER);
     VAR
-        sym:  INTEGER;
-        t:    PROG.TYPE_;
-        L:    INTEGER;
+        sym:      INTEGER;
+        t:        PROG.TYPE_;
+        variant:  INTEGER;
+        node:     AVL.NODE;
 
     BEGIN
         sym := parser.sym;
         IF sym # SCAN.lxBAR THEN
-            L := CODE.NewLabel();
-            CaseLabelList(parser, caseExpr, labels, L);
+            variant := CODE.NewLabel();
+            node := CaseLabelList(parser, caseExpr, tree, variant);
             PARS.checklex(parser, SCAN.lxCOLON);
             PARS.Next(parser);
-            IF isPtr(caseExpr) OR isRec(caseExpr) THEN
+            IF isRecPtr(caseExpr) THEN
                 t := caseExpr.type;
-                caseExpr.ident.type := labels.last(LABEL).type
+                caseExpr.ident.type := node.data(CASE_LABEL).type
             END;
 
-            CODE.SetLabel(L);
+            CODE.SetLabel(variant);
             parser.StatSeq(parser);
             CODE.AddJmpCmd(CODE.opJMP, end);
 
-            IF isPtr(caseExpr) OR isRec(caseExpr) THEN
+            IF isRecPtr(caseExpr) THEN
                 caseExpr.ident.type := t
             END
         END
@@ -2716,39 +2750,34 @@ VAR
 
     PROCEDURE Table (node: AVL.NODE; else: INTEGER);
     VAR
-        a, b, L, R, body: INTEGER;
+        L, R: INTEGER;
+        range: RANGE;
         left, right: AVL.NODE;
 
     BEGIN
         IF node # NIL THEN
-            a := node.data(CASE_DATA).a;
-            b := node.data(CASE_DATA).b;
-            body := node.data(CASE_DATA).L;
+
+            range := node.data(CASE_LABEL).range;
 
             left := node.left;
             IF left # NIL THEN
-                L := left.data(CASE_DATA).L0
+                L := left.data(CASE_LABEL).self
             ELSE
                 L := else
             END;
 
             right := node.right;
             IF right # NIL THEN
-                R := right.data(CASE_DATA).L0
+                R := right.data(CASE_LABEL).self
             ELSE
                 R := else
             END;
 
-            CODE.SetLabel(node.data(CASE_DATA).L0);
+            CODE.SetLabel(node.data(CASE_LABEL).self);
 
-            IF a = b THEN
-                CODE.caselr(a, L, R)
-            ELSE
-                CODE.casel(a, L);
-                CODE.caser(b, R);
-            END;
+            CODE.case(range.a, range.b, L, R);
 
-            CODE.AddJmpCmd(CODE.opJMP, body);
+            CODE.AddJmpCmd(CODE.opJMP, node.data(CASE_LABEL).variant);
 
             Table(left, else);
             Table(right, else)
@@ -2756,13 +2785,69 @@ VAR
     END Table;
 
 
+    PROCEDURE TableT (node: AVL.NODE);
+    BEGIN
+        IF node # NIL THEN
+            CODE.caset(node.data(CASE_LABEL).range.a, node.data(CASE_LABEL).variant);
+
+            TableT(node.left);
+            TableT(node.right)
+        END
+    END TableT;
+
+
+    PROCEDURE ParseCase (parser: PARS.PARSER; e: PARS.EXPR; pos: SCAN.POSITION);
+    VAR
+        table, end, else: INTEGER;
+        tree: AVL.NODE;
+
+    BEGIN
+        end   := CODE.NewLabel();
+        else  := CODE.NewLabel();
+        table := CODE.NewLabel();
+        CODE.AddCmd(CODE.opSWITCH, ORD(isRecPtr(e)));
+        CODE.AddJmpCmd(CODE.opJMP, table);
+
+        tree := NIL;
+
+        case(parser, e, tree, end);
+        WHILE parser.sym = SCAN.lxBAR DO
+            PARS.Next(parser);
+            case(parser, e, tree, end)
+        END;
+
+        CODE.SetLabel(else);
+        IF parser.sym = SCAN.lxELSE THEN
+            PARS.Next(parser);
+            parser.StatSeq(parser);
+            CODE.AddJmpCmd(CODE.opJMP, end)
+        ELSE
+            CODE.OnError(pos.line, errCASE)
+        END;
+
+        PARS.checklex(parser, SCAN.lxEND);
+        PARS.Next(parser);
+
+        CODE.SetLabel(table);
+
+        IF isRecPtr(e) THEN
+            TableT(tree);
+            CODE.AddJmpCmd(CODE.opJMP, else)
+        ELSE
+            Table(tree, else)
+        END;
+
+        AVL.destroy(tree, DestroyLabel);
+        CODE.SetLabel(end);
+        CODE.AddCmd0(CODE.opENDSW)
+    END ParseCase;
+
+
 BEGIN
-    end  := CODE.NewLabel();
-    else := CODE.NewLabel();
     NextPos(parser, pos);
     expression(parser, e);
     PARS.check(isInt(e) OR isChar(e) OR isCharW(e) OR isPtr(e) OR isRec(e), parser, pos, 95);
-    IF isPtr(e) OR isRec(e) THEN
+    IF isRecPtr(e) THEN
         PARS.check(isVar(e), parser, pos, 93);
         PARS.check(e.ident # NIL, parser, pos, 106)
     END;
@@ -2784,60 +2869,7 @@ BEGIN
 
     PARS.checklex(parser, SCAN.lxOF);
     PARS.Next(parser);
-
-    CODE.AddCmd0(CODE.opSWITCH);
-
-    table := CODE.NewLabel();
-    CODE.AddJmpCmd(CODE.opJMP, table);
-
-    labels := LISTS.create(labels);
-    case(parser, e, labels, end);
-    WHILE parser.sym = SCAN.lxBAR DO
-        PARS.Next(parser);
-        case(parser, e, labels, end)
-    END;
-
-    CODE.SetLabel(else);
-    IF parser.sym = SCAN.lxELSE THEN
-        PARS.Next(parser);
-        parser.StatSeq(parser);
-        CODE.AddJmpCmd(CODE.opJMP, end)
-    ELSE
-        CODE.OnError(pos.line, errCASE)
-    END;
-
-    PARS.checklex(parser, SCAN.lxEND);
-    PARS.Next(parser);
-
-    CODE.SetLabel(table);
-
-    label := labels.first(LABEL);
-
-    IF isInt(e) OR isChar(e) OR isCharW(e) THEN
-
-        root := NIL;
-
-        WHILE label # NIL DO
-            root := AVL.insert(root, CreateNodeData(label), LabelCmp, newnode, node);
-            ASSERT(newnode);
-
-            label := label.next(LABEL)
-        END;
-
-        Table(root, else)
-
-    ELSE
-
-        WHILE label # NIL DO
-            CODE.caset(label.a, label.L);
-            label := label.next(LABEL)
-        END;
-
-        CODE.AddJmpCmd(CODE.opJMP, else)
-    END;
-
-    CODE.SetLabel(end);
-    CODE.AddCmd0(CODE.opENDSW)
+    ParseCase(parser, e, pos)
 END CaseStatement;
 
 
@@ -3083,6 +3115,8 @@ VAR
     parser:   PARS.PARSER;
 
 BEGIN
+    CaseLabels := C.create();
+
     checking := chk;
     CODE.init;
 
@@ -3119,7 +3153,6 @@ BEGIN
     CODE.codes.bss := PARS.program.bss;
 
     X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
-
 END compile;
 
 

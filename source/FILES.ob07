@@ -7,12 +7,12 @@
 
 MODULE FILES;
 
-IMPORT UTILS, LISTS;
+IMPORT UTILS, C := COLLECTIONS;
 
 
 TYPE
 
-    FILE* = POINTER TO RECORD (LISTS.ITEM)
+    FILE* = POINTER TO RECORD (C.ITEM)
 
         ptr: INTEGER;
 
@@ -23,7 +23,7 @@ TYPE
 
 VAR
 
-    files: LISTS.LIST;
+    files: C.COLLECTION;
 
 
 PROCEDURE copy (src: ARRAY OF BYTE; src_idx: INTEGER; VAR dst: ARRAY OF BYTE; dst_idx: INTEGER; bytes: INTEGER);
@@ -57,15 +57,15 @@ END flush;
 
 PROCEDURE NewFile (): FILE;
 VAR
-    file: FILE;
-    f:    LISTS.ITEM;
+    file:  FILE;
+    citem: C.ITEM;
 
 BEGIN
-    f := LISTS.pop(files);
-    IF f = NIL THEN
+    citem := C.pop(files);
+    IF citem = NIL THEN
         NEW(file)
     ELSE
-        file := f(FILE)
+        file := citem(FILE)
     END
 
     RETURN file
@@ -128,7 +128,7 @@ BEGIN
         UTILS.FileClose(file.ptr);
         file.ptr := 0;
 
-        LISTS.push(files, file);
+        C.push(files, file);
         file := NIL
     END
 END close;
@@ -215,5 +215,5 @@ END WriteByte;
 
 
 BEGIN
-    files := LISTS.create(NIL)
+    files := C.create()
 END FILES.

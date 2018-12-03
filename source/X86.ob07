@@ -523,7 +523,7 @@ VAR
 
     n, a, b, label: INTEGER;
 
-    param1, param2, param3: INTEGER;
+    param1, param2: INTEGER;
 
     float: REAL;
 
@@ -534,7 +534,6 @@ BEGIN
 
         param1 := cmd.param1;
         param2 := cmd.param2;
-        param3 := cmd.param3;
 
         CASE cmd.opcode OF
 
@@ -563,7 +562,7 @@ BEGIN
 
         |CODE.opPRECALL:
             n := param2;
-            IF (param3 # 0) & (n # 0) THEN
+            IF (param1 # 0) & (n # 0) THEN
                 OutByte3(083H, 0ECH, 008H)  // sub esp, 8
             END;
             WHILE n > 0 DO
@@ -1242,27 +1241,32 @@ BEGIN
 
         |CODE.opSWITCH:
             UnOp(reg1);
-            IF reg1 # eax THEN
-                ASSERT(REG.GetReg(R, eax));
-                ASSERT(REG.Exchange(R, reg1, eax));
+            IF param2 = 0 THEN
+                reg2 := eax
+            ELSE
+                reg2 := ecx
+            END;
+            IF reg1 # reg2 THEN
+                ASSERT(REG.GetReg(R, reg2));
+                ASSERT(REG.Exchange(R, reg1, reg2));
                 drop
             END;
             drop
 
         |CODE.opENDSW:
-        
+
         |CODE.opCASEL:
             cmprc(eax, param1);
             jcc(jl, param2)
-            
+
         |CODE.opCASER:
             cmprc(eax, param1);
-            jcc(jg, param2) 
-            
+            jcc(jg, param2)
+
         |CODE.opCASELR:
             cmprc(eax, param1);
             jcc(jl, param2);
-            jcc(jg, param3)
+            jcc(jg, cmd(CODE.COMMAND3).param3)
 
         |CODE.opCODE:
             OutByte(Byte(param2))
@@ -1308,7 +1312,7 @@ BEGIN
                 Reloc(BIN.RDATA, stroffs + param2);
             END;
 
-            pushc(param3);
+            pushc(param1);
             CallRTL(pic, CODE._move)
 
         |CODE.opCHKIDX:
@@ -1782,7 +1786,7 @@ BEGIN
             n := param2 + 8;
             ASSERT(MACHINE.Align(n, 32));
             pushc(n);
-            pushc(param3);
+            pushc(param1);
             CallRTL(pic, CODE._new)
 
         |CODE.opDISP:
@@ -1921,13 +1925,12 @@ BEGIN
             ASSERT(REG.GetReg(R, eax))
 
         |CODE.opCASET:
-            push(eax);
-            push(eax);
+            push(ecx);
+            push(ecx);
             pushc(param2);
             CallRTL(pic, CODE._guardrec);
-            mov(ecx, eax);
-            pop(eax);
-            test(ecx);
+            pop(ecx);
+            test(eax);
             jcc(jne, param1)
 
         |CODE.opPACK:
