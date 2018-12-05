@@ -53,6 +53,14 @@ TYPE
         prev: CASE_LABEL
 
     END;
+    
+    CASE_VARIANT = POINTER TO RECORD (LISTS.ITEM)
+    
+        label:      INTEGER;
+        cmd:        CODE.COMMAND;
+        processed:  BOOLEAN
+    
+    END;   
 
 
 VAR
@@ -61,7 +69,9 @@ VAR
 
     checking: SET;
 
-    CaseLabels: C.COLLECTION;
+    CaseLabels, CaseVar: C.COLLECTION;
+    
+    CaseVariants: LISTS.LIST;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -2582,10 +2592,31 @@ END LabelCmp;
 
 
 PROCEDURE DestroyLabel (VAR label: AVL.DATA);
-BEGIN                 
+BEGIN
     C.push(CaseLabels, label);
     label := NIL
-END DestroyLabel;
+END DestroyLabel; 
+
+
+PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
+VAR
+    res:   CASE_VARIANT;
+    citem: C.ITEM;     
+
+BEGIN
+    citem := C.pop(CaseVar);
+    IF citem = NIL THEN
+        NEW(res)
+    ELSE
+        res := citem(CASE_VARIANT)
+    END;        
+
+    res.label := label;
+    res.cmd := cmd;
+    res.processed := FALSE
+    
+    RETURN res
+END NewVariant;
 
 
 PROCEDURE CaseStatement (parser: PARS.PARSER);
@@ -2661,7 +2692,7 @@ VAR
         newnode:   BOOLEAN;
         range:     RANGE;
 
-    BEGIN     
+    BEGIN
         citem := C.pop(CaseLabels);
         IF citem = NIL THEN
             NEW(label)
@@ -2723,7 +2754,8 @@ VAR
         sym:      INTEGER;
         t:        PROG.TYPE_;
         variant:  INTEGER;
-        node:     AVL.NODE;
+        node:     AVL.NODE; 
+        last:     CODE.COMMAND;
 
     BEGIN
         sym := parser.sym;
@@ -2736,8 +2768,14 @@ VAR
                 t := caseExpr.type;
                 caseExpr.ident.type := node.data(CASE_LABEL).type
             END;
-
+                            
+            last := CODE.getlast();
             CODE.SetLabel(variant);
+            
+            IF ~isRecPtr(caseExpr) THEN 
+                LISTS.push(CaseVariants, NewVariant(variant, last))
+            END;
+
             parser.StatSeq(parser);
             CODE.AddJmpCmd(CODE.opJMP, end);
 
@@ -2753,6 +2791,8 @@ VAR
         L, R: INTEGER;
         range: RANGE;
         left, right: AVL.NODE;
+        last: CODE.COMMAND;
+        v: CASE_VARIANT;
 
     BEGIN
         IF node # NIL THEN
@@ -2772,12 +2812,25 @@ VAR
             ELSE
                 R := else
             END;
+            
+            last := CODE.getlast();
+            
+            v := CaseVariants.last(CASE_VARIANT);
+            WHILE (v # NIL) & (v.label # 0) & (v.label # node.data(CASE_LABEL).variant) DO
+                v := v.prev(CASE_VARIANT)
+            END;
+            
+            ASSERT((v # NIL) & (v.label # 0));
+            CODE.setlast(v.cmd);
 
             CODE.SetLabel(node.data(CASE_LABEL).self);
+            CODE.case(range.a, range.b, L, R); 
+            IF v.processed THEN
+                CODE.AddJmpCmd(CODE.opJMP, node.data(CASE_LABEL).variant)
+            END;
+            v.processed := TRUE;
 
-            CODE.case(range.a, range.b, L, R);
-
-            CODE.AddJmpCmd(CODE.opJMP, node.data(CASE_LABEL).variant);
+            CODE.setlast(last);
 
             Table(left, else);
             Table(right, else)
@@ -2800,8 +2853,10 @@ VAR
     VAR
         table, end, else: INTEGER;
         tree: AVL.NODE;
+        item:  LISTS.ITEM;
 
-    BEGIN
+    BEGIN             
+        LISTS.push(CaseVariants, NewVariant(0, NIL));
         end   := CODE.NewLabel();
         else  := CODE.NewLabel();
         table := CODE.NewLabel();
@@ -2828,18 +2883,24 @@ VAR
         PARS.checklex(parser, SCAN.lxEND);
         PARS.Next(parser);
 
-        CODE.SetLabel(table);
-
         IF isRecPtr(e) THEN
+            CODE.SetLabel(table);
             TableT(tree);
             CODE.AddJmpCmd(CODE.opJMP, else)
         ELSE
+            tree.data(CASE_LABEL).self := table;
             Table(tree, else)
         END;
 
         AVL.destroy(tree, DestroyLabel);
         CODE.SetLabel(end);
-        CODE.AddCmd0(CODE.opENDSW)
+        CODE.AddCmd0(CODE.opENDSW);
+
+        REPEAT
+            item := LISTS.pop(CaseVariants);
+            C.push(CaseVar, item)
+        UNTIL item(CASE_VARIANT).cmd = NIL
+
     END ParseCase;
 
 
@@ -3112,10 +3173,14 @@ END setrtl;
 
 PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
 VAR
-    parser:   PARS.PARSER;
+    parser:  PARS.PARSER;
 
 BEGIN
     CaseLabels := C.create();
+    CaseVar := C.create();
+    
+    CaseVariants := LISTS.create(NIL);
+    LISTS.push(CaseVariants, NewVariant(0, NIL));
 
     checking := chk;
     CODE.init;

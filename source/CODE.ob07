@@ -126,7 +126,7 @@ TYPE
         param2*:  INTEGER
 
     END;
-    
+
     COMMAND3* = POINTER TO RECORD (COMMAND)
 
         param3*:  INTEGER
@@ -205,6 +205,11 @@ PROCEDURE setlast* (cmd: COMMAND);
 BEGIN
     codes.last := cmd
 END setlast;
+
+
+PROCEDURE getlast* (): COMMAND;
+    RETURN codes.last
+END getlast;
 
 
 PROCEDURE PutByte (codes: CODES; b: BYTE);
