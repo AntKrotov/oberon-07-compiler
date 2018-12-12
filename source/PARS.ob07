@@ -1088,7 +1088,11 @@ BEGIN
 END create;
 
 
+PROCEDURE init* (bit_depth: INTEGER);
 BEGIN
-    program := PROG.create(32);
+    program := PROG.create(bit_depth);
     parsers := C.create()
+END init;
+
+
 END PARS.

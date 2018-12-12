@@ -1,0 +1,296 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE AMD64;
+
+IMPORT CODE, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS, REG, C := CONSOLE;
+
+
+CONST
+
+    rax = REG.R0;
+    rcx = REG.R1;
+    rdx = REG.R2;
+
+
+VAR
+
+    file: WR.FILE;  
+
+    eol:  ARRAY 3 OF CHAR;  
+    
+    regs: ARRAY 3, 4 OF CHAR; 
+    
+    R: REG.REGS;
+
+
+PROCEDURE WriteChar (c: CHAR);
+BEGIN
+    WR.WriteByte(file, ORD(c))
+END WriteChar;
+
+
+PROCEDURE Write (s: ARRAY OF CHAR);
+VAR
+    i: INTEGER;
+
+BEGIN
+    i := 0;
+    WHILE s[i] # 0X DO
+        WriteChar(s[i]);
+        INC(i)
+    END
+END Write;
+
+
+PROCEDURE WriteLn (s: ARRAY OF CHAR);
+BEGIN
+    Write(s);
+    Write(eol)
+END WriteLn;
+
+
+PROCEDURE hexdgt (n: INTEGER): CHAR;
+VAR
+    res: CHAR;
+
+BEGIN
+    IF n < 10 THEN
+        res := CHR(n + ORD("0"))
+    ELSE
+        res := CHR(n + ORD("a") - 10)
+    END                      
+    
+    RETURN res
+END hexdgt;
+
+
+PROCEDURE WriteHex (n: INTEGER);
+VAR
+    b: BYTE;
+    i: INTEGER;
+
+BEGIN
+    Write("0x");
+    FOR i := 7 TO 0 BY -1 DO
+        b := MACHINE.Byte(n, i);
+        WriteChar(hexdgt(b DIV 16));
+        WriteChar(hexdgt(b MOD 16))
+    END
+END WriteHex;
+
+
+PROCEDURE WriteHexLn (n: INTEGER);
+BEGIN
+    WriteHex(n);
+    Write(eol)
+END WriteHexLn;
+
+
+PROCEDURE WriteByte (b: BYTE);
+BEGIN
+    Write("0x");
+    WriteChar(hexdgt(b DIV 16));
+    WriteChar(hexdgt(b MOD 16))
+END WriteByte;
+
+
+PROCEDURE mov (reg1, reg2: INTEGER);
+BEGIN 
+    Write("mov "); Write(regs[reg1]); Write(","); WriteLn(regs[reg2])
+END mov;
+
+
+PROCEDURE xchg (reg1, reg2: INTEGER);
+BEGIN
+    Write("xchg "); Write(regs[reg1]); Write(","); WriteLn(regs[reg2])
+END xchg;
+
+
+PROCEDURE pop (reg: INTEGER);
+BEGIN
+    Write("pop "); WriteLn(regs[reg])
+END pop;
+
+
+PROCEDURE push (reg: INTEGER);
+BEGIN
+    Write("push "); WriteLn(regs[reg])
+END push;
+
+
+PROCEDURE prolog;
+BEGIN     
+    WriteLn("format PE64 CONSOLE");
+    WriteLn("entry start");
+    WriteLn("section '.text' code readable executable");
+    WriteLn("start:");
+    WriteLn("sub rsp,8*5")
+END prolog;
+
+
+PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR);
+VAR
+    i: INTEGER; 
+    
+    
+    PROCEDURE import (code: CODE.CODES);
+    VAR
+        lib: CODE.IMPORT_LIB;
+        proc: CODE.IMPORT_PROC;
+        n: INTEGER;
+
+    BEGIN 
+        WriteLn("section '.idata' import data readable writeable");
+        lib := code.import.first(CODE.IMPORT_LIB);
+        n := 0;
+        WHILE lib # NIL DO   
+            Write("dd 0,0,0,RVA "); Write("lib_name"); WriteHex(n); Write(",RVA "); Write("lib_table"); WriteHexLn(n);
+            lib := lib.next(CODE.IMPORT_LIB);
+            INC(n)
+        END;
+        WriteLn("dd 0,0,0,0,0");
+        
+        lib := code.import.first(CODE.IMPORT_LIB);
+        n := 0;
+        WHILE lib # NIL DO
+            Write("lib_table"); WriteHex(n); WriteLn(":");
+            proc := lib.procs.first(CODE.IMPORT_PROC);
+            WHILE proc # NIL DO
+                IF (lib.name = "kernel32.dll") & (proc.name = "ExitProcess") THEN
+                    WriteLn("ExitProcess:")
+                END;
+                Write("P"); WriteHex(proc.label); Write(" dq RVA "); Write("N"); WriteHexLn(proc.label);
+                proc := proc.next(CODE.IMPORT_PROC)
+            END;
+            WriteLn("dq 0");
+            lib := lib.next(CODE.IMPORT_LIB);
+            INC(n)
+        END;
+        
+        lib := code.import.first(CODE.IMPORT_LIB);
+        n := 0;
+        WHILE lib # NIL DO
+            Write("lib_name"); WriteHex(n); Write(" db '"); Write(lib.name); WriteLn("',0");
+            lib := lib.next(CODE.IMPORT_LIB);
+            INC(n)
+        END; 
+        
+        lib := code.import.first(CODE.IMPORT_LIB);
+        n := 0;
+        WHILE lib # NIL DO
+            proc := lib.procs.first(CODE.IMPORT_PROC);
+            WHILE proc # NIL DO
+                Write("N"); WriteHex(proc.label); WriteLn(" dw 0");
+                Write("db '"); Write(proc.name); WriteLn("',0");
+                proc := proc.next(CODE.IMPORT_PROC)
+            END;
+            lib := lib.next(CODE.IMPORT_LIB);
+            INC(n)
+        END
+
+    END import;
+
+BEGIN
+    WriteLn("mov ecx,0");
+    WriteLn("call qword [ExitProcess]");
+
+    WriteLn("section '.data' data readable writeable");
+
+    WriteLn("TYPES:");
+    i := 0;
+    WHILE i < CHL.Length(code.types) DO
+        IF i MOD 4 = 0 THEN
+            WriteLn("");
+            Write("dq ")
+        ELSE
+            Write(",")
+        END;
+        WriteHex(CHL.GetInt(code.types, i));
+        INC(i)
+    END;
+    
+    WriteLn("");
+    WriteLn("STRINGS:");
+    i := 0;
+    WHILE i < CHL.Length(code.data) DO
+        IF i MOD 12 = 0 THEN
+            WriteLn("");
+            Write("db ")
+        ELSE
+            Write(",")
+        END;
+        WriteByte(CHL.GetByte(code.data, i));
+        INC(i)
+    END;  
+    
+    WriteLn("");
+    Write("MODNAME: db '"); Write(modname); Write(".exe"); WriteLn("',0");
+    
+    WriteLn("section '.bss' data readable writeable");
+    Write("GLOB: rb "); WriteHexLn(code.bss);
+
+    import(code)
+END epilog; 
+
+
+PROCEDURE translate (commands: LISTS.LIST);
+VAR
+    cmd: CODE.COMMAND;
+    
+    param1, param2: INTEGER;
+
+BEGIN   
+    cmd := commands.first(CODE.COMMAND);
+    WHILE cmd # NIL DO      
+    
+        param1 := cmd.param1;
+        param2 := cmd.param2;
+    
+        CASE cmd.opcode OF
+
+        |CODE.opLABEL:
+            Write("L"); WriteHex(param2); WriteLn(":")
+            
+        |CODE.opNOP:
+
+        ELSE  
+
+        END;
+
+        cmd := cmd.next(CODE.COMMAND)
+    END
+END translate;
+
+
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
+VAR
+    path, modname, ext: PATHS.PATH;
+
+BEGIN            
+    eol[0] := 0DX;
+    eol[1] := 0AX;
+    eol[2] := 0X;  
+    
+    regs[rax] := "rax";
+    regs[rcx] := "rcx";
+    regs[rdx] := "rdx";
+
+    file := WR.Create(outname);
+    PATHS.split(outname, path, modname, ext);
+    
+    R := REG.Create(push, pop, mov, xchg);
+
+    prolog;
+    translate(code.commands);
+    epilog(code, modname);
+    
+    WR.Close(file)
+END CodeGen;
+
+
+END AMD64.

@@ -30,6 +30,8 @@ BEGIN
         res := TARGETS.KOS
     ELSIF s = "obj" THEN
         res := TARGETS.OBJ
+    ELSIF s = "win64" THEN
+        res := TARGETS.WIN64
     ELSE
         res := 0
     END
@@ -213,6 +215,12 @@ BEGIN
         ERRORS.error1("bad parameter <target>")
     END;
 
+    IF target = TARGETS.WIN64 THEN
+        PARS.init(64)
+    ELSE
+        PARS.init(32)
+    END;
+
     PARS.program.dll := target IN {TARGETS.DLL, TARGETS.OBJ};
     PARS.program.obj := target = TARGETS.OBJ;
 
@@ -225,14 +233,17 @@ BEGIN
         ELSE
             BaseAdr := 400000H
         END;
-        STRINGS.append(lib_path, "Windows32");
-        STRINGS.append(lib_path, UTILS.slash)
+        STRINGS.append(lib_path, "Windows32")
 
     ELSIF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-        STRINGS.append(lib_path, "KolibriOS");
-        STRINGS.append(lib_path, UTILS.slash)
+        STRINGS.append(lib_path, "KolibriOS")
+
+    ELSIF target = TARGETS.WIN64 THEN
+        STRINGS.append(lib_path, "Windows64")
 
     END;
+
+    STRINGS.append(lib_path, UTILS.slash);
 
     keys(StackSize, BaseAdr, Version, pic, reloc, checking);
 

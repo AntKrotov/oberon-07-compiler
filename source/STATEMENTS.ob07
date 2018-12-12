@@ -9,8 +9,8 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86,
-    ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS;
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64,
+    ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, TARGETS;
 
 
 CONST
@@ -53,14 +53,14 @@ TYPE
         prev: CASE_LABEL
 
     END;
-    
+
     CASE_VARIANT = POINTER TO RECORD (LISTS.ITEM)
-    
+
         label:      INTEGER;
         cmd:        CODE.COMMAND;
         processed:  BOOLEAN
-    
-    END;   
+
+    END;
 
 
 VAR
@@ -70,7 +70,7 @@ VAR
     checking: SET;
 
     CaseLabels, CaseVar: C.COLLECTION;
-    
+
     CaseVariants: LISTS.LIST;
 
 
@@ -2595,13 +2595,13 @@ PROCEDURE DestroyLabel (VAR label: AVL.DATA);
 BEGIN
     C.push(CaseLabels, label);
     label := NIL
-END DestroyLabel; 
+END DestroyLabel;
 
 
 PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
 VAR
     res:   CASE_VARIANT;
-    citem: C.ITEM;     
+    citem: C.ITEM;
 
 BEGIN
     citem := C.pop(CaseVar);
@@ -2609,12 +2609,12 @@ BEGIN
         NEW(res)
     ELSE
         res := citem(CASE_VARIANT)
-    END;        
+    END;
 
     res.label := label;
     res.cmd := cmd;
     res.processed := FALSE
-    
+
     RETURN res
 END NewVariant;
 
@@ -2754,7 +2754,7 @@ VAR
         sym:      INTEGER;
         t:        PROG.TYPE_;
         variant:  INTEGER;
-        node:     AVL.NODE; 
+        node:     AVL.NODE;
         last:     CODE.COMMAND;
 
     BEGIN
@@ -2768,11 +2768,11 @@ VAR
                 t := caseExpr.type;
                 caseExpr.ident.type := node.data(CASE_LABEL).type
             END;
-                            
+
             last := CODE.getlast();
             CODE.SetLabel(variant);
-            
-            IF ~isRecPtr(caseExpr) THEN 
+
+            IF ~isRecPtr(caseExpr) THEN
                 LISTS.push(CaseVariants, NewVariant(variant, last))
             END;
 
@@ -2812,19 +2812,19 @@ VAR
             ELSE
                 R := else
             END;
-            
+
             last := CODE.getlast();
-            
+
             v := CaseVariants.last(CASE_VARIANT);
             WHILE (v # NIL) & (v.label # 0) & (v.label # node.data(CASE_LABEL).variant) DO
                 v := v.prev(CASE_VARIANT)
             END;
-            
+
             ASSERT((v # NIL) & (v.label # 0));
             CODE.setlast(v.cmd);
 
             CODE.SetLabel(node.data(CASE_LABEL).self);
-            CODE.case(range.a, range.b, L, R); 
+            CODE.case(range.a, range.b, L, R);
             IF v.processed THEN
                 CODE.AddJmpCmd(CODE.opJMP, node.data(CASE_LABEL).variant)
             END;
@@ -2855,7 +2855,7 @@ VAR
         tree: AVL.NODE;
         item:  LISTS.ITEM;
 
-    BEGIN             
+    BEGIN
         LISTS.push(CaseVariants, NewVariant(0, NIL));
         end   := CODE.NewLabel();
         else  := CODE.NewLabel();
@@ -3178,7 +3178,7 @@ VAR
 BEGIN
     CaseLabels := C.create();
     CaseVar := C.create();
-    
+
     CaseVariants := LISTS.create(NIL);
     LISTS.push(CaseVariants, NewVariant(0, NIL));
 
@@ -3216,8 +3216,12 @@ BEGIN
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
     CODE.codes.bss := PARS.program.bss;
-
-    X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
+    
+    IF target = TARGETS.WIN64 THEN
+        AMD64.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
+    ELSE
+        X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
+    END
 END compile;
 
 
