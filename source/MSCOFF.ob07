@@ -109,8 +109,8 @@ VAR
 
     ExpCount: INTEGER;
 
-    icount, ecount, dcount, ccount: INTEGER; 
-    
+    icount, ecount, dcount, ccount: INTEGER;
+
     FileHeader: FH;
 
     flat, data, edata, idata, bss: SH;

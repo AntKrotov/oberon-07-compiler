@@ -928,6 +928,11 @@ BEGIN
                 CODE.AddCmd(CODE.opCODE, ARITH.getInt(code))
             UNTIL parser.sym = SCAN.lxRROUND
 
+        |PROG.sysVM:
+            parser.expression(parser, e);
+            PARS.check(isInt(e), parser, pos, 66);
+            CODE.AddCmd0(CODE.opVM)
+
         END;
 
         e.obj := eEXPR;
@@ -3216,7 +3221,6 @@ BEGIN
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
     CODE.codes.bss := PARS.program.bss;
-    
     IF target = TARGETS.WIN64 THEN
         AMD64.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
     ELSE

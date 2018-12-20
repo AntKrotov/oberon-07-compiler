@@ -7,6 +7,8 @@
 
 MODULE STRINGS;
 
+IMPORT MACHINE;
+
 
 PROCEDURE append* (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
 VAR
@@ -56,26 +58,37 @@ VAR
     i, a: INTEGER;
     minus: BOOLEAN;
 
-BEGIN
-    minus := x < 0;
-    IF minus THEN
-        x := -x
-    END;
-    i := 0;
-    a := 0;
-    REPEAT
-        str[i] := CHR(x MOD 10 + ORD("0"));
-        x := x DIV 10;
-        INC(i)
-    UNTIL x = 0;
+BEGIN  
+    IF x = MACHINE.native.minInt THEN
+        IF MACHINE.native.bit_depth = 32 THEN
+            COPY("-2147483648", str)
+        ELSIF MACHINE.native.bit_depth = 64 THEN
+            COPY("-9223372036854775808", str)
+        END 
 
-    IF minus THEN
-        str[i] := "-";
-        INC(i)
-    END;
+    ELSE
 
-    str[i] := 0X;
-    reverse(str)
+        minus := x < 0;
+        IF minus THEN
+            x := -x
+        END;
+        i := 0;
+        a := 0;
+        REPEAT
+            str[i] := CHR(x MOD 10 + ORD("0"));
+            x := x DIV 10;
+            INC(i)
+        UNTIL x = 0;
+
+        IF minus THEN
+            str[i] := "-";
+            INC(i)
+        END;
+
+        str[i] := 0X;
+        reverse(str)
+    
+    END
 END IntToStr;
 
 
@@ -220,7 +233,7 @@ BEGIN
     END
 
     RETURN res
-END StrToVer;  
+END StrToVer;
 
 
 PROCEDURE Utf8To16* (src: ARRAY OF CHAR; VAR dst: ARRAY OF WCHAR): INTEGER;

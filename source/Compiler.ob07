@@ -171,6 +171,7 @@ BEGIN
     lib_path := app_path;
 
     UTILS.GetArg(1, inname);
+
     IF inname = "" THEN
         C.String("Akron Oberon-07/16 Compiler v"); C.Int(VER.Major); C.String("."); C.Int2(VER.Minor); C.Ln; C.Ln;
         C.String("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln; C.Ln;
@@ -210,12 +211,15 @@ BEGIN
     END;
 
     target := Target(param);
-
+    
     IF target = 0 THEN
         ERRORS.error1("bad parameter <target>")
     END;
 
     IF target = TARGETS.WIN64 THEN
+        IF UTILS.bit_depth = 32 THEN           
+            ERRORS.error1("bad parameter <target>")
+        END;
         PARS.init(64)
     ELSE
         PARS.init(32)

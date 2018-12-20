@@ -7,14 +7,14 @@
 
 MODULE TEXTDRV;
 
-IMPORT FILES, C := COLLECTIONS;
+IMPORT FILES, C := COLLECTIONS, CONSOLE;
 
 
 CONST
 
     CR = 0DX; LF = 0AX;
 
-    CHUNK = 1024 * 64;
+    CHUNK = 1024 * 256;
 
 
 TYPE
@@ -34,7 +34,7 @@ TYPE
         open*:        PROCEDURE (text: TEXT; name: ARRAY OF CHAR): BOOLEAN;
         peak*:        PROCEDURE (text: TEXT): CHAR;
         nextc*:       PROCEDURE (text: TEXT)
-        
+
     END;
 
 
@@ -67,6 +67,7 @@ PROCEDURE load (text: TEXT);
 BEGIN
     IF ~text.eof THEN
         text.size := FILES.read(text.file, text.chunk, LEN(text.chunk));
+        //CONSOLE.Int(text.size); CONSOLE.Ln;
         text.pos := 0;
         IF text.size = 0 THEN
             text.eof := TRUE;
@@ -128,9 +129,7 @@ BEGIN
         IF (text.chunk[0] = 0EFH) &
            (text.chunk[1] = 0BBH) &
            (text.chunk[2] = 0BFH) THEN
-            next(text);
-            next(text);
-            next(text);
+            text.pos := 3;
             text.utf8 := TRUE
         END
     END;

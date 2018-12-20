@@ -13,6 +13,8 @@ IMPORT HOST, UNIXTIME;
 CONST
 
     slash* = HOST.slash;
+    
+    bit_depth* = HOST.bit_depth;
 
 
 VAR

@@ -10,6 +10,6 @@ MODULE VER;
 CONST
 
     Major* = 0;
-    Minor* = 92;
+    Minor* = 93;
 
 END VER.

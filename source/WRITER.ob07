@@ -13,9 +13,9 @@ IMPORT FILES, ERRORS, MACHINE;
 TYPE
 
     FILE* = FILES.FILE;
-                       
-    
-VAR                  
+
+
+VAR
 
     counter*: INTEGER;
 
@@ -41,16 +41,27 @@ END WriteByte;
 
 
 PROCEDURE Write* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER);
-VAR 
+VAR
     n: INTEGER;
 
-BEGIN       
+BEGIN
     n := FILES.write(file, chunk, bytes);
-    IF n # bytes THEN 
+    IF n # bytes THEN
         ERRORS.error1("writing file error")
     END;
     INC(counter, n)
 END Write;
+
+
+PROCEDURE Write64LE* (file: FILE; n: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO 7 DO
+        WriteByte(file, MACHINE.Byte(n, i))
+    END
+END Write64LE;
 
 
 PROCEDURE Write32LE* (file: FILE; n: INTEGER);
