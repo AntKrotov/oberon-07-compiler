@@ -14,15 +14,15 @@ CONST
 
     OS* = "WIN";
 
-    slash* = "\";
+    slash* = "\"; 
+    
+    bit_depth* = 32;
 
     OFS_MAXPATHNAME = 128;
 
     MAX_PARAM = 1024;
 
     SW_SHOW = 5;
-
-    SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
 TYPE
@@ -80,13 +80,13 @@ VAR
     hConsoleOutput: INTEGER;
 
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
-    argc*: INTEGER;       
-    
+    argc: INTEGER;
+
     eol*: ARRAY 3 OF CHAR;
 
 
 PROCEDURE [winapi, "kernel32.dll", "GetTickCount"]
-    _GetTickCount* (): INTEGER;
+    _GetTickCount (): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "GetStdHandle"]
     GetStdHandle (nStdHandle: INTEGER): INTEGER;
@@ -301,7 +301,7 @@ BEGIN
 END splitf;
 
 
-BEGIN            
+BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     hConsoleOutput := GetStdHandle(-11);
     ParamParse
