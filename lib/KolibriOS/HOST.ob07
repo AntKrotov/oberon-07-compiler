@@ -13,11 +13,11 @@ CONST
 
     OS* = "KOS";
 
-    slash* = "/";
+    slash* = "/"; 
+    
+    bit_depth* = 32;
 
     MAX_PARAM = 1024;
-
-    SEEK_BEG* = 0; SEEK_CUR* = 1; SEEK_END* = 2;
 
 
 TYPE
@@ -52,7 +52,7 @@ VAR
 
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
     argc*: INTEGER;
-    
+
     eol*: ARRAY 3 OF CHAR;
 
 
@@ -453,7 +453,7 @@ BEGIN
 END splitf;
 
 
-BEGIN            
+BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     Console := API.import;
     IF Console THEN
