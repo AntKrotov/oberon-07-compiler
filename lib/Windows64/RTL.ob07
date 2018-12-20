@@ -17,7 +17,7 @@ CONST
     DLL_THREAD_DETACH   = 3;
     DLL_PROCESS_DETACH  = 0;
 
-    SIZE_OF_DWORD = 4;
+    SIZE_OF_QWORD = 8;
 
 
 TYPE
@@ -38,52 +38,36 @@ VAR
 
 
 PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
-BEGIN
-    SYSTEM.CODE(
+VAR
+    qwords: INTEGER;
+    qword:  INTEGER;
+    byte:   BYTE;
 
-    08BH, 045H, 008H,    (*  mov eax, dword [ebp + 8]   *)
-    085H, 0C0H,          (*  test eax, eax              *)
-    07EH, 019H,          (*  jle L                      *)
-    0FCH,                (*  cld                        *)
-    057H,                (*  push edi                   *)
-    056H,                (*  push esi                   *)
-    08BH, 075H, 00CH,    (*  mov esi, dword [ebp + 12]  *)
-    08BH, 07DH, 010H,    (*  mov edi, dword [ebp + 16]  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    0C1H, 0E9H, 002H,    (*  shr ecx, 2                 *)
-    0F3H, 0A5H,          (*  rep movsd                  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    083H, 0E1H, 003H,    (*  and ecx, 3                 *)
-    0F3H, 0A4H,          (*  rep movsb                  *)
-    05EH,                (*  pop esi                    *)
-    05FH                 (*  pop edi                    *)
-                         (*  L:                         *)
-                )
+BEGIN
+    qwords := bytes DIV 8;
+    bytes := bytes MOD 8;
+
+    WHILE qwords > 0 DO
+        SYSTEM.GET(source, qword);
+        SYSTEM.PUT(dest, qword);
+        INC(source, 8);
+        INC(dest, 8);
+        DEC(qwords)
+    END;
+
+    WHILE bytes > 0 DO
+        SYSTEM.GET(source, byte);
+        SYSTEM.PUT8(dest, byte);
+        INC(source);
+        INC(dest);
+        DEC(bytes)
+    END
 END _move;
 
 
 PROCEDURE [stdcall] _move2* (bytes, dest, source: INTEGER);
 BEGIN
-    SYSTEM.CODE(
-
-    08BH, 045H, 008H,    (*  mov eax, dword [ebp + 8]   *)
-    085H, 0C0H,          (*  test eax, eax              *)
-    07EH, 019H,          (*  jle L                      *)
-    0FCH,                (*  cld                        *)
-    057H,                (*  push edi                   *)
-    056H,                (*  push esi                   *)
-    08BH, 075H, 010H,    (*  mov esi, dword [ebp + 16]  *)
-    08BH, 07DH, 00CH,    (*  mov edi, dword [ebp + 12]  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    0C1H, 0E9H, 002H,    (*  shr ecx, 2                 *)
-    0F3H, 0A5H,          (*  rep movsd                  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    083H, 0E1H, 003H,    (*  and ecx, 3                 *)
-    0F3H, 0A4H,          (*  rep movsb                  *)
-    05EH,                (*  pop esi                    *)
-    05FH                 (*  pop edi                    *)
-                         (*  L:                         *)
-                )
+    _move(bytes, source, dest)
 END _move2;
 
 
@@ -134,12 +118,12 @@ END _rot;
 
 
 PROCEDURE [stdcall] _in* (s, i: INTEGER): BOOLEAN;
-    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
+    RETURN (LSR(i, 6) = 0) & ODD(LSR(s, i))
 END _in;
 
 
 PROCEDURE [stdcall] _in2* (i, s: INTEGER): BOOLEAN;
-    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
+    RETURN (LSR(i, 6) = 0) & ODD(LSR(s, i))
 END _in2;
 
 
@@ -148,14 +132,14 @@ VAR
     res: INTEGER;
 
 BEGIN
-    IF (a <= b) & (a <= 31) & (b >= 0) THEN
-        IF b > 31 THEN
-            b := 31
+    IF (a <= b) & (a <= 63) & (b >= 0) THEN
+        IF b > 63 THEN
+            b := 63
         END;
         IF a < 0 THEN
             a := 0
         END;
-        res := LSR(ASR(ROR(1, 1), b - a), 31 - b)
+        res := LSR(ASR(ROR(1, 1), b - a), 63 - b)
     ELSE
         res := 0
     END
@@ -171,7 +155,7 @@ END _set;
 
 PROCEDURE [stdcall] _incl* (n: INTEGER; VAR s: SET);
 BEGIN
-    IF LSR(n, 5) = 0 THEN
+    IF LSR(n, 6) = 0 THEN
         s := s + BITS(LSL(1, n))
     END
 END _incl;
@@ -179,7 +163,7 @@ END _incl;
 
 PROCEDURE [stdcall] _excl* (n: INTEGER; VAR s: SET);
 BEGIN
-    IF LSR(n, 5) = 0 THEN
+    IF LSR(n, 6) = 0 THEN
         s := s - BITS(LSL(1, n))
     END
 END _excl;
@@ -189,20 +173,20 @@ PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
 
-    08BH, 045H, 008H,    (*  mov     eax, dword [ebp +  8]  *)
-    08BH, 04DH, 00CH,    (*  mov     ecx, dword [ebp + 12]  *)
-    031H, 0D2H,          (*  xor     edx, edx               *)
-    085H, 0C0H,          (*  test    eax, eax               *)
-    07DH, 002H,          (*  jge     L1                     *)
-    0F7H, 0D2H,          (*  not     edx                    *)
-                         (*  L1:                            *)
-    0F7H, 0F9H,          (*  idiv    ecx                    *)
-    08BH, 04DH, 010H,    (*  mov     ecx, dword [ebp + 16]  *)
-    089H, 011H,          (*  mov     dword [ecx], edx       *)
-    0C9H,                (*  leave                          *)
-    0C2H, 00CH, 000H     (*  ret     12                     *)
+    048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
+    048H, 08BH, 04DH, 018H,    (*  mov     rcx, qword [rbp + 24]  *)
+    048H, 031H, 0D2H,          (*  xor     rdx, rdx               *)
+    048H, 085H, 0C0H,          (*  test    rax, rax               *)
+    07DH, 003H,                (*  jge     L1                     *)
+    048H, 0F7H, 0D2H,          (*  not     rdx                    *)
+                               (*  L1:                            *)
+    048H, 0F7H, 0F9H,          (*  idiv    rcx                    *)
+    048H, 08BH, 04DH, 020H,    (*  mov     rcx, qword [rbp + 32]  *)
+    048H, 089H, 011H,          (*  mov     qword [rcx], rdx       *)
+    048H, 089H, 0ECH,          (*  mov     rsp, rbp               *)
+    05DH,                      (*  pop     rbp                    *)
+    0C2H, 018H, 000H           (*  ret     24                     *)
                )
-
     RETURN 0
 END divmod;
 
@@ -260,7 +244,7 @@ BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
         SYSTEM.PUT(ptr, t);
-        INC(ptr, SIZE_OF_DWORD)
+        INC(ptr, SIZE_OF_QWORD)
     END
 END _new;
 
@@ -268,7 +252,7 @@ END _new;
 PROCEDURE [stdcall] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
-        ptr := API._DISPOSE(ptr - SIZE_OF_DWORD)
+        ptr := API._DISPOSE(ptr - SIZE_OF_QWORD)
     END
 END _dispose;
 
@@ -318,52 +302,44 @@ END strncmpw;
 
 
 PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
+VAR
+    c: CHAR;
+    res: INTEGER;
+
 BEGIN
-    SYSTEM.CODE(
+    res := 0;
+    REPEAT
+        SYSTEM.GET(str, c); INC(str);
+        DEC(len);
+        INC(res)
+    UNTIL (c = 0X) OR (len = 0);
 
-    08BH, 045H, 00CH,    (*  mov     eax, dword [ebp + 0Ch]  *)
-    08BH, 04DH, 008H,    (*  mov     ecx, dword [ebp + 08h]  *)
-    048H,                (*  dec     eax                     *)
-                         (*  L1:                             *)
-    040H,                (*  inc     eax                     *)
-    080H, 038H, 000H,    (*  cmp     byte [eax], 0           *)
-    074H, 003H,          (*  jz      L2                      *)
-    0E2H, 0F8H,          (*  loop    L1                      *)
-    040H,                (*  inc     eax                     *)
-                         (*  L2:                             *)
-    02BH, 045H, 00CH,    (*  sub     eax, dword [ebp + 0Ch]  *)
-    0C9H,                (*  leave                           *)
-    0C2H, 008H, 000H     (*  ret     08h                     *)
-               )
+    IF c = 0X THEN
+        DEC(res)
+    END
 
-    RETURN 0
+    RETURN res
 END _length;
 
 
 PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
+VAR
+    c: WCHAR;
+    res: INTEGER;
+
 BEGIN
-    SYSTEM.CODE(
+    res := 0;
+    REPEAT
+        SYSTEM.GET(str, c); INC(str, 2);
+        DEC(len);
+        INC(res)
+    UNTIL (c = 0X) OR (len = 0);
 
-    08BH, 045H, 00CH,         (*  mov     eax, dword [ebp + 0Ch]  *)
-    08BH, 04DH, 008H,         (*  mov     ecx, dword [ebp + 08h]  *)
-    048H,                     (*  dec     eax                     *)
-    048H,                     (*  dec     eax                     *)
-                              (*  L1:                             *)
-    040H,                     (*  inc     eax                     *)
-    040H,                     (*  inc     eax                     *)
-    066H, 083H, 038H, 000H,   (*  cmp     word [eax], 0           *)
-    074H, 004H,               (*  jz      L2                      *)
-    0E2H, 0F6H,               (*  loop    L1                      *)
-    040H,                     (*  inc     eax                     *)
-    040H,                     (*  inc     eax                     *)
-                              (*  L2:                             *)
-    02BH, 045H, 00CH,         (*  sub     eax, dword [ebp + 0Ch]  *)
-    0D1H, 0E8H,               (*  shr     eax, 1                  *)
-    0C9H,                     (*  leave                           *)
-    0C2H, 008H, 000H          (*  ret     08h                     *)
-               )
+    IF c = 0X THEN
+        DEC(res)
+    END
 
-    RETURN 0
+    RETURN res
 END _lengthw;
 
 
@@ -529,7 +505,7 @@ BEGIN
     (* r IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
+        SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
     END
 
     RETURN t1 = t0
@@ -544,10 +520,10 @@ BEGIN
     (* p IS t0 *)
 
     IF p # 0 THEN
-        DEC(p, SIZE_OF_DWORD);
+        DEC(p, SIZE_OF_QWORD);
         SYSTEM.GET(p, t1);
         WHILE (t1 # 0) & (t1 # t0) DO
-            SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
+            SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
         END
     ELSE
         t1 := -1
@@ -562,7 +538,7 @@ BEGIN
     (* r:t1 IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
+        SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
     END
 
     RETURN t1 = t0
@@ -577,10 +553,10 @@ BEGIN
     (* p IS t0 *)
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        DEC(p, SIZE_OF_DWORD);
+        DEC(p, SIZE_OF_QWORD);
         SYSTEM.GET(p, t1);
         WHILE (t1 # t0) & (t1 # 0) DO
-            SYSTEM.GET(types + t1 * SIZE_OF_DWORD, t1)
+            SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
         END
     ELSE
         t1 := t0
@@ -617,7 +593,7 @@ BEGIN
         res := 0
     END
 
-    RETURN res
+    RETURN 1
 END _dllentry;
 
 
