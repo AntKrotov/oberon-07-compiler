@@ -928,11 +928,6 @@ BEGIN
                 CODE.AddCmd(CODE.opCODE, ARITH.getInt(code))
             UNTIL parser.sym = SCAN.lxRROUND
 
-        |PROG.sysVM:
-            parser.expression(parser, e);
-            PARS.check(isInt(e), parser, pos, 66);
-            CODE.AddCmd0(CODE.opVM)
-
         END;
 
         e.obj := eEXPR;

@@ -6,6 +6,12 @@
 *)
 
 MODULE MACHINE;
+          
+
+CONST
+
+    min32* = -2147483647-1;
+    max32* = 2147483647;
 
 
 VAR
@@ -102,7 +108,7 @@ END Align;
 
 
 PROCEDURE Int32To64* (value: INTEGER): INTEGER;
-BEGIN     
+BEGIN
     IF native.bit_depth = 64 THEN
         value := LSL(value, 16);
         value := LSL(value, 16);
@@ -115,7 +121,7 @@ END Int32To64;
 
 
 PROCEDURE Int64To32* (value: INTEGER): INTEGER;
-BEGIN                            
+BEGIN
     IF native.bit_depth = 64 THEN
         value := LSL(value, 16);
         value := LSL(value, 16);

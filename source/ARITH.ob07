@@ -181,9 +181,9 @@ BEGIN
 
     END;
 
-    //IF MACHINE._64to32 THEN
+    IF MACHINE._64to32 THEN
         value := MACHINE.Int32To64(value);
-    //END;
+    END;
 
     IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
         error := 3

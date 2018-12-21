@@ -39,7 +39,7 @@ CONST
     sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*   = 29;  stMAX*    = 30;
     sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY* = 33;  sysINF*   = 34;
     sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
-    sysWSADR*  = 39;  sysVM*     = 40;
+    sysWSADR*  = 39;
 
     default* =  1; stdcall* = 2; winapi* = 3; cdecl* = 4; kosapi* = 5;
     noalign* = 10;
@@ -1115,7 +1115,6 @@ BEGIN
     EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
     EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
     EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
-    EnterProc(unit, "VM",     idSYSPROC, sysVM);
 
     ident := addIdent(unit, SCAN.enterid("CARD8"), idTYPE);
     ident.type := program.stTypes.tCARD8;

@@ -12,8 +12,8 @@ IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS;
 
 CONST
 
-    FREGS = 8;  
-    
+    FREGS = 8;
+
     opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
     opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
     opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
@@ -79,7 +79,7 @@ CONST
     opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
     opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
 
-    opCODE* = 235; opVM* = 236;
+    opCODE* = 235;
 
 
     _move      *=   0;
