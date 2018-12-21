@@ -45,7 +45,7 @@ VAR
 
 BEGIN
     qwords := bytes DIV 8;
-    bytes := bytes MOD 8;
+    bytes  := bytes MOD 8;
 
     WHILE qwords > 0 DO
         SYSTEM.GET(source, qword);
@@ -303,7 +303,7 @@ END strncmpw;
 
 PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
 VAR
-    c: CHAR;
+    c:   CHAR;
     res: INTEGER;
 
 BEGIN
@@ -324,7 +324,7 @@ END _length;
 
 PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
 VAR
-    c: WCHAR;
+    c:   WCHAR;
     res: INTEGER;
 
 BEGIN

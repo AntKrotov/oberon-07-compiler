@@ -14,8 +14,8 @@ CONST
 
     OS* = "WIN64";
 
-    slash* = "\"; 
-    
+    slash* = "\";
+
     bit_depth* = 64;
 
     OFS_MAXPATHNAME = 128;
@@ -74,7 +74,6 @@ TYPE
     END;
 
 
-
 VAR
 
     hConsoleOutput: INTEGER;
@@ -86,7 +85,7 @@ VAR
 
 
 PROCEDURE [winapi, "kernel32.dll", "GetTickCount"]
-    __GetTickCount (): INTEGER;
+    _GetTickCount (): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "GetStdHandle"]
     _GetStdHandle (nStdHandle: INTEGER): INTEGER;
@@ -114,7 +113,7 @@ PROCEDURE [winapi, "kernel32.dll", "OpenFile"]
     _OpenFile (lpFileName: INTEGER; lpReOpenBuff: OFSTRUCT; uStyle: INTEGER): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "GetCurrentDirectoryA"]
-    __GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
+    _GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
 
 PROCEDURE [winapi, "kernel32.dll", "GetSystemTime"]
     _GetSystemTime (T: TSystemTime);
@@ -129,9 +128,9 @@ END ExitProcess;
 PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
 VAR
     n: INTEGER;
-BEGIN
 
-    n := API.syscall2(SYSTEM.ADR(__GetCurrentDirectory), LEN(path), SYSTEM.ADR(path[0]));
+BEGIN
+    n := API.syscall2(SYSTEM.ADR(_GetCurrentDirectory), LEN(path), SYSTEM.ADR(path[0]));
     path[n] := slash;
     path[n + 1] := 0X
 END GetCurrentDirectory;
@@ -258,7 +257,7 @@ VAR
 
 BEGIN
     res := API.syscall3(SYSTEM.ADR(_OpenFile), SYSTEM.ADR(FName[0]), SYSTEM.ADR(ofstr), 0);
-    IF ASR(LSL(res, 32), 32) = (*4294967295*)-1 THEN
+    IF res = 0FFFFFFFFH THEN
         res := -1
     END
 
@@ -275,7 +274,7 @@ END OutChar;
 
 
 PROCEDURE GetTickCount* (): INTEGER;
-    RETURN API.syscall1(SYSTEM.ADR(__GetTickCount), 0) DIV 10
+    RETURN API.syscall1(SYSTEM.ADR(_GetTickCount), 0) DIV 10
 END GetTickCount;
 
 
