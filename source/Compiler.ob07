@@ -21,12 +21,12 @@ IMPORT mSt := STATEMENTS,
 CONST
 	EXT = ".ob07";
 
-PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
+PROCEDURE Target_Get (s: ARRAY OF CHAR): INTEGER;
 	VAR
 		res: INTEGER;
 	BEGIN
 		IF s = "con" THEN
-			res := mTarg.CON
+			res := mTarg.CONSOLE
 		ELSIF s = "gui" THEN
 			res := mTarg.GUI
 		ELSIF s = "dll" THEN
@@ -42,7 +42,7 @@ PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
 		END
 
 		RETURN res
-	END Target;
+	END Target_Get;
 
 PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
 	VAR
@@ -213,7 +213,7 @@ PROCEDURE Main;
 			mErr.error1("not enough parameters")
 		END;
 
-		target := Target(param);
+		target := Target_Get(param);
 		
 		IF target = 0 THEN
 			mErr.error1("bad parameter <target>")
@@ -234,7 +234,7 @@ PROCEDURE Main;
 		mStr.append(lib_path, "lib");
 		mStr.append(lib_path, mUtil.slash);
 
-		IF target IN {mTarg.CON, mTarg.GUI, mTarg.DLL} THEN
+		IF target IN {mTarg.CONSOLE, mTarg.GUI, mTarg.DLL} THEN
 			IF target = mTarg.DLL THEN
 				BaseAdr := 10000000H
 			ELSE

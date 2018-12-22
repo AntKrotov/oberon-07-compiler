@@ -9,7 +9,7 @@ MODULE TARGETS;
 
 CONST
 
-    CON*    =  1;
+    CONSOLE*    =  1;
     GUI*    =  2;
     DLL*    =  3;
     KOS*    =  4;

@@ -2246,7 +2246,7 @@ VAR
 
 BEGIN
 
-    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.KOS} THEN
+    IF target IN {TARGETS.CONSOLE, TARGETS.GUI, TARGETS.KOS} THEN
         pushc(0);
         CallRTL(pic, CODE._exit);
     ELSIF target = TARGETS.DLL THEN
@@ -2326,11 +2326,11 @@ BEGIN
 
     BIN.fixup(program);
 
-    IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
+    IF target IN {TARGETS.CONSOLE, TARGETS.GUI, TARGETS.DLL} THEN
         IF pic THEN
             reloc := FALSE
         END;
-        PE32.write(program, outname, base, target = TARGETS.CON, target = TARGETS.DLL, pic, reloc)
+        PE32.write(program, outname, base, target = TARGETS.CONSOLE, target = TARGETS.DLL, pic, reloc)
     ELSIF target = TARGETS.KOS THEN
         KOS.write(program, outname)
     ELSIF target = TARGETS.OBJ THEN
