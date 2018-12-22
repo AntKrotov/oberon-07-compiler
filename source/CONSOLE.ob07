@@ -10,35 +10,35 @@ IMPORT mUtil := UTILS,
 	mStr := STRINGS;
 
 
-PROCEDURE String* (s: ARRAY OF CHAR);
+PROCEDURE String* (pStr: ARRAY OF CHAR);
 	VAR
 		i: INTEGER;
 
 	BEGIN
 		i := 0;
-		WHILE (i < LEN(s)) & (s[i] # 0X) DO
-			mUtil.OutChar(s[i]);
+		WHILE (i < LEN(pStr)) & (pStr[i] # 0X) DO
+			mUtil.OutChar(pStr[i]);
 			INC(i)
 		END
 	END String;
 
 
-PROCEDURE Int* (n: INTEGER);
+PROCEDURE Int* (pInt: INTEGER);
 	VAR
-		s: ARRAY 32 OF CHAR;
+		str: ARRAY 32 OF CHAR;
 
 	BEGIN
-		mStr.IntToStr(n, s);
-		String(s)
+		mStr.IntToStr(pInt, str);
+		String(pStr)
 	END Int;
 
 
-PROCEDURE Int2* (n: INTEGER);
+PROCEDURE Int2* (pInt: INTEGER);
 	BEGIN
-		IF n < 10 THEN
+		IF pInt < 10 THEN
 			String("0")
 		END;
-		Int(n)
+		Int(pInt)
 	END Int2;
 
 PROCEDURE Ln*;
@@ -53,10 +53,10 @@ PROCEDURE StringLn* (pStr: ARRAY OF CHAR);
 		String(mUtil.eol)
 	END StringLn;
 
-PROCEDURE Int2Ln* (n: INTEGER);
+PROCEDURE Int2Ln* (pInt: INTEGER);
 	(* Out integer to console with Ln *)
 	BEGIN
-		Int2(n);
+		Int2(pInt);
 		Ln()
 	END Int2Ln;
 
