@@ -1,11 +1,10 @@
-﻿(*
+﻿MODULE PROG;
+(*
 	BSD 2-Clause License
 
 	Copyright (c) 2018, Anton Krotov
 	All rights reserved.
-*)
-
-MODULE PROG;
+	*)
 
 IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS;
 
@@ -270,7 +269,7 @@ PROCEDURE getOffset* (program: PROGRAM; varIdent: IDENT): INTEGER;
 	BEGIN
 		IF varIdent.offset = -1 THEN
 			IF varIdent.global THEN
-				IF MACHINE.Align(program.bss, varIdent.type.align) THEN
+				IF MACHINE.IsAlign(program.bss, varIdent.type.align) THEN
 					IF MACHINE.native.maxInt - program.bss >= varIdent.type.size THEN
 						varIdent.offset := program.bss;
 						INC(program.bss, varIdent.type.size)
@@ -279,7 +278,7 @@ PROCEDURE getOffset* (program: PROGRAM; varIdent: IDENT): INTEGER;
 			ELSE
 				word := program.target.word;
 				size := varIdent.type.size;
-				IF MACHINE.Align(size, word) THEN
+				IF MACHINE.IsAlign(size, word) THEN
 					size := size DIV word;
 					IF MACHINE.native.maxInt - program.locsize >= size THEN
 						INC(program.locsize, size);
@@ -840,7 +839,7 @@ PROCEDURE setFields (self: TYPE_; type: TYPE_): BOOLEAN;
 		WHILE res & (item # NIL) & (item.type = NIL) DO
 			item.type := type;
 			IF ~self.noalign THEN
-				res := MACHINE.Align(self.size, type.align)
+				res := MACHINE.IsAlign(self.size, type.align)
 			ELSE
 				res := TRUE
 			END;
@@ -955,7 +954,7 @@ PROCEDURE setParams (self: TYPE_; type: TYPE_);
 					END
 				ELSE
 					size := type.size;
-					ASSERT(MACHINE.Align(size, word));
+					ASSERT(MACHINE.IsAlign(size, word));
 					size := size DIV word
 				END;
 				param.offset := self.params.size + Dim(type) + FRAME;
@@ -1170,7 +1169,7 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 	BEGIN
 		idents := C.New();
 
-		MACHINE.SetBitDepth(bit_depth);
+		MACHINE.BitDepth_Set(bit_depth);
 		NEW(program);
 		NEW(units);
 		ASSERT(LISTS.create(units) = units);

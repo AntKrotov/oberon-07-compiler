@@ -94,11 +94,11 @@ VAR
 	CodeList: LISTS.LIST;
 
 PROCEDURE Byte (n: INTEGER): BYTE;
-		RETURN MACHINE.Byte(n, 0)
+		RETURN MACHINE.Byte_Get(n, 0)
 	END Byte;
 
 PROCEDURE Word (n: INTEGER): INTEGER;
-		RETURN MACHINE.Byte(n, 0) + MACHINE.Byte(n, 1) * 256
+		RETURN MACHINE.Byte_Get(n, 0) + MACHINE.Byte_Get(n, 1) * 256
 	END Word;
 
 PROCEDURE OutByte (n: INTEGER);
@@ -126,10 +126,10 @@ PROCEDURE OutByte (n: INTEGER);
 
 PROCEDURE OutInt (n: INTEGER);
 	BEGIN
-		OutByte(MACHINE.Byte(n, 0));
-		OutByte(MACHINE.Byte(n, 1));
-		OutByte(MACHINE.Byte(n, 2));
-		OutByte(MACHINE.Byte(n, 3))
+		OutByte(MACHINE.Byte_Get(n, 0));
+		OutByte(MACHINE.Byte_Get(n, 1));
+		OutByte(MACHINE.Byte_Get(n, 2));
+		OutByte(MACHINE.Byte_Get(n, 3))
 	END OutInt;
 
 PROCEDURE OutByte2 (a, b: INTEGER);
@@ -1752,7 +1752,7 @@ PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN; stroffs: INTEGER);
 			|CODE.opNEW:
 				PushAll(1);
 				n := param2 + 8;
-				ASSERT(MACHINE.Align(n, 32));
+				ASSERT(MACHINE.IsAlign(n, 32));
 				pushc(n);
 				pushc(param1);
 				CallRTL(pic, CODE._new)

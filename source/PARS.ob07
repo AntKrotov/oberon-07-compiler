@@ -634,7 +634,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 			CODE.AddRec(t.base.num);
 
 			IF ~t.noalign THEN
-				check1(MACHINE.Align(t.size, t.align), parser, 104);
+				check1(MACHINE.IsAlign(t.size, t.align), parser, 104);
 				check1(ARITH.setInt(typeSize, t.size), parser, 104)
 			END;
 

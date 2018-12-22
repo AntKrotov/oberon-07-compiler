@@ -37,4 +37,8 @@ CONST
 		slash* = mUtil.slash; 
 		pathLen* = 2048;
 
+	(* for architecture *)
+		min32* = -2147483647-1;
+		max32* = 2147483647;
+
 END modConstante.
