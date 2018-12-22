@@ -141,7 +141,7 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 
 	END keys;
 
-PROCEDURE main;
+PROCEDURE Main;
 	VAR
 		path:       PARS.PATH;
 		inname:     PARS.PATH;
@@ -262,8 +262,8 @@ PROCEDURE main;
 		C.Int(WRITER.counter); C.String(" bytes"); C.Ln;
 
 		UTILS.Exit(0)
-	END main;
+	END Main;
 
 BEGIN
-	main
+	Main
 END Compiler.
