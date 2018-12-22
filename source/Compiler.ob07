@@ -43,17 +43,17 @@ PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
 		RETURN iRes
 	END Target_Get;
 
-PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
+PROCEDURE Keys_Set (VAR pStackSize, pBaseAddress, pVersion: INTEGER; VAR pPic, pReloc: BOOLEAN; VAR pChecking: SET);
+	(* Set keys for begin compiling. *)
 	VAR
 		param: mPars.PATH;
 		i, j:  INTEGER;
-		end:   BOOLEAN;
+		bEnd:  BOOLEAN;
 		value: INTEGER;
-		minor,
-		major: INTEGER;
+		minor, major: INTEGER;
 
 	BEGIN
-		end := FALSE;
+		bEnd := FALSE;
 		i := 4;
 		REPEAT
 			mUtil.GetArg(i, param);
@@ -62,7 +62,7 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 				INC(i);
 				mUtil.GetArg(i, param);
 				IF mStr.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
-					StackSize := value
+					pStackSize := value
 				END;
 				IF param[0] = "-" THEN
 					DEC(i)
@@ -72,7 +72,7 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 				INC(i);
 				mUtil.GetArg(i, param);
 				IF mStr.StrToInt(param, value) THEN
-					BaseAddress := ((value DIV 64) * 64) * 1024
+					pBaseAddress := ((value DIV 64) * 64) * 1024
 				END;
 				IF param[0] = "-" THEN
 					DEC(i)
@@ -88,23 +88,23 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 					j := 0;
 					WHILE param[j] # 0X DO
 						IF    param[j] = "p" THEN
-							EXCL(checking, mSt.chkPTR)
+							EXCL(pChecking, mSt.chkPTR)
 						ELSIF param[j] = "t" THEN
-							EXCL(checking, mSt.chkGUARD)
+							EXCL(pChecking, mSt.chkGUARD)
 						ELSIF param[j] = "i" THEN
-							EXCL(checking, mSt.chkIDX)
+							EXCL(pChecking, mSt.chkIDX)
 						ELSIF param[j] = "b" THEN
-							EXCL(checking, mSt.chkBYTE)
+							EXCL(pChecking, mSt.chkBYTE)
 						ELSIF param[j] = "c" THEN
-							EXCL(checking, mSt.chkCHR)
+							EXCL(pChecking, mSt.chkCHR)
 						ELSIF param[j] = "w" THEN
-							EXCL(checking, mSt.chkWCHR)
+							EXCL(pChecking, mSt.chkWCHR)
 						ELSIF param[j] = "r" THEN
-							EXCL(checking, mSt.chkCHR);
-							EXCL(checking, mSt.chkWCHR);
-							EXCL(checking, mSt.chkBYTE)
+							EXCL(pChecking, mSt.chkCHR);
+							EXCL(pChecking, mSt.chkWCHR);
+							EXCL(pChecking, mSt.chkBYTE)
 						ELSIF param[j] = "a" THEN
-							checking := {}
+							pChecking := {}
 						END;
 
 						INC(j)
@@ -115,29 +115,29 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 				INC(i);
 				mUtil.GetArg(i, param);
 				IF mStr.StrToVer(param, major, minor) THEN
-					Version := major * 65536 + minor
+					pVersion := major * 65536 + minor
 				END;
 				IF param[0] = "-" THEN
 					DEC(i)
 				END
 
 			ELSIF param = "-pic" THEN
-				pic := TRUE
+				pPic := TRUE
 
 			ELSIF param = "-reloc" THEN
-				reloc := TRUE
+				pReloc := TRUE
 
 			ELSIF param = "" THEN
-				end := TRUE
+				bEnd := TRUE
 
 			ELSE
 				mErr.error3("bad parameter: ", param, "")
 			END;
 
 			INC(i)
-		UNTIL end
+		UNTIL bEnd
 
-	END keys;
+	END Keys_Set;
 
 PROCEDURE Main;
 	VAR
@@ -175,16 +175,16 @@ PROCEDURE Main;
 
 		IF inname = "" THEN
 			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mVer.Major); mCons.String("."); mCons.Int2(mVer.Minor); mCons.Ln; mCons.Ln;
-			mCons.String("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln; mCons.Ln;
-			mCons.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln; mCons.Ln;
-			mCons.String("optional settings:"); mCons.Ln; mCons.Ln;
-			mCons.String("  -stk <size>            set size of stack in megabytes"); mCons.Ln; mCons.Ln;
-			mCons.String("  -base <address>        set base address of image in kilobytes"); mCons.Ln; mCons.Ln;
-			mCons.String("  -pic                   generate position-independent code"); mCons.Ln; mCons.Ln;
-			mCons.String("  -reloc                 make relocation table"); mCons.Ln; mCons.Ln;
-			mCons.String('  -ver <major.minor>     set version of program ("obj" only)'); mCons.Ln; mCons.Ln;
-			mCons.String('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,'); mCons.Ln;
-			mCons.String('                         BYTE, CHR, WCHR)'); mCons.Ln; mCons.Ln;
+			mCons.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln;
+			mCons.StringLn('target = "con" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln;
+			mCons.StringLn("optional settings:"); mCons.Ln;
+			mCons.StringLn("  -stk <size>            set size of stack in megabytes"); mCons.Ln;
+			mCons.StringLn("  -base <address>        set base address of image in kilobytes"); mCons.Ln;
+			mCons.StringLn("  -pic                   generate position-independent code"); mCons.Ln;
+			mCons.StringLn("  -reloc                 make relocation table"); mCons.Ln;
+			mCons.StringLn('  -ver <major.minor>     set version of program ("obj" only)'); mCons.Ln;
+			mCons.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
+			mCons.StringLn('                         BYTE, CHR, WCHR)'); mCons.Ln;
 			mUtil.Exit(0)
 		END;
 
@@ -250,7 +250,7 @@ PROCEDURE Main;
 
 		mStr.append(lib_path, mUtil.slash);
 
-		keys(StackSize, BaseAdr, Version, pic, reloc, checking);
+		Keys_Set(StackSize, BaseAdr, Version, pic, reloc, checking);
 
 		mSt.compile(path, lib_path, modname, outname, mConst.FILE_EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
 
