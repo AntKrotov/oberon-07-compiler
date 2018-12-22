@@ -19,28 +19,29 @@ IMPORT mSt := STATEMENTS,
 	mWrit := WRITER,
 	mConst:= modConstante;
 
-
-PROCEDURE Target_Get (s: ARRAY OF CHAR): INTEGER;
+PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
+	(* Compare pTarget (platform) white string constante.
+		Return associate integer constante. *)
 	VAR
-		res: INTEGER;
+		iRes: INTEGER;
 	BEGIN
-		IF s = "con" THEN
-			res := mTarg.CONSOLE
-		ELSIF s = "gui" THEN
-			res := mTarg.GUI
-		ELSIF s = "dll" THEN
-			res := mTarg.DLL
-		ELSIF s = "kos" THEN
-			res := mTarg.KOS
-		ELSIF s = "obj" THEN
-			res := mTarg.OBJ
-		ELSIF s = "win64" THEN
-			res := mTarg.WIN64
+		IF pTarget = mConst.TARGET_CONSOLE THEN
+			iRes := mTarg.CONSOLE
+		ELSIF pTarget = mConst.TARGET_GUI THEN
+			iRes := mTarg.GUI
+		ELSIF pTarget = mConst.TARGET_DLL THEN
+			iRes := mTarg.DLL
+		ELSIF pTarget = mConst.TARGET_KOLIBRY THEN
+			iRes := mTarg.KOS
+		ELSIF pTarget = "obj" THEN
+			iRes := mTarg.OBJ
+		ELSIF pTarget = "win64" THEN
+			iRes := mTarg.WIN64
 		ELSE
-			res := 0
+			iRes := 0
 		END
 
-		RETURN res
+		RETURN iRes
 	END Target_Get;
 
 PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);

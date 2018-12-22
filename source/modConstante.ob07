@@ -6,6 +6,10 @@ MODULE modConstante;
 	*)
 
 CONST
-	FILE_EXT* = ".ob07";
+	FILE_EXT*       = ".ob07";
+	TARGET_CONSOLE* = "console";
+	TARGET_GUI*     = "gui";
+	TARGET_DLL*     = "dll";
+	TARGET_KOLIBRY* = "kos";
 
 END modConstante.
