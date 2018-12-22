@@ -44,7 +44,7 @@ PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
 PROCEDURE Keys_Set (VAR pStackSize, pBaseAddress, pVersion: INTEGER; VAR pPic, pReloc: BOOLEAN; VAR pChecking: SET);
 	(* Set keys for begin compiling. *)
 	VAR
-		param: mPars.PATH;
+		param: mPars.tPath;
 		i, j:  INTEGER;
 		bEnd:  BOOLEAN;
 		value: INTEGER;
@@ -139,15 +139,15 @@ PROCEDURE Keys_Set (VAR pStackSize, pBaseAddress, pVersion: INTEGER; VAR pPic, p
 
 PROCEDURE Main;
 	VAR
-		path:       mPars.PATH;
-		inname:     mPars.PATH;
-		ext:        mPars.PATH;
-		app_path:   mPars.PATH;
-		lib_path:   mPars.PATH;
-		modname:    mPars.PATH;
-		outname:    mPars.PATH;
-		param:      mPars.PATH;
-		temp:       mPars.PATH;
+		path:       mPars.tPath;
+		inname:     mPars.tPath;
+		ext:        mPars.tPath;
+		app_path:   mPars.tPath;
+		lib_path:   mPars.tPath;
+		modname:    mPars.tPath;
+		outname:    mPars.tPath;
+		param:      mPars.tPath;
+		temp:       mPars.tPath;
 
 		target:     INTEGER;
 
@@ -166,7 +166,7 @@ PROCEDURE Main;
 		reloc := FALSE;
 		checking := mSt.chkALL;
 
-		mPath.GetCurrentDirectory(app_path);
+		mPath.CurrentDirectory_Get(app_path);
 		lib_path := app_path;
 
 		mUtil.GetArg(1, inname);
@@ -186,11 +186,11 @@ PROCEDURE Main;
 			mUtil.Exit(0)
 		END;
 
-		mPath.split(inname, path, modname, ext);
+		mPath.Split(inname, path, modname, ext);
 		IF ext # mConst.FILE_EXT THEN
 			mErr.Error3('Inputfile name extension must be "', mConst.FILE_EXT, '"')
 		END;
-		IF mPath.isRelative(path) THEN
+		IF mPath.IsRelative(path) THEN
 			mPath.RelPath(app_path, path, temp);
 			path := temp
 		END;
@@ -199,7 +199,7 @@ PROCEDURE Main;
 		IF outname = "" THEN
 			mErr.Error1("not enough parameters")
 		END;
-		IF mPath.isRelative(outname) THEN
+		IF mPath.IsRelative(outname) THEN
 			mPath.RelPath(app_path, outname, temp);
 			outname := temp
 		END;

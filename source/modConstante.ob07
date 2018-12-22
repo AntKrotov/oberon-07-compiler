@@ -3,6 +3,8 @@ MODULE modConstante;
 		propspero.78.su@gmail.com 2018-12-22 12:09
 	*)
 
+IMPORT mUtil := UTILS;
+
 CONST
 	FILE_EXT* = ".ob07";
 	(* version for self build *)
@@ -30,6 +32,9 @@ CONST
 		Target_iKolibry* =  Target_iDLL     + 1;
 		Target_iObject*  =  Target_iKolibry + 1;
 		Target_iWin64*   =  Target_iObject  + 1;
-	
+
+	(* for path *)
+		slash* = mUtil.slash; 
+		pathLen* = 2048;
 
 END modConstante.

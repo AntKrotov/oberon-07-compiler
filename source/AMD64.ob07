@@ -1967,7 +1967,7 @@ PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; pic: BOOLEAN);
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic, reloc: BOOLEAN);
 	VAR
-		path, modname, ext: PATHS.PATH;
+		path, modname, ext: PATHS.tPath;
 
 	BEGIN
 
@@ -1992,7 +1992,7 @@ PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, bas
 		regs32[rdx] := "edx";
 
 		file := WR.Create(outname);
-		PATHS.split(outname, path, modname, ext);
+		PATHS.Split(outname, path, modname, ext);
 
 		R := REG.Create(push, pop, mov, xchg);
 

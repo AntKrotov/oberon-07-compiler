@@ -17,7 +17,7 @@ CONST
 
 TYPE
 
-	PATH* = PATHS.PATH;
+	tPath* = PATHS.tPath;
 
 	PARSER* = POINTER TO rPARSER;
 
@@ -38,11 +38,11 @@ TYPE
 
 	rPARSER = RECORD (C.tpItem)
 
-		fname*:      PATH;
-		path:        PATH;
-		lib_path:    PATH;
-		ext:         PATH;
-		modname:     PATH;
+		fname*:      tPath;
+		path:        tPath;
+		lib_path:    tPath;
+		ext:         tPath;
+		modname:     tPath;
 		scanner:     SCAN.SCANNER;
 		lex*:        SCAN.LEX;
 		sym*:        INTEGER;
@@ -57,14 +57,13 @@ TYPE
 		designator*: EXPRPROC;
 		chkreturn:   RETPROC;
 
-		create*:     PROCEDURE (path, lib_path, ext: PATH; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER
+		create*:     PROCEDURE (path, lib_path, ext: tPath; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER
 
 	END;
 
 VAR
 	program*:  PROG.PROGRAM;
 	parsers: C.tpCollection;
-
 
 PROCEDURE destroy* (VAR parser: PARSER);
 	BEGIN
@@ -1028,7 +1027,7 @@ PROCEDURE NewParser (): PARSER;
 		RETURN pars
 	END NewParser;
 
-PROCEDURE create* (path, lib_path, ext: PATH; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER;
+PROCEDURE create* (path, lib_path, ext: tPath; StatSeq: STATPROC; expression, designator: EXPRPROC; chkreturn: RETPROC): PARSER;
 	VAR
 		parser: PARSER;
 

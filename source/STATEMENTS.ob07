@@ -3110,10 +3110,9 @@ PROCEDURE setrtl;
 
 	END setrtl;
 
-PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
+PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.tPath; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
 	VAR
 		parser:  PARS.PARSER;
-
 	BEGIN
 		CaseLabels := C.New();
 		CaseVar := C.New();
