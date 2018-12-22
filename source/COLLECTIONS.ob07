@@ -16,21 +16,20 @@ TYPE
 	END;
 
 
-PROCEDURE Push* (collection: tpCollection; item: tpItem);
+PROCEDURE Push* (pCollection: tpCollection; item: tpItem);
 	BEGIN
-		item.link := collection.last;
-		collection.last := item
+		item.link := pCollection.last;
+		pCollection.last := item
 	END Push;
 
 
-PROCEDURE Pop* (collection: tpCollection): tpItem;
+PROCEDURE Pop* (pCollection: tpCollection): tpItem;
 	VAR
 		item: tpItem;
-
 	BEGIN
-		item := collection.last;
+		item := pCollection.last;
 		IF item # NIL THEN
-			collection.last := item.link
+			pCollection.last := item.link
 		END
 
 		RETURN item
@@ -39,13 +38,13 @@ PROCEDURE Pop* (collection: tpCollection): tpItem;
 
 PROCEDURE New* (): tpCollection;
 	VAR
-		collection: tpCollection;
+		colRes: tpCollection;
 
 	BEGIN
-		NEW(collection);
-		collection.last := NIL
+		NEW(colRes);
+		colRes.last := NIL
 
-		RETURN collection
+		RETURN colRes
 	END New;
 
 
