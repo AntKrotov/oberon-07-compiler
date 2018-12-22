@@ -25,74 +25,70 @@ PROCEDURE Aligh_Get (pNum, pAlign: INTEGER): INTEGER;
 		RETURN pNum
 	END Aligh_Get;
 
-PROCEDURE Byte_Write* (file: tpFile; n: BYTE);
+PROCEDURE Byte_Write* (pFile: tpFile; pByte: BYTE);
 	BEGIN
-		IF mFile.WriteByte(file, n) THEN
+		IF mFile.WriteByte(pFile, pByte) THEN
 			INC(counter)
 		ELSE
 			mErr.Error1("writing file error")
 		END
 	END Byte_Write;
 
-PROCEDURE Write* (file: tpFile; chunk: ARRAY OF BYTE; bytes: INTEGER);
+PROCEDURE Write* (pFile: tpFile; pChunk: ARRAY OF BYTE; pLenBytes: INTEGER);
 	VAR
-		n: INTEGER;
-
+		_len: INTEGER;
 	BEGIN
-		n := mFile.Write(file, chunk, bytes);
-		IF n # bytes THEN
+		_len := mFile.Write(pFile, pChunk, pLenBytes);
+		IF _len # pLenBytes THEN
 			mErr.Error1("writing file error")
 		END;
-		INC(counter, n)
+		INC(counter, _len)
 	END Write;
 
-PROCEDURE Write64LE* (file: tpFile; n: INTEGER);
+PROCEDURE Write64LE* (pFile: tpFile; pLen: INTEGER);
 	VAR
-		i: INTEGER;
-
+		_i: INTEGER;
 	BEGIN
-		FOR i := 0 TO 7 DO
-			Byte_Write(file, mMash.Byte(n, i))
+		FOR _i := 0 TO 7 DO
+			Byte_Write(pFile, mMash.Byte(pLen, _i))
 		END
 	END Write64LE;
 
-PROCEDURE Write32LE* (file: tpFile; n: INTEGER);
+PROCEDURE Write32LE* (pFile: tpFile; pLen: INTEGER);
 	VAR
-		i: INTEGER;
-
+		_i: INTEGER;
 	BEGIN
-		FOR i := 0 TO 3 DO
-			Byte_Write(file, mMash.Byte(n, i))
+		FOR _i := 0 TO 3 DO
+			Byte_Write(pFile, mMash.Byte(pLen, _i))
 		END
 	END Write32LE;
 
-PROCEDURE Write16LE* (file: tpFile; n: INTEGER);
+PROCEDURE Write16LE* (pFile: tpFile; pLen: INTEGER);
 	BEGIN
-		Byte_Write(file, mMash.Byte(n, 0));
-		Byte_Write(file, mMash.Byte(n, 1))
+		Byte_Write(pFile, mMash.Byte(pLen, 0));
+		Byte_Write(pFile, mMash.Byte(pLen, 1))
 	END Write16LE;
 
-PROCEDURE Padding* (file: tpFile; FileAlignment: INTEGER);
+PROCEDURE Padding* (pFile: tpFile; FileAlignment: INTEGER);
 	VAR
-		i: INTEGER;
-
+		_i: INTEGER;
 	BEGIN
-		i := Aligh_Get(counter, FileAlignment) - counter;
-		WHILE i > 0 DO
-			Byte_Write(file, 0);
-			DEC(i)
+		_i := Aligh_Get(counter, FileAlignment) - counter;
+		WHILE _i > 0 DO
+			Byte_Write(pFile, 0);
+			DEC(_i)
 		END
 	END Padding;
 
-PROCEDURE Create* (FileName: ARRAY OF CHAR): tpFile;
+PROCEDURE Create* (pFileName: ARRAY OF CHAR): tpFile;
 	BEGIN
 		counter := 0
-		RETURN mFile.Create(FileName)
+		RETURN mFile.Create(pFileName)
 	END Create;
 
-PROCEDURE Close* (VAR file: tpFile);
+PROCEDURE Close* (VAR pFile: tpFile);
 	BEGIN
-		mFile.Close(file)
+		mFile.Close(pFile)
 	END Close;
 
 END WRITER.
