@@ -2551,7 +2551,7 @@ PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
 		citem: C.tpItem;
 
 	BEGIN
-		citem := C.pop(CaseVar);
+		citem := C.Pop(CaseVar);
 		IF citem = NIL THEN
 			NEW(res)
 		ELSE
@@ -2639,7 +2639,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			range:     RANGE;
 
 		BEGIN
-			citem := C.pop(CaseLabels);
+			citem := C.Pop(CaseLabels);
 			IF citem = NIL THEN
 				NEW(label)
 			ELSE

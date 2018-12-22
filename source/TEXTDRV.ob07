@@ -148,7 +148,7 @@ PROCEDURE NewText (): TEXT;
 		citem: C.tpItem;
 
 	BEGIN
-		citem := C.pop(texts);
+		citem := C.Pop(texts);
 		IF citem = NIL THEN
 			NEW(text)
 		ELSE

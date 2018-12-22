@@ -252,7 +252,7 @@ PROCEDURE NewIdent (): IDENT;
 		citem: C.tpItem;
 
 	BEGIN
-		citem := C.pop(idents);
+		citem := C.Pop(idents);
 		IF citem = NIL THEN
 			NEW(ident)
 		ELSE

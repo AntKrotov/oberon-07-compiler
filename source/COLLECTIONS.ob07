@@ -23,7 +23,7 @@ PROCEDURE Push* (collection: tpCollection; item: tpItem);
 	END Push;
 
 
-PROCEDURE pop* (collection: tpCollection): tpItem;
+PROCEDURE Pop* (collection: tpCollection): tpItem;
 	VAR
 		item: tpItem;
 
@@ -34,7 +34,7 @@ PROCEDURE pop* (collection: tpCollection): tpItem;
 		END
 
 		RETURN item
-	END pop;
+	END Pop;
 
 
 PROCEDURE create* (): tpCollection;

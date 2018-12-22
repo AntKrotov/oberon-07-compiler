@@ -53,7 +53,7 @@ PROCEDURE New(): tpFile;
 		citem: mCol.tpItem;
 
 	BEGIN
-		citem := mCol.pop(files);
+		citem := mCol.Pop(files);
 		IF citem = NIL THEN
 			NEW(fileRes)
 		ELSE

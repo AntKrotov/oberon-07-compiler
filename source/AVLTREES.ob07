@@ -30,7 +30,7 @@ PROCEDURE NewNode (data: DATA): NODE;
 		citem: C.tpItem;
 
 	BEGIN  
-		citem := C.pop(nodes);
+		citem := C.Pop(nodes);
 		IF citem = NIL THEN
 			NEW(node)
 		ELSE

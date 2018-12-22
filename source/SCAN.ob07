@@ -578,7 +578,7 @@ PROCEDURE NewScanner (): SCANNER;
 		citem: C.tpItem;
 
 	BEGIN
-		citem := C.pop(scanners);
+		citem := C.Pop(scanners);
 		IF citem = NIL THEN
 			NEW(scan)
 		ELSE
