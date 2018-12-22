@@ -11,12 +11,10 @@ IMPORT mAt := AVLTREES,
 	mMach := MACHINE,
 	mConst := modConstante;
 
-CONST
-
 TYPE
-	RELATION* = ARRAY 3 OF CHAR;
+	tRelation* = ARRAY 3 OF CHAR;
 
-	VALUE* = RECORD
+	tValue* = RECORD
 			typ*:      INTEGER;
 			int:       INTEGER;
 			float:     REAL;
@@ -29,665 +27,618 @@ VAR
 
 	digit: ARRAY 256 OF INTEGER;
 
-PROCEDURE Int* (v: VALUE): INTEGER;
-VAR
-	res: INTEGER;
-
-BEGIN
-
-	IF v.typ = mConst.typeInteger THEN
-		res := v.int
-	ELSIF v.typ = mConst.typeChar THEN
-		res := v.int
-	ELSIF v.typ = mConst.typeWChar THEN
-		res := v.int
-	ELSIF v.typ = mConst.typeSet THEN
-		res := ORD(v.set);
-		IF mMach.b64to32 THEN
-			res := mMach.Int32To64(res)
+PROCEDURE Int* (pVal: tValue): INTEGER;
+	VAR
+		res: INTEGER;
+	BEGIN
+		IF pVal.typ = mConst.typeInteger THEN
+			res := pVal.int
+		ELSIF pVal.typ = mConst.typeChar THEN
+			res := pVal.int
+		ELSIF pVal.typ = mConst.typeWChar THEN
+			res := pVal.int
+		ELSIF pVal.typ = mConst.typeSet THEN
+			res := ORD(pVal.set);
+			IF mMach.b64to32 THEN
+				res := mMach.Int32To64(res)
+			END
+		ELSIF pVal.typ = mConst.typeBoolean THEN
+			res := ORD(pVal.bool)
 		END
-	ELSIF v.typ = mConst.typeBoolean THEN
-		res := ORD(v.bool)
-	END
 
-	RETURN res
-END Int;
+		RETURN res
+	END Int;
 
+PROCEDURE Bool_Get* (pVal: tValue): BOOLEAN;
+	BEGIN
+		ASSERT(pVal.typ = mConst.typeBoolean);
 
-PROCEDURE getBool* (v: VALUE): BOOLEAN;
-BEGIN
-	ASSERT(v.typ = mConst.typeBoolean);
+		RETURN pVal.bool
+	END Bool_Get;
 
-	RETURN v.bool
-END getBool;
+PROCEDURE Float_Get* (pVal: tValue): REAL;
+	BEGIN
+		ASSERT(pVal.typ = mConst.typeReal);
 
+		RETURN pVal.float
+	END Float_Get;
 
-PROCEDURE Float* (v: VALUE): REAL;
-BEGIN
-	ASSERT(v.typ = mConst.typeReal);
+PROCEDURE Check* (pVal: tValue): BOOLEAN;
+	VAR
+		_bError: BOOLEAN;
+	BEGIN
+		_bError := FALSE;
 
-	RETURN v.float
-END Float;
-
-
-PROCEDURE check* (v: VALUE): BOOLEAN;
-VAR
-	error: BOOLEAN;
-
-BEGIN
-	error := FALSE;
-
-	IF (v.typ = mConst.typeInteger) & ((v.int < mMach.target.minInt) OR (v.int > mMach.target.maxInt)) THEN
-		error := TRUE
-	ELSIF (v.typ = mConst.typeChar) & ((v.int < 0) OR (v.int > 255)) THEN
-		error := TRUE
-	ELSIF (v.typ = mConst.typeWChar) & ((v.int < 0) OR (v.int > 65535)) THEN
-		error := TRUE
-	ELSIF (v.typ = mConst.typeReal) & ((v.float < -mMach.target.maxReal) OR (v.float > mMach.target.maxReal)) THEN
-		error := TRUE
-	END
-
-	RETURN ~error
-END check;
-
-
-PROCEDURE isZero* (v: VALUE): BOOLEAN;
-VAR
-	res: BOOLEAN;
-BEGIN
-	ASSERT(v.typ IN {mConst.typeInteger, mConst.typeReal});
-
-	IF v.typ = mConst.typeInteger THEN
-		res := v.int = 0
-	ELSIF v.typ = mConst.typeReal THEN
-		res := v.float = 0.0
-	END
-
-	RETURN res
-END isZero;
-
-
-PROCEDURE iconv* (s: ARRAY OF CHAR; VAR v: VALUE; VAR error: INTEGER);
-VAR
-	value: INTEGER;
-	i:     INTEGER;
-	d:     INTEGER;
-
-BEGIN
-	error := 0;
-	value := 0;
-
-	i := 0;
-	WHILE mStr.digit(s[i]) & (error = 0) DO
-		d := digit[ORD(s[i])];
-		IF value <= (mMach.native.maxInt - d) DIV 10 THEN
-			value := value * 10 + d;
-			INC(i)
-		ELSE
-			error := 1
+		IF (pVal.typ = mConst.typeInteger) & ((pVal.int < mMach.target.minInt) OR (pVal.int > mMach.target.maxInt)) THEN
+			_bError := TRUE
+		ELSIF (pVal.typ = mConst.typeChar) & ((pVal.int < 0) OR (pVal.int > 255)) THEN
+			_bError := TRUE
+		ELSIF (pVal.typ = mConst.typeWChar) & ((pVal.int < 0) OR (pVal.int > 65535)) THEN
+			_bError := TRUE
+		ELSIF (pVal.typ = mConst.typeReal) & ((pVal.float < -mMach.target.maxReal) OR (pVal.float > mMach.target.maxReal)) THEN
+			_bError := TRUE
 		END
-	END;
 
-	IF error = 0 THEN
-		v.int := value;
-		v.typ := mConst.typeInteger;
-		IF ~check(v) THEN
-			error := 1
+		RETURN ~_bError
+	END Check;
+
+PROCEDURE IsZero* (pVal: tValue): BOOLEAN;
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		ASSERT(pVal.typ IN {mConst.typeInteger, mConst.typeReal});
+
+		IF pVal.typ = mConst.typeInteger THEN
+			_bRes := pVal.int = 0
+		ELSIF pVal.typ = mConst.typeReal THEN
+			_bRes := pVal.float = 0.0
 		END
-	END
 
-END iconv;
+		RETURN _bRes
+	END IsZero;
 
+PROCEDURE Int_Convert* (s: ARRAY OF CHAR; VAR pVal: tValue; VAR pError: INTEGER);
+	VAR
+		_val: INTEGER;
+		_i:   INTEGER;
+		d:    INTEGER;
+	BEGIN
+		pError := 0;
+		_val := 0;
 
-PROCEDURE hconv* (s: ARRAY OF CHAR; VAR v: VALUE; VAR error: INTEGER);
-VAR
-	value: INTEGER;
-	i:     INTEGER;
-	n:     INTEGER;
-	d:     INTEGER;
-
-BEGIN
-	ASSERT(mStr.digit(s[0]));
-
-	error := 0;
-	value := 0;
-
-	n := -1;
-	i := 0;
-	WHILE (s[i] # "H") & (s[i] # "X") & (error = 0) DO
-
-		d := digit[ORD(s[i])];
-		IF (n = -1) & (d # 0) THEN
-			n := i
+		_i := 0;
+		WHILE mStr.digit(s[_i]) & (pError = 0) DO
+			d := digit[ORD(s[_i])];
+			IF _val <= (mMach.native.maxInt - d) DIV 10 THEN
+				_val := _val * 10 + d;
+				INC(_i)
+			ELSE
+				pError := 1
+			END
 		END;
 
-		IF (n # -1) & (i - n + 1 > mMach.target.maxHex) THEN
-			error := 2
-		ELSE
-			value := value * 16 + d;
-			INC(i)
+		IF pError = 0 THEN
+			pVal.int := _val;
+			pVal.typ := mConst.typeInteger;
+			IF ~Check(pVal) THEN
+				pError := 1
+			END
 		END
+	END Int_Convert;
 
-	END;
+PROCEDURE Hex_Convert* (s: ARRAY OF CHAR; VAR pVal: tValue; VAR pError: INTEGER);
+	VAR
+		_val: INTEGER;
+		_i:     INTEGER;
+		n:     INTEGER;
+		d:     INTEGER;
+	BEGIN
+		ASSERT(mStr.digit(s[0]));
 
-	IF mMach.b64to32 THEN
-		value := mMach.Int32To64(value);
-	END;
+		pError := 0;
+		_val := 0;
 
-	IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
-		error := 3
-	END;
+		n := -1;
+		_i := 0;
+		WHILE (s[_i] # "H") & (s[_i] # "X") & (pError = 0) DO
 
-	IF error = 0 THEN
-		v.int := value;
-		IF s[i] = "X" THEN
-			v.typ := mConst.typeChar;
-			IF ~check(v) THEN
-				v.typ := mConst.typeWChar;
-				IF ~check(v) THEN
-					error := 3
+			d := digit[ORD(s[_i])];
+			IF (n = -1) & (d # 0) THEN
+				n := _i
+			END;
+
+			IF (n # -1) & (_i - n + 1 > mMach.target.maxHex) THEN
+				pError := 2
+			ELSE
+				_val := _val * 16 + d;
+				INC(_i)
+			END
+
+		END;
+
+		IF mMach.b64to32 THEN
+			_val := mMach.Int32To64(_val);
+		END;
+
+		IF (s[_i] = "X") & (n # -1) & (_i - n > 4) THEN
+			pError := 3
+		END;
+
+		IF pError = 0 THEN
+			pVal.int := _val;
+			IF s[_i] = "X" THEN
+				pVal.typ := mConst.typeChar;
+				IF ~Check(pVal) THEN
+					pVal.typ := mConst.typeWChar;
+					IF ~Check(pVal) THEN
+						pError := 3
+					END
+				END
+			ELSE
+				pVal.typ := mConst.typeInteger;
+				IF ~Check(pVal) THEN
+					pError := 2
 				END
 			END
-		ELSE
-			v.typ := mConst.typeInteger;
-			IF ~check(v) THEN
-				error := 2
+		END
+
+	END Hex_Convert;
+
+PROCEDURE IsOpFloat2 (VAR pA: REAL; pB: REAL; pOp: CHAR): BOOLEAN;
+	VAR
+		_max: REAL;
+		_bRes: BOOLEAN;
+	BEGIN
+		_max := mMach.native.maxReal;
+
+		CASE pOp OF
+		|"+":
+			IF (pA < 0.0) & (pB < 0.0) THEN
+				_bRes := pA > -_max - pB
+			ELSIF (pA > 0.0) & (pB > 0.0) THEN
+				_bRes := pA <  _max - pB
+			ELSE
+				_bRes := TRUE
+			END;
+			IF _bRes THEN
+				pA := pA + pB
+			END
+		|"-":
+			IF (pA < 0.0) & (pB > 0.0) THEN
+				_bRes := pA > pB - _max
+			ELSIF (pA > 0.0) & (pB < 0.0) THEN
+				_bRes := pA < pB + _max
+			ELSE
+				_bRes := TRUE
+			END;
+			IF _bRes THEN
+				pA := pA - pB
+			END
+		|"*":
+			IF (ABS(pA) > 1.0) & (ABS(pB) > 1.0) THEN
+				_bRes := ABS(pA) < _max / ABS(pB)
+			ELSE
+				_bRes := TRUE
+			END;
+			IF _bRes THEN
+				pA := pA * pB
+			END
+		|"/":
+			IF ABS(pB) < 1.0 THEN
+				_bRes := ABS(pA) < _max * ABS(pB)
+			ELSE
+				_bRes := TRUE
+			END;
+			IF _bRes THEN
+				pA := pA / pB
 			END
 		END
-	END
+		RETURN _bRes
+	END IsOpFloat2;
 
-END hconv;
+PROCEDURE Float_Convert* (s: ARRAY OF CHAR; VAR pVal: tValue; VAR pError: INTEGER);
+	VAR
+		_val:    REAL;
+		exp10:    REAL;
+		_i, n, d:  INTEGER;
+		minus:    BOOLEAN;
 
+	BEGIN
+		pError := 0;
+		_val := 0.0;
+		exp10 := 10.0;
+		minus := FALSE;
+		n := 0;
 
-PROCEDURE opFloat2 (VAR a: REAL; b: REAL; op: CHAR): BOOLEAN;
-VAR
-	max: REAL;
-	res: BOOLEAN;
-
-BEGIN
-	max := mMach.native.maxReal;
-
-	CASE op OF
-	|"+":
-		IF (a < 0.0) & (b < 0.0) THEN
-			res := a > -max - b
-		ELSIF (a > 0.0) & (b > 0.0) THEN
-			res := a <  max - b
-		ELSE
-			res := TRUE
-		END;
-		IF res THEN
-			a := a + b
-		END
-
-	|"-":
-		IF (a < 0.0) & (b > 0.0) THEN
-			res := a > b - max
-		ELSIF (a > 0.0) & (b < 0.0) THEN
-			res := a < b + max
-		ELSE
-			res := TRUE
-		END;
-		IF res THEN
-			a := a - b
-		END
-
-	|"*":
-		IF (ABS(a) > 1.0) & (ABS(b) > 1.0) THEN
-			res := ABS(a) < max / ABS(b)
-		ELSE
-			res := TRUE
-		END;
-		IF res THEN
-			a := a * b
-		END
-
-	|"/":
-		IF ABS(b) < 1.0 THEN
-			res := ABS(a) < max * ABS(b)
-		ELSE
-			res := TRUE
-		END;
-		IF res THEN
-			a := a / b
-		END
-
-	END
-
-	RETURN res
-END opFloat2;
-
-
-PROCEDURE fconv* (s: ARRAY OF CHAR; VAR v: VALUE; VAR error: INTEGER);
-VAR
-	value:    REAL;
-	exp10:    REAL;
-	i, n, d:  INTEGER;
-	minus:    BOOLEAN;
-
-BEGIN
-	error := 0;
-	value := 0.0;
-	exp10 := 10.0;
-	minus := FALSE;
-	n := 0;
-
-	i := 0;
-	WHILE (error = 0) & mStr.digit(s[i]) DO
-		IF opFloat2(value, 10.0, "*") & opFloat2(value, FLT(digit[ORD(s[i])]), "+") THEN
-			INC(i)
-		ELSE
-			error := 4
-		END
-	END;
-
-	INC(i);
-
-	WHILE (error = 0) & mStr.digit(s[i]) DO
-		IF opFloat2(value, FLT(digit[ORD(s[i])]) / exp10, "+") & opFloat2(exp10, 10.0, "*") THEN
-			INC(i)
-		ELSE
-			error := 4
-		END
-	END;
-
-	IF s[i] = "E" THEN
-		INC(i)
-	END;
-
-	IF (s[i] = "-") OR (s[i] = "+") THEN
-		minus := s[i] = "-";
-		INC(i)
-	END;
-
-	WHILE (error = 0) & mStr.digit(s[i]) DO
-		d := digit[ORD(s[i])];
-		IF n <= (mMach.native.maxInt - d) DIV 10 THEN
-			n := n * 10 + d;
-			INC(i)
-		ELSE
-			error := 5
-		END
-	END;
-
-	exp10 := 1.0;
-	WHILE (error = 0) & (n > 0) DO
-		IF opFloat2(exp10, 10.0, "*") THEN
-			DEC(n)
-		ELSE
-			error := 4
-		END
-	END;
-
-	IF error = 0 THEN
-		IF minus THEN
-			IF ~opFloat2(value, exp10, "/") THEN
-				error := 4
+		_i := 0;
+		WHILE (pError = 0) & mStr.digit(s[_i]) DO
+			IF IsOpFloat2(_val, 10.0, "*") & IsOpFloat2(_val, FLT(digit[ORD(s[_i])]), "+") THEN
+				INC(_i)
+			ELSE
+				pError := 4
 			END
-		ELSE
-			IF ~opFloat2(value, exp10, "*") THEN
-				error := 4
+		END;
+
+		INC(_i);
+
+		WHILE (pError = 0) & mStr.digit(s[_i]) DO
+			IF IsOpFloat2(_val, FLT(digit[ORD(s[_i])]) / exp10, "+") & IsOpFloat2(exp10, 10.0, "*") THEN
+				INC(_i)
+			ELSE
+				pError := 4
 			END
-		END
-	END;
+		END;
 
-	IF error = 0 THEN
-		v.float := value;
-		v.typ := mConst.typeReal;
-		IF ~check(v) THEN
-			error := 4
-		END
-	END
+		IF s[_i] = "E" THEN
+			INC(_i)
+		END;
 
-END fconv;
+		IF (s[_i] = "-") OR (s[_i] = "+") THEN
+			minus := s[_i] = "-";
+			INC(_i)
+		END;
 
+		WHILE (pError = 0) & mStr.digit(s[_i]) DO
+			d := digit[ORD(s[_i])];
+			IF n <= (mMach.native.maxInt - d) DIV 10 THEN
+				n := n * 10 + d;
+				INC(_i)
+			ELSE
+				pError := 5
+			END
+		END;
 
-PROCEDURE setChar* (VAR v: VALUE; ord: INTEGER);
-BEGIN
-	v.typ := mConst.typeChar;
-	v.int := ord
-END setChar;
+		exp10 := 1.0;
+		WHILE (pError = 0) & (n > 0) DO
+			IF IsOpFloat2(exp10, 10.0, "*") THEN
+				DEC(n)
+			ELSE
+				pError := 4
+			END
+		END;
 
+		IF pError = 0 THEN
+			IF minus THEN
+				IF ~IsOpFloat2(_val, exp10, "/") THEN
+					pError := 4
+				END
+			ELSE
+				IF ~IsOpFloat2(_val, exp10, "*") THEN
+					pError := 4
+				END
+			END
+		END;
 
-PROCEDURE setWChar* (VAR v: VALUE; ord: INTEGER);
-BEGIN
-	v.typ := mConst.typeWChar;
-	v.int := ord
-END setWChar;
-
-
-PROCEDURE addInt (VAR a: INTEGER; b: INTEGER): BOOLEAN;
-VAR
-	error: BOOLEAN;
-
-BEGIN
-	IF (a > 0) & (b > 0) THEN
-		error := a > mMach.native.maxInt - b
-	ELSIF (a < 0) & (b < 0) THEN
-		error := a < mMach.native.minInt - b
-	ELSE
-		error := FALSE
-	END;
-
-	IF ~error THEN
-		a := a + b
-	ELSE
-		a := 0
-	END
-
-	RETURN ~error
-END addInt;
-
-
-PROCEDURE subInt (VAR a: INTEGER; b: INTEGER): BOOLEAN;
-VAR
-	error: BOOLEAN;
-
-BEGIN
-	IF (a > 0) & (b < 0) THEN
-		error := a > mMach.native.maxInt + b
-	ELSIF (a < 0) & (b > 0) THEN
-		error := a < mMach.native.minInt + b
-	ELSIF (a = 0) & (b < 0) THEN
-		error := b = mMach.native.minInt
-	ELSE
-		error := FALSE
-	END;
-
-	IF ~error THEN
-		a := a - b
-	ELSE
-		a := 0
-	END
-
-	RETURN ~error
-END subInt;
-
-
-PROCEDURE lg2 (x: INTEGER): INTEGER;
-VAR
-	n: INTEGER;
-
-BEGIN
-	ASSERT(x > 0);
-
-	n := 0;
-	WHILE ~ODD(x) DO
-		x := x DIV 2;
-		INC(n)
-	END;
-
-	IF x # 1 THEN
-		n := 255
-	END
-
-	RETURN n
-END lg2;
-
-
-PROCEDURE mulInt* (VAR a: INTEGER; b: INTEGER): BOOLEAN;
-VAR
-	error:    BOOLEAN;
-	min, max: INTEGER;
-
-BEGIN
-	min := mMach.native.minInt;
-	max := mMach.native.maxInt;
-
-	IF ((a > 1) & (b > 1)) OR ((a < 0) & (b < 0)) THEN
-		error := (a = min) OR (b = min) OR (ABS(a) > max DIV ABS(b))
-
-	ELSIF ((a > 1) & (b < 0)) OR ((a < 0) & (b > 1)) THEN
-		error := (a = min) OR (b = min);
-		IF ~error THEN
-			IF lg2(ABS(a)) + lg2(ABS(b)) >= mMach.native.bit_depth THEN
-				error := ABS(a) > max DIV ABS(b)
+		IF pError = 0 THEN
+			pVal.float := _val;
+			pVal.typ := mConst.typeReal;
+			IF ~Check(pVal) THEN
+				pError := 4
 			END
 		END
 
-	ELSE
-		error := FALSE
-	END;
+	END Float_Convert;
 
-	IF ~error THEN
-		a := a * b
-	ELSE
-		a := 0
-	END
+PROCEDURE Char_Set* (VAR pVal: tValue; pOrd: INTEGER);
+	BEGIN
+		pVal.typ := mConst.typeChar;
+		pVal.int := pOrd
+	END Char_Set;
 
-	RETURN ~error
-END mulInt;
+PROCEDURE WChar_Set* (VAR pVal: tValue; pOrd: INTEGER);
+	BEGIN
+		pVal.typ := mConst.typeWChar;
+		pVal.int := pOrd
+	END WChar_Set;
 
+PROCEDURE Int_Add (VAR pA: INTEGER; pB: INTEGER): BOOLEAN;
+	VAR
+		_bError: BOOLEAN;
+	BEGIN
+		IF (pA > 0) & (pB > 0) THEN
+			_bError := pA > mMach.native.maxInt - pB
+		ELSIF (pA < 0) & (pB < 0) THEN
+			_bError := pA < mMach.native.minInt - pB
+		ELSE
+			_bError := FALSE
+		END;
 
-PROCEDURE _ASR (x, n: INTEGER): INTEGER;
-BEGIN
-	IF mMach.b64to32 THEN
-		x := mMach.Int32To64(x)
-	END
-
-	RETURN ASR(x, n)
-END _ASR;
-
-
-PROCEDURE _LSR (x, n: INTEGER): INTEGER;
-BEGIN
-	IF mMach.b64to32 THEN
-		x := mMach.Int64To32(x);
-		x := LSR(x, n);
-		x := mMach.Int32To64(x)
-	ELSE
-		x := LSR(x, n)
-	END
-
-	RETURN x
-END _LSR;
-
-
-PROCEDURE _LSL (x, n: INTEGER): INTEGER;
-BEGIN
-	x := LSL(x, n);
-	IF mMach.b64to32 THEN
-		x := mMach.Int32To64(x)
-	END
-
-	RETURN x
-END _LSL;
-
-
-PROCEDURE _ROR1_32 (x: INTEGER): INTEGER;
-BEGIN
-	x := mMach.Int64To32(x);
-	x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 31)))
-	RETURN mMach.Int32To64(x)
-END _ROR1_32;
-
-
-PROCEDURE _ROR (x, n: INTEGER): INTEGER;
-BEGIN
-	IF mMach.b64to32 THEN
-		n := n MOD 32;
-		WHILE n > 0 DO
-			x := _ROR1_32(x);
-			DEC(n)
+		IF ~_bError THEN
+			pA := pA + pB
+		ELSE
+			pA := 0
 		END
-	ELSE
-		x := ROR(x, n)
-	END
 
-	RETURN x
-END _ROR;
+		RETURN ~_bError
+	END Int_Add;
 
+PROCEDURE Int_Sub (VAR pA: INTEGER; pB: INTEGER): BOOLEAN;
+	VAR
+		_bError: BOOLEAN;
+	BEGIN
+		IF (pA > 0) & (pB < 0) THEN
+			_bError := pA > mMach.native.maxInt + pB
+		ELSIF (pA < 0) & (pB > 0) THEN
+			_bError := pA < mMach.native.minInt + pB
+		ELSIF (pA = 0) & (pB < 0) THEN
+			_bError := pB = mMach.native.minInt
+		ELSE
+			_bError := FALSE
+		END;
 
-PROCEDURE opInt* (VAR a: VALUE; b: VALUE; op: CHAR): BOOLEAN;
-VAR
-	success: BOOLEAN;
+		IF ~_bError THEN
+			pA := pA - pB
+		ELSE
+			pA := 0
+		END
 
-BEGIN
-	success := TRUE;
+		RETURN ~_bError
+	END Int_Sub;
 
-	CASE op OF
-	|"+": success := addInt(a.int, b.int)
-	|"-": success := subInt(a.int, b.int)
-	|"*": success := mulInt(a.int, b.int)
-	|"/": success := FALSE
-	|"D": IF (b.int # -1) OR (a.int # mMach.native.minInt) THEN a.int := a.int DIV b.int ELSE success := FALSE END
-	|"M": a.int := a.int MOD b.int
-	|"L": a.int := _LSL(a.int, b.int)
-	|"A": a.int := _ASR(a.int, b.int)
-	|"O": a.int := _ROR(a.int, b.int)
-	|"R": a.int := _LSR(a.int, b.int)
-	|"m": a.int := MIN(a.int, b.int)
-	|"x": a.int := MAX(a.int, b.int)
-	END;
-	a.typ := mConst.typeInteger
+PROCEDURE Lg2_Get (pNum: INTEGER): INTEGER;
+	VAR
+		_num: INTEGER;
+	BEGIN
+		ASSERT(pNum > 0);
 
-	RETURN success & check(a)
-END opInt;
+		_num := 0;
+		WHILE ~ODD(pNum) DO
+			pNum := pNum DIV 2;
+			INC(_num)
+		END;
 
+		IF pNum # 1 THEN
+			_num := 255
+		END
 
-PROCEDURE charToStr* (c: VALUE; VAR s: ARRAY OF CHAR);
-BEGIN
-	s[0] := CHR(c.int);
-	s[1] := 0X
-END charToStr;
+		RETURN _num
+	END Lg2_Get;
 
+PROCEDURE Int_Mul* (VAR pA: INTEGER; pB: INTEGER): BOOLEAN;
+	VAR
+		_bError:    BOOLEAN;
+		_min, _max: INTEGER;
+	BEGIN
+		_min := mMach.native.minInt;
+		_max := mMach.native.maxInt;
 
-PROCEDURE opSet* (VAR a: VALUE; b: VALUE; op: CHAR);
-BEGIN
-	CASE op OF
-	|"+": a.set := a.set + b.set
-	|"-": a.set := a.set - b.set
-	|"*": a.set := a.set * b.set
-	|"/": a.set := a.set / b.set
-	END;
-	a.typ := mConst.typeSet
-END opSet;
+		IF ((pA > 1) & (pB > 1)) OR ((pA < 0) & (pB < 0)) THEN
+			_bError := (pA = _min) OR (pB = _min) OR (ABS(pA) > _max DIV ABS(pB))
 
+		ELSIF ((pA > 1) & (pB < 0)) OR ((pA < 0) & (pB > 1)) THEN
+			_bError := (pA = _min) OR (pB = _min);
+			IF ~_bError THEN
+				IF Lg2_Get(ABS(pA)) + Lg2_Get(ABS(pB)) >= mMach.native.bit_depth THEN
+					_bError := ABS(pA) > _max DIV ABS(pB)
+				END
+			END
 
-PROCEDURE opFloat* (VAR a: VALUE; b: VALUE; op: CHAR): BOOLEAN;
-BEGIN
-	a.typ := mConst.typeReal
-	RETURN opFloat2(a.float, b.float, op) & check(a)
-END opFloat;
+		ELSE
+			_bError := FALSE
+		END;
 
+		IF ~_bError THEN
+			pA := pA * pB
+		ELSE
+			pA := 0
+		END
 
-PROCEDURE ord* (VAR v: VALUE);
-BEGIN
-	CASE v.typ OF
-	|mConst.typeChar, mConst.typeWChar:
-	|mConst.typeBoolean: v.int := ORD(v.bool)
-	|mConst.typeSet:
-		v.int := ORD(v.set);
+		RETURN ~_bError
+	END Int_Mul;
+
+PROCEDURE ASR_Get (pNum, pBit: INTEGER): INTEGER;
+	BEGIN
 		IF mMach.b64to32 THEN
-			v.int := mMach.Int32To64(v.int)
+			pNum := mMach.Int32To64(pNum)
 		END
-	END;
-	v.typ := mConst.typeInteger
-END ord;
+
+		RETURN ASR(pNum, pBit)
+	END ASR_Get;
+
+PROCEDURE LSR_Get (pNum, pBit: INTEGER): INTEGER;
+	BEGIN
+		IF mMach.b64to32 THEN
+			pNum := mMach.Int64To32(pNum);
+			pNum := LSR(pNum, pBit);
+			pNum := mMach.Int32To64(pNum)
+		ELSE
+			pNum := LSR(pNum, pBit)
+		END
+
+		RETURN pNum
+	END LSR_Get;
+
+PROCEDURE LSL_Get (pNum, pBit: INTEGER): INTEGER;
+	BEGIN
+		pNum := LSL(pNum, pBit);
+		IF mMach.b64to32 THEN
+			pNum := mMach.Int32To64(pNum)
+		END
+
+		RETURN pNum
+	END LSL_Get;
+
+PROCEDURE ROR1_32_Get (pNum: INTEGER): INTEGER;
+	BEGIN
+		pNum := mMach.Int64To32(pNum);
+		pNum := ORD(BITS(LSR(pNum, 1)) + BITS(LSL(pNum, 31)))
+		RETURN mMach.Int32To64(pNum)
+	END ROR1_32_Get;
+
+PROCEDURE ROR_Get (pNum, pBit: INTEGER): INTEGER;
+	BEGIN
+		IF mMach.b64to32 THEN
+			pBit := pBit MOD 32;
+			WHILE pBit > 0 DO
+				pNum := ROR1_32_Get(pNum);
+				DEC(pBit)
+			END
+		ELSE
+			pNum := ROR(pNum, pBit)
+		END
+
+		RETURN pNum
+	END ROR_Get;
+
+PROCEDURE IsOpInt* (VAR pA: tValue; pB: tValue; pOp: CHAR): BOOLEAN;
+	VAR
+		_bSuccess: BOOLEAN;
+	BEGIN
+		_bSuccess := TRUE;
+
+		CASE pOp OF
+		|"+": _bSuccess := Int_Add(pA.int, pB.int)
+		|"-": _bSuccess := Int_Sub(pA.int, pB.int)
+		|"*": _bSuccess := Int_Mul(pA.int, pB.int)
+		|"/": _bSuccess := FALSE
+		|"D": IF (pB.int # -1) OR (pA.int # mMach.native.minInt) THEN pA.int := pA.int DIV pB.int ELSE _bSuccess := FALSE END
+		|"M": pA.int := pA.int MOD pB.int
+		|"L": pA.int := LSL_Get(pA.int, pB.int)
+		|"A": pA.int := ASR_Get(pA.int, pB.int)
+		|"O": pA.int := ROR_Get(pA.int, pB.int)
+		|"R": pA.int := LSR_Get(pA.int, pB.int)
+		|"m": pA.int := MIN(pA.int, pB.int)
+		|"x": pA.int := MAX(pA.int, pB.int)
+		END;
+		pA.typ := mConst.typeInteger
+
+		RETURN _bSuccess & Check(pA)
+	END IsOpInt;
+
+PROCEDURE CharToStr* (c: tValue; VAR s: ARRAY OF CHAR);
+	BEGIN
+		s[0] := CHR(c.int);
+		s[1] := 0X
+	END CharToStr;
+
+PROCEDURE OpSet_Set* (VAR pA: tValue; pB: tValue; pOp: CHAR);
+	BEGIN
+		CASE pOp OF
+		|"+": pA.set := pA.set + pB.set
+		|"-": pA.set := pA.set - pB.set
+		|"*": pA.set := pA.set * pB.set
+		|"/": pA.set := pA.set / pB.set
+		END;
+		pA.typ := mConst.typeSet
+	END OpSet_Set;
+
+PROCEDURE IsOpFloat* (VAR pA: tValue; pB: tValue; pOp: CHAR): BOOLEAN;
+	BEGIN
+		pA.typ := mConst.typeReal
+		RETURN IsOpFloat2(pA.float, pB.float, pOp) & Check(pA)
+	END IsOpFloat;
+
+PROCEDURE Ord_Set* (VAR pVal: tValue);
+	BEGIN
+		CASE pVal.typ OF
+		|mConst.typeChar, mConst.typeWChar:
+		|mConst.typeBoolean: pVal.int := ORD(pVal.bool)
+		|mConst.typeSet:
+			pVal.int := ORD(pVal.set);
+			IF mMach.b64to32 THEN
+				pVal.int := mMach.Int32To64(pVal.int)
+			END
+		END;
+		pVal.typ := mConst.typeInteger
+	END Ord_Set;
+
+PROCEDURE Odd_Set* (VAR pVal: tValue);
+	BEGIN
+		pVal.typ := mConst.typeBoolean;
+		pVal.bool := ODD(pVal.int)
+	END Odd_Set;
+
+PROCEDURE Bits_Set* (VAR pVal: tValue);
+	BEGIN
+		pVal.typ := mConst.typeSet;
+		pVal.set := BITS(pVal.int)
+	END Bits_Set;
+
+PROCEDURE Abs_Set* (VAR pVal: tValue);
+	BEGIN
+		CASE pVal.typ OF
+		|mConst.typeReal:    pVal.float := ABS(pVal.float)
+		|mConst.typeInteger: pVal.int := ABS(pVal.int)
+		END
+	END Abs_Set;
+
+PROCEDURE IsFloor* (VAR pVal: tValue): BOOLEAN;
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		pVal.typ := mConst.typeInteger;
+		_bRes := (FLT(mMach.native.minInt) <= pVal.float) & (pVal.float <= FLT(mMach.native.maxInt));
+		IF _bRes THEN
+			pVal.int := FLOOR(pVal.float)
+		END
+
+		RETURN _bRes
+	END IsFloor;
+
+PROCEDURE Float_Set* (VAR pVal: tValue);
+	BEGIN
+		pVal.typ := mConst.typeReal;
+		pVal.float := FLT(pVal.int)
+	END Float_Set;
 
 
-PROCEDURE odd* (VAR v: VALUE);
+PROCEDURE IsNeg* (VAR pVal: tValue): BOOLEAN;
+	VAR
+		z: tValue;
+		_bRes: BOOLEAN;
+
+	BEGIN
+		_bRes := TRUE;
+
+		z.typ := mConst.typeInteger;
+		z.int := 0;
+
+		CASE pVal.typ OF
+		|mConst.typeReal:     pVal.float := -pVal.float
+		|mConst.typeSet:      pVal.set := -pVal.set
+		|mConst.typeInteger:  _bRes := IsOpInt(z, pVal, "-"); pVal := z
+		|mConst.typeBoolean:  pVal.bool := ~pVal.bool
+		END
+
+		RETURN _bRes
+	END IsNeg;
+
+
+PROCEDURE setbool* (VAR pVal: tValue; pB: BOOLEAN);
 BEGIN
-	v.typ := mConst.typeBoolean;
-	v.bool := ODD(v.int)
-END odd;
-
-
-PROCEDURE bits* (VAR v: VALUE);
-BEGIN
-	v.typ := mConst.typeSet;
-	v.set := BITS(v.int)
-END bits;
-
-
-PROCEDURE abs* (VAR v: VALUE);
-BEGIN
-	CASE v.typ OF
-	|mConst.typeReal:    v.float := ABS(v.float)
-	|mConst.typeInteger: v.int := ABS(v.int)
-	END
-END abs;
-
-
-PROCEDURE floor* (VAR v: VALUE): BOOLEAN;
-VAR
-	res: BOOLEAN;
-
-BEGIN
-	v.typ := mConst.typeInteger;
-	res := (FLT(mMach.native.minInt) <= v.float) & (v.float <= FLT(mMach.native.maxInt));
-	IF res THEN
-		v.int := FLOOR(v.float)
-	END
-
-	RETURN res
-END floor;
-
-
-PROCEDURE flt* (VAR v: VALUE);
-BEGIN
-	v.typ := mConst.typeReal;
-	v.float := FLT(v.int)
-END flt;
-
-
-PROCEDURE neg* (VAR v: VALUE): BOOLEAN;
-VAR
-	z: VALUE;
-	res: BOOLEAN;
-
-BEGIN
-	res := TRUE;
-
-	z.typ := mConst.typeInteger;
-	z.int := 0;
-
-	CASE v.typ OF
-	|mConst.typeReal:     v.float := -v.float
-	|mConst.typeSet:      v.set := -v.set
-	|mConst.typeInteger:  res := opInt(z, v, "-"); v := z
-	|mConst.typeBoolean:  v.bool := ~v.bool
-	END
-
-	RETURN res
-END neg;
-
-
-PROCEDURE setbool* (VAR v: VALUE; b: BOOLEAN);
-BEGIN
-	v.bool := b;
-	v.typ := mConst.typeBoolean
+	pVal.bool := pB;
+	pVal.typ := mConst.typeBoolean
 END setbool;
 
 
-PROCEDURE opBoolean* (VAR a: VALUE; b: VALUE; op: CHAR);
+PROCEDURE opBoolean* (VAR pA: tValue; pB: tValue; pOp: CHAR);
 BEGIN
-	CASE op OF
-	|"&": a.bool := a.bool & b.bool
-	|"|": a.bool := a.bool OR b.bool
+	CASE pOp OF
+	|"&": pA.bool := pA.bool & pB.bool
+	|"|": pA.bool := pA.bool OR pB.bool
 	END;
-	a.typ := mConst.typeBoolean
+	pA.typ := mConst.typeBoolean
 END opBoolean;
 
 
-PROCEDURE range* (i: VALUE; a, b: INTEGER): BOOLEAN;
-	RETURN (a <= i.int) & (i.int <= b)
+PROCEDURE range* (i: tValue; pA, pB: INTEGER): BOOLEAN;
+	RETURN (pA <= i.int) & (i.int <= pB)
 END range;
 
 
-PROCEDURE less (v, v2: VALUE; VAR error: INTEGER): BOOLEAN;
+PROCEDURE less (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
 VAR
-	res: BOOLEAN;
+	_bRes: BOOLEAN;
 
 BEGIN
-	res := FALSE;
+	_bRes := FALSE;
 
-	IF (v.typ = v2.typ) OR (v.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
-		CASE v.typ OF
+	IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
+		CASE pVal.typ OF
 		|mConst.typeInteger,
 		 mConst.typeWChar,
-		 mConst.typeChar:     res := v.int < v2.int
-		|mConst.typeReal:     res := v.float < v2.float
+		 mConst.typeChar:     _bRes := pVal.int < v2.int
+		|mConst.typeReal:     _bRes := pVal.float < v2.float
 		|mConst.typeBoolean,
 		 mConst.typeSet:      error := 1
 		END
@@ -695,76 +646,75 @@ BEGIN
 		error := 1
 	END
 
-	RETURN res
+	RETURN _bRes
 END less;
 
-
-PROCEDURE equal (v, v2: VALUE; VAR error: INTEGER): BOOLEAN;
+PROCEDURE equal (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
 VAR
-	res: BOOLEAN;
+	_bRes: BOOLEAN;
 
 BEGIN
-	res := FALSE;
+	_bRes := FALSE;
 
-	IF (v.typ = v2.typ) OR (v.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
-		CASE v.typ OF
+	IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
+		CASE pVal.typ OF
 		|mConst.typeInteger,
 		 mConst.typeWChar,
-		 mConst.typeChar:     res := v.int = v2.int
-		|mConst.typeReal:     res := v.float = v2.float
-		|mConst.typeBoolean:  res := v.bool = v2.bool
-		|mConst.typeSet:      res := v.set = v2.set
+		 mConst.typeChar:     _bRes := pVal.int = v2.int
+		|mConst.typeReal:     _bRes := pVal.float = v2.float
+		|mConst.typeBoolean:  _bRes := pVal.bool = v2.bool
+		|mConst.typeSet:      _bRes := pVal.set = v2.set
 		END
 	ELSE
 		error := 1
 	END
 
-	RETURN res
+	RETURN _bRes
 END equal;
 
 
-PROCEDURE relation* (VAR v: VALUE; v2: VALUE; operator: RELATION; VAR error: INTEGER);
+PROCEDURE relation* (VAR pVal: tValue; v2: tValue; operator: tRelation; VAR error: INTEGER);
 VAR
-	res: BOOLEAN;
+	_bRes: BOOLEAN;
 
 BEGIN
 	error := 0;
 
-	res := FALSE;
+	_bRes := FALSE;
 
 	CASE operator[0] OF
 
 	|"=":
-		res := equal(v, v2, error)
+		_bRes := equal(pVal, v2, error)
 
 	|"#":
-		res := ~equal(v, v2, error)
+		_bRes := ~equal(pVal, v2, error)
 
 	|"<":
 		IF operator[1] = "=" THEN
-			res := less(v, v2, error);
+			_bRes := less(pVal, v2, error);
 			IF error = 0 THEN
-				res := equal(v, v2, error) OR res
+				_bRes := equal(pVal, v2, error) OR _bRes
 			END
 		ELSE
-			res := less(v, v2, error)
+			_bRes := less(pVal, v2, error)
 		END
 
 	|">":
 		IF operator[1] = "=" THEN
-			res := ~less(v, v2, error)
+			_bRes := ~less(pVal, v2, error)
 		ELSE
-			res := less(v, v2, error);
+			_bRes := less(pVal, v2, error);
 			IF error = 0 THEN
-				res := equal(v, v2, error) OR res
+				_bRes := equal(pVal, v2, error) OR _bRes
 			END;
-			res := ~res
+			_bRes := ~_bRes
 		END
 
 	|"I":
-		IF (v.typ = mConst.typeInteger) & (v2.typ = mConst.typeSet) THEN
-			IF range(v, 0, mMach.target.maxSet) THEN
-				res := v.int IN v2.set
+		IF (pVal.typ = mConst.typeInteger) & (v2.typ = mConst.typeSet) THEN
+			IF range(pVal, 0, mMach.target.maxSet) THEN
+				_bRes := pVal.int IN v2.set
 			ELSE
 				error := 2
 			END
@@ -775,41 +725,41 @@ BEGIN
 	END;
 
 	IF error = 0 THEN
-		v.bool := res;
-		v.typ  := mConst.typeBoolean
+		pVal.bool := _bRes;
+		pVal.typ  := mConst.typeBoolean
 	END
 
 END relation;
 
 
-PROCEDURE emptySet* (VAR v: VALUE);
+PROCEDURE emptySet* (VAR pVal: tValue);
 BEGIN
-	v.typ := mConst.typeSet;
-	v.set := {}
+	pVal.typ := mConst.typeSet;
+	pVal.set := {}
 END emptySet;
 
 
-PROCEDURE constrSet* (VAR v: VALUE; a, b: VALUE);
+PROCEDURE constrSet* (VAR pVal: tValue; pA, pB: tValue);
 BEGIN
-	v.typ := mConst.typeSet;
-	v.set := {a.int .. b.int}
+	pVal.typ := mConst.typeSet;
+	pVal.set := {pA.int .. pB.int}
 END constrSet;
 
 
-PROCEDURE getInt* (v: VALUE): INTEGER;
+PROCEDURE getInt* (pVal: tValue): INTEGER;
 BEGIN
-	ASSERT(check(v))
+	ASSERT(Check(pVal))
 
-	RETURN v.int
+	RETURN pVal.int
 END getInt;
 
 
-PROCEDURE setInt* (VAR v: VALUE; i: INTEGER): BOOLEAN;
+PROCEDURE setInt* (VAR pVal: tValue; i: INTEGER): BOOLEAN;
 BEGIN
-	v.int := i;
-	v.typ := mConst.typeInteger
+	pVal.int := i;
+	pVal.typ := mConst.typeInteger
 
-	RETURN check(v)
+	RETURN Check(pVal)
 END setInt;
 
 

@@ -63,7 +63,7 @@ TYPE
 		pos*:            POSITION;
 		ident*:          IDENT;
 		string*:         IDENT;
-		value*:          ARITH.VALUE;
+		value*:          ARITH.tValue;
 		error*:          INTEGER;
 		over:            BOOLEAN
 	END;
@@ -283,11 +283,11 @@ PROCEDURE number (text: TEXTDRV.TEXT; VAR lex: LEX; VAR range: BOOLEAN);
 		END;
 
 		IF lex.sym = lxINTEGER THEN
-			ARITH.iconv(lex.s, lex.value, error)
+			ARITH.Int_Convert(lex.s, lex.value, error)
 		ELSIF (lex.sym = lxHEX) OR (lex.sym = lxCHAR) THEN
-			ARITH.hconv(lex.s, lex.value, error)
+			ARITH.Hex_Convert(lex.s, lex.value, error)
 		ELSIF lex.sym = lxFLOAT THEN
-			ARITH.fconv(lex.s, lex.value, error)
+			ARITH.Float_Convert(lex.s, lex.value, error)
 		END;
 
 		CASE error OF
@@ -332,7 +332,7 @@ PROCEDURE string (text: TEXTDRV.TEXT; VAR lex: LEX);
 					lex.sym := lxSTRING
 				ELSE
 					lex.sym := lxCHAR;
-					ARITH.setChar(lex.value, ORD(c1))
+					ARITH.Char_Set(lex.value, ORD(c1))
 				END
 			END
 		ELSE

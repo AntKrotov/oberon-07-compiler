@@ -191,7 +191,7 @@ TYPE
 		export*:     BOOLEAN;
 		import*:     LISTS.tpItem;
 		unit*:       UNIT;
-		value*:      ARITH.VALUE;
+		value*:      ARITH.tValue;
 		type*:       TYPE_;
 		stproc*:     INTEGER;
 		global*:     BOOLEAN;

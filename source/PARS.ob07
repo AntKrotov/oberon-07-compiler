@@ -36,7 +36,7 @@ TYPE
 
 		obj*:         INTEGER;
 		type*:        PROG.TYPE_;
-		value*:       ARITH.VALUE;
+		value*:       ARITH.tValue;
 		stproc*:      INTEGER;
 		readOnly*:    BOOLEAN;
 		ident*:       PROG.IDENT
@@ -268,7 +268,7 @@ PROCEDURE QIdent (parser: PARSER; forward: BOOLEAN): PROG.IDENT;
 		RETURN ident
 	END QIdent;
 
-PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
+PROCEDURE strcmp* (VAR v: ARITH.tValue; v2: ARITH.tValue; operator: INTEGER);
 	VAR
 		str: SCAN.LEXSTR;
 		string1, string2: SCAN.IDENT;
@@ -277,14 +277,14 @@ PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 
 		IF v.typ = mConst.typeChar THEN
 			ASSERT(v2.typ = mConst.typeString);
-			ARITH.charToStr(v, str);
+			ARITH.CharToStr(v, str);
 			string1 := SCAN.enterid(str);
 			string2 := v2.string(SCAN.IDENT)
 		END;
 
 		IF v2.typ = mConst.typeChar THEN
 			ASSERT(v.typ = mConst.typeString);
-			ARITH.charToStr(v2, str);
+			ARITH.CharToStr(v2, str);
 			string2 := SCAN.enterid(str);
 			string1 := v.string(SCAN.IDENT)
 		END;
@@ -307,7 +307,7 @@ PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 
 	END strcmp;
 
-PROCEDURE ConstExpression* (parser: PARSER; VAR v: ARITH.VALUE);
+PROCEDURE ConstExpression* (parser: PARSER; VAR v: ARITH.tValue);
 	VAR
 		e: EXPR;
 		pos: SCAN.POSITION;
@@ -514,8 +514,8 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 		forward = 2;
 
 	VAR
-		arrLen:     ARITH.VALUE;
-		typeSize:   ARITH.VALUE;
+		arrLen:     ARITH.tValue;
+		typeSize:   ARITH.tValue;
 		ident:      PROG.IDENT;
 		unit:       PROG.UNIT;
 		pos:        SCAN.POSITION;
@@ -549,7 +549,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 			ConstExpression(parser, arrLen);
 
 			check(arrLen.typ = mConst.typeInteger, parser, pos, 43);
-			check(ARITH.check(arrLen),         parser, pos, 39);
+			check(ARITH.Check(arrLen),         parser, pos, 39);
 			check(ARITH.getInt(arrLen) > 0,    parser, pos, 51);
 
 			t := program.enterType(program, PROG.tARRAY, -1, ARITH.getInt(arrLen), unit);
@@ -567,7 +567,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			a := t.length;
 			b := t.base.size;
-			check1(ARITH.mulInt(a, b), parser, 104);
+			check1(ARITH.Int_Mul(a, b), parser, 104);
 			check1(ARITH.setInt(typeSize, a), parser, 104);
 			t.size := a;
 
@@ -726,9 +726,9 @@ PROCEDURE ConstTypeDeclaration (parser: PARSER; const: BOOLEAN);
 		IF const THEN
 			ConstExpression(parser, ident.value);
 			IF ident.value.typ = mConst.typeInteger THEN
-				check(ARITH.check(ident.value), parser, pos, 39)
+				check(ARITH.Check(ident.value), parser, pos, 39)
 			ELSIF ident.value.typ = mConst.typeReal THEN
-				check(ARITH.check(ident.value), parser, pos, 40)
+				check(ARITH.Check(ident.value), parser, pos, 40)
 			END;
 			ident.typ  := PROG.idCONST;
 			ident.type := program.getType(program, ident.value.typ)
