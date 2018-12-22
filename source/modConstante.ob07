@@ -1,0 +1,11 @@
+MODULE modConstante;
+(*
+
+		Defined constante for all compiler
+		propspero.78.su@gmail.com 2018-12-22 12:22
+	*)
+
+CONST
+	FILE_EXT* = ".ob07";
+
+END modConstante.

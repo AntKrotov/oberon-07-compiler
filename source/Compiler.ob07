@@ -16,10 +16,9 @@ IMPORT mSt := STATEMENTS,
 	mErr  := ERRORS,
 	mStr  := STRINGS,
 	mVer  := VER,
-	mWrit := WRITER;
+	mWrit := WRITER,
+	mConst:= modConstante;
 
-CONST
-	EXT = ".ob07";
 
 PROCEDURE Target_Get (s: ARRAY OF CHAR): INTEGER;
 	VAR
@@ -88,7 +87,6 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 				ELSE
 					j := 0;
 					WHILE param[j] # 0X DO
-
 						IF    param[j] = "p" THEN
 							EXCL(checking, mSt.chkPTR)
 						ELSIF param[j] = "t" THEN
@@ -191,8 +189,8 @@ PROCEDURE Main;
 		END;
 
 		mPath.split(inname, path, modname, ext);
-		IF ext # EXT THEN
-			mErr.error3('inputfile name extension must be "', EXT, '"')
+		IF ext # mConst.FILE_EXT THEN
+			mErr.error3('Inputfile name extension must be "', mConst.FILE_EXT, '"')
 		END;
 		IF mPath.isRelative(path) THEN
 			mPath.RelPath(app_path, path, temp);
@@ -254,7 +252,7 @@ PROCEDURE Main;
 
 		keys(StackSize, BaseAdr, Version, pic, reloc, checking);
 
-		mSt.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
+		mSt.compile(path, lib_path, modname, outname, mConst.FILE_EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
 
 		time := mUtil.GetTickCount() - mUtil.time;
 
