@@ -35,18 +35,18 @@ VAR
 
 BEGIN
 
-	IF v.typ = mConst.tInteger THEN
+	IF v.typ = mConst.typeInteger THEN
 		res := v.int
-	ELSIF v.typ = mConst.tCHAR THEN
+	ELSIF v.typ = mConst.typeChar THEN
 		res := v.int
-	ELSIF v.typ = mConst.tWCHAR THEN
+	ELSIF v.typ = mConst.typeWChar THEN
 		res := v.int
-	ELSIF v.typ = mConst.tSET THEN
+	ELSIF v.typ = mConst.typeSet THEN
 		res := ORD(v.set);
 		IF mMach.b64to32 THEN
 			res := mMach.Int32To64(res)
 		END
-	ELSIF v.typ = mConst.tBOOLEAN THEN
+	ELSIF v.typ = mConst.typeBoolean THEN
 		res := ORD(v.bool)
 	END
 
@@ -56,7 +56,7 @@ END Int;
 
 PROCEDURE getBool* (v: VALUE): BOOLEAN;
 BEGIN
-	ASSERT(v.typ = mConst.tBOOLEAN);
+	ASSERT(v.typ = mConst.typeBoolean);
 
 	RETURN v.bool
 END getBool;
@@ -64,7 +64,7 @@ END getBool;
 
 PROCEDURE Float* (v: VALUE): REAL;
 BEGIN
-	ASSERT(v.typ = mConst.tREAL);
+	ASSERT(v.typ = mConst.typeReal);
 
 	RETURN v.float
 END Float;
@@ -77,13 +77,13 @@ VAR
 BEGIN
 	error := FALSE;
 
-	IF (v.typ = mConst.tInteger) & ((v.int < mMach.target.minInt) OR (v.int > mMach.target.maxInt)) THEN
+	IF (v.typ = mConst.typeInteger) & ((v.int < mMach.target.minInt) OR (v.int > mMach.target.maxInt)) THEN
 		error := TRUE
-	ELSIF (v.typ = mConst.tCHAR) & ((v.int < 0) OR (v.int > 255)) THEN
+	ELSIF (v.typ = mConst.typeChar) & ((v.int < 0) OR (v.int > 255)) THEN
 		error := TRUE
-	ELSIF (v.typ = mConst.tWCHAR) & ((v.int < 0) OR (v.int > 65535)) THEN
+	ELSIF (v.typ = mConst.typeWChar) & ((v.int < 0) OR (v.int > 65535)) THEN
 		error := TRUE
-	ELSIF (v.typ = mConst.tREAL) & ((v.float < -mMach.target.maxReal) OR (v.float > mMach.target.maxReal)) THEN
+	ELSIF (v.typ = mConst.typeReal) & ((v.float < -mMach.target.maxReal) OR (v.float > mMach.target.maxReal)) THEN
 		error := TRUE
 	END
 
@@ -95,11 +95,11 @@ PROCEDURE isZero* (v: VALUE): BOOLEAN;
 VAR
 	res: BOOLEAN;
 BEGIN
-	ASSERT(v.typ IN {mConst.tInteger, mConst.tREAL});
+	ASSERT(v.typ IN {mConst.typeInteger, mConst.typeReal});
 
-	IF v.typ = mConst.tInteger THEN
+	IF v.typ = mConst.typeInteger THEN
 		res := v.int = 0
-	ELSIF v.typ = mConst.tREAL THEN
+	ELSIF v.typ = mConst.typeReal THEN
 		res := v.float = 0.0
 	END
 
@@ -130,7 +130,7 @@ BEGIN
 
 	IF error = 0 THEN
 		v.int := value;
-		v.typ := mConst.tInteger;
+		v.typ := mConst.typeInteger;
 		IF ~check(v) THEN
 			error := 1
 		END
@@ -181,15 +181,15 @@ BEGIN
 	IF error = 0 THEN
 		v.int := value;
 		IF s[i] = "X" THEN
-			v.typ := mConst.tCHAR;
+			v.typ := mConst.typeChar;
 			IF ~check(v) THEN
-				v.typ := mConst.tWCHAR;
+				v.typ := mConst.typeWChar;
 				IF ~check(v) THEN
 					error := 3
 				END
 			END
 		ELSE
-			v.typ := mConst.tInteger;
+			v.typ := mConst.typeInteger;
 			IF ~check(v) THEN
 				error := 2
 			END
@@ -333,7 +333,7 @@ BEGIN
 
 	IF error = 0 THEN
 		v.float := value;
-		v.typ := mConst.tREAL;
+		v.typ := mConst.typeReal;
 		IF ~check(v) THEN
 			error := 4
 		END
@@ -344,14 +344,14 @@ END fconv;
 
 PROCEDURE setChar* (VAR v: VALUE; ord: INTEGER);
 BEGIN
-	v.typ := mConst.tCHAR;
+	v.typ := mConst.typeChar;
 	v.int := ord
 END setChar;
 
 
 PROCEDURE setWChar* (VAR v: VALUE; ord: INTEGER);
 BEGIN
-	v.typ := mConst.tWCHAR;
+	v.typ := mConst.typeWChar;
 	v.int := ord
 END setWChar;
 
@@ -539,7 +539,7 @@ BEGIN
 	|"m": a.int := MIN(a.int, b.int)
 	|"x": a.int := MAX(a.int, b.int)
 	END;
-	a.typ := mConst.tInteger
+	a.typ := mConst.typeInteger
 
 	RETURN success & check(a)
 END opInt;
@@ -560,13 +560,13 @@ BEGIN
 	|"*": a.set := a.set * b.set
 	|"/": a.set := a.set / b.set
 	END;
-	a.typ := mConst.tSET
+	a.typ := mConst.typeSet
 END opSet;
 
 
 PROCEDURE opFloat* (VAR a: VALUE; b: VALUE; op: CHAR): BOOLEAN;
 BEGIN
-	a.typ := mConst.tREAL
+	a.typ := mConst.typeReal
 	RETURN opFloat2(a.float, b.float, op) & check(a)
 END opFloat;
 
@@ -574,28 +574,28 @@ END opFloat;
 PROCEDURE ord* (VAR v: VALUE);
 BEGIN
 	CASE v.typ OF
-	|mConst.tCHAR, mConst.tWCHAR:
-	|mConst.tBOOLEAN: v.int := ORD(v.bool)
-	|mConst.tSET:
+	|mConst.typeChar, mConst.typeWChar:
+	|mConst.typeBoolean: v.int := ORD(v.bool)
+	|mConst.typeSet:
 		v.int := ORD(v.set);
 		IF mMach.b64to32 THEN
 			v.int := mMach.Int32To64(v.int)
 		END
 	END;
-	v.typ := mConst.tInteger
+	v.typ := mConst.typeInteger
 END ord;
 
 
 PROCEDURE odd* (VAR v: VALUE);
 BEGIN
-	v.typ := mConst.tBOOLEAN;
+	v.typ := mConst.typeBoolean;
 	v.bool := ODD(v.int)
 END odd;
 
 
 PROCEDURE bits* (VAR v: VALUE);
 BEGIN
-	v.typ := mConst.tSET;
+	v.typ := mConst.typeSet;
 	v.set := BITS(v.int)
 END bits;
 
@@ -603,8 +603,8 @@ END bits;
 PROCEDURE abs* (VAR v: VALUE);
 BEGIN
 	CASE v.typ OF
-	|mConst.tREAL:    v.float := ABS(v.float)
-	|mConst.tInteger: v.int := ABS(v.int)
+	|mConst.typeReal:    v.float := ABS(v.float)
+	|mConst.typeInteger: v.int := ABS(v.int)
 	END
 END abs;
 
@@ -614,7 +614,7 @@ VAR
 	res: BOOLEAN;
 
 BEGIN
-	v.typ := mConst.tInteger;
+	v.typ := mConst.typeInteger;
 	res := (FLT(mMach.native.minInt) <= v.float) & (v.float <= FLT(mMach.native.maxInt));
 	IF res THEN
 		v.int := FLOOR(v.float)
@@ -626,7 +626,7 @@ END floor;
 
 PROCEDURE flt* (VAR v: VALUE);
 BEGIN
-	v.typ := mConst.tREAL;
+	v.typ := mConst.typeReal;
 	v.float := FLT(v.int)
 END flt;
 
@@ -639,14 +639,14 @@ VAR
 BEGIN
 	res := TRUE;
 
-	z.typ := mConst.tInteger;
+	z.typ := mConst.typeInteger;
 	z.int := 0;
 
 	CASE v.typ OF
-	|mConst.tREAL:     v.float := -v.float
-	|mConst.tSET:      v.set := -v.set
-	|mConst.tInteger:  res := opInt(z, v, "-"); v := z
-	|mConst.tBOOLEAN:  v.bool := ~v.bool
+	|mConst.typeReal:     v.float := -v.float
+	|mConst.typeSet:      v.set := -v.set
+	|mConst.typeInteger:  res := opInt(z, v, "-"); v := z
+	|mConst.typeBoolean:  v.bool := ~v.bool
 	END
 
 	RETURN res
@@ -656,7 +656,7 @@ END neg;
 PROCEDURE setbool* (VAR v: VALUE; b: BOOLEAN);
 BEGIN
 	v.bool := b;
-	v.typ := mConst.tBOOLEAN
+	v.typ := mConst.typeBoolean
 END setbool;
 
 
@@ -666,7 +666,7 @@ BEGIN
 	|"&": a.bool := a.bool & b.bool
 	|"|": a.bool := a.bool OR b.bool
 	END;
-	a.typ := mConst.tBOOLEAN
+	a.typ := mConst.typeBoolean
 END opBoolean;
 
 
@@ -682,14 +682,14 @@ VAR
 BEGIN
 	res := FALSE;
 
-	IF (v.typ = v2.typ) OR (v.typ IN {mConst.tCHAR, mConst.tWCHAR}) & (v2.typ IN {mConst.tCHAR, mConst.tWCHAR}) THEN
+	IF (v.typ = v2.typ) OR (v.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
 		CASE v.typ OF
-		|mConst.tInteger,
-		 mConst.tWCHAR,
-		 mConst.tCHAR:     res := v.int < v2.int
-		|mConst.tREAL:     res := v.float < v2.float
-		|mConst.tBOOLEAN,
-		 mConst.tSET:      error := 1
+		|mConst.typeInteger,
+		 mConst.typeWChar,
+		 mConst.typeChar:     res := v.int < v2.int
+		|mConst.typeReal:     res := v.float < v2.float
+		|mConst.typeBoolean,
+		 mConst.typeSet:      error := 1
 		END
 	ELSE
 		error := 1
@@ -706,14 +706,14 @@ VAR
 BEGIN
 	res := FALSE;
 
-	IF (v.typ = v2.typ) OR (v.typ IN {mConst.tCHAR, mConst.tWCHAR}) & (v2.typ IN {mConst.tCHAR, mConst.tWCHAR}) THEN
+	IF (v.typ = v2.typ) OR (v.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
 		CASE v.typ OF
-		|mConst.tInteger,
-		 mConst.tWCHAR,
-		 mConst.tCHAR:     res := v.int = v2.int
-		|mConst.tREAL:     res := v.float = v2.float
-		|mConst.tBOOLEAN:  res := v.bool = v2.bool
-		|mConst.tSET:      res := v.set = v2.set
+		|mConst.typeInteger,
+		 mConst.typeWChar,
+		 mConst.typeChar:     res := v.int = v2.int
+		|mConst.typeReal:     res := v.float = v2.float
+		|mConst.typeBoolean:  res := v.bool = v2.bool
+		|mConst.typeSet:      res := v.set = v2.set
 		END
 	ELSE
 		error := 1
@@ -762,7 +762,7 @@ BEGIN
 		END
 
 	|"I":
-		IF (v.typ = mConst.tInteger) & (v2.typ = mConst.tSET) THEN
+		IF (v.typ = mConst.typeInteger) & (v2.typ = mConst.typeSet) THEN
 			IF range(v, 0, mMach.target.maxSet) THEN
 				res := v.int IN v2.set
 			ELSE
@@ -776,7 +776,7 @@ BEGIN
 
 	IF error = 0 THEN
 		v.bool := res;
-		v.typ  := mConst.tBOOLEAN
+		v.typ  := mConst.typeBoolean
 	END
 
 END relation;
@@ -784,14 +784,14 @@ END relation;
 
 PROCEDURE emptySet* (VAR v: VALUE);
 BEGIN
-	v.typ := mConst.tSET;
+	v.typ := mConst.typeSet;
 	v.set := {}
 END emptySet;
 
 
 PROCEDURE constrSet* (VAR v: VALUE; a, b: VALUE);
 BEGIN
-	v.typ := mConst.tSET;
+	v.typ := mConst.typeSet;
 	v.set := {a.int .. b.int}
 END constrSet;
 
@@ -807,7 +807,7 @@ END getInt;
 PROCEDURE setInt* (VAR v: VALUE; i: INTEGER): BOOLEAN;
 BEGIN
 	v.int := i;
-	v.typ := mConst.tInteger
+	v.typ := mConst.typeInteger
 
 	RETURN check(v)
 END setInt;

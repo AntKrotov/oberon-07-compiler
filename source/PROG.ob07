@@ -24,13 +24,13 @@ CONST
 	idPROC*    =  8;  idVPAR*   =  9;  idPARAM*  = 10;  idSYSFUNC* = 11;
 	idSYSPROC* = 12;  idIMP*    = 13;
 
-	tINTEGER* =  1;  tBYTE*      =  2;  tCHAR*   =  3;  tSET*    =  4;
-	tBOOLEAN* =  5;  tREAL*      =  6;  tARRAY*  =  7;  tRECORD* =  8;
-	tPOINTER* =  9;  tPROCEDURE* = 10;  tSTRING* = 11;  tNIL*    = 12;
+	tINTEGER* =  1;  tBYTE*      =  2;  typeChar*   =  3;  typeSet*    =  4;
+	typeBoolean* =  5;  typeReal*      =  6;  tARRAY*  =  7;  tRECORD* =  8;
+	tPOINTER* =  9;  tPROCEDURE* = 10;  typeString* = 11;  tNIL*    = 12;
 	tCARD8*   = 13;  tCARD16*    = 14;  tCARD32* = 15;  tCARD64* = 16;
-	tANYREC*  = 17;  tWCHAR*     = 18;
+	tANYREC*  = 17;  typeWChar*     = 18;
 
-	BASICTYPES* = {tINTEGER, tBYTE, tCHAR, tSET, tBOOLEAN, tREAL, tCARD8, tCARD16, tCARD32, tCARD64, tWCHAR};
+	BASICTYPES* = {tINTEGER, tBYTE, typeChar, typeSet, typeBoolean, typeReal, tCARD8, tCARD16, tCARD32, tCARD64, typeWChar};
 
 	stABS*  =  1;  stASR*  =  2;  stCHR*    =  3;  stFLOOR* =  4;
 	stFLT*  =  5;  stLEN*  =  6;  stLSL*    =  7;  stODD*   =  8;
@@ -227,7 +227,7 @@ TYPE
 
 		stTypes*:     RECORD
 
-			tINTEGER*, tBYTE*, tCHAR*, tWCHAR*, tSET*, tBOOLEAN*, tREAL*, tSTRING*, tNIL*,
+			tINTEGER*, tBYTE*, typeChar*, typeWChar*, typeSet*, typeBoolean*, typeReal*, typeString*, tNIL*,
 			tCARD8*, tCARD16*, tCARD32*, tCARD64*, tANYREC*: TYPE_
 
 		END;
@@ -657,23 +657,23 @@ PROCEDURE enterStTypes (unit: UNIT; program: PROGRAM);
 
 		stName     := SCAN.enterid("CHAR");
 		ident      := addIdent(unit, stName, idTYPE);
-		ident.type := program.stTypes.tCHAR;
+		ident.type := program.stTypes.typeChar;
 
 		stName     := SCAN.enterid("WCHAR");
 		ident      := addIdent(unit, stName, idTYPE);
-		ident.type := program.stTypes.tWCHAR;
+		ident.type := program.stTypes.typeWChar;
 
 		stName     := SCAN.enterid("SET");
 		ident      := addIdent(unit, stName, idTYPE);
-		ident.type := program.stTypes.tSET;
+		ident.type := program.stTypes.typeSet;
 
 		stName     := SCAN.enterid("BOOLEAN");
 		ident      := addIdent(unit, stName, idTYPE);
-		ident.type := program.stTypes.tBOOLEAN;
+		ident.type := program.stTypes.typeBoolean;
 
 		stName     := SCAN.enterid("REAL");
 		ident      := addIdent(unit, stName, idTYPE);
-		ident.type := program.stTypes.tREAL;
+		ident.type := program.stTypes.typeReal;
 
 	END enterStTypes;
 
@@ -1028,20 +1028,20 @@ PROCEDURE getType (program: PROGRAM; typ: INTEGER): TYPE_;
 		res: TYPE_;
 	BEGIN
 
-		IF typ = mConst.tInteger THEN
+		IF typ = mConst.typeInteger THEN
 			res := program.stTypes.tINTEGER
-		ELSIF typ = mConst.tREAL THEN
-			res := program.stTypes.tREAL
-		ELSIF typ = mConst.tSET THEN
-			res := program.stTypes.tSET
-		ELSIF typ = mConst.tBOOLEAN THEN
-			res := program.stTypes.tBOOLEAN
-		ELSIF typ = mConst.tCHAR THEN
-			res := program.stTypes.tCHAR
-		ELSIF typ = mConst.tWCHAR THEN
-			res := program.stTypes.tWCHAR
-		ELSIF typ = mConst.tSTRING THEN
-			res := program.stTypes.tSTRING
+		ELSIF typ = mConst.typeReal THEN
+			res := program.stTypes.typeReal
+		ELSIF typ = mConst.typeSet THEN
+			res := program.stTypes.typeSet
+		ELSIF typ = mConst.typeBoolean THEN
+			res := program.stTypes.typeBoolean
+		ELSIF typ = mConst.typeChar THEN
+			res := program.stTypes.typeChar
+		ELSIF typ = mConst.typeWChar THEN
+			res := program.stTypes.typeWChar
+		ELSIF typ = mConst.typeString THEN
+			res := program.stTypes.typeString
 		ELSE
 			res := NIL
 		END;
@@ -1195,12 +1195,12 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 
 		program.stTypes.tINTEGER := enterType(program, tINTEGER,  program.target.word, 0, NIL);
 		program.stTypes.tBYTE    := enterType(program, tBYTE,                       1, 0, NIL);
-		program.stTypes.tCHAR    := enterType(program, tCHAR,                       1, 0, NIL);
-		program.stTypes.tWCHAR   := enterType(program, tWCHAR,                      2, 0, NIL);
-		program.stTypes.tSET     := enterType(program, tSET,      program.target.word, 0, NIL);
-		program.stTypes.tBOOLEAN := enterType(program, tBOOLEAN,                    1, 0, NIL);
-		program.stTypes.tREAL    := enterType(program, tREAL,                       8, 0, NIL);
-		program.stTypes.tSTRING  := enterType(program, tSTRING,   program.target.word, 0, NIL);
+		program.stTypes.typeChar    := enterType(program, typeChar,                       1, 0, NIL);
+		program.stTypes.typeWChar   := enterType(program, typeWChar,                      2, 0, NIL);
+		program.stTypes.typeSet     := enterType(program, typeSet,      program.target.word, 0, NIL);
+		program.stTypes.typeBoolean := enterType(program, typeBoolean,                    1, 0, NIL);
+		program.stTypes.typeReal    := enterType(program, typeReal,                       8, 0, NIL);
+		program.stTypes.typeString  := enterType(program, typeString,   program.target.word, 0, NIL);
 		program.stTypes.tNIL     := enterType(program, tNIL,      program.target.word, 0, NIL);
 
 		program.stTypes.tCARD8   := enterType(program, tCARD8,                      1, 0, NIL);
@@ -1213,11 +1213,11 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 
 		program.stTypes.tINTEGER.align := program.stTypes.tINTEGER.size;
 		program.stTypes.tBYTE.align    := 1;
-		program.stTypes.tCHAR.align    := program.stTypes.tCHAR.size;
-		program.stTypes.tWCHAR.align   := program.stTypes.tWCHAR.size;
-		program.stTypes.tSET.align     := program.stTypes.tSET.size;
-		program.stTypes.tBOOLEAN.align := program.stTypes.tBOOLEAN.size;
-		program.stTypes.tREAL.align    := program.stTypes.tREAL.size;
+		program.stTypes.typeChar.align    := program.stTypes.typeChar.size;
+		program.stTypes.typeWChar.align   := program.stTypes.typeWChar.size;
+		program.stTypes.typeSet.align     := program.stTypes.typeSet.size;
+		program.stTypes.typeBoolean.align := program.stTypes.typeBoolean.size;
+		program.stTypes.typeReal.align    := program.stTypes.typeReal.size;
 
 		program.stTypes.tCARD8.align    := program.stTypes.tCARD8.size;
 		program.stTypes.tCARD16.align   := program.stTypes.tCARD16.size;

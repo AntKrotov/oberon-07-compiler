@@ -341,7 +341,7 @@ PROCEDURE string (text: TEXTDRV.TEXT; VAR lex: LEX);
 
 		IF lex.sym = lxSTRING THEN
 			lex.string := enterid(lex.s);
-			lex.value.typ := mConst.tSTRING;
+			lex.value.typ := mConst.typeString;
 			lex.value.string := lex.string
 		END
 

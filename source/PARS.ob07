@@ -275,15 +275,15 @@ PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 		bool: BOOLEAN;
 	BEGIN
 
-		IF v.typ = mConst.tCHAR THEN
-			ASSERT(v2.typ = mConst.tSTRING);
+		IF v.typ = mConst.typeChar THEN
+			ASSERT(v2.typ = mConst.typeString);
 			ARITH.charToStr(v, str);
 			string1 := SCAN.enterid(str);
 			string2 := v2.string(SCAN.IDENT)
 		END;
 
-		IF v2.typ = mConst.tCHAR THEN
-			ASSERT(v.typ = mConst.tSTRING);
+		IF v2.typ = mConst.typeChar THEN
+			ASSERT(v.typ = mConst.typeString);
 			ARITH.charToStr(v2, str);
 			string2 := SCAN.enterid(str);
 			string1 := v.string(SCAN.IDENT)
@@ -439,7 +439,7 @@ PROCEDURE FormalParameters (parser: PARSER; type: PROG.TYPE_);
 				ident := QIdent(parser, FALSE);
 				check1(ident.typ = PROG.idTYPE, parser, 68);
 				check1((ident.type.typ # PROG.tRECORD) & (ident.type.typ # PROG.tARRAY), parser, 69);
-				check1( ~((type.call IN {PROG.winapi, PROG.kosapi}) & (ident.type.typ = PROG.tREAL)), parser, 113);
+				check1( ~((type.call IN {PROG.winapi, PROG.kosapi}) & (ident.type.typ = PROG.typeReal)), parser, 113);
 				type.base := ident.type;
 				Next(parser)
 			ELSE
@@ -548,7 +548,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			ConstExpression(parser, arrLen);
 
-			check(arrLen.typ = mConst.tInteger, parser, pos, 43);
+			check(arrLen.typ = mConst.typeInteger, parser, pos, 43);
 			check(ARITH.check(arrLen),         parser, pos, 39);
 			check(ARITH.getInt(arrLen) > 0,    parser, pos, 51);
 
@@ -725,9 +725,9 @@ PROCEDURE ConstTypeDeclaration (parser: PARSER; const: BOOLEAN);
 
 		IF const THEN
 			ConstExpression(parser, ident.value);
-			IF ident.value.typ = mConst.tInteger THEN
+			IF ident.value.typ = mConst.typeInteger THEN
 				check(ARITH.check(ident.value), parser, pos, 39)
-			ELSIF ident.value.typ = mConst.tREAL THEN
+			ELSIF ident.value.typ = mConst.typeReal THEN
 				check(ARITH.check(ident.value), parser, pos, 40)
 			END;
 			ident.typ  := PROG.idCONST;
@@ -866,7 +866,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 					check1(parser.sym # SCAN.lxRETURN, parser, 70)
 				END;
 
-				proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), t.params.size * ORD(t.call # PROG.cdecl));
+				proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.typeReal), t.params.size * ORD(t.call # PROG.cdecl));
 				enter.param2 := program.locsize;
 				checklex(parser, SCAN.lxEND)
 			END;
