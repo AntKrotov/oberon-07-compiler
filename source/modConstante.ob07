@@ -5,7 +5,9 @@ MODULE modConstante;
 
 CONST
 	FILE_EXT*       = ".ob07";
-	
+	(* version for self build *)
+		Version_Major* = 0;
+		Version_Minor* = 93;
 	(* target out binary file *)
 		Target_sConsole* = "console";
 		Target_sGUI*     = "gui";

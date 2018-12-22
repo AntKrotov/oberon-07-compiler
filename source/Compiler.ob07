@@ -14,7 +14,6 @@ IMPORT mSt := STATEMENTS,
 	mCons := CONSOLE,
 	mErr  := ERRORS,
 	mStr  := STRINGS,
-	mVer  := VER,
 	mWrit := WRITER,
 	mConst:= modConstante;
 
@@ -174,7 +173,7 @@ PROCEDURE Main;
 		mUtil.GetArg(1, inname);
 
 		IF inname = "" THEN
-			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mVer.Major); mCons.String("."); mCons.Int2Ln(mVer.Minor); mCons.Ln;
+			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mConst.Version_Major); mCons.String("."); mCons.Int2Ln(mConst.Version_Minor); mCons.Ln;
 			mCons.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln;
 			mCons.StringLn('target = "con" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln;
 			mCons.StringLn("optional settings:"); mCons.Ln;
