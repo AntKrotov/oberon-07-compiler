@@ -1085,7 +1085,7 @@ END create;
 PROCEDURE init* (bit_depth: INTEGER);
 BEGIN
 	program := PROG.create(bit_depth);
-	parsers := C.create()
+	parsers := C.New()
 END init;
 
 

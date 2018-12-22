@@ -198,5 +198,5 @@ PROCEDURE WriteByte* (pFile: tpFile; pByte: BYTE): BOOLEAN;
 	END WriteByte;
 
 BEGIN
-	files := mCol.create()
+	files := mCol.New()
 END FILES.

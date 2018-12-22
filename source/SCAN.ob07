@@ -631,7 +631,7 @@ PROCEDURE init;
 		END enterkw;
 
 	BEGIN
-		scanners := C.create();
+		scanners := C.New();
 
 		FOR i := 0 TO 255 DO
 			vocabulary.delimiters[i] := FALSE

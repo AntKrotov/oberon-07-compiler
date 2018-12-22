@@ -3116,8 +3116,8 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, ve
 		parser:  PARS.PARSER;
 
 	BEGIN
-		CaseLabels := C.create();
-		CaseVar := C.create();
+		CaseLabels := C.New();
+		CaseVar := C.New();
 
 		CaseVariants := LISTS.create(NIL);
 		LISTS.push(CaseVariants, NewVariant(0, NIL));

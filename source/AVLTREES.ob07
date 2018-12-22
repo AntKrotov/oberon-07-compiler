@@ -174,5 +174,5 @@ PROCEDURE destroy* (VAR node: NODE; destructor: DESTRUCTOR);
 	END destroy;
 
 BEGIN
-	nodes := C.create()
+	nodes := C.New()
 END AVLTREES.

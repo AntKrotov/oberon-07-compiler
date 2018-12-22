@@ -184,5 +184,5 @@ PROCEDURE destroy* (VAR text: TEXT);
 	END destroy;
 
 BEGIN
-	texts := C.create()
+	texts := C.New()
 END TEXTDRV.

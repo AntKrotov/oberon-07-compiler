@@ -37,7 +37,7 @@ PROCEDURE Pop* (collection: tpCollection): tpItem;
 	END Pop;
 
 
-PROCEDURE create* (): tpCollection;
+PROCEDURE New* (): tpCollection;
 	VAR
 		collection: tpCollection;
 
@@ -46,7 +46,7 @@ PROCEDURE create* (): tpCollection;
 		collection.last := NIL
 
 		RETURN collection
-	END create;
+	END New;
 
 
 END COLLECTIONS.

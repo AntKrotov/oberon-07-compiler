@@ -1168,7 +1168,7 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 		units:   UNITS;
 
 	BEGIN
-		idents := C.create();
+		idents := C.New();
 
 		MACHINE.SetBitDepth(bit_depth);
 		NEW(program);
