@@ -1,53 +1,47 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE ERRORS;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
-MODULE ERRORS;
-
-IMPORT C := CONSOLE, UTILS;
-
+IMPORT mCons := CONSOLE,
+	mUtil := UTILS;
 
 PROCEDURE hintmsg* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
-BEGIN
-    IF hint = 0 THEN
-        C.String("  hint ("); C.Int(line); C.String(":"); C.Int(col); C.String(")");
-        C.String(" variable "); C.String(22X); C.String(name); C.String(22X); C.String(" never used"); C.Ln
-    END
-END hintmsg;
-
+	BEGIN
+		IF hint = 0 THEN
+			mCons.String("  hint ("); mCons.Int(line); mCons.String(":"); mCons.Int(col); mCons.String(")");
+			mCons.String(" variable "); mCons.String(22X); mCons.String(name); mCons.String(22X); mCons.StringLn(" never used");
+		END
+	END hintmsg;
 
 PROCEDURE errormsg* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
-BEGIN
-    C.String("error: ");  C.Int(errno);     C.Ln;
-    C.String("line:  ");  C.Int(line);      C.Ln;
-    C.String("col:   ");  C.Int(col);       C.Ln;
-    C.String("file:  ");  C.String(fname);  C.Ln;
-    UTILS.Exit(1)
-END errormsg;
-
+	BEGIN
+		mCons.String("error: ");  mCons.IntLn(errno);
+		mCons.String("line:  ");  mCons.IntLn(line);
+		mCons.String("col:   ");  mCons.IntLn(col);
+		mCons.String("file:  ");  mCons.StringLn(fname);
+		mUtil.Exit(1)
+	END errormsg;
 
 PROCEDURE error1* (s1: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.Ln;
-    UTILS.Exit(1)
-END error1;
-
+	BEGIN
+		mCons.StringLn(s1);
+		mUtil.Exit(1)
+	END error1;
 
 PROCEDURE error3* (s1, s2, s3: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.String(s2); C.String(s3); C.Ln;
-    UTILS.Exit(1)
-END error3;
-
+	BEGIN
+		mCons.String(s1); mCons.String(s2); mCons.StringLn(s3);
+		mUtil.Exit(1)
+	END error3;
 
 PROCEDURE error5* (s1, s2, s3, s4, s5: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.String(s2); C.String(s3); C.String(s4); C.String(s5); C.Ln;
-    UTILS.Exit(1)
-END error5;
-
+	BEGIN
+		mCons.String(s1); mCons.String(s2); mCons.String(s3); mCons.String(s4); mCons.StringLn(s5);
+		mUtil.Exit(1)
+	END error5;
 
 END ERRORS.

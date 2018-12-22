@@ -29,7 +29,7 @@ PROCEDURE Int* (pInt: INTEGER);
 
 	BEGIN
 		mStr.IntToStr(pInt, str);
-		String(pStr)
+		String(str)
 	END Int;
 
 
@@ -52,6 +52,13 @@ PROCEDURE StringLn* (pStr: ARRAY OF CHAR);
 		String(pStr);
 		String(mUtil.eol)
 	END StringLn;
+
+PROCEDURE IntLn* (pInt: INTEGER);
+	(* Out integer to console with Ln *)
+	BEGIN
+		Int(pInt);
+		Ln()
+	END IntLn;
 
 PROCEDURE Int2Ln* (pInt: INTEGER);
 	(* Out integer to console with Ln *)
