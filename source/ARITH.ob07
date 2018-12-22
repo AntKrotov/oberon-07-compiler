@@ -581,12 +581,10 @@ PROCEDURE Float_Set* (VAR pVal: tValue);
 		pVal.float := FLT(pVal.int)
 	END Float_Set;
 
-
 PROCEDURE IsNeg* (VAR pVal: tValue): BOOLEAN;
 	VAR
 		z: tValue;
 		_bRes: BOOLEAN;
-
 	BEGIN
 		_bRes := TRUE;
 
@@ -603,185 +601,164 @@ PROCEDURE IsNeg* (VAR pVal: tValue): BOOLEAN;
 		RETURN _bRes
 	END IsNeg;
 
+PROCEDURE Bool_Set* (VAR pVal: tValue; pB: BOOLEAN);
+	BEGIN
+		pVal.bool := pB;
+		pVal.typ := mConst.typeBoolean
+	END Bool_Set;
 
-PROCEDURE setbool* (VAR pVal: tValue; pB: BOOLEAN);
-BEGIN
-	pVal.bool := pB;
-	pVal.typ := mConst.typeBoolean
-END setbool;
+PROCEDURE OpBool_Set* (VAR pA: tValue; pB: tValue; pOp: CHAR);
+	BEGIN
+		CASE pOp OF
+		|"&": pA.bool := pA.bool & pB.bool
+		|"|": pA.bool := pA.bool OR pB.bool
+		END;
+		pA.typ := mConst.typeBoolean
+	END OpBool_Set;
 
+PROCEDURE IsRange* (i: tValue; pA, pB: INTEGER): BOOLEAN;
+		RETURN (pA <= i.int) & (i.int <= pB)
+	END IsRange;
 
-PROCEDURE opBoolean* (VAR pA: tValue; pB: tValue; pOp: CHAR);
-BEGIN
-	CASE pOp OF
-	|"&": pA.bool := pA.bool & pB.bool
-	|"|": pA.bool := pA.bool OR pB.bool
-	END;
-	pA.typ := mConst.typeBoolean
-END opBoolean;
+PROCEDURE IsLess (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		_bRes := FALSE;
 
-
-PROCEDURE range* (i: tValue; pA, pB: INTEGER): BOOLEAN;
-	RETURN (pA <= i.int) & (i.int <= pB)
-END range;
-
-
-PROCEDURE less (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
-VAR
-	_bRes: BOOLEAN;
-
-BEGIN
-	_bRes := FALSE;
-
-	IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
-		CASE pVal.typ OF
-		|mConst.typeInteger,
-		 mConst.typeWChar,
-		 mConst.typeChar:     _bRes := pVal.int < v2.int
-		|mConst.typeReal:     _bRes := pVal.float < v2.float
-		|mConst.typeBoolean,
-		 mConst.typeSet:      error := 1
-		END
-	ELSE
-		error := 1
-	END
-
-	RETURN _bRes
-END less;
-
-PROCEDURE equal (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
-VAR
-	_bRes: BOOLEAN;
-
-BEGIN
-	_bRes := FALSE;
-
-	IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
-		CASE pVal.typ OF
-		|mConst.typeInteger,
-		 mConst.typeWChar,
-		 mConst.typeChar:     _bRes := pVal.int = v2.int
-		|mConst.typeReal:     _bRes := pVal.float = v2.float
-		|mConst.typeBoolean:  _bRes := pVal.bool = v2.bool
-		|mConst.typeSet:      _bRes := pVal.set = v2.set
-		END
-	ELSE
-		error := 1
-	END
-
-	RETURN _bRes
-END equal;
-
-
-PROCEDURE relation* (VAR pVal: tValue; v2: tValue; operator: tRelation; VAR error: INTEGER);
-VAR
-	_bRes: BOOLEAN;
-
-BEGIN
-	error := 0;
-
-	_bRes := FALSE;
-
-	CASE operator[0] OF
-
-	|"=":
-		_bRes := equal(pVal, v2, error)
-
-	|"#":
-		_bRes := ~equal(pVal, v2, error)
-
-	|"<":
-		IF operator[1] = "=" THEN
-			_bRes := less(pVal, v2, error);
-			IF error = 0 THEN
-				_bRes := equal(pVal, v2, error) OR _bRes
-			END
-		ELSE
-			_bRes := less(pVal, v2, error)
-		END
-
-	|">":
-		IF operator[1] = "=" THEN
-			_bRes := ~less(pVal, v2, error)
-		ELSE
-			_bRes := less(pVal, v2, error);
-			IF error = 0 THEN
-				_bRes := equal(pVal, v2, error) OR _bRes
-			END;
-			_bRes := ~_bRes
-		END
-
-	|"I":
-		IF (pVal.typ = mConst.typeInteger) & (v2.typ = mConst.typeSet) THEN
-			IF range(pVal, 0, mMach.target.maxSet) THEN
-				_bRes := pVal.int IN v2.set
-			ELSE
-				error := 2
+		IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
+			CASE pVal.typ OF
+			|mConst.typeInteger,
+			 mConst.typeWChar,
+			 mConst.typeChar:     _bRes := pVal.int < v2.int
+			|mConst.typeReal:     _bRes := pVal.float < v2.float
+			|mConst.typeBoolean,
+			 mConst.typeSet:      error := 1
 			END
 		ELSE
 			error := 1
 		END
 
-	END;
+		RETURN _bRes
+	END IsLess;
 
-	IF error = 0 THEN
-		pVal.bool := _bRes;
-		pVal.typ  := mConst.typeBoolean
-	END
+PROCEDURE IsEqual (pVal, v2: tValue; VAR error: INTEGER): BOOLEAN;
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		_bRes := FALSE;
 
-END relation;
+		IF (pVal.typ = v2.typ) OR (pVal.typ IN {mConst.typeChar, mConst.typeWChar}) & (v2.typ IN {mConst.typeChar, mConst.typeWChar}) THEN
+			CASE pVal.typ OF
+			|mConst.typeInteger,
+			 mConst.typeWChar,
+			 mConst.typeChar:     _bRes := pVal.int = v2.int
+			|mConst.typeReal:     _bRes := pVal.float = v2.float
+			|mConst.typeBoolean:  _bRes := pVal.bool = v2.bool
+			|mConst.typeSet:      _bRes := pVal.set = v2.set
+			END
+		ELSE
+			error := 1
+		END
 
+		RETURN _bRes
+	END IsEqual;
 
-PROCEDURE emptySet* (VAR pVal: tValue);
+PROCEDURE Relation_Set* (VAR pVal: tValue; v2: tValue; operator: tRelation; VAR error: INTEGER);
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		error := 0;
+
+		_bRes := FALSE;
+
+		CASE operator[0] OF
+		|"=":
+			_bRes := IsEqual(pVal, v2, error)
+		|"#":
+			_bRes := ~IsEqual(pVal, v2, error)
+		|"<":
+			IF operator[1] = "=" THEN
+				_bRes := IsLess(pVal, v2, error);
+				IF error = 0 THEN
+					_bRes := IsEqual(pVal, v2, error) OR _bRes
+				END
+			ELSE
+				_bRes := IsLess(pVal, v2, error)
+			END
+		|">":
+			IF operator[1] = "=" THEN
+				_bRes := ~IsLess(pVal, v2, error)
+			ELSE
+				_bRes := IsLess(pVal, v2, error);
+				IF error = 0 THEN
+					_bRes := IsEqual(pVal, v2, error) OR _bRes
+				END;
+				_bRes := ~_bRes
+			END
+		|"I":
+			IF (pVal.typ = mConst.typeInteger) & (v2.typ = mConst.typeSet) THEN
+				IF IsRange(pVal, 0, mMach.target.maxSet) THEN
+					_bRes := pVal.int IN v2.set
+				ELSE
+					error := 2
+				END
+			ELSE
+				error := 1
+			END
+		END;
+
+		IF error = 0 THEN
+			pVal.bool := _bRes;
+			pVal.typ  := mConst.typeBoolean
+		END
+
+	END Relation_Set;
+
+PROCEDURE Empty_Set* (VAR pVal: tValue);
+	BEGIN
+		pVal.typ := mConst.typeSet;
+		pVal.set := {}
+	END Empty_Set;
+
+PROCEDURE Set_New* (VAR pVal: tValue; pA, pB: tValue);
+	BEGIN
+		pVal.typ := mConst.typeSet;
+		pVal.set := {pA.int .. pB.int}
+	END Set_New;
+
+PROCEDURE Int_Get* (pVal: tValue): INTEGER;
+	BEGIN
+		ASSERT(Check(pVal))
+
+		RETURN pVal.int
+	END Int_Get;
+
+PROCEDURE Int_Set* (VAR pVal: tValue; i: INTEGER): BOOLEAN;
+	BEGIN
+		pVal.int := i;
+		pVal.typ := mConst.typeInteger
+
+		RETURN Check(pVal)
+	END Int_Set;
+
+PROCEDURE Init;
+	VAR
+		_i: INTEGER;
+	BEGIN
+		FOR _i := 0 TO LEN(digit) - 1 DO
+			digit[_i] := -1
+		END;
+
+		FOR _i := ORD("0") TO ORD("9") DO
+			digit[_i] := _i - ORD("0")
+		END;
+
+		FOR _i := ORD("A") TO ORD("F") DO
+			digit[_i] := _i - ORD("A") + 10
+		END
+	END Init;
+
 BEGIN
-	pVal.typ := mConst.typeSet;
-	pVal.set := {}
-END emptySet;
-
-
-PROCEDURE constrSet* (VAR pVal: tValue; pA, pB: tValue);
-BEGIN
-	pVal.typ := mConst.typeSet;
-	pVal.set := {pA.int .. pB.int}
-END constrSet;
-
-
-PROCEDURE getInt* (pVal: tValue): INTEGER;
-BEGIN
-	ASSERT(Check(pVal))
-
-	RETURN pVal.int
-END getInt;
-
-
-PROCEDURE setInt* (VAR pVal: tValue; i: INTEGER): BOOLEAN;
-BEGIN
-	pVal.int := i;
-	pVal.typ := mConst.typeInteger
-
-	RETURN Check(pVal)
-END setInt;
-
-
-PROCEDURE init;
-VAR
-	i: INTEGER;
-
-BEGIN
-	FOR i := 0 TO LEN(digit) - 1 DO
-		digit[i] := -1
-	END;
-
-	FOR i := ORD("0") TO ORD("9") DO
-		digit[i] := i - ORD("0")
-	END;
-
-	FOR i := ORD("A") TO ORD("F") DO
-		digit[i] := i - ORD("A") + 10
-	END
-END init;
-
-
-BEGIN
-	init
+	Init
 END ARITH.

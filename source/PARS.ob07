@@ -303,7 +303,7 @@ PROCEDURE strcmp* (VAR v: ARITH.tValue; v2: ARITH.tValue; operator: INTEGER);
 		|SCAN.lxGE: bool := string1.s >= string2.s
 		END;
 
-		ARITH.setbool(v, bool)
+		ARITH.Bool_Set(v, bool)
 
 	END strcmp;
 
@@ -550,9 +550,9 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			check(arrLen.typ = mConst.typeInteger, parser, pos, 43);
 			check(ARITH.Check(arrLen),         parser, pos, 39);
-			check(ARITH.getInt(arrLen) > 0,    parser, pos, 51);
+			check(ARITH.Int_Get(arrLen) > 0,    parser, pos, 51);
 
-			t := program.enterType(program, PROG.tARRAY, -1, ARITH.getInt(arrLen), unit);
+			t := program.enterType(program, PROG.tARRAY, -1, ARITH.Int_Get(arrLen), unit);
 
 			IF parser.sym = SCAN.lxCOMMA THEN
 				type(parser, t.base, {comma, closed})
@@ -568,7 +568,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 			a := t.length;
 			b := t.base.size;
 			check1(ARITH.Int_Mul(a, b), parser, 104);
-			check1(ARITH.setInt(typeSize, a), parser, 104);
+			check1(ARITH.Int_Set(typeSize, a), parser, 104);
 			t.size := a;
 
 			t.closed := TRUE
@@ -645,7 +645,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			IF ~t.noalign THEN
 				check1(MACHINE.IsAlign(t.size, t.align), parser, 104);
-				check1(ARITH.setInt(typeSize, t.size), parser, 104)
+				check1(ARITH.Int_Set(typeSize, t.size), parser, 104)
 			END;
 
 			checklex(parser, SCAN.lxEND);
