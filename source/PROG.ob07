@@ -6,7 +6,13 @@
 	All rights reserved.
 	*)
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS;
+IMPORT SCAN,
+	LISTS,
+	ARITH,
+	ERRORS,
+	MACHINE,
+	C := COLLECTIONS,
+	mConst := modConstante;
 
 CONST
 
@@ -249,7 +255,6 @@ PROCEDURE NewIdent (): IDENT;
 	VAR
 		ident: IDENT;
 		citem: C.tpItem;
-
 	BEGIN
 		citem := C.Pop(idents);
 		IF citem = NIL THEN
@@ -1021,22 +1026,21 @@ PROCEDURE enterType (program: PROGRAM; typ, size, length: INTEGER; unit: UNIT): 
 PROCEDURE getType (program: PROGRAM; typ: INTEGER): TYPE_;
 	VAR
 		res: TYPE_;
-
 	BEGIN
 
-		IF typ = ARITH.tINTEGER THEN
+		IF typ = mConst.tInteger THEN
 			res := program.stTypes.tINTEGER
-		ELSIF typ = ARITH.tREAL THEN
+		ELSIF typ = mConst.tREAL THEN
 			res := program.stTypes.tREAL
-		ELSIF typ = ARITH.tSET THEN
+		ELSIF typ = mConst.tSET THEN
 			res := program.stTypes.tSET
-		ELSIF typ = ARITH.tBOOLEAN THEN
+		ELSIF typ = mConst.tBOOLEAN THEN
 			res := program.stTypes.tBOOLEAN
-		ELSIF typ = ARITH.tCHAR THEN
+		ELSIF typ = mConst.tCHAR THEN
 			res := program.stTypes.tCHAR
-		ELSIF typ = ARITH.tWCHAR THEN
+		ELSIF typ = mConst.tWCHAR THEN
 			res := program.stTypes.tWCHAR
-		ELSIF typ = ARITH.tSTRING THEN
+		ELSIF typ = mConst.tSTRING THEN
 			res := program.stTypes.tSTRING
 		ELSE
 			res := NIL

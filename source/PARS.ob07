@@ -6,7 +6,18 @@
 	All rights reserved.
 	*)
 
-IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE, C := COLLECTIONS;
+IMPORT PROG,
+	SCAN,
+	ARITH,
+	STRINGS,
+	ERRORS,
+	LISTS,
+	CODE,
+	CONSOLE,
+	PATHS,
+	MACHINE,
+	C := COLLECTIONS,
+	mConst := modConstante;
 
 CONST
 
@@ -262,18 +273,17 @@ PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 		str: SCAN.LEXSTR;
 		string1, string2: SCAN.IDENT;
 		bool: BOOLEAN;
-
 	BEGIN
 
-		IF v.typ = ARITH.tCHAR THEN
-			ASSERT(v2.typ = ARITH.tSTRING);
+		IF v.typ = mConst.tCHAR THEN
+			ASSERT(v2.typ = mConst.tSTRING);
 			ARITH.charToStr(v, str);
 			string1 := SCAN.enterid(str);
 			string2 := v2.string(SCAN.IDENT)
 		END;
 
-		IF v2.typ = ARITH.tCHAR THEN
-			ASSERT(v.typ = ARITH.tSTRING);
+		IF v2.typ = mConst.tCHAR THEN
+			ASSERT(v.typ = mConst.tSTRING);
 			ARITH.charToStr(v2, str);
 			string2 := SCAN.enterid(str);
 			string1 := v.string(SCAN.IDENT)
@@ -538,7 +548,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			ConstExpression(parser, arrLen);
 
-			check(arrLen.typ = ARITH.tINTEGER, parser, pos, 43);
+			check(arrLen.typ = mConst.tInteger, parser, pos, 43);
 			check(ARITH.check(arrLen),         parser, pos, 39);
 			check(ARITH.getInt(arrLen) > 0,    parser, pos, 51);
 
@@ -703,7 +713,6 @@ PROCEDURE ConstTypeDeclaration (parser: PARSER; const: BOOLEAN);
 		ident:  PROG.IDENT;
 		name:   SCAN.IDENT;
 		pos:    SCAN.POSITION;
-
 	BEGIN
 		IF const THEN
 			ident := IdentDef(parser, PROG.idNONE, name)
@@ -716,9 +725,9 @@ PROCEDURE ConstTypeDeclaration (parser: PARSER; const: BOOLEAN);
 
 		IF const THEN
 			ConstExpression(parser, ident.value);
-			IF ident.value.typ = ARITH.tINTEGER THEN
+			IF ident.value.typ = mConst.tInteger THEN
 				check(ARITH.check(ident.value), parser, pos, 39)
-			ELSIF ident.value.typ = ARITH.tREAL THEN
+			ELSIF ident.value.typ = mConst.tREAL THEN
 				check(ARITH.check(ident.value), parser, pos, 40)
 			END;
 			ident.typ  := PROG.idCONST;

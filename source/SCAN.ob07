@@ -6,7 +6,12 @@
 	All rights reserved.
 	*)
 
-IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, C := COLLECTIONS;
+IMPORT TEXTDRV,
+	AVL := AVLTREES,
+	ARITH,
+	S := STRINGS,
+	C := COLLECTIONS,
+	mConst := modConstante;
 
 CONST
 	LEXLEN = 1024;
@@ -301,7 +306,6 @@ PROCEDURE string (text: TEXTDRV.TEXT; VAR lex: LEX);
 		c, c1: CHAR;
 		n:     INTEGER;
 		quot:  CHAR;
-
 	BEGIN
 		quot := text.peak(text);
 
@@ -337,7 +341,7 @@ PROCEDURE string (text: TEXTDRV.TEXT; VAR lex: LEX);
 
 		IF lex.sym = lxSTRING THEN
 			lex.string := enterid(lex.s);
-			lex.value.typ := ARITH.tSTRING;
+			lex.value.typ := mConst.tSTRING;
 			lex.value.string := lex.string
 		END
 

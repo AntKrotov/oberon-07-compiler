@@ -640,8 +640,6 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			END
 			RETURN res
 		END shift_minmax;
-
-
 	BEGIN
 		ASSERT(e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC});
 
@@ -875,7 +873,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				REPEAT
 					getpos(parser, pos);
 					PARS.ConstExpression(parser, code);
-					PARS.check(code.typ = ARITH.tINTEGER, parser, pos, 43);
+					PARS.check(code.typ = mConst.tInteger, parser, pos, 43);
 					PARS.check(ARITH.range(code, 0, 255), parser, pos, 42);
 					IF parser.sym = SCAN.lxCOMMA THEN
 						PARS.Next(parser)
@@ -1468,7 +1466,6 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		operator:  ARITH.RELATION;
 		error:     INTEGER;
 
-
 		PROCEDURE relation (sym: INTEGER): BOOLEAN;
 			RETURN (sym = SCAN.lxEQ) OR (sym = SCAN.lxNE) OR
 					(sym = SCAN.lxLT) OR (sym = SCAN.lxLE) OR
@@ -1476,19 +1473,16 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					(sym = SCAN.lxIN) OR (sym = SCAN.lxIS)
 		END relation;
 
-
 		PROCEDURE AddOperator (sym: INTEGER): BOOLEAN;
 			RETURN (sym = SCAN.lxPLUS) OR (sym = SCAN.lxMINUS) OR
 					(sym = SCAN.lxOR)
 		END AddOperator;
-
 
 		PROCEDURE MulOperator (sym: INTEGER): BOOLEAN;
 			RETURN (sym = SCAN.lxMUL) OR (sym = SCAN.lxSLASH) OR
 					(sym = SCAN.lxDIV) OR (sym = SCAN.lxMOD) OR
 					(sym = SCAN.lxAND)
 		END MulOperator;
-
 
 		PROCEDURE element (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		VAR
@@ -1544,7 +1538,6 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 		END element;
 
-
 		PROCEDURE set (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		VAR
 			e1: PARS.EXPR;
@@ -1586,7 +1579,6 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			END;
 			PARS.Next(parser);
 		END set;
-
 
 		PROCEDURE factor (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		VAR
@@ -1760,9 +1752,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
 						CASE e.value.typ OF
-						|ARITH.tINTEGER: PARS.check(ARITH.opInt(e.value, e1.value, "*"),   parser, pos, 39)
-						|ARITH.tREAL:    PARS.check(ARITH.opFloat(e.value, e1.value, "*"), parser, pos, 40)
-						|ARITH.tSET:     ARITH.opSet(e.value, e1.value, "*")
+						|mConst.tInteger: PARS.check(ARITH.opInt(e.value, e1.value, "*"),   parser, pos, 39)
+						|mConst.tREAL:    PARS.check(ARITH.opFloat(e.value, e1.value, "*"), parser, pos, 40)
+						|mConst.tSET:     ARITH.opSet(e.value, e1.value, "*")
 						END
 
 					ELSE
@@ -1801,8 +1793,8 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
 						CASE e.value.typ OF
-						|ARITH.tREAL: PARS.check(ARITH.opFloat(e.value, e1.value, "/"), parser, pos, 40)
-						|ARITH.tSET:  ARITH.opSet(e.value, e1.value, "/")
+						|mConst.tREAL: PARS.check(ARITH.opFloat(e.value, e1.value, "/"), parser, pos, 40)
+						|mConst.tSET:  ARITH.opSet(e.value, e1.value, "/")
 						END
 
 					ELSE
@@ -1965,9 +1957,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
 						CASE e.value.typ OF
-						|ARITH.tINTEGER: PARS.check(ARITH.opInt(e.value, e1.value, CHR(op)),   parser, pos, 39)
-						|ARITH.tREAL:    PARS.check(ARITH.opFloat(e.value, e1.value, CHR(op)), parser, pos, 40)
-						|ARITH.tSET:     ARITH.opSet(e.value, e1.value, CHR(op))
+						|mConst.tInteger: PARS.check(ARITH.opInt(e.value, e1.value, CHR(op)),   parser, pos, 39)
+						|mConst.tREAL:    PARS.check(ARITH.opFloat(e.value, e1.value, CHR(op)), parser, pos, 40)
+						|mConst.tSET:     ARITH.opSet(e.value, e1.value, CHR(op))
 						END
 
 					ELSE
@@ -2106,8 +2098,6 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 			RETURN res
 		END strcmp;
-
-
 	BEGIN
 		getpos(parser, pos0);
 		SimpleExpression(parser, e);
@@ -2568,8 +2558,6 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 	VAR
 		e:      PARS.EXPR;
 		pos:    SCAN.POSITION;
-
-
 		PROCEDURE isRecPtr (caseExpr: PARS.EXPR): BOOLEAN;
 			RETURN isRec(caseExpr) OR isPtr(caseExpr)
 		END isRecPtr;
@@ -2588,19 +2576,19 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 
 			IF isChar(caseExpr) THEN
 				PARS.ConstExpression(parser, value);
-				PARS.check(value.typ = ARITH.tCHAR, parser, pos, 99);
+				PARS.check(value.typ = mConst.tCHAR, parser, pos, 99);
 				a := ARITH.getInt(value)
 			ELSIF isCharW(caseExpr) THEN
 				PARS.ConstExpression(parser, value);
-				IF (value.typ = ARITH.tSTRING) & (_length(value.string(SCAN.IDENT).s) = 1) & (LENGTH(value.string(SCAN.IDENT).s) > 1) THEN
+				IF (value.typ = mConst.tSTRING) & (_length(value.string(SCAN.IDENT).s) = 1) & (LENGTH(value.string(SCAN.IDENT).s) > 1) THEN
 					ASSERT(ARITH.setInt(value, StrToWChar(value.string(SCAN.IDENT).s)))
 				ELSE
-					PARS.check(value.typ IN {ARITH.tWCHAR, ARITH.tCHAR}, parser, pos, 99)
+					PARS.check(value.typ IN {mConst.tWCHAR, mConst.tCHAR}, parser, pos, 99)
 				END;
 				a := ARITH.getInt(value)
 			ELSIF isInt(caseExpr) THEN
 				PARS.ConstExpression(parser, value);
-				PARS.check(value.typ = ARITH.tINTEGER, parser, pos, 99);
+				PARS.check(value.typ = mConst.tInteger, parser, pos, 99);
 				a := ARITH.getInt(value)
 			ELSIF isRecPtr(caseExpr) THEN
 				qualident(parser, label);
@@ -2847,8 +2835,6 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			UNTIL item(CASE_VARIANT).cmd = NIL
 
 		END ParseCase;
-
-
 	BEGIN
 		NextPos(parser, pos);
 		expression(parser, e);
@@ -2930,7 +2916,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		IF parser.sym = SCAN.lxBY THEN
 			NextPos(parser, pos);
 			PARS.ConstExpression(parser, step);
-			PARS.check(step.typ = ARITH.tINTEGER, parser, pos, 76);
+			PARS.check(step.typ = mConst.tInteger, parser, pos, 76);
 			st := ARITH.getInt(step);
 			PARS.check(st # 0, parser, pos, 98)
 		ELSE

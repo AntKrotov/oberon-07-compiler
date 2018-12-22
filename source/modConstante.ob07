@@ -40,5 +40,14 @@ CONST
 	(* for architecture *)
 		min32* = -2147483647-1;
 		max32* = 2147483647;
+	
+	(* Define type *)
+		tInteger* = 1; 
+		tREAL* = 2;
+		tSET*    = 3;
+		tBOOLEAN* = 4;
+		tCHAR* = 5;
+		tWCHAR*  = 6;
+		tSTRING*  = 7;
 
 END modConstante.
