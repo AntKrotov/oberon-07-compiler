@@ -12,9 +12,9 @@ IMPORT C := COLLECTIONS;
 
 TYPE
 
-    DATA* = POINTER TO RECORD (C.ITEM) END;
+    DATA* = POINTER TO RECORD (C.tpItem) END;
 
-    NODE* = POINTER TO RECORD (C.ITEM)
+    NODE* = POINTER TO RECORD (C.tpItem)
 
         data*: DATA;
 
@@ -37,7 +37,7 @@ VAR
 PROCEDURE NewNode (data: DATA): NODE;
 VAR
     node:  NODE;
-    citem: C.ITEM;
+    citem: C.tpItem;
 
 BEGIN  
     citem := C.pop(nodes);

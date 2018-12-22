@@ -55,7 +55,7 @@ TYPE
 
     TYPE_* = POINTER TO rTYPE_;
 
-    FRWPTR* = POINTER TO RECORD (LISTS.ITEM)
+    FRWPTR* = POINTER TO RECORD (LISTS.tpItem)
 
         type:        TYPE_;
         baseIdent:   SCAN.IDENT;
@@ -73,25 +73,25 @@ TYPE
 
     END;
 
-    PROC* = POINTER TO RECORD (LISTS.ITEM)
+    PROC* = POINTER TO RECORD (LISTS.tpItem)
 
         label*:      INTEGER;
         used*:       BOOLEAN;
         processed*:  BOOLEAN;
-        import*:     LISTS.ITEM;
+        import*:     LISTS.tpItem;
         using*:      LISTS.LIST;
         enter*,
-        leave*:      LISTS.ITEM
+        leave*:      LISTS.tpItem
 
     END;
 
-    USED_PROC = POINTER TO RECORD (LISTS.ITEM)
+    USED_PROC = POINTER TO RECORD (LISTS.tpItem)
 
         proc: PROC
 
     END;
 
-    rUNIT = RECORD (LISTS.ITEM)
+    rUNIT = RECORD (LISTS.tpItem)
 
         program*:    PROGRAM;
         name*:       SCAN.IDENT;
@@ -145,7 +145,7 @@ TYPE
 
     END;
 
-    rTYPE_ = RECORD (LISTS.ITEM)
+    rTYPE_ = RECORD (LISTS.tpItem)
 
         typ*:        INTEGER;
         size*:       INTEGER;
@@ -163,7 +163,7 @@ TYPE
 
     END;
 
-    rFIELD = RECORD (LISTS.ITEM)
+    rFIELD = RECORD (LISTS.tpItem)
 
         type*:       TYPE_;
         name*:       SCAN.IDENT;
@@ -172,7 +172,7 @@ TYPE
 
     END;
 
-    rPARAM = RECORD (LISTS.ITEM)
+    rPARAM = RECORD (LISTS.tpItem)
 
         name*:       SCAN.IDENT;
         type*:       TYPE_;
@@ -181,12 +181,12 @@ TYPE
 
     END;
 
-    rIDENT = RECORD (LISTS.ITEM)
+    rIDENT = RECORD (LISTS.tpItem)
 
         name*:       SCAN.IDENT;
         typ*:        INTEGER;
         export*:     BOOLEAN;
-        import*:     LISTS.ITEM;
+        import*:     LISTS.tpItem;
         unit*:       UNIT;
         value*:      ARITH.VALUE;
         type*:       TYPE_;
@@ -242,7 +242,7 @@ TYPE
 
     END;
 
-    DELIMPORT = PROCEDURE (import: LISTS.ITEM);
+    DELIMPORT = PROCEDURE (import: LISTS.tpItem);
 
 
 VAR
@@ -253,7 +253,7 @@ VAR
 PROCEDURE NewIdent (): IDENT;
 VAR
     ident: IDENT;
-    citem: C.ITEM;
+    citem: C.tpItem;
 
 BEGIN
     citem := C.pop(idents);
@@ -398,7 +398,7 @@ END addIdent;
 PROCEDURE UseProc* (unit: UNIT; call_proc: PROC);
 VAR
     procs:    LISTS.LIST;
-    cur:      LISTS.ITEM;
+    cur:      LISTS.tpItem;
     proc:     USED_PROC;
 
 BEGIN
@@ -576,7 +576,7 @@ END linkptr;
 PROCEDURE isTypeEq* (t1, t2: TYPE_): BOOLEAN;
 VAR
     res: BOOLEAN;
-    param1, param2: LISTS.ITEM;
+    param1, param2: LISTS.tpItem;
 
 BEGIN
     IF t1 = t2 THEN
@@ -949,7 +949,7 @@ CONST
     FRAME = 2;
 
 VAR
-    item: LISTS.ITEM;
+    item: LISTS.tpItem;
     param: PARAM;
     word, size: INTEGER;
 
@@ -1143,12 +1143,12 @@ VAR
     proc:   PROC;
     flag:   BOOLEAN;
     beg,
-    end:    LISTS.ITEM;
+    end:    LISTS.tpItem;
 
 
     PROCEDURE process (proc: PROC);
     VAR
-        used_proc: LISTS.ITEM;
+        used_proc: LISTS.tpItem;
 
     BEGIN
         proc.processed := TRUE;

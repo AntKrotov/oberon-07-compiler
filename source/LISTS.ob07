@@ -12,20 +12,20 @@ IMPORT C := COLLECTIONS;
 
 TYPE
 
-    ITEM* = POINTER TO RECORD (C.ITEM)
+    tpItem* = POINTER TO RECORD (C.tpItem)
 
-        prev*, next*: ITEM
+        prev*, next*: tpItem
 
     END;
 
     LIST* = POINTER TO RECORD
 
-        first*, last*: ITEM
+        first*, last*: tpItem
 
     END;
 
 
-PROCEDURE push* (list: LIST; item: ITEM);
+PROCEDURE push* (list: LIST; item: tpItem);
 BEGIN
     ASSERT(list # NIL);
     ASSERT(item # NIL);
@@ -46,9 +46,9 @@ BEGIN
 END push;
 
 
-PROCEDURE pop* (list: LIST): ITEM;
+PROCEDURE pop* (list: LIST): tpItem;
 VAR
-    last: ITEM;
+    last: tpItem;
 
 BEGIN
     ASSERT(list # NIL);
@@ -72,9 +72,9 @@ BEGIN
 END pop;
 
 
-PROCEDURE insert* (list: LIST; cur, nov: ITEM);
+PROCEDURE insert* (list: LIST; cur, nov: tpItem);
 VAR
-    next: ITEM;
+    next: tpItem;
 
 BEGIN
     ASSERT(list # NIL);
@@ -95,9 +95,9 @@ BEGIN
 END insert;
 
 
-PROCEDURE insertL* (list: LIST; cur, nov: ITEM);
+PROCEDURE insertL* (list: LIST; cur, nov: tpItem);
 VAR
-    prev: ITEM;
+    prev: tpItem;
 
 BEGIN
     ASSERT(list # NIL);
@@ -121,9 +121,9 @@ BEGIN
 END insertL;
 
 
-PROCEDURE delete* (list: LIST; item: ITEM);
+PROCEDURE delete* (list: LIST; item: tpItem);
 VAR
-    prev, next: ITEM;
+    prev, next: tpItem;
 
 BEGIN
     ASSERT(list # NIL);
@@ -151,7 +151,7 @@ END delete;
 
 PROCEDURE count* (list: LIST): INTEGER;
 VAR
-    item: ITEM;
+    item: tpItem;
     res:  INTEGER;
 
 BEGIN

@@ -27,14 +27,14 @@ CONST
 
 TYPE
 
-    RELOC* = POINTER TO RECORD (LISTS.ITEM)
+    RELOC* = POINTER TO RECORD (LISTS.tpItem)
 
         opcode*: INTEGER;
         offset*: INTEGER
 
     END;
 
-    IMPRT* = POINTER TO RECORD (LISTS.ITEM)
+    IMPRT* = POINTER TO RECORD (LISTS.tpItem)
 
         nameoffs*: INTEGER;
         label*:    INTEGER;
@@ -44,7 +44,7 @@ TYPE
 
     END;
 
-    EXPRT* = POINTER TO RECORD (LISTS.ITEM)
+    EXPRT* = POINTER TO RECORD (LISTS.tpItem)
 
         nameoffs*: INTEGER;
         label*:    INTEGER

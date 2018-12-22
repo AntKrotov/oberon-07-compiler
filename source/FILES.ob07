@@ -10,7 +10,7 @@ IMPORT mUtil := UTILS,
 	mCol := COLLECTIONS, CONSOLE;
 
 TYPE
-	tpFile* = POINTER TO RECORD (mCol.ITEM)
+	tpFile* = POINTER TO RECORD (mCol.tpItem)
 		ptr: INTEGER;
 		buffer: ARRAY 64*1024 OF BYTE;
 		count:  INTEGER
@@ -50,7 +50,7 @@ PROCEDURE Flush (pFile: tpFile): INTEGER;
 PROCEDURE New(): tpFile;
 	VAR
 		fileRes:  tpFile;
-		citem: mCol.ITEM;
+		citem: mCol.tpItem;
 
 	BEGIN
 		citem := mCol.pop(files);

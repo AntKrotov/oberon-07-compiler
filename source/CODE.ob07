@@ -118,7 +118,7 @@ CONST
 
 TYPE
 
-    COMMAND* = POINTER TO RECORD (LISTS.ITEM)
+    COMMAND* = POINTER TO RECORD (LISTS.tpItem)
 
         opcode*:  INTEGER;
         param1*:  INTEGER;
@@ -145,21 +145,21 @@ TYPE
 
     END;
 
-    EXPORT_PROC* = POINTER TO RECORD (LISTS.ITEM)
+    EXPORT_PROC* = POINTER TO RECORD (LISTS.tpItem)
 
         label*: INTEGER;
         name*:  SCAN.LEXSTR
 
     END;
 
-    IMPORT_LIB* = POINTER TO RECORD (LISTS.ITEM)
+    IMPORT_LIB* = POINTER TO RECORD (LISTS.tpItem)
 
         name*:   SCAN.LEXSTR;
         procs*:  LISTS.LIST
 
     END;
 
-    IMPORT_PROC* = POINTER TO RECORD (LISTS.ITEM)
+    IMPORT_PROC* = POINTER TO RECORD (LISTS.tpItem)
 
         label*: INTEGER;
         lib*:   IMPORT_LIB;
@@ -635,7 +635,7 @@ BEGIN
 END Call;
 
 
-PROCEDURE CallImp* (proc: LISTS.ITEM);
+PROCEDURE CallImp* (proc: LISTS.tpItem);
 BEGIN
     AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
 END CallImp;
@@ -653,7 +653,7 @@ BEGIN
 END AssignProc;
 
 
-PROCEDURE AssignImpProc* (proc: LISTS.ITEM);
+PROCEDURE AssignImpProc* (proc: LISTS.tpItem);
 BEGIN
     AddJmpCmd(opSAVEIP, proc(IMPORT_PROC).label)
 END AssignImpProc;
@@ -665,7 +665,7 @@ BEGIN
 END PushProc;
 
 
-PROCEDURE PushImpProc* (proc: LISTS.ITEM);
+PROCEDURE PushImpProc* (proc: LISTS.tpItem);
 BEGIN
     AddJmpCmd(opPUSHIP, proc(IMPORT_PROC).label)
 END PushImpProc;
@@ -681,7 +681,7 @@ BEGIN
 END ProcCmp;
 
 
-PROCEDURE ProcImpCmp* (proc: LISTS.ITEM; eq: BOOLEAN);
+PROCEDURE ProcImpCmp* (proc: LISTS.tpItem; eq: BOOLEAN);
 BEGIN
     IF eq THEN
         AddJmpCmd(opEQIP, proc(IMPORT_PROC).label)
@@ -1019,7 +1019,7 @@ BEGIN
 END AddImp;
 
 
-PROCEDURE DelImport* (imp: LISTS.ITEM);
+PROCEDURE DelImport* (imp: LISTS.tpItem);
 VAR
     lib: IMPORT_LIB;
 

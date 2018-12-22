@@ -39,7 +39,7 @@ TYPE
     EXPRPROC  = PROCEDURE (parser: PARSER; VAR e: EXPR);
     RETPROC   = PROCEDURE (parser: PARSER; e: EXPR; t: PROG.TYPE_; pos: SCAN.POSITION): BOOLEAN;
 
-    rPARSER = RECORD (C.ITEM)
+    rPARSER = RECORD (C.tpItem)
 
         fname*:      PATH;
         path:        PATH;
@@ -798,7 +798,7 @@ VAR
         proc:       PROG.IDENT;
         endname,
         name:       SCAN.IDENT;
-        param:      LISTS.ITEM;
+        param:      LISTS.tpItem;
         unit:       PROG.UNIT;
         ident:      PROG.IDENT;
         e:          EXPR;
@@ -1045,7 +1045,7 @@ END open;
 PROCEDURE NewParser (): PARSER;
 VAR
     pars:  PARSER;
-    citem: C.ITEM;
+    citem: C.tpItem;
 
 BEGIN
     citem := C.pop(parsers);

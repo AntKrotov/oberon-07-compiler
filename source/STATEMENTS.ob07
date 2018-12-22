@@ -54,7 +54,7 @@ TYPE
 
 	END;
 
-	CASE_VARIANT = POINTER TO RECORD (LISTS.ITEM)
+	CASE_VARIANT = POINTER TO RECORD (LISTS.tpItem)
 
 		label:      INTEGER;
 		cmd:        CODE.COMMAND;
@@ -1150,7 +1150,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 PROCEDURE ActualParameters (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
 		proc:  PROG.TYPE_;
-		param: LISTS.ITEM;
+		param: LISTS.tpItem;
 		e1:    PARS.EXPR;
 		pos:   SCAN.POSITION;
 
@@ -2600,7 +2600,7 @@ PROCEDURE DestroyLabel (VAR label: AVL.DATA);
 PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
 	VAR
 		res:   CASE_VARIANT;
-		citem: C.ITEM;
+		citem: C.tpItem;
 
 	BEGIN
 		citem := C.pop(CaseVar);
@@ -2685,7 +2685,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		PROCEDURE LabelRange (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; variant: INTEGER): AVL.NODE;
 		VAR
 			label:     CASE_LABEL;
-			citem:     C.ITEM;
+			citem:     C.tpItem;
 			pos, pos1: SCAN.POSITION;
 			node:      AVL.NODE;
 			newnode:   BOOLEAN;
@@ -2852,7 +2852,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		VAR
 			table, end, else: INTEGER;
 			tree: AVL.NODE;
-			item:  LISTS.ITEM;
+			item:  LISTS.tpItem;
 
 		BEGIN
 			LISTS.push(CaseVariants, NewVariant(0, NIL));

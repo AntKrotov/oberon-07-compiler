@@ -75,7 +75,7 @@ TYPE
 
     END;
 
-    SCANNER* = POINTER TO RECORD (C.ITEM)
+    SCANNER* = POINTER TO RECORD (C.tpItem)
 
         text:            TEXTDRV.TEXT;
         range:           BOOLEAN
@@ -604,7 +604,7 @@ END Next;
 PROCEDURE NewScanner (): SCANNER;
 VAR
     scan:  SCANNER;
-    citem: C.ITEM;
+    citem: C.tpItem;
 
 BEGIN
     citem := C.pop(scanners);

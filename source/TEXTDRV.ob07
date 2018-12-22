@@ -13,7 +13,7 @@ CONST
 	CHUNK = 1024 * 256;
 
 TYPE
-	TEXT* = POINTER TO RECORD (C.ITEM)
+	TEXT* = POINTER TO RECORD (C.tpItem)
 		chunk:        ARRAY CHUNK OF BYTE;
 		pos, size:    INTEGER;
 		file:         FILES.tpFile;
@@ -145,7 +145,7 @@ PROCEDURE open (text: TEXT; name: ARRAY OF CHAR): BOOLEAN;
 PROCEDURE NewText (): TEXT;
 	VAR
 		text:  TEXT;
-		citem: C.ITEM;
+		citem: C.tpItem;
 
 	BEGIN
 		citem := C.pop(texts);
