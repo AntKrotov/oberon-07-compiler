@@ -6,8 +6,9 @@
 	All rights reserved.
 	*)
 
-IMPORT AVLTREES, STRINGS, MACHINE;
-
+IMPORT mAt := AVLTREES,
+	STRINGS,
+	MACHINE;
 
 CONST
 
@@ -29,7 +30,7 @@ TYPE
 		set:       SET;
 		bool:      BOOLEAN;
 
-		string*:   AVLTREES.DATA
+		string*:   mAt.tpData
 
 	END;
 

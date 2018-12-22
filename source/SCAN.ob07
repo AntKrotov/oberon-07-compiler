@@ -42,7 +42,7 @@ CONST
 TYPE
 	LEXSTR* = ARRAY LEXLEN OF CHAR;
 
-	IDENT* = POINTER TO RECORD (AVL.DATA)
+	IDENT* = POINTER TO RECORD (AVL.tpData)
 		s*: LEXSTR;
 		offset*, offsetW*: INTEGER
 	END;
@@ -76,13 +76,13 @@ VAR
 	vocabulary: RECORD
 		KW:          ARRAY 33 OF KEYWORD;
 		delimiters:  ARRAY 256 OF BOOLEAN;
-		idents:      AVL.NODE;
+		idents:      AVL.tpNode;
 		ident:       IDENT
 	END;
 
 	scanners: C.tpCollection;
 
-PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
+PROCEDURE nodecmp (a, b: AVL.tpData): INTEGER;
 		RETURN ORD(a(IDENT).s > b(IDENT).s) - ORD(a(IDENT).s < b(IDENT).s)
 	END nodecmp;
 
@@ -124,11 +124,11 @@ PROCEDURE key (VAR lex: LEX);
 PROCEDURE enterid* (s: LEXSTR): IDENT;
 	VAR
 		newnode: BOOLEAN;
-		node:    AVL.NODE;
+		node:    AVL.tpNode;
 
 	BEGIN
 		vocabulary.ident.s := s;
-		vocabulary.idents := AVL.insert(vocabulary.idents, vocabulary.ident, nodecmp, newnode, node);
+		vocabulary.idents := AVL.Insert(vocabulary.idents, vocabulary.ident, nodecmp, newnode, node);
 
 		IF newnode THEN
 			NEW(vocabulary.ident);

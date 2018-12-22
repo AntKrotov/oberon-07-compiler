@@ -6,173 +6,167 @@
 	All rights reserved.
 	*)
 
-IMPORT C := COLLECTIONS;
+IMPORT mCol := COLLECTIONS;
 
 TYPE
-	DATA* = POINTER TO RECORD (C.tpItem) END;
+	tpData* = POINTER TO RECORD (mCol.tpItem) END;
 
-	NODE* = POINTER TO RECORD (C.tpItem)
-		data*: DATA;
-		height: INTEGER;
-		left*, right*: NODE
-	END;
-
-	CMP* = PROCEDURE (a, b: DATA): INTEGER;
-
-	DESTRUCTOR* = PROCEDURE (VAR data: DATA);
-
-VAR
-	nodes: C.tpCollection;
-
-PROCEDURE NewNode (data: DATA): NODE;
-	VAR
-		node:  NODE;
-		citem: C.tpItem;
-
-	BEGIN  
-		citem := C.Pop(nodes);
-		IF citem = NIL THEN
-			NEW(node)
-		ELSE
-			node := citem(NODE)
+	tpNode* = POINTER TO RECORD (mCol.tpItem)
+			data*: tpData;
+			height: INTEGER;
+			left*, right*: tpNode
 		END;
 
-		node.data := data;
-		node.left := NIL;
-		node.right := NIL;
-		node.height := 1
+	tCMP = PROCEDURE (a, b: tpData): INTEGER;
 
-		RETURN node
-	END NewNode;
+	tDesctuctor = PROCEDURE (VAR data: tpData);
 
-PROCEDURE height (p: NODE): INTEGER;
+VAR
+	nodes: mCol.tpCollection;
+
+PROCEDURE New (pData: tpData): tpNode;
 	VAR
-		res: INTEGER;
-
-	BEGIN
-		IF p = NIL THEN
-			res := 0
+		_node:  tpNode;
+		_colItem: mCol.tpItem;
+	BEGIN  
+		_colItem := mCol.Pop(nodes);
+		IF _colItem = NIL THEN
+			NEW(_node)
 		ELSE
-			res := p.height
+			_node := _colItem(tpNode)
+		END;
+
+		_node.data := pData;
+		_node.left := NIL;
+		_node.right := NIL;
+		_node.height := 1
+
+		RETURN _node
+	END New;
+
+PROCEDURE Height_Get (pNode: tpNode): INTEGER;
+	VAR
+		_res: INTEGER;
+	BEGIN
+		IF pNode = NIL THEN
+			_res := 0
+		ELSE
+			_res := pNode.height
 		END
 
-		RETURN res
-	END height;
+		RETURN _res
+	END Height_Get;
 
-PROCEDURE bfactor (p: NODE): INTEGER;
-		RETURN height(p.right) - height(p.left)
-	END bfactor;
+PROCEDURE BFactor_Get (pNode: tpNode): INTEGER;
+		RETURN Height_Get(pNode.right) - Height_Get(pNode.left)
+	END BFactor_Get;
 
-PROCEDURE fixheight (p: NODE);
+PROCEDURE Height_Fix (pNode: tpNode);
 	BEGIN
-		p.height := MAX(height(p.left), height(p.right)) + 1
-	END fixheight;
+		pNode.height := MAX(Height_Get(pNode.left), Height_Get(pNode.right)) + 1
+	END Height_Fix;
 
-PROCEDURE rotateright (p: NODE): NODE;
+PROCEDURE RotateR (pNode: tpNode): tpNode;
 	VAR
-		q: NODE;
-
+		_node: tpNode;
 	BEGIN
-		q := p.left;
-		p.left := q.right;
-		q.right := p;
-		fixheight(p);
-		fixheight(q)
+		_node := pNode.left;
+		pNode.left := _node.right;
+		_node.right := pNode;
+		Height_Fix(pNode);
+		Height_Fix(_node)
 
-		RETURN q
-	END rotateright;
+		RETURN _node
+	END RotateR;
 
-PROCEDURE rotateleft (q: NODE): NODE;
+PROCEDURE RotateL (pNode: tpNode): tpNode;
 	VAR
-		p: NODE;
-
+		_node: tpNode;
 	BEGIN
-		p := q.right;
-		q.right := p.left;
-		p.left := q;
-		fixheight(q);
-		fixheight(p)
+		_node := pNode.right;
+		pNode.right := _node.left;
+		_node.left := pNode;
+		Height_Fix(pNode);
+		Height_Fix(_node)
 
-		RETURN p
-	END rotateleft;
+		RETURN _node
+	END RotateL;
 
-PROCEDURE balance (p: NODE): NODE;
+PROCEDURE Node_Balance (pNode: tpNode): tpNode;
 	VAR
-		res: NODE;
-
+		_node: tpNode;
 	BEGIN
-		fixheight(p);
+		Height_Fix(pNode);
 
-		IF bfactor(p) = 2 THEN
-			IF bfactor(p.right) < 0 THEN
-				p.right := rotateright(p.right)
+		IF BFactor_Get(pNode) = 2 THEN
+			IF BFactor_Get(pNode.right) < 0 THEN
+				pNode.right := RotateR(pNode.right)
 			END;
-			res := rotateleft(p)
+			_node := RotateL(pNode)
 
-		ELSIF bfactor(p) = -2 THEN
-			IF bfactor(p.left) > 0 THEN
-				p.left := rotateleft(p.left)
+		ELSIF BFactor_Get(pNode) = -2 THEN
+			IF BFactor_Get(pNode.left) > 0 THEN
+				pNode.left := RotateL(pNode.left)
 			END;
-			res := rotateright(p)
+			_node := RotateR(pNode)
 
 		ELSE
-			res := p
+			_node := pNode
 		END
 
-		RETURN res
-	END balance;
+		RETURN _node
+	END Node_Balance;
 
-PROCEDURE insert* (p: NODE; data: DATA; cmp: CMP; VAR newnode: BOOLEAN; VAR node: NODE): NODE;
+PROCEDURE Insert* (pNode: tpNode; pData: tpData; cmp: tCMP; VAR pNewNode: BOOLEAN; VAR pNode2: tpNode): tpNode;
 	VAR
-		res: NODE;
-		rescmp: INTEGER;
-
+		_node: tpNode;
+		_resCmp: INTEGER;
 	BEGIN
-		IF p = NIL THEN
-			res := NewNode(data);
-			node := res;
-			newnode := TRUE
+		IF pNode = NIL THEN
+			_node := New(pData);
+			pNode2 := _node;
+			pNewNode := TRUE
 		ELSE
 
-			rescmp := cmp(data, p.data);
-			IF rescmp < 0 THEN
-				p.left := insert(p.left, data, cmp, newnode, node);
-				res := balance(p)
-			ELSIF rescmp > 0 THEN
-				p.right := insert(p.right, data, cmp, newnode, node);
-				res := balance(p)
+			_resCmp := cmp(pData, pNode.data);
+			IF _resCmp < 0 THEN
+				pNode.left := Insert(pNode.left, pData, cmp, pNewNode, pNode2);
+				_node := Node_Balance(pNode)
+			ELSIF _resCmp > 0 THEN
+				pNode.right := Insert(pNode.right, pData, cmp, pNewNode, pNode2);
+				_node := Node_Balance(pNode)
 			ELSE
-				res := p;
-				node := res;
-				newnode := FALSE
+				_node := pNode;
+				pNode2 := _node;
+				pNewNode := FALSE
 			END
 
 		END
 
-		RETURN res
-	END insert;
+		RETURN _node
+	END Insert;
 
-PROCEDURE destroy* (VAR node: NODE; destructor: DESTRUCTOR);
+PROCEDURE Destroy* (VAR pNode: tpNode; pDestructor: tDesctuctor);
 	VAR
-		left, right: NODE;
+		left, right: tpNode;
 
 	BEGIN
-		IF node # NIL THEN
-			left  := node.left;
-			right := node.right;
+		IF pNode # NIL THEN
+			left  := pNode.left;
+			right := pNode.right;
 
-			IF destructor # NIL THEN
-				destructor(node.data)
+			IF pDestructor # NIL THEN
+				pDestructor(pNode.data)
 			END; 
 			
-			C.Push(nodes, node);
-			node := NIL;
+			mCol.Push(nodes, pNode);
+			pNode := NIL;
 
-			destroy(left, destructor);
-			destroy(right, destructor)
+			Destroy(left, pDestructor);
+			Destroy(right, pDestructor)
 		END
-	END destroy;
+	END Destroy;
 
 BEGIN
-	nodes := C.New()
+	nodes := mCol.New()
 END AVLTREES.

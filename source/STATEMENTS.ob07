@@ -40,7 +40,7 @@ TYPE
 
 	CASE_LABEL = POINTER TO rCASE_LABEL;
 
-	rCASE_LABEL = RECORD (AVL.DATA)
+	rCASE_LABEL = RECORD (AVL.tpData)
 
 		range: RANGE;
 
@@ -2520,7 +2520,7 @@ PROCEDURE RepeatStatement (parser: PARS.PARSER);
 		END
 	END RepeatStatement;
 
-PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
+PROCEDURE LabelCmp (a, b: AVL.tpData): INTEGER;
 	VAR
 		La, Ra, Lb, Rb, res: INTEGER;
 
@@ -2538,7 +2538,7 @@ PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
 		RETURN res
 	END LabelCmp;
 
-PROCEDURE DestroyLabel (VAR label: AVL.DATA);
+PROCEDURE DestroyLabel (VAR label: AVL.tpData);
 	BEGIN
 		C.Push(CaseLabels, label);
 		label := NIL
@@ -2618,7 +2618,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END Label;
 
 
-		PROCEDURE CheckType (node: AVL.NODE; type: PROG.TYPE_; parser: PARS.PARSER; pos: SCAN.POSITION);
+		PROCEDURE CheckType (node: AVL.tpNode; type: PROG.TYPE_; parser: PARS.PARSER; pos: SCAN.POSITION);
 		BEGIN
 			IF node # NIL THEN
 				PARS.check(~(PROG.isBaseOf(node.data(CASE_LABEL).type, type) OR PROG.isBaseOf(type, node.data(CASE_LABEL).type)), parser, pos, 100);
@@ -2628,12 +2628,12 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END CheckType;
 
 
-		PROCEDURE LabelRange (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; variant: INTEGER): AVL.NODE;
+		PROCEDURE LabelRange (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.tpNode; variant: INTEGER): AVL.tpNode;
 		VAR
 			label:     CASE_LABEL;
 			citem:     C.tpItem;
 			pos, pos1: SCAN.POSITION;
-			node:      AVL.NODE;
+			node:      AVL.tpNode;
 			newnode:   BOOLEAN;
 			range:     RANGE;
 
@@ -2665,7 +2665,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			IF isRecPtr(caseExpr) THEN
 				CheckType(tree, label.type, parser, pos1)
 			END;
-			tree := AVL.insert(tree, label, LabelCmp, newnode, node);
+			tree := AVL.Insert(tree, label, LabelCmp, newnode, node);
 			PARS.check(newnode, parser, pos1, 100)
 
 			RETURN node
@@ -2673,10 +2673,10 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END LabelRange;
 
 
-		PROCEDURE CaseLabelList (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; variant: INTEGER): AVL.NODE;
+		PROCEDURE CaseLabelList (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.tpNode; variant: INTEGER): AVL.tpNode;
 		VAR
 			exit: BOOLEAN;
-			res:  AVL.NODE;
+			res:  AVL.tpNode;
 
 		BEGIN
 			exit := FALSE;
@@ -2694,12 +2694,12 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END CaseLabelList;
 
 
-		PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; end: INTEGER);
+		PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.tpNode; end: INTEGER);
 		VAR
 			sym:      INTEGER;
 			t:        PROG.TYPE_;
 			variant:  INTEGER;
-			node:     AVL.NODE;
+			node:     AVL.tpNode;
 			last:     CODE.COMMAND;
 
 		BEGIN
@@ -2731,11 +2731,11 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END case;
 
 
-		PROCEDURE Table (node: AVL.NODE; else: INTEGER);
+		PROCEDURE Table (node: AVL.tpNode; else: INTEGER);
 		VAR
 			L, R: INTEGER;
 			range: RANGE;
-			left, right: AVL.NODE;
+			left, right: AVL.tpNode;
 			last: CODE.COMMAND;
 			v: CASE_VARIANT;
 
@@ -2783,7 +2783,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		END Table;
 
 
-		PROCEDURE TableT (node: AVL.NODE);
+		PROCEDURE TableT (node: AVL.tpNode);
 		BEGIN
 			IF node # NIL THEN
 				CODE.caset(node.data(CASE_LABEL).range.a, node.data(CASE_LABEL).variant);
@@ -2797,7 +2797,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		PROCEDURE ParseCase (parser: PARS.PARSER; e: PARS.EXPR; pos: SCAN.POSITION);
 		VAR
 			table, end, else: INTEGER;
-			tree: AVL.NODE;
+			tree: AVL.tpNode;
 			item:  LISTS.tpItem;
 
 		BEGIN
@@ -2837,7 +2837,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				Table(tree, else)
 			END;
 
-			AVL.destroy(tree, DestroyLabel);
+			AVL.Destroy(tree, DestroyLabel);
 			CODE.SetLabel(end);
 			CODE.AddCmd0(CODE.opENDSW);
 
