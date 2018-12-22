@@ -1,11 +1,10 @@
-﻿(*
+﻿MODULE STATEMENTS;
+(*
 	BSD 2-Clause License
 
 	Copyright (c) 2018, Anton Krotov
 	All rights reserved.
 	*)
-
-MODULE STATEMENTS;
 
 IMPORT
 
@@ -3067,7 +3066,7 @@ PROCEDURE setrtl;
 				CODE.codes.rtl[idx] := id.proc.label;
 				id.proc.used := TRUE
 			ELSE
-				ERRORS.error3("procedure RTL.", name, " not found")
+				ERRORS.Error3("procedure RTL.", name, " not found")
 			END
 		END getproc;
 
@@ -3136,7 +3135,7 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, ve
 				parser.parse(parser);
 				PARS.destroy(parser)
 			ELSE
-				ERRORS.error5("file ", lib_path, "RTL", ext, " not found")
+				ERRORS.Error5("file ", lib_path, "RTL", ext, " not found")
 			END
 		END;
 
@@ -3146,7 +3145,7 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, ve
 		IF parser.open(parser, modname) THEN
 			parser.parse(parser)
 		ELSE
-			ERRORS.error5("file ", path, modname, ext, " not found")
+			ERRORS.Error5("file ", path, modname, ext, " not found")
 		END;
 
 		PARS.destroy(parser);

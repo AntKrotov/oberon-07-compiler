@@ -9,39 +9,39 @@
 IMPORT mCons := CONSOLE,
 	mUtil := UTILS;
 
-PROCEDURE hintmsg* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
+PROCEDURE Msg_Hint* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
 	BEGIN
 		IF hint = 0 THEN
 			mCons.String("  hint ("); mCons.Int(line); mCons.String(":"); mCons.Int(col); mCons.String(")");
 			mCons.String(" variable "); mCons.String(22X); mCons.String(name); mCons.String(22X); mCons.StringLn(" never used");
 		END
-	END hintmsg;
+	END Msg_Hint;
 
-PROCEDURE errormsg* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
+PROCEDURE Msg_Err* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
 	BEGIN
 		mCons.String("error: ");  mCons.IntLn(errno);
 		mCons.String("line:  ");  mCons.IntLn(line);
 		mCons.String("col:   ");  mCons.IntLn(col);
 		mCons.String("file:  ");  mCons.StringLn(fname);
 		mUtil.Exit(1)
-	END errormsg;
+	END Msg_Err;
 
-PROCEDURE error1* (s1: ARRAY OF CHAR);
+PROCEDURE Error1* (s1: ARRAY OF CHAR);
 	BEGIN
 		mCons.StringLn(s1);
 		mUtil.Exit(1)
-	END error1;
+	END Error1;
 
-PROCEDURE error3* (s1, s2, s3: ARRAY OF CHAR);
+PROCEDURE Error3* (s1, s2, s3: ARRAY OF CHAR);
 	BEGIN
 		mCons.String(s1); mCons.String(s2); mCons.StringLn(s3);
 		mUtil.Exit(1)
-	END error3;
+	END Error3;
 
-PROCEDURE error5* (s1, s2, s3, s4, s5: ARRAY OF CHAR);
+PROCEDURE Error5* (s1, s2, s3, s4, s5: ARRAY OF CHAR);
 	BEGIN
 		mCons.String(s1); mCons.String(s2); mCons.String(s3); mCons.String(s4); mCons.StringLn(s5);
 		mUtil.Exit(1)
-	END error5;
+	END Error5;
 
 END ERRORS.

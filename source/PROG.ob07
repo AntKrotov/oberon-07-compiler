@@ -301,7 +301,7 @@ PROCEDURE close (unit: UNIT);
 		ident := unit.idents.last(IDENT);
 		WHILE (ident # NIL) & (ident.typ # idGUARD) DO
 			IF (ident.typ = idVAR) & (ident.offset = -1) THEN
-				ERRORS.hintmsg(ident.name.s, ident.pos.line, ident.pos.col, 0);
+				ERRORS.Msg_Hint(ident.name.s, ident.pos.line, ident.pos.col, 0);
 				IF ident.export THEN
 					offset := getOffset(unit.program, ident)
 				END
@@ -490,7 +490,7 @@ PROCEDURE closeScope (unit: UNIT);
 			del  := item;
 			item := item.prev(IDENT);
 			IF (del.typ = idVAR) & (del.offset = -1) THEN
-				ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
+				ERRORS.Msg_Hint(del.name.s, del.pos.line, del.pos.col, 0)
 			END;
 			LISTS.delete(unit.idents, del);
 			C.Push(idents, del)

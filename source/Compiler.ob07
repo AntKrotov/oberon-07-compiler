@@ -1,11 +1,10 @@
-﻿(*
+﻿MODULE Compiler;
+(*
 	BSD 2-Clause License
 
 	Copyright (c) 2018, Anton Krotov
 	All rights reserved.
 	*)
-
-MODULE Compiler;
 
 IMPORT mSt := STATEMENTS,
 	mPars := PARS,
@@ -130,7 +129,7 @@ PROCEDURE Keys_Set (VAR pStackSize, pBaseAddress, pVersion: INTEGER; VAR pPic, p
 				bEnd := TRUE
 
 			ELSE
-				mErr.error3("bad parameter: ", param, "")
+				mErr.Error3("bad parameter: ", param, "")
 			END;
 
 			INC(i)
@@ -189,7 +188,7 @@ PROCEDURE Main;
 
 		mPath.split(inname, path, modname, ext);
 		IF ext # mConst.FILE_EXT THEN
-			mErr.error3('Inputfile name extension must be "', mConst.FILE_EXT, '"')
+			mErr.Error3('Inputfile name extension must be "', mConst.FILE_EXT, '"')
 		END;
 		IF mPath.isRelative(path) THEN
 			mPath.RelPath(app_path, path, temp);
@@ -198,7 +197,7 @@ PROCEDURE Main;
 
 		mUtil.GetArg(2, outname);
 		IF outname = "" THEN
-			mErr.error1("not enough parameters")
+			mErr.Error1("not enough parameters")
 		END;
 		IF mPath.isRelative(outname) THEN
 			mPath.RelPath(app_path, outname, temp);
@@ -207,18 +206,18 @@ PROCEDURE Main;
 
 		mUtil.GetArg(3, param);
 		IF param = "" THEN
-			mErr.error1("not enough parameters")
+			mErr.Error1("not enough parameters")
 		END;
 
 		target := Target_Get(param);
 		
 		IF target = 0 THEN
-			mErr.error1("bad parameter <target>")
+			mErr.Error1("bad parameter <target>")
 		END;
 
 		IF target = mConst.Target_iWin64 THEN
 			IF mUtil.bit_depth = 32 THEN           
-				mErr.error1("bad parameter <target>")
+				mErr.Error1("bad parameter <target>")
 			END;
 			mPars.init(64)
 		ELSE

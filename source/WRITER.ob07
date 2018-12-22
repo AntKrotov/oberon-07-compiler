@@ -11,7 +11,6 @@ IMPORT FILES, ERRORS, MACHINE;
 TYPE
 	FILE* = FILES.tpFile;
 
-
 VAR
 	counter*: INTEGER;
 
@@ -29,7 +28,7 @@ PROCEDURE WriteByte* (file: FILE; n: BYTE);
 		IF FILES.WriteByte(file, n) THEN
 			INC(counter)
 		ELSE
-			ERRORS.error1("writing file error")
+			ERRORS.Error1("writing file error")
 		END
 	END WriteByte;
 
@@ -40,7 +39,7 @@ PROCEDURE Write* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER);
 	BEGIN
 		n := FILES.Write(file, chunk, bytes);
 		IF n # bytes THEN
-			ERRORS.error1("writing file error")
+			ERRORS.Error1("writing file error")
 		END;
 		INC(counter, n)
 	END Write;
