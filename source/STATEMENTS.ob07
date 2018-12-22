@@ -29,7 +29,6 @@ CONST
 
 	chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
 
-
 TYPE
 
 	isXXX = PROCEDURE (e: PARS.EXPR): BOOLEAN;
@@ -62,129 +61,101 @@ TYPE
 
 	END;
 
-
 VAR
-
 	begcall, endcall: CODE.COMMAND;
-
 	checking: SET;
-
-	CaseLabels, CaseVar: C.COLLECTION;
-
+	CaseLabels, CaseVar: C.tpCollection;
 	CaseVariants: LISTS.LIST;
-
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
 		RETURN e.obj IN {eCONST, eVAR, eEXPR, eVPAR, ePARAM, eVREC}
 	END isExpr;
 
-
 PROCEDURE isVar (e: PARS.EXPR): BOOLEAN;
 		RETURN e.obj IN {eVAR, eVPAR, ePARAM, eVREC}
 	END isVar;
-
 
 PROCEDURE isBoolean (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tBOOLEAN)
 	END isBoolean;
 
-
 PROCEDURE isInteger (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tINTEGER)
 	END isInteger;
-
 
 PROCEDURE isByte (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tBYTE)
 	END isByte;
 
-
 PROCEDURE isInt (e: PARS.EXPR): BOOLEAN;
 		RETURN isByte(e) OR isInteger(e)
 	END isInt;
-
 
 PROCEDURE isReal (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tREAL)
 	END isReal;
 
-
 PROCEDURE isSet (e: PARS.EXPR): BOOLEAN;
-	RETURN isExpr(e) & (e.type.typ = PROG.tSET)
-END isSet;
-
+		RETURN isExpr(e) & (e.type.typ = PROG.tSET)
+	END isSet;
 
 PROCEDURE isString (e: PARS.EXPR): BOOLEAN;
 		RETURN (e.obj = eCONST) & (e.type.typ IN {PROG.tSTRING, PROG.tCHAR})
 	END isString;
 
-
 PROCEDURE isStringW (e: PARS.EXPR): BOOLEAN;
 		RETURN (e.obj = eCONST) & (e.type.typ IN {PROG.tSTRING, PROG.tCHAR, PROG.tWCHAR})
 	END isStringW;
-
 
 PROCEDURE isChar (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tCHAR)
 	END isChar;
 
-
 PROCEDURE isCharArray (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ = PROG.tCHAR)
 	END isCharArray;
-
 
 PROCEDURE isCharW (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tWCHAR)
 	END isCharW;
 
-
 PROCEDURE isCharArrayW (e: PARS.EXPR): BOOLEAN;
-	RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ = PROG.tWCHAR)
-END isCharArrayW;
-
+		RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ = PROG.tWCHAR)
+	END isCharArrayW;
 
 PROCEDURE isCharArrayX (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR})
 	END isCharArrayX;
 
-
 PROCEDURE isPtr (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tPOINTER)
 	END isPtr;
-
 
 PROCEDURE isRec (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tRECORD)
 	END isRec;
 
-
 PROCEDURE isArr (e: PARS.EXPR): BOOLEAN;
-	RETURN isExpr(e) & (e.type.typ = PROG.tARRAY)
-END isArr;
-
+		RETURN isExpr(e) & (e.type.typ = PROG.tARRAY)
+	END isArr;
 
 PROCEDURE isProc (e: PARS.EXPR): BOOLEAN;
 		RETURN isExpr(e) & (e.type.typ = PROG.tPROCEDURE) OR (e.obj IN {ePROC, eIMP})
 	END isProc;
 
-
 PROCEDURE isNil (e: PARS.EXPR): BOOLEAN;
 		RETURN e.type.typ = PROG.tNIL
 	END isNil;
 
-
 PROCEDURE getpos (parser: PARS.PARSER; VAR pos: SCAN.POSITION);
-BEGIN
-	pos := parser.lex.pos
-END getpos;
-
+	BEGIN
+		pos := parser.lex.pos
+	END getpos;
 
 PROCEDURE NextPos (parser: PARS.PARSER; VAR pos: SCAN.POSITION);
 	BEGIN
 		PARS.NextPos(parser, pos)
 	END NextPos;
-
 
 PROCEDURE strlen (e: PARS.EXPR): INTEGER;
 	VAR
@@ -199,7 +170,6 @@ PROCEDURE strlen (e: PARS.EXPR): INTEGER;
 		END
 		RETURN res
 	END strlen;
-
 
 PROCEDURE _length (s: ARRAY OF CHAR): INTEGER;
 	VAR
@@ -218,7 +188,6 @@ PROCEDURE _length (s: ARRAY OF CHAR): INTEGER;
 		RETURN res
 	END _length;
 
-
 PROCEDURE utf8strlen (e: PARS.EXPR): INTEGER;
 	VAR
 		res: INTEGER;
@@ -233,7 +202,6 @@ PROCEDURE utf8strlen (e: PARS.EXPR): INTEGER;
 		RETURN res
 	END utf8strlen;
 
-
 PROCEDURE StrToWChar (s: ARRAY OF CHAR): INTEGER;
 	VAR
 		res: ARRAY 2 OF WCHAR;
@@ -243,11 +211,9 @@ PROCEDURE StrToWChar (s: ARRAY OF CHAR): INTEGER;
 		RETURN ORD(res[0])
 	END StrToWChar;
 
-
 PROCEDURE isStringW1 (e: PARS.EXPR): BOOLEAN;
 		RETURN (e.obj = eCONST) & isString(e) & (utf8strlen(e) = 1) & (strlen(e) > 1)
 	END isStringW1;
-
 
 PROCEDURE assigncomp (e: PARS.EXPR; t: PROG.TYPE_): BOOLEAN;
 	VAR
@@ -303,7 +269,6 @@ PROCEDURE assigncomp (e: PARS.EXPR; t: PROG.TYPE_): BOOLEAN;
 		RETURN res
 	END assigncomp;
 
-
 PROCEDURE String (e: PARS.EXPR): INTEGER;
 	VAR
 		offset: INTEGER;
@@ -322,7 +287,6 @@ PROCEDURE String (e: PARS.EXPR): INTEGER;
 
 		RETURN offset
 	END String;
-
 
 PROCEDURE StringW (e: PARS.EXPR): INTEGER;
 	VAR
@@ -351,7 +315,6 @@ PROCEDURE StringW (e: PARS.EXPR): INTEGER;
 		RETURN offset
 	END StringW;
 
-
 PROCEDURE CheckRange (range, line, errno: INTEGER);
 	VAR
 		label: INTEGER;
@@ -362,7 +325,6 @@ PROCEDURE CheckRange (range, line, errno: INTEGER);
 		CODE.OnError(line, errno);
 		CODE.SetLabel(label)
 	END CheckRange;
-
 
 PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 	VAR
@@ -482,12 +444,10 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 		RETURN res
 	END assign;
 
-
 PROCEDURE LoadConst (e: PARS.EXPR);
 	BEGIN
 		CODE.AddCmd(CODE.opCONST, ARITH.Int(e.value))
 	END LoadConst;
-
 
 PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: PROG.PARAM);
 
@@ -643,7 +603,6 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 
 		END
 	END paramcomp;
-
 
 PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
@@ -1146,7 +1105,6 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 	END stProc;
 
-
 PROCEDURE ActualParameters (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
 		proc:  PROG.TYPE_;
@@ -1195,7 +1153,6 @@ PROCEDURE ActualParameters (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		END
 
 	END ActualParameters;
-
 
 PROCEDURE qualident (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
@@ -1273,7 +1230,6 @@ PROCEDURE qualident (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 	END qualident;
 
-
 PROCEDURE deref (pos: SCAN.POSITION; e: PARS.EXPR; load: BOOLEAN; error: INTEGER);
 	VAR
 		label:  INTEGER;
@@ -1290,7 +1246,6 @@ PROCEDURE deref (pos: SCAN.POSITION; e: PARS.EXPR; load: BOOLEAN; error: INTEGER
 			CODE.SetLabel(label)
 		END
 	END deref;
-
 
 PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
@@ -1503,7 +1458,6 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		END
 
 	END designator;
-
 
 PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 	VAR
@@ -2410,7 +2364,6 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		END
 	END expression;
 
-
 PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 	VAR
 		e, e1:  PARS.EXPR;
@@ -2486,7 +2439,6 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 
 	END ElementaryStatement;
 
-
 PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 	VAR
 		e:     PARS.EXPR;
@@ -2543,7 +2495,6 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 		PARS.Next(parser)
 	END IfStatement;
 
-
 PROCEDURE RepeatStatement (parser: PARS.PARSER);
 	VAR
 		e:     PARS.EXPR;
@@ -2570,7 +2521,6 @@ PROCEDURE RepeatStatement (parser: PARS.PARSER);
 		END
 	END RepeatStatement;
 
-
 PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
 	VAR
 		La, Ra, Lb, Rb, res: INTEGER;
@@ -2589,13 +2539,11 @@ PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
 		RETURN res
 	END LabelCmp;
 
-
 PROCEDURE DestroyLabel (VAR label: AVL.DATA);
 	BEGIN
 		C.push(CaseLabels, label);
 		label := NIL
 	END DestroyLabel;
-
 
 PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
 	VAR
@@ -2616,7 +2564,6 @@ PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
 
 		RETURN res
 	END NewVariant;
-
 
 PROCEDURE CaseStatement (parser: PARS.PARSER);
 	VAR
@@ -2932,7 +2879,6 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		ParseCase(parser, e, pos)
 	END CaseStatement;
 
-
 PROCEDURE ForStatement (parser: PARS.PARSER);
 	VAR
 		e:       PARS.EXPR;
@@ -3039,7 +2985,6 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 
 	END ForStatement;
 
-
 PROCEDURE statement (parser: PARS.PARSER);
 	VAR
 		sym: INTEGER;
@@ -3062,7 +3007,6 @@ PROCEDURE statement (parser: PARS.PARSER);
 		END
 	END statement;
 
-
 PROCEDURE StatSeq (parser: PARS.PARSER);
 	BEGIN
 		statement(parser);
@@ -3071,7 +3015,6 @@ PROCEDURE StatSeq (parser: PARS.PARSER);
 			statement(parser)
 		END
 	END StatSeq;
-
 
 PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN.POSITION): BOOLEAN;
 	VAR
@@ -3104,7 +3047,6 @@ PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN
 
 		RETURN res
 	END chkreturn;
-
 
 PROCEDURE setrtl;
 	VAR
@@ -3169,7 +3111,6 @@ PROCEDURE setrtl;
 
 	END setrtl;
 
-
 PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
 	VAR
 		parser:  PARS.PARSER;
@@ -3221,7 +3162,5 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.PATH; target, ve
 			X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
 		END
 	END compile;
-
-
 
 END STATEMENTS.

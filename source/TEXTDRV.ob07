@@ -28,7 +28,7 @@ TYPE
 	END;
 
 VAR
-	texts: C.COLLECTION;
+	texts: C.tpCollection;
 
 PROCEDURE reset (text: TEXT);
 	BEGIN

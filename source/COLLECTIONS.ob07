@@ -11,19 +11,19 @@ TYPE
 		link: tpItem
 	END;
 
-	COLLECTION* = POINTER TO RECORD
+	tpCollection* = POINTER TO RECORD
 		last: tpItem
 	END;
 
 
-PROCEDURE push* (collection: COLLECTION; item: tpItem);
+PROCEDURE push* (collection: tpCollection; item: tpItem);
 	BEGIN
 		item.link := collection.last;
 		collection.last := item
 	END push;
 
 
-PROCEDURE pop* (collection: COLLECTION): tpItem;
+PROCEDURE pop* (collection: tpCollection): tpItem;
 	VAR
 		item: tpItem;
 
@@ -37,9 +37,9 @@ PROCEDURE pop* (collection: COLLECTION): tpItem;
 	END pop;
 
 
-PROCEDURE create* (): COLLECTION;
+PROCEDURE create* (): tpCollection;
 	VAR
-		collection: COLLECTION;
+		collection: tpCollection;
 
 	BEGIN
 		NEW(collection);

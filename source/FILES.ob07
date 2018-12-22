@@ -17,7 +17,7 @@ TYPE
 	END;
 
 VAR
-	files: mCol.COLLECTION;
+	files: mCol.tpCollection;
 
 PROCEDURE Copy (pSrc: ARRAY OF BYTE; pSrcIdx: INTEGER; VAR pDst: ARRAY OF BYTE; pDstIdx: INTEGER; pBytes: INTEGER);
 	(* Copy array of bytes from source to destinace *)
