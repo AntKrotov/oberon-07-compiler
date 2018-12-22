@@ -9,11 +9,10 @@
 IMPORT mList := LISTS,
 	mScan := SCAN,
 	mStr  := STRINGS,
-	mChl := CHUNKLISTS;
+	mChl := CHUNKLISTS,
+	mConst := modConstante;
 
 CONST
-
-	FREGS = 8;
 
 	opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
 	opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
@@ -781,7 +780,7 @@ PROCEDURE loadf* (): BOOLEAN;
 BEGIN
 	AddCmd0(opLOADF);
 	INC(codes.fregs)
-	RETURN codes.fregs < FREGS
+	RETURN codes.fregs < mConst.codeFregs
 END loadf;
 
 
@@ -789,7 +788,7 @@ PROCEDURE inf* (): BOOLEAN;
 BEGIN
 	AddCmd0(opINF);
 	INC(codes.fregs)
-	RETURN codes.fregs < FREGS
+	RETURN codes.fregs < mConst.codeFregs
 END inf;
 
 
@@ -829,7 +828,7 @@ PROCEDURE flt* (): BOOLEAN;
 BEGIN
 	AddCmd0(opFLT);
 	INC(codes.fregs)
-	RETURN codes.fregs < FREGS
+	RETURN codes.fregs < mConst.codeFregs
 END flt;
 
 
@@ -900,7 +899,7 @@ BEGIN
 	cmd.float := r;
 	insert(codes.last, cmd);
 	INC(codes.fregs);
-	ASSERT(codes.fregs <= FREGS)
+	ASSERT(codes.fregs <= mConst.codeFregs)
 END Float;
 
 
@@ -919,7 +918,7 @@ PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
 BEGIN
 	AddCmd(opRESF, fregs);
 	codes.fregs := fregs + 1
-	RETURN codes.fregs < FREGS
+	RETURN codes.fregs < mConst.codeFregs
 END resf;
 
 

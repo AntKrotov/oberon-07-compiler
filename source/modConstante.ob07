@@ -50,4 +50,7 @@ CONST
 		typeWChar*  = 6;
 		typeString*  = 7;
 
+	(* for CODE *)
+		codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
+
 END modConstante.
