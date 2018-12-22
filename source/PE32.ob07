@@ -14,7 +14,6 @@ IMPORT BIN,
 	mConst := modConstante,
 	CHL := CHUNKLISTS;
 
-
 CONST
 
 	SIZE_OF_DWORD = 4;
@@ -41,137 +40,105 @@ CONST
 	SectionAlignment = 1000H;
 	FileAlignment    =  200H;
 
-
 TYPE
 
 	WORD  = WCHAR;
 	DWORD = INTEGER;
 
-
 	NAME* = ARRAY IMAGE_SIZEOF_SHORT_NAME OF CHAR;
 
-
 	IMAGE_DATA_DIRECTORY = RECORD
-
-		VirtualAddress:  DWORD;
-		Size:            DWORD
-
-	END;
-
+			VirtualAddress:  DWORD;
+			Size:            DWORD
+		END;
 
 	IMAGE_OPTIONAL_HEADER = RECORD
-
-		Magic:                        WORD;
-		MajorLinkerVersion:           BYTE;
-		MinorLinkerVersion:           BYTE;
-		SizeOfCode:                   DWORD;
-		SizeOfInitializedData:        DWORD;
-		SizeOfUninitializedData:      DWORD;
-		AddressOfEntryPoint:          DWORD;
-		BaseOfCode:                   DWORD;
-		BaseOfData:                   DWORD;
-		ImageBase:                    DWORD;
-		SectionAlignment:             DWORD;
-		FileAlignment:                DWORD;
-		MajorOperatingSystemVersion:  WORD;
-		MinorOperatingSystemVersion:  WORD;
-		MajorImageVersion:            WORD;
-		MinorImageVersion:            WORD;
-		MajorSubsystemVersion:        WORD;
-		MinorSubsystemVersion:        WORD;
-		Win32VersionValue:            DWORD;
-		SizeOfImage:                  DWORD;
-		SizeOfHeaders:                DWORD;
-		CheckSum:                     DWORD;
-		Subsystem:                    WORD;
-		DllCharacteristics:           WORD;
-		SizeOfStackReserve:           DWORD;
-		SizeOfStackCommit:            DWORD;
-		SizeOfHeapReserve:            DWORD;
-		SizeOfHeapCommit:             DWORD;
-		LoaderFlags:                  DWORD;
-		NumberOfRvaAndSizes:          DWORD;
-
-		DataDirectory: ARRAY IMAGE_NUMBEROF_DIRECTORY_ENTRIES OF IMAGE_DATA_DIRECTORY
-
-	END;
-
+			Magic:                        WORD;
+			MajorLinkerVersion:           BYTE;
+			MinorLinkerVersion:           BYTE;
+			SizeOfCode:                   DWORD;
+			SizeOfInitializedData:        DWORD;
+			SizeOfUninitializedData:      DWORD;
+			AddressOfEntryPoint:          DWORD;
+			BaseOfCode:                   DWORD;
+			BaseOfData:                   DWORD;
+			ImageBase:                    DWORD;
+			SectionAlignment:             DWORD;
+			FileAlignment:                DWORD;
+			MajorOperatingSystemVersion:  WORD;
+			MinorOperatingSystemVersion:  WORD;
+			MajorImageVersion:            WORD;
+			MinorImageVersion:            WORD;
+			MajorSubsystemVersion:        WORD;
+			MinorSubsystemVersion:        WORD;
+			Win32VersionValue:            DWORD;
+			SizeOfImage:                  DWORD;
+			SizeOfHeaders:                DWORD;
+			CheckSum:                     DWORD;
+			Subsystem:                    WORD;
+			DllCharacteristics:           WORD;
+			SizeOfStackReserve:           DWORD;
+			SizeOfStackCommit:            DWORD;
+			SizeOfHeapReserve:            DWORD;
+			SizeOfHeapCommit:             DWORD;
+			LoaderFlags:                  DWORD;
+			NumberOfRvaAndSizes:          DWORD;
+			DataDirectory: ARRAY IMAGE_NUMBEROF_DIRECTORY_ENTRIES OF IMAGE_DATA_DIRECTORY
+		END;
 
 	IMAGE_FILE_HEADER* = RECORD
-
-		Machine*:               WORD;
-		NumberOfSections*:      WORD;
-		TimeDateStamp*:         DWORD;
-		PointerToSymbolTable*:  DWORD;
-		NumberOfSymbols*:       DWORD;
-		SizeOfOptionalHeader*:  WORD;
-		Characteristics*:       WORD
-
-	END;
-
+			Machine*:               WORD;
+			NumberOfSections*:      WORD;
+			TimeDateStamp*:         DWORD;
+			PointerToSymbolTable*:  DWORD;
+			NumberOfSymbols*:       DWORD;
+			SizeOfOptionalHeader*:  WORD;
+			Characteristics*:       WORD
+		END;
 
 	IMAGE_NT_HEADERS = RECORD
-
-		Signature:       ARRAY 4 OF BYTE;
-		FileHeader:      IMAGE_FILE_HEADER;
-		OptionalHeader:  IMAGE_OPTIONAL_HEADER
-
-	END;
-
+			Signature:       ARRAY 4 OF BYTE;
+			FileHeader:      IMAGE_FILE_HEADER;
+			OptionalHeader:  IMAGE_OPTIONAL_HEADER
+		END;
 
 	IMAGE_SECTION_HEADER* = RECORD
-
-		Name*: NAME;
-
-		VirtualSize*,
-		VirtualAddress*,
-		SizeOfRawData*,
-		PointerToRawData*,
-		PointerToRelocations*,
-		PointerToLinenumbers*:   DWORD;
-
-		NumberOfRelocations*,
-		NumberOfLinenumbers*:    WORD;
-
-		Characteristics*:        DWORD
-
-	END;
-
+			Name*: NAME;
+			VirtualSize*,
+			VirtualAddress*,
+			SizeOfRawData*,
+			PointerToRawData*,
+			PointerToRelocations*,
+			PointerToLinenumbers*:   DWORD;
+			NumberOfRelocations*,
+			NumberOfLinenumbers*:    WORD;
+			Characteristics*:        DWORD
+		END;
 
 	IMAGE_EXPORT_DIRECTORY = RECORD
-
-		Characteristics:       DWORD;
-		TimeDateStamp:         DWORD;
-		MajorVersion:          WORD;
-		MinorVersion:          WORD;
-		Name,
-		Base,
-		NumberOfFunctions,
-		NumberOfNames,
-		AddressOfFunctions,
-		AddressOfNames,
-		AddressOfNameOrdinals: DWORD
-
-	END;
-
+			Characteristics:       DWORD;
+			TimeDateStamp:         DWORD;
+			MajorVersion:          WORD;
+			MinorVersion:          WORD;
+			Name,
+			Base,
+			NumberOfFunctions,
+			NumberOfNames,
+			AddressOfFunctions,
+			AddressOfNames,
+			AddressOfNameOrdinals: DWORD
+		END;
 
 	VIRTUAL_ADDR = RECORD
-
-		Code, Data, Bss, Import: INTEGER
-
-	END;
-
+			Code, Data, Bss, Import: INTEGER
+		END;
 
 	RELOC = POINTER TO RECORD (LISTS.tpItem)
+			Page, Size: DWORD;
+			reloc: ARRAY 1024 OF WORD
+		END;
 
-		Page, Size: DWORD;
-		reloc: ARRAY 1024 OF WORD
-
-	END;
-
-
-	FILE = WR.FILE;
-
+	FILE = WR.tpFile;
 
 VAR
 
@@ -179,7 +146,6 @@ VAR
 	PEHeader:        IMAGE_NT_HEADERS;
 	SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
 	Relocations:     LISTS.LIST;
-
 
 PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
 	BEGIN
@@ -199,7 +165,6 @@ PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_E
 		RETURN SIZE_OF_IMAGE_EXPORT_DIRECTORY + ExportDir.NumberOfFunctions * (2 * SIZE_OF_DWORD + SIZE_OF_WORD)
 	END Export;
 
-
 PROCEDURE align (n, _align: INTEGER): INTEGER;
 	BEGIN
 		IF n MOD _align # 0 THEN
@@ -208,7 +173,6 @@ PROCEDURE align (n, _align: INTEGER): INTEGER;
 
 		RETURN n
 	END align;
-
 
 PROCEDURE GetProcCount (lib: BIN.IMPRT): INTEGER;
 	VAR
@@ -225,7 +189,6 @@ PROCEDURE GetProcCount (lib: BIN.IMPRT): INTEGER;
 
 		RETURN res
 	END GetProcCount;
-
 
 PROCEDURE GetImportSize (imp_list: LISTS.LIST): INTEGER;
 	VAR
@@ -271,7 +234,6 @@ PROCEDURE GetImportSize (imp_list: LISTS.LIST): INTEGER;
 
 		RETURN ((libcnt + 1) * 5 + (proccnt + libcnt) * 2) * SIZE_OF_DWORD
 	END GetImportSize;
-
 
 PROCEDURE fixup (program: BIN.PROGRAM; Address: VIRTUAL_ADDR);
 	VAR
@@ -353,7 +315,6 @@ PROCEDURE fixup (program: BIN.PROGRAM; Address: VIRTUAL_ADDR);
 		END
 	END fixup;
 
-
 PROCEDURE InitArray (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF CHAR);
 	VAR
 		i, k: INTEGER;
@@ -386,12 +347,10 @@ PROCEDURE InitArray (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF C
 		idx := idx + k
 	END InitArray;
 
-
 PROCEDURE WriteWord (file: FILE; w: WORD);
 	BEGIN
 		WR.Write16LE(file, ORD(w))
 	END WriteWord;
-
 
 PROCEDURE WriteName* (File: FILE; name: NAME);
 	VAR
@@ -401,17 +360,16 @@ PROCEDURE WriteName* (File: FILE; name: NAME);
 		nameLen := LENGTH(name);
 
 		FOR i := 0 TO nameLen - 1 DO
-			WR.WriteByte(File, ORD(name[i]))
+			WR.Byte_Write(File, ORD(name[i]))
 		END;
 
 		i := LEN(name) - nameLen;
 		WHILE i > 0 DO
-			WR.WriteByte(File, 0);
+			WR.Byte_Write(File, 0);
 			DEC(i)
 		END
 
 	END WriteName;
-
 
 PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER);
 	VAR
@@ -421,12 +379,12 @@ PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER);
 		nameLen := LENGTH(h.Name);
 
 		FOR i := 0 TO nameLen - 1 DO
-			WR.WriteByte(file, ORD(h.Name[i]))
+			WR.Byte_Write(file, ORD(h.Name[i]))
 		END;
 
 		i := LEN(h.Name) - nameLen;
 		WHILE i > 0 DO
-			WR.WriteByte(file, 0);
+			WR.Byte_Write(file, 0);
 			DEC(i)
 		END;
 
@@ -443,7 +401,6 @@ PROCEDURE WriteSectionHeader* (file: FILE; h: IMAGE_SECTION_HEADER);
 		WR.Write32LE(file, h.Characteristics)
 	END WriteSectionHeader;
 
-
 PROCEDURE WriteFileHeader* (file: FILE; h: IMAGE_FILE_HEADER);
 	BEGIN
 		WriteWord(file, h.Machine);
@@ -456,7 +413,6 @@ PROCEDURE WriteFileHeader* (file: FILE; h: IMAGE_FILE_HEADER);
 		WriteWord(file, h.SizeOfOptionalHeader);
 		WriteWord(file, h.Characteristics)
 	END WriteFileHeader;
-
 
 PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: INTEGER; console, dll, pic, reloc: BOOLEAN);
 	VAR
@@ -508,8 +464,8 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: IN
 
 			WriteWord(file, h.Magic);
 
-			WR.WriteByte(file, h.MajorLinkerVersion);
-			WR.WriteByte(file, h.MinorLinkerVersion);
+			WR.Byte_Write(file, h.MajorLinkerVersion);
+			WR.Byte_Write(file, h.MinorLinkerVersion);
 
 			WR.Write32LE(file, h.SizeOfCode);
 			WR.Write32LE(file, h.SizeOfInitializedData);
@@ -856,6 +812,5 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: IN
 
 		WR.Close(File)
 	END write;
-
 
 END PE32.

@@ -15,13 +15,11 @@ TYPE
 		last: tpItem
 	END;
 
-
 PROCEDURE Push* (pCollection: tpCollection; item: tpItem);
 	BEGIN
 		item.link := pCollection.last;
 		pCollection.last := item
 	END Push;
-
 
 PROCEDURE Pop* (pCollection: tpCollection): tpItem;
 	VAR
@@ -35,7 +33,6 @@ PROCEDURE Pop* (pCollection: tpCollection): tpItem;
 		RETURN item
 	END Pop;
 
-
 PROCEDURE New* (): tpCollection;
 	VAR
 		colRes: tpCollection;
@@ -46,6 +43,5 @@ PROCEDURE New* (): tpCollection;
 
 		RETURN colRes
 	END New;
-
 
 END COLLECTIONS.

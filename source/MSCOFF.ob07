@@ -19,14 +19,14 @@ TYPE
 	FH = PE32.IMAGE_FILE_HEADER;
 	SH = PE32.IMAGE_SECTION_HEADER;
 
-PROCEDURE WriteReloc (File: WR.FILE; VirtualAddress, SymbolTableIndex, Type: INTEGER);
+PROCEDURE WriteReloc (File: WR.tpFile; VirtualAddress, SymbolTableIndex, Type: INTEGER);
 	BEGIN
 		WR.Write32LE(File, VirtualAddress);
 		WR.Write32LE(File, SymbolTableIndex);
 		WR.Write16LE(File, Type)
 	END WriteReloc;
 
-PROCEDURE Reloc (program: BIN.PROGRAM; File: WR.FILE);
+PROCEDURE Reloc (program: BIN.PROGRAM; File: WR.tpFile);
 	VAR
 		reloc: BIN.RELOC;
 
@@ -86,7 +86,7 @@ PROCEDURE RelocCount (program: BIN.PROGRAM): INTEGER;
 
 PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; ver: INTEGER);
 	VAR
-		File:  WR.FILE;
+		File:  WR.tpFile;
 		exp:   BIN.EXPRT;
 		n, i:  INTEGER;
 
@@ -128,9 +128,7 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; ver: INTEGER);
 			END;
 			section.NumberOfRelocations := WCHR(NumberOfRelocations)
 		END SetNumberOfRelocations;
-
 	BEGIN
-
 		szversion := "version";
 
 		ASSERT(LENGTH(szversion) = 7);
