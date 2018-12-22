@@ -41,17 +41,23 @@ PROCEDURE Int2* (n: INTEGER);
 		Int(n)
 	END Int2;
 
-
 PROCEDURE Ln*;
 	BEGIN
 		String(mUtil.eol)
 	END Ln;
 
 PROCEDURE StringLn* (pStr: ARRAY OF CHAR);
-	(* Out string in console withe Ln *)
+	(* Out string to console with Ln *)
 	BEGIN
 		String(pStr);
 		String(mUtil.eol)
 	END StringLn;
+
+PROCEDURE Int2Ln* (n: INTEGER);
+	(* Out integer to console with Ln *)
+	BEGIN
+		Int2(n);
+		Ln()
+	END Int2Ln;
 
 END CONSOLE.

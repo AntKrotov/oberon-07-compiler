@@ -1,69 +1,67 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE UNIXTIME;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
-
-MODULE UNIXTIME;
-
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
 VAR
+	aDays: ARRAY 12, 31, 2 OF INTEGER;
 
-    days: ARRAY 12, 31, 2 OF INTEGER;
+PROCEDURE Init;
+	(* Initialize calendar for unix time. NOT USE HIER !!!! *)
+	VAR
+		iMonth, j, k, n0, n1: INTEGER;
+	BEGIN
+
+		FOR iMonth := 0 TO 11 DO
+			FOR j := 0 TO 30 DO
+				aDays[iMonth, j, 0] := 0;
+				aDays[iMonth, j, 1] := 0;
+			END
+		END;
+
+		aDays[ 1, 28, 0] := -1;
+
+		FOR k := 0 TO 1 DO
+			aDays[ 1, 29, k] := -1;
+			aDays[ 1, 30, k] := -1;
+			aDays[ 3, 30, k] := -1;
+			aDays[ 5, 30, k] := -1;
+			aDays[ 8, 30, k] := -1;
+			aDays[10, 30, k] := -1;
+		END;
+
+		n0 := 0;
+		n1 := 0;
+		FOR iMonth := 0 TO 11 DO
+			FOR j := 0 TO 30 DO
+				IF aDays[iMonth, j, 0] = 0 THEN
+					aDays[iMonth, j, 0] := n0;
+					INC(n0)
+				END;
+				IF aDays[iMonth, j, 1] = 0 THEN
+					aDays[iMonth, j, 1] := n1;
+					INC(n1)
+				END
+			END
+		END
+
+	END Init;
 
 
-PROCEDURE init;
-VAR
-    i, j, k, n0, n1: INTEGER;
-BEGIN
-
-    FOR i := 0 TO 11 DO
-        FOR j := 0 TO 30 DO
-            days[i, j, 0] := 0;
-            days[i, j, 1] := 0;
-        END
-    END;
-
-    days[ 1, 28, 0] := -1;
-
-    FOR k := 0 TO 1 DO
-        days[ 1, 29, k] := -1;
-        days[ 1, 30, k] := -1;
-        days[ 3, 30, k] := -1;
-        days[ 5, 30, k] := -1;
-        days[ 8, 30, k] := -1;
-        days[10, 30, k] := -1;
-    END;
-
-    n0 := 0;
-    n1 := 0;
-    FOR i := 0 TO 11 DO
-        FOR j := 0 TO 30 DO
-            IF days[i, j, 0] = 0 THEN
-                days[i, j, 0] := n0;
-                INC(n0)
-            END;
-            IF days[i, j, 1] = 0 THEN
-                days[i, j, 1] := n1;
-                INC(n1)
-            END
-        END
-    END
-
-END init;
-
-
-PROCEDURE time* (year, month, day, hour, min, sec: INTEGER): INTEGER;
-VAR
-    d, s: INTEGER;
-BEGIN
-    d := (year - 1970) * 365 + days[month - 1, day - 1, ORD(year DIV 4 = 0)] + (year - 1969) DIV 4;
-    s := d * 86400 + hour * 3600 + min * 60 + sec
-    RETURN s
-END time;
+PROCEDURE Time_Get* (pYear, pMonth, pDay, pHour, pMin, pSec: INTEGER): INTEGER;
+	(* Return relativity time of parameters *)
+	VAR
+		days, sec: INTEGER;
+	BEGIN
+		days := (pYear - 1970) * 365 + aDays[pMonth - 1, pDay - 1, ORD(pYear DIV 4 = 0)] + (pYear - 1969) DIV 4;
+		sec := days * 86400 + pHour * 3600 + pMin * 60 + pSec
+		RETURN sec
+	END Time_Get;
 
 
 BEGIN
-    init
+	Init
 END UNIXTIME.
