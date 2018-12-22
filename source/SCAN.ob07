@@ -614,7 +614,7 @@ PROCEDURE close* (VAR scanner: SCANNER);
 				TEXTDRV.destroy(scanner.text)
 			END;
 
-			C.push(scanners, scanner);
+			C.Push(scanners, scanner);
 			scanner := NIL
 		END
 	END close;

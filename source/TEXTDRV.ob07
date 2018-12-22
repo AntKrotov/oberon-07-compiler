@@ -178,7 +178,7 @@ PROCEDURE destroy* (VAR text: TEXT);
 				FILES.Close(text.file)
 			END;
 
-			C.push(texts, text);
+			C.Push(texts, text);
 			text := NIL
 		END
 	END destroy;

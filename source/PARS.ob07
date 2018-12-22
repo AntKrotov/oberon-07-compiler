@@ -8,14 +8,12 @@
 
 IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE, C := COLLECTIONS;
 
-
 CONST
 
 	eCONST*   =  1;  eTYPE*   =  2;  eVAR*     =  3;  eEXPR*    =  4;
 	eVREC*    =  5;  ePROC*   =  6;  eVPAR*    =  7;  ePARAM*   =  8;
 	eSTPROC*  =  9;  eSTFUNC* = 10;  eSYSFUNC* = 11;  eSYSPROC* = 12;
 	eIMP*     = 13;
-
 
 TYPE
 
@@ -63,11 +61,8 @@ TYPE
 
 	END;
 
-
 VAR
-
 	program*:  PROG.PROGRAM;
-
 	parsers: C.tpCollection;
 
 
@@ -77,7 +72,7 @@ BEGIN
 		SCAN.close(parser.scanner)
 	END;
 
-	C.push(parsers, parser);
+	C.Push(parsers, parser);
 	parser := NIL
 END destroy;
 

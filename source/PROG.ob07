@@ -314,7 +314,7 @@ PROCEDURE close (unit: UNIT);
 			prev := ident.prev(IDENT);
 			IF ~ident.export THEN
 				LISTS.delete(unit.idents, ident);
-				C.push(idents, ident)
+				C.Push(idents, ident)
 			END;
 			ident := prev
 		END;
@@ -493,12 +493,12 @@ PROCEDURE closeScope (unit: UNIT);
 				ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
 			END;
 			LISTS.delete(unit.idents, del);
-			C.push(idents, del)
+			C.Push(idents, del)
 		END;
 
 		IF (item # NIL) & (item.typ = idGUARD) THEN
 			LISTS.delete(unit.idents, item);
-			C.push(idents, item)
+			C.Push(idents, item)
 		END;
 
 		DEC(unit.scopeLvl)

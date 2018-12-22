@@ -2541,7 +2541,7 @@ PROCEDURE LabelCmp (a, b: AVL.DATA): INTEGER;
 
 PROCEDURE DestroyLabel (VAR label: AVL.DATA);
 	BEGIN
-		C.push(CaseLabels, label);
+		C.Push(CaseLabels, label);
 		label := NIL
 	END DestroyLabel;
 
@@ -2844,7 +2844,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 
 			REPEAT
 				item := LISTS.pop(CaseVariants);
-				C.push(CaseVar, item)
+				C.Push(CaseVar, item)
 			UNTIL item(CASE_VARIANT).cmd = NIL
 
 		END ParseCase;

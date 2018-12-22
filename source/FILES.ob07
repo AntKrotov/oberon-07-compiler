@@ -117,7 +117,7 @@ PROCEDURE Close* (VAR pFile: tpFile);
 			mUtil.FileClose(pFile.ptr);
 			pFile.ptr := 0;
 
-			mCol.push(files, pFile);
+			mCol.Push(files, pFile);
 			pFile := NIL
 		END
 	END Close;

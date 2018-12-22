@@ -16,11 +16,11 @@ TYPE
 	END;
 
 
-PROCEDURE push* (collection: tpCollection; item: tpItem);
+PROCEDURE Push* (collection: tpCollection; item: tpItem);
 	BEGIN
 		item.link := collection.last;
 		collection.last := item
-	END push;
+	END Push;
 
 
 PROCEDURE pop* (collection: tpCollection): tpItem;

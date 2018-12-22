@@ -165,7 +165,7 @@ PROCEDURE destroy* (VAR node: NODE; destructor: DESTRUCTOR);
 				destructor(node.data)
 			END; 
 			
-			C.push(nodes, node);
+			C.Push(nodes, node);
 			node := NIL;
 
 			destroy(left, destructor);
