@@ -7,16 +7,16 @@
 
 MODULE Compiler;
 
-IMPORT ST := STATEMENTS,
-	TARGETS,
-	PARS,
-	UTILS,
-	PATHS,
-	C := CONSOLE,
-	ERRORS,
-	STRINGS,
-	VER,
-	WRITER;
+IMPORT mSt := STATEMENTS,
+	mTarg := TARGETS,
+	mPars := PARS,
+	mUtil := UTILS,
+	mPath := PATHS,
+	mCons := CONSOLE,
+	mErr  := ERRORS,
+	mStr  := STRINGS,
+	mVer  := VER,
+	mWrit := WRITER;
 
 CONST
 	EXT = ".ob07";
@@ -26,17 +26,17 @@ PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
 		res: INTEGER;
 	BEGIN
 		IF s = "con" THEN
-			res := TARGETS.CON
+			res := mTarg.CON
 		ELSIF s = "gui" THEN
-			res := TARGETS.GUI
+			res := mTarg.GUI
 		ELSIF s = "dll" THEN
-			res := TARGETS.DLL
+			res := mTarg.DLL
 		ELSIF s = "kos" THEN
-			res := TARGETS.KOS
+			res := mTarg.KOS
 		ELSIF s = "obj" THEN
-			res := TARGETS.OBJ
+			res := mTarg.OBJ
 		ELSIF s = "win64" THEN
-			res := TARGETS.WIN64
+			res := mTarg.WIN64
 		ELSE
 			res := 0
 		END
@@ -46,7 +46,7 @@ PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
 
 PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
 	VAR
-		param: PARS.PATH;
+		param: mPars.PATH;
 		i, j:  INTEGER;
 		end:   BOOLEAN;
 		value: INTEGER;
@@ -57,12 +57,12 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 		end := FALSE;
 		i := 4;
 		REPEAT
-			UTILS.GetArg(i, param);
+			mUtil.GetArg(i, param);
 
 			IF param = "-stk" THEN
 				INC(i);
-				UTILS.GetArg(i, param);
-				IF STRINGS.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
+				mUtil.GetArg(i, param);
+				IF mStr.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
 					StackSize := value
 				END;
 				IF param[0] = "-" THEN
@@ -71,8 +71,8 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 
 			ELSIF param = "-base" THEN
 				INC(i);
-				UTILS.GetArg(i, param);
-				IF STRINGS.StrToInt(param, value) THEN
+				mUtil.GetArg(i, param);
+				IF mStr.StrToInt(param, value) THEN
 					BaseAddress := ((value DIV 64) * 64) * 1024
 				END;
 				IF param[0] = "-" THEN
@@ -81,7 +81,7 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 
 			ELSIF param = "-nochk" THEN
 				INC(i);
-				UTILS.GetArg(i, param);
+				mUtil.GetArg(i, param);
 
 				IF param[0] = "-" THEN
 					DEC(i)
@@ -90,21 +90,21 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 					WHILE param[j] # 0X DO
 
 						IF    param[j] = "p" THEN
-							EXCL(checking, ST.chkPTR)
+							EXCL(checking, mSt.chkPTR)
 						ELSIF param[j] = "t" THEN
-							EXCL(checking, ST.chkGUARD)
+							EXCL(checking, mSt.chkGUARD)
 						ELSIF param[j] = "i" THEN
-							EXCL(checking, ST.chkIDX)
+							EXCL(checking, mSt.chkIDX)
 						ELSIF param[j] = "b" THEN
-							EXCL(checking, ST.chkBYTE)
+							EXCL(checking, mSt.chkBYTE)
 						ELSIF param[j] = "c" THEN
-							EXCL(checking, ST.chkCHR)
+							EXCL(checking, mSt.chkCHR)
 						ELSIF param[j] = "w" THEN
-							EXCL(checking, ST.chkWCHR)
+							EXCL(checking, mSt.chkWCHR)
 						ELSIF param[j] = "r" THEN
-							EXCL(checking, ST.chkCHR);
-							EXCL(checking, ST.chkWCHR);
-							EXCL(checking, ST.chkBYTE)
+							EXCL(checking, mSt.chkCHR);
+							EXCL(checking, mSt.chkWCHR);
+							EXCL(checking, mSt.chkBYTE)
 						ELSIF param[j] = "a" THEN
 							checking := {}
 						END;
@@ -115,8 +115,8 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 
 			ELSIF param = "-ver" THEN
 				INC(i);
-				UTILS.GetArg(i, param);
-				IF STRINGS.StrToVer(param, major, minor) THEN
+				mUtil.GetArg(i, param);
+				IF mStr.StrToVer(param, major, minor) THEN
 					Version := major * 65536 + minor
 				END;
 				IF param[0] = "-" THEN
@@ -133,7 +133,7 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 				end := TRUE
 
 			ELSE
-				ERRORS.error3("bad parameter: ", param, "")
+				mErr.error3("bad parameter: ", param, "")
 			END;
 
 			INC(i)
@@ -143,15 +143,15 @@ PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BO
 
 PROCEDURE Main;
 	VAR
-		path:       PARS.PATH;
-		inname:     PARS.PATH;
-		ext:        PARS.PATH;
-		app_path:   PARS.PATH;
-		lib_path:   PARS.PATH;
-		modname:    PARS.PATH;
-		outname:    PARS.PATH;
-		param:      PARS.PATH;
-		temp:       PARS.PATH;
+		path:       mPars.PATH;
+		inname:     mPars.PATH;
+		ext:        mPars.PATH;
+		app_path:   mPars.PATH;
+		lib_path:   mPars.PATH;
+		modname:    mPars.PATH;
+		outname:    mPars.PATH;
+		param:      mPars.PATH;
+		temp:       mPars.PATH;
 
 		target:     INTEGER;
 
@@ -168,100 +168,100 @@ PROCEDURE Main;
 		Version := 65536;
 		pic := FALSE;
 		reloc := FALSE;
-		checking := ST.chkALL;
+		checking := mSt.chkALL;
 
-		PATHS.GetCurrentDirectory(app_path);
+		mPath.GetCurrentDirectory(app_path);
 		lib_path := app_path;
 
-		UTILS.GetArg(1, inname);
+		mUtil.GetArg(1, inname);
 
 		IF inname = "" THEN
-			C.String("Akron Oberon-07/16 Compiler v"); C.Int(VER.Major); C.String("."); C.Int2(VER.Minor); C.Ln; C.Ln;
-			C.String("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln; C.Ln;
-			C.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); C.Ln; C.Ln;
-			C.String("optional settings:"); C.Ln; C.Ln;
-			C.String("  -stk <size>            set size of stack in megabytes"); C.Ln; C.Ln;
-			C.String("  -base <address>        set base address of image in kilobytes"); C.Ln; C.Ln;
-			C.String("  -pic                   generate position-independent code"); C.Ln; C.Ln;
-			C.String("  -reloc                 make relocation table"); C.Ln; C.Ln;
-			C.String('  -ver <major.minor>     set version of program ("obj" only)'); C.Ln; C.Ln;
-			C.String('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,'); C.Ln;
-			C.String('                         BYTE, CHR, WCHR)'); C.Ln; C.Ln;
-			UTILS.Exit(0)
+			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mVer.Major); mCons.String("."); mCons.Int2(mVer.Minor); mCons.Ln; mCons.Ln;
+			mCons.String("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln; mCons.Ln;
+			mCons.String('target = "con" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln; mCons.Ln;
+			mCons.String("optional settings:"); mCons.Ln; mCons.Ln;
+			mCons.String("  -stk <size>            set size of stack in megabytes"); mCons.Ln; mCons.Ln;
+			mCons.String("  -base <address>        set base address of image in kilobytes"); mCons.Ln; mCons.Ln;
+			mCons.String("  -pic                   generate position-independent code"); mCons.Ln; mCons.Ln;
+			mCons.String("  -reloc                 make relocation table"); mCons.Ln; mCons.Ln;
+			mCons.String('  -ver <major.minor>     set version of program ("obj" only)'); mCons.Ln; mCons.Ln;
+			mCons.String('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,'); mCons.Ln;
+			mCons.String('                         BYTE, CHR, WCHR)'); mCons.Ln; mCons.Ln;
+			mUtil.Exit(0)
 		END;
 
-		PATHS.split(inname, path, modname, ext);
+		mPath.split(inname, path, modname, ext);
 		IF ext # EXT THEN
-			ERRORS.error3('inputfile name extension must be "', EXT, '"')
+			mErr.error3('inputfile name extension must be "', EXT, '"')
 		END;
-		IF PATHS.isRelative(path) THEN
-			PATHS.RelPath(app_path, path, temp);
+		IF mPath.isRelative(path) THEN
+			mPath.RelPath(app_path, path, temp);
 			path := temp
 		END;
 
-		UTILS.GetArg(2, outname);
+		mUtil.GetArg(2, outname);
 		IF outname = "" THEN
-			ERRORS.error1("not enough parameters")
+			mErr.error1("not enough parameters")
 		END;
-		IF PATHS.isRelative(outname) THEN
-			PATHS.RelPath(app_path, outname, temp);
+		IF mPath.isRelative(outname) THEN
+			mPath.RelPath(app_path, outname, temp);
 			outname := temp
 		END;
 
-		UTILS.GetArg(3, param);
+		mUtil.GetArg(3, param);
 		IF param = "" THEN
-			ERRORS.error1("not enough parameters")
+			mErr.error1("not enough parameters")
 		END;
 
 		target := Target(param);
 		
 		IF target = 0 THEN
-			ERRORS.error1("bad parameter <target>")
+			mErr.error1("bad parameter <target>")
 		END;
 
-		IF target = TARGETS.WIN64 THEN
-			IF UTILS.bit_depth = 32 THEN           
-				ERRORS.error1("bad parameter <target>")
+		IF target = mTarg.WIN64 THEN
+			IF mUtil.bit_depth = 32 THEN           
+				mErr.error1("bad parameter <target>")
 			END;
-			PARS.init(64)
+			mPars.init(64)
 		ELSE
-			PARS.init(32)
+			mPars.init(32)
 		END;
 
-		PARS.program.dll := target IN {TARGETS.DLL, TARGETS.OBJ};
-		PARS.program.obj := target = TARGETS.OBJ;
+		mPars.program.dll := target IN {mTarg.DLL, mTarg.OBJ};
+		mPars.program.obj := target = mTarg.OBJ;
 
-		STRINGS.append(lib_path, "lib");
-		STRINGS.append(lib_path, UTILS.slash);
+		mStr.append(lib_path, "lib");
+		mStr.append(lib_path, mUtil.slash);
 
-		IF target IN {TARGETS.CON, TARGETS.GUI, TARGETS.DLL} THEN
-			IF target = TARGETS.DLL THEN
+		IF target IN {mTarg.CON, mTarg.GUI, mTarg.DLL} THEN
+			IF target = mTarg.DLL THEN
 				BaseAdr := 10000000H
 			ELSE
 				BaseAdr := 400000H
 			END;
-			STRINGS.append(lib_path, "Windows32")
+			mStr.append(lib_path, "Windows32")
 
-		ELSIF target IN {TARGETS.KOS, TARGETS.OBJ} THEN
-			STRINGS.append(lib_path, "KolibriOS")
+		ELSIF target IN {mTarg.KOS, mTarg.OBJ} THEN
+			mStr.append(lib_path, "KolibriOS")
 
-		ELSIF target = TARGETS.WIN64 THEN
-			STRINGS.append(lib_path, "Windows64")
+		ELSIF target = mTarg.WIN64 THEN
+			mStr.append(lib_path, "Windows64")
 
 		END;
 
-		STRINGS.append(lib_path, UTILS.slash);
+		mStr.append(lib_path, mUtil.slash);
 
 		keys(StackSize, BaseAdr, Version, pic, reloc, checking);
 
-		ST.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
+		mSt.compile(path, lib_path, modname, outname, EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
 
-		time := UTILS.GetTickCount() - UTILS.time;
+		time := mUtil.GetTickCount() - mUtil.time;
 
-		C.Int(time DIV 100); C.String("."); C.Int2(time MOD 100); C.String(" sec, ");
-		C.Int(WRITER.counter); C.String(" bytes"); C.Ln;
+		mCons.Int(time DIV 100); mCons.String("."); mCons.Int2(time MOD 100); mCons.String(" sec, ");
+		mCons.Int(mWrit.counter); mCons.String(" bytes"); mCons.Ln;
 
-		UTILS.Exit(0)
+		mUtil.Exit(0)
 	END Main;
 
 BEGIN
