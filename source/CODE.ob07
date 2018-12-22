@@ -6,7 +6,10 @@
 	All rights reserved.
 	*)
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS;
+IMPORT mList := LISTS,
+	mScan := SCAN,
+	mStr  := STRINGS,
+	mChl := CHUNKLISTS;
 
 CONST
 
@@ -115,7 +118,7 @@ CONST
 
 TYPE
 
-	COMMAND* = POINTER TO RECORD (LISTS.tpItem)
+	COMMAND* = POINTER TO RECORD (mList.tpItem)
 
 		opcode*:  INTEGER;
 		param1*:  INTEGER;
@@ -142,25 +145,25 @@ TYPE
 
 	END;
 
-	EXPORT_PROC* = POINTER TO RECORD (LISTS.tpItem)
+	EXPORT_PROC* = POINTER TO RECORD (mList.tpItem)
 
 		label*: INTEGER;
-		name*:  SCAN.LEXSTR
+		name*:  mScan.LEXSTR
 
 	END;
 
-	IMPORT_LIB* = POINTER TO RECORD (LISTS.tpItem)
+	IMPORT_LIB* = POINTER TO RECORD (mList.tpItem)
 
-		name*:   SCAN.LEXSTR;
-		procs*:  LISTS.tpList
+		name*:   mScan.LEXSTR;
+		procs*:  mList.tpList
 
 	END;
 
-	IMPORT_PROC* = POINTER TO RECORD (LISTS.tpItem)
+	IMPORT_PROC* = POINTER TO RECORD (mList.tpItem)
 
 		label*: INTEGER;
 		lib*:   IMPORT_LIB;
-		name*:  SCAN.LEXSTR;
+		name*:  mScan.LEXSTR;
 		count:  INTEGER
 
 	END;
@@ -171,11 +174,11 @@ TYPE
 		last:       COMMAND;
 		begcall:    CMDSTACK;
 		endcall:    CMDSTACK;
-		commands*:  LISTS.tpList;
-		export*:    LISTS.tpList;
-		import*:    LISTS.tpList;
-		types*:     CHL.INTLIST;
-		data*:      CHL.BYTELIST;
+		commands*:  mList.tpList;
+		export*:    mList.tpList;
+		import*:    mList.tpList;
+		types*:     mChl.INTLIST;
+		data*:      mChl.BYTELIST;
 		dmin*:      INTEGER;
 		lcount*:    INTEGER;
 		bss*:       INTEGER;
@@ -209,7 +212,7 @@ END getlast;
 
 PROCEDURE PutByte (codes: CODES; b: BYTE);
 BEGIN
-	CHL.PushByte(codes.data, b)
+	mChl.PushByte(codes.data, b)
 END PutByte;
 
 
@@ -217,7 +220,7 @@ PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 VAR
 	i, n, res: INTEGER;
 BEGIN
-	res := CHL.Length(codes.data);
+	res := mChl.Length(codes.data);
 
 	i := 0;
 	n := LENGTH(s);
@@ -238,7 +241,7 @@ VAR
 
 BEGIN
 	IF codes.charoffs[c] = -1 THEN
-		res := CHL.Length(codes.data);
+		res := mChl.Length(codes.data);
 		PutByte(codes, c);
 		PutByte(codes, 0);
 		codes.charoffs[c] := res
@@ -255,14 +258,14 @@ VAR
 	i, n, res: INTEGER;
 
 BEGIN
-	res := CHL.Length(codes.data);
+	res := mChl.Length(codes.data);
 
 	IF ODD(res) THEN
 		PutByte(codes, 0);
 		INC(res)
 	END;
 
-	n := STRINGS.Utf8To16(s, codes.wstr);
+	n := mStr.Utf8To16(s, codes.wstr);
 
 	i := 0;
 	WHILE i < n DO
@@ -284,7 +287,7 @@ VAR
 
 BEGIN
 	IF codes.wcharoffs[c] = -1 THEN
-		res := CHL.Length(codes.data);
+		res := mChl.Length(codes.data);
 
 		IF ODD(res) THEN
 			PutByte(codes, 0);
@@ -307,7 +310,7 @@ END putstrW1;
 
 PROCEDURE SetMinDataSize* (size: INTEGER);
 BEGIN
-	codes.dmin := CHL.Length(codes.data) + size
+	codes.dmin := mChl.Length(codes.data) + size
 END SetMinDataSize;
 
 
@@ -346,13 +349,13 @@ END popBegEnd;
 
 PROCEDURE AddRec* (base: INTEGER);
 BEGIN
-	CHL.PushInt(codes.types, base)
+	mChl.PushInt(codes.types, base)
 END AddRec;
 
 
 PROCEDURE insert (cur, nov: COMMAND);
 BEGIN
-	LISTS.Insert(codes.commands, cur, nov);
+	mList.Insert(codes.commands, cur, nov);
 	codes.last := nov
 END insert;
 
@@ -409,7 +412,7 @@ END AddCmd0;
 
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
-	LISTS.Del(codes.commands, cmd)
+	mList.Del(codes.commands, cmd)
 END delete;
 
 
@@ -631,7 +634,7 @@ BEGIN
 END Call;
 
 
-PROCEDURE CallImp* (proc: LISTS.tpItem);
+PROCEDURE CallImp* (proc: mList.tpItem);
 BEGIN
 	AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
 END CallImp;
@@ -649,7 +652,7 @@ BEGIN
 END AssignProc;
 
 
-PROCEDURE AssignImpProc* (proc: LISTS.tpItem);
+PROCEDURE AssignImpProc* (proc: mList.tpItem);
 BEGIN
 	AddJmpCmd(opSAVEIP, proc(IMPORT_PROC).label)
 END AssignImpProc;
@@ -661,7 +664,7 @@ BEGIN
 END PushProc;
 
 
-PROCEDURE PushImpProc* (proc: LISTS.tpItem);
+PROCEDURE PushImpProc* (proc: mList.tpItem);
 BEGIN
 	AddJmpCmd(opPUSHIP, proc(IMPORT_PROC).label)
 END PushImpProc;
@@ -677,7 +680,7 @@ BEGIN
 END ProcCmp;
 
 
-PROCEDURE ProcImpCmp* (proc: LISTS.tpItem; eq: BOOLEAN);
+PROCEDURE ProcImpCmp* (proc: mList.tpItem; eq: BOOLEAN);
 BEGIN
 	IF eq THEN
 		AddJmpCmd(opEQIP, proc(IMPORT_PROC).label)
@@ -965,7 +968,7 @@ BEGIN
 END caset;
 
 
-PROCEDURE AddExp* (label: INTEGER; name: SCAN.LEXSTR);
+PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
 VAR
 	exp: EXPORT_PROC;
 
@@ -973,11 +976,11 @@ BEGIN
 	NEW(exp);
 	exp.label := label;
 	exp.name  := name;
-	LISTS.Add(codes.export, exp)
+	mList.Add(codes.export, exp)
 END AddExp;
 
 
-PROCEDURE AddImp* (dll, proc: SCAN.LEXSTR): IMPORT_PROC;
+PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
 VAR
 	lib: IMPORT_LIB;
 	p:   IMPORT_PROC;
@@ -991,8 +994,8 @@ BEGIN
 	IF lib = NIL THEN
 		NEW(lib);
 		lib.name := dll;
-		lib.procs := LISTS.New(NIL);
-		LISTS.Add(codes.import, lib)
+		lib.procs := mList.New(NIL);
+		mList.Add(codes.import, lib)
 	END;
 
 	p := lib.procs.first(IMPORT_PROC);
@@ -1006,7 +1009,7 @@ BEGIN
 		p.label := NewLabel();
 		p.lib   := lib;
 		p.count := 1;
-		LISTS.Add(lib.procs, p)
+		mList.Add(lib.procs, p)
 	ELSE
 		INC(p.count)
 	END
@@ -1015,7 +1018,7 @@ BEGIN
 END AddImp;
 
 
-PROCEDURE DelImport* (imp: LISTS.tpItem);
+PROCEDURE DelImport* (imp: mList.tpItem);
 VAR
 	lib: IMPORT_LIB;
 
@@ -1023,9 +1026,9 @@ BEGIN
 	DEC(imp(IMPORT_PROC).count);
 	IF imp(IMPORT_PROC).count = 0 THEN
 		lib := imp(IMPORT_PROC).lib;
-		LISTS.Del(lib.procs, imp);
+		mList.Del(lib.procs, imp);
 		IF lib.procs.first = NIL THEN
-			LISTS.Del(codes.import, lib)
+			mList.Del(codes.import, lib)
 		END
 	END
 END DelImport;
@@ -1042,15 +1045,15 @@ BEGIN
 	codes.begcall.top := -1;
 	NEW(codes.endcall);
 	codes.endcall.top := -1;
-	codes.commands := LISTS.New(NIL);
-	codes.export   := LISTS.New(NIL);
-	codes.import   := LISTS.New(NIL);
-	codes.types    := CHL.CreateIntList();
-	codes.data     := CHL.CreateByteList();
+	codes.commands := mList.New(NIL);
+	codes.export   := mList.New(NIL);
+	codes.import   := mList.New(NIL);
+	codes.types    := mChl.CreateIntList();
+	codes.data     := mChl.CreateByteList();
 
-	NEW(cmd); cmd.opcode := opNOP; LISTS.Add(codes.commands, cmd);
+	NEW(cmd); cmd.opcode := opNOP; mList.Add(codes.commands, cmd);
 	codes.last := cmd;
-	NEW(cmd); cmd.opcode := opNOP; LISTS.Add(codes.commands, cmd);
+	NEW(cmd); cmd.opcode := opNOP; mList.Add(codes.commands, cmd);
 
 	AddRec(0);
 
