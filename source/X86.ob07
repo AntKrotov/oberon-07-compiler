@@ -91,7 +91,7 @@ VAR
 
 	program: BIN.PROGRAM;
 
-	CodeList: LISTS.LIST;
+	CodeList: LISTS.tpList;
 
 PROCEDURE Byte (n: INTEGER): BYTE;
 		RETURN MACHINE.Byte_Get(n, 0)
@@ -119,7 +119,7 @@ PROCEDURE OutByte (n: INTEGER);
 			NEW(c);
 			c.code[0] := n;
 			c.length  := 1;
-			LISTS.push(CodeList, c)
+			LISTS.Add(CodeList, c)
 		END
 
 	END OutByte;
@@ -287,7 +287,7 @@ PROCEDURE Reloc (op, value: INTEGER);
 		NEW(reloc);
 		reloc.op := op;
 		reloc.value := value;
-		LISTS.push(CodeList, reloc)
+		LISTS.Add(CodeList, reloc)
 	END Reloc;
 
 PROCEDURE jcc (opcode, label: INTEGER);
@@ -299,7 +299,7 @@ PROCEDURE jcc (opcode, label: INTEGER);
 		j.label := label;
 		j.jmp   := opcode;
 		j.short := FALSE;
-		LISTS.push(CodeList, j)
+		LISTS.Add(CodeList, j)
 	END jcc;
 
 PROCEDURE jmp (label: INTEGER);
@@ -310,7 +310,7 @@ PROCEDURE jmp (label: INTEGER);
 		NEW(j);
 		j.label := label;
 		j.short := FALSE;
-		LISTS.push(CodeList, j)
+		LISTS.Add(CodeList, j)
 	END jmp;
 
 PROCEDURE call (label: INTEGER);
@@ -321,7 +321,7 @@ PROCEDURE call (label: INTEGER);
 		NEW(c);
 		c.label := label;
 		c.short := TRUE;
-		LISTS.push(CodeList, c)
+		LISTS.Add(CodeList, c)
 	END call;
 
 PROCEDURE Pic (reg, opcode, value: INTEGER);
@@ -364,7 +364,7 @@ PROCEDURE SetLabel (label: INTEGER);
 	BEGIN
 		NEW(L);
 		L.label := label;
-		LISTS.push(CodeList, L)
+		LISTS.Add(CodeList, L)
 	END SetLabel;
 
 PROCEDURE fixup;
@@ -2189,7 +2189,7 @@ PROCEDURE epilog (code: CODE.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target
 		tcount, dcount: INTEGER;
 
 
-		PROCEDURE import (imp: LISTS.LIST);
+		PROCEDURE import (imp: LISTS.tpList);
 		VAR
 			lib:  CODE.IMPORT_LIB;
 			proc: CODE.IMPORT_PROC;
@@ -2272,7 +2272,7 @@ PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, bas
 
 	BEGIN
 
-		CodeList := LISTS.create(NIL);
+		CodeList := LISTS.New(NIL);
 
 		program := BIN.create(code.lcount);
 

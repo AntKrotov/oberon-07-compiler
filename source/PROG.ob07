@@ -69,7 +69,7 @@ TYPE
 
 	END;
 
-	IDENTS = POINTER TO RECORD (LISTS.LIST)
+	IDENTS = POINTER TO RECORD (LISTS.tpList)
 
 		add*:   PROCEDURE (unit: UNIT; ident: SCAN.IDENT; typ: INTEGER): IDENT;
 		get*:   PROCEDURE (unit: UNIT; ident: SCAN.IDENT; currentScope: BOOLEAN): IDENT
@@ -82,7 +82,7 @@ TYPE
 		used*:       BOOLEAN;
 		processed*:  BOOLEAN;
 		import*:     LISTS.tpItem;
-		using*:      LISTS.LIST;
+		using*:      LISTS.tpList;
 		enter*,
 		leave*:      LISTS.tpItem
 
@@ -99,7 +99,7 @@ TYPE
 		program*:    PROGRAM;
 		name*:       SCAN.IDENT;
 		idents*:     IDENTS;
-		frwPointers: LISTS.LIST;
+		frwPointers: LISTS.tpList;
 		gscope:      IDENT;
 		closed*:     BOOLEAN;
 		scopeLvl*:   INTEGER;
@@ -130,7 +130,7 @@ TYPE
 
 	PARAM* = POINTER TO rPARAM;
 
-	FIELDS = POINTER TO RECORD (LISTS.LIST)
+	FIELDS = POINTER TO RECORD (LISTS.tpList)
 
 		add*:        PROCEDURE (rec: TYPE_; name: SCAN.IDENT; export: BOOLEAN): BOOLEAN;
 		get*:        PROCEDURE (rec: TYPE_; name: SCAN.IDENT; unit: UNIT): FIELD;
@@ -138,7 +138,7 @@ TYPE
 
 	END;
 
-	PARAMS = POINTER TO RECORD (LISTS.LIST)
+	PARAMS = POINTER TO RECORD (LISTS.tpList)
 
 		size*:       INTEGER;
 
@@ -202,7 +202,7 @@ TYPE
 
 	END;
 
-	UNITS* = POINTER TO RECORD (LISTS.LIST)
+	UNITS* = POINTER TO RECORD (LISTS.tpList)
 
 		program:     PROGRAM;
 
@@ -215,13 +215,13 @@ TYPE
 
 		recCount:    INTEGER;
 		units*:      UNITS;
-		types*:      LISTS.LIST;
+		types*:      LISTS.tpList;
 		sysunit*:    UNIT;
 		rtl*:        UNIT;
 		bss*:        INTEGER;
 		locsize*:    INTEGER;
 
-		procs*:      LISTS.LIST;
+		procs*:      LISTS.tpList;
 		dll*:        BOOLEAN;
 		obj*:        BOOLEAN;
 
@@ -317,7 +317,7 @@ PROCEDURE close (unit: UNIT);
 		WHILE ident # NIL DO
 			prev := ident.prev(IDENT);
 			IF ~ident.export THEN
-				LISTS.delete(unit.idents, ident);
+				LISTS.Del(unit.idents, ident);
 				C.Push(idents, ident)
 			END;
 			ident := prev
@@ -346,7 +346,7 @@ PROCEDURE addIdent (unit: UNIT; ident: SCAN.IDENT; typ: INTEGER): IDENT;
 		item:   IDENT;
 		res:    BOOLEAN;
 		proc:   PROC;
-		procs:  LISTS.LIST;
+		procs:  LISTS.tpList;
 
 	BEGIN
 		ASSERT(unit # NIL);
@@ -376,13 +376,13 @@ PROCEDURE addIdent (unit: UNIT; ident: SCAN.IDENT; typ: INTEGER): IDENT;
 				proc.label := 0;
 				proc.used := FALSE;
 				proc.processed := FALSE;
-				proc.using := LISTS.create(NIL);
+				proc.using := LISTS.New(NIL);
 				procs := unit.program.procs;
-				LISTS.push(procs, proc);
+				LISTS.Add(procs, proc);
 				item.proc := proc
 			END;
 
-			LISTS.push(unit.idents, item)
+			LISTS.Add(unit.idents, item)
 		ELSE
 			item := NIL
 		END
@@ -392,7 +392,7 @@ PROCEDURE addIdent (unit: UNIT; ident: SCAN.IDENT; typ: INTEGER): IDENT;
 
 PROCEDURE UseProc* (unit: UNIT; call_proc: PROC);
 	VAR
-		procs:    LISTS.LIST;
+		procs:    LISTS.tpList;
 		cur:      LISTS.tpItem;
 		proc:     USED_PROC;
 
@@ -410,7 +410,7 @@ PROCEDURE UseProc* (unit: UNIT; call_proc: PROC);
 			IF cur = NIL THEN
 				NEW(proc);
 				proc.proc := call_proc;
-				LISTS.push(procs, proc)
+				LISTS.Add(procs, proc)
 			END
 		END
 	END UseProc;
@@ -476,7 +476,7 @@ PROCEDURE openScope (unit: UNIT; proc: PROC): BOOLEAN;
 			item.name := NIL;
 			item.typ  := idGUARD;
 
-			LISTS.push(unit.idents, item)
+			LISTS.Add(unit.idents, item)
 		END
 
 		RETURN res
@@ -496,12 +496,12 @@ PROCEDURE closeScope (unit: UNIT);
 			IF (del.typ = idVAR) & (del.offset = -1) THEN
 				ERRORS.Msg_Hint(del.name.s, del.pos.line, del.pos.col, 0)
 			END;
-			LISTS.delete(unit.idents, del);
+			LISTS.Del(unit.idents, del);
 			C.Push(idents, del)
 		END;
 
 		IF (item # NIL) & (item.typ = idGUARD) THEN
-			LISTS.delete(unit.idents, item);
+			LISTS.Del(unit.idents, item);
 			C.Push(idents, item)
 		END;
 
@@ -526,7 +526,7 @@ PROCEDURE frwptr (unit: UNIT; type: TYPE_; baseIdent: SCAN.IDENT; pos: SCAN.POSI
 		newptr.linked     := FALSE;
 		newptr.notRecord  := FALSE;
 
-		LISTS.push(unit.frwPointers, newptr)
+		LISTS.Add(unit.frwPointers, newptr)
 	END frwptr;
 
 PROCEDURE linkptr (unit: UNIT): FRWPTR;
@@ -729,7 +729,7 @@ PROCEDURE newunit (units: UNITS; name: SCAN.IDENT): UNIT;
 		NEW(unit);
 
 		NEW(idents);
-		ASSERT(LISTS.create(idents) = idents);
+		ASSERT(LISTS.New(idents) = idents);
 
 		idents.add       := addIdent;
 		idents.get       := getIdent;
@@ -738,7 +738,7 @@ PROCEDURE newunit (units: UNITS; name: SCAN.IDENT): UNIT;
 		unit.name        := name;
 		unit.closed      := FALSE;
 		unit.idents      := idents;
-		unit.frwPointers := LISTS.create(NIL);
+		unit.frwPointers := LISTS.New(NIL);
 
 		unit.scope.open    := openScope;
 		unit.scope.close   := closeScope;
@@ -756,7 +756,7 @@ PROCEDURE newunit (units: UNITS; name: SCAN.IDENT): UNIT;
 
 		unit.gscope := unit.idents.last(IDENT);
 
-		LISTS.push(units, unit);
+		LISTS.Add(units, unit);
 
 		unit.scopeLvl := 0;
 		unit.scopes[0] := NIL;
@@ -819,7 +819,7 @@ PROCEDURE addField (self: TYPE_; name: SCAN.IDENT; export: BOOLEAN): BOOLEAN;
 			field.type   := NIL;
 			field.offset := self.size;
 
-			LISTS.push(self.fields, field)
+			LISTS.Add(self.fields, field)
 		END
 
 		RETURN res
@@ -892,7 +892,7 @@ PROCEDURE addParam (self: TYPE_; name: SCAN.IDENT; vPar: BOOLEAN): BOOLEAN;
 			param.type := NIL;
 			param.vPar := vPar;
 
-			LISTS.push(self.params, param)
+			LISTS.Add(self.params, param)
 		END
 
 		RETURN res
@@ -981,10 +981,10 @@ PROCEDURE enterType (program: PROGRAM; typ, size, length: INTEGER; unit: UNIT): 
 		NEW(t);
 
 		NEW(fields);
-		ASSERT(LISTS.create(fields) = fields);
+		ASSERT(LISTS.New(fields) = fields);
 
 		NEW(params);
-		ASSERT(LISTS.create(params) = params);
+		ASSERT(LISTS.New(params) = params);
 
 		t.typ     := typ;
 		t.size    := size;
@@ -1018,7 +1018,7 @@ PROCEDURE enterType (program: PROGRAM; typ, size, length: INTEGER; unit: UNIT): 
 			t.closed := TRUE
 		END;
 
-		LISTS.push(program.types, t)
+		LISTS.Add(program.types, t)
 
 		RETURN t
 	END enterType;
@@ -1176,7 +1176,7 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 		MACHINE.BitDepth_Set(bit_depth);
 		NEW(program);
 		NEW(units);
-		ASSERT(LISTS.create(units) = units);
+		ASSERT(LISTS.New(units) = units);
 
 		program.target.bit_depth := bit_depth;
 		program.target.word      := bit_depth DIV 8;
@@ -1186,9 +1186,9 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 		program.bss := 0;
 
 		program.units := units;
-		program.types := LISTS.create(NIL);
+		program.types := LISTS.New(NIL);
 
-		program.procs := LISTS.create(NIL);
+		program.procs := LISTS.New(NIL);
 
 		program.enterType := enterType;
 		program.getType   := getType;

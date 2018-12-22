@@ -134,7 +134,7 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; ver: INTEGER);
 		ASSERT(LENGTH(szversion) = 7);
 
 		KOS.Import(program, 0, ImportTable, ILen, LibCount, isize);
-		ExpCount := LISTS.count(program.exp_list);
+		ExpCount := LISTS.Count_Get(program.exp_list);
 
 		icount := CHL.Length(program.import);
 		dcount := CHL.Length(program.data);

@@ -308,7 +308,7 @@ PROCEDURE setcc (set, reg: INTEGER);
 		WriteLn(regs8[reg])
 	END setcc;
 
-PROCEDURE translate (commands: LISTS.LIST; pic: BOOLEAN; stroffs: INTEGER);
+PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 	VAR
 		cmd, next, next2: COMMAND;
 

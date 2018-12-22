@@ -8,7 +8,6 @@
 
 IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH;
 
-
 CONST
 
 	RCODE*    = 1;
@@ -22,7 +21,6 @@ CONST
 	PICIMP*   = 8;
 
 	IMPTAB*   = 9;
-
 
 TYPE
 
@@ -62,12 +60,11 @@ TYPE
 		modname*:   INTEGER;
 		import*:    CHL.BYTELIST;
 		export*:    CHL.BYTELIST;
-		rel_list*:  LISTS.LIST;
-		imp_list*:  LISTS.LIST;
-		exp_list*:  LISTS.LIST
+		rel_list*:  LISTS.tpList;
+		imp_list*:  LISTS.tpList;
+		exp_list*:  LISTS.tpList
 
 	END;
-
 
 PROCEDURE create* (NumberOfLabels: INTEGER): PROGRAM;
 VAR
@@ -84,9 +81,9 @@ BEGIN
 		CHL.PushInt(program.labels, 0)
 	END;
 
-	program.rel_list := LISTS.create(NIL);
-	program.imp_list := LISTS.create(NIL);
-	program.exp_list := LISTS.create(NIL);
+	program.rel_list := LISTS.New(NIL);
+	program.imp_list := LISTS.New(NIL);
+	program.exp_list := LISTS.New(NIL);
 
 	program.data   := CHL.CreateByteList();
 	program.code   := CHL.CreateByteList();
@@ -117,7 +114,7 @@ BEGIN
 	NEW(cmd);
 	cmd.opcode := opcode;
 	cmd.offset := CHL.Length(program.code);
-	LISTS.push(program.rel_list, cmd)
+	LISTS.Add(program.rel_list, cmd)
 END PutReloc;
 
 
@@ -221,7 +218,7 @@ BEGIN
 	NEW(imp);
 	imp.nameoffs := CHL.Length(program.import);
 	imp.label := label;
-	LISTS.push(program.imp_list, imp);
+	LISTS.Add(program.imp_list, imp);
 
 	i := 0;
 	WHILE name[i] # 0X DO
@@ -274,12 +271,12 @@ BEGIN
 
 	IF cur # NIL THEN
 		IF cur.prev # NIL THEN
-			LISTS.insert(program.exp_list, cur.prev, exp)
+			LISTS.Insert(program.exp_list, cur.prev, exp)
 		ELSE
-			LISTS.insertL(program.exp_list, cur, exp)
+			LISTS.InsertL(program.exp_list, cur, exp)
 		END
 	ELSE
-		LISTS.push(program.exp_list, exp)
+		LISTS.Add(program.exp_list, exp)
 	END
 
 END Export;

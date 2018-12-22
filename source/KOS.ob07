@@ -44,7 +44,7 @@ PROCEDURE Import* (pProgram: mBin.PROGRAM; pData: INTEGER; VAR pImportTable: mCh
 		END;
 
 		pLen  := pLibCount * 2 + 2;
-		pSize := (mList.count(pProgram.imp_list) + pLen + 1) * mConst.Kolibry_SizeDWORD;
+		pSize := (mList.Count_Get(pProgram.imp_list) + pLen + 1) * mConst.Kolibry_SizeDWORD;
 
 		pImportTable := mChl.CreateIntList();
 		FOR _i := 0 TO pSize DIV mConst.Kolibry_SizeHeader - 1 DO

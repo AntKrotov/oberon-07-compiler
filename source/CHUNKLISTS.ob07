@@ -15,7 +15,7 @@ CONST
 
 TYPE
 
-	ANYLIST = POINTER TO RECORD (LISTS.LIST)
+	ANYLIST = POINTER TO RECORD (LISTS.tpList)
 
 		length: INTEGER
 
@@ -102,7 +102,7 @@ PROCEDURE PushByte* (list: BYTELIST; byte: BYTE);
 		IF chunk.count = LENOFBYTECHUNK THEN
 			NEW(chunk);
 			chunk.count := 0;
-			LISTS.push(list, chunk)
+			LISTS.Add(list, chunk)
 		END;
 
 		chunk.data[chunk.count] := byte;
@@ -126,17 +126,17 @@ PROCEDURE WriteToFile* (file: WR.tpFile; list: BYTELIST);
 PROCEDURE CreateByteList* (): BYTELIST;
 	VAR
 		bytelist: BYTELIST;
-		list:     LISTS.LIST;
+		list:     LISTS.tpList;
 		chunk:    BYTECHUNK;
 
 	BEGIN
 		NEW(bytelist);
-		list := LISTS.create(bytelist);
+		list := LISTS.New(bytelist);
 		bytelist.length := 0;
 
 		NEW(chunk);
 		chunk.count := 0;
-		LISTS.push(list, chunk)
+		LISTS.Add(list, chunk)
 
 		RETURN list(BYTELIST)
 	END CreateByteList;
@@ -203,7 +203,7 @@ PROCEDURE PushInt* (list: INTLIST; int: INTEGER);
 		IF chunk.count = LENOFINTCHUNK THEN
 			NEW(chunk);
 			chunk.count := 0;
-			LISTS.push(list, chunk)
+			LISTS.Add(list, chunk)
 		END;
 
 		chunk.data[chunk.count] := int;
@@ -215,17 +215,17 @@ PROCEDURE PushInt* (list: INTLIST; int: INTEGER);
 PROCEDURE CreateIntList* (): INTLIST;
 	VAR
 		intlist:  INTLIST;
-		list:     LISTS.LIST;
+		list:     LISTS.tpList;
 		chunk:    INTCHUNK;
 
 	BEGIN
 		NEW(intlist);
-		list := LISTS.create(intlist);
+		list := LISTS.New(intlist);
 		intlist.length := 0;
 
 		NEW(chunk);
 		chunk.count := 0;
-		LISTS.push(list, chunk)
+		LISTS.Add(list, chunk)
 
 		RETURN list(INTLIST)
 	END CreateIntList;

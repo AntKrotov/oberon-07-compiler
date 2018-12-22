@@ -64,7 +64,7 @@ VAR
 	begcall, endcall: CODE.COMMAND;
 	checking: SET;
 	CaseLabels, CaseVar: C.tpCollection;
-	CaseVariants: LISTS.LIST;
+	CaseVariants: LISTS.tpList;
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
 		RETURN e.obj IN {eCONST, eVAR, eEXPR, eVPAR, ePARAM, eVREC}
@@ -2706,7 +2706,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				CODE.SetLabel(variant);
 
 				IF ~isRecPtr(caseExpr) THEN
-					LISTS.push(CaseVariants, NewVariant(variant, last))
+					LISTS.Add(CaseVariants, NewVariant(variant, last))
 				END;
 
 				parser.StatSeq(parser);
@@ -2789,7 +2789,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			item:  LISTS.tpItem;
 
 		BEGIN
-			LISTS.push(CaseVariants, NewVariant(0, NIL));
+			LISTS.Add(CaseVariants, NewVariant(0, NIL));
 			end   := CODE.NewLabel();
 			else  := CODE.NewLabel();
 			table := CODE.NewLabel();
@@ -2830,7 +2830,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			CODE.AddCmd0(CODE.opENDSW);
 
 			REPEAT
-				item := LISTS.pop(CaseVariants);
+				item := LISTS.Delete(CaseVariants);
 				C.Push(CaseVar, item)
 			UNTIL item(CASE_VARIANT).cmd = NIL
 
@@ -3103,8 +3103,8 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.tPath; target, v
 		CaseLabels := C.New();
 		CaseVar := C.New();
 
-		CaseVariants := LISTS.create(NIL);
-		LISTS.push(CaseVariants, NewVariant(0, NIL));
+		CaseVariants := LISTS.New(NIL);
+		LISTS.Add(CaseVariants, NewVariant(0, NIL));
 
 		checking := chk;
 		CODE.init;

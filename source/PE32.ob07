@@ -1,11 +1,10 @@
-﻿(*
+﻿MODULE PE32;
+(*
 	BSD 2-Clause License
 
 	Copyright (c) 2018, Anton Krotov
 	All rights reserved.
 	*)
-
-MODULE PE32;
 
 IMPORT BIN,
 	LISTS,
@@ -145,7 +144,7 @@ VAR
 	msdos:           ARRAY 128 OF BYTE;
 	PEHeader:        IMAGE_NT_HEADERS;
 	SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
-	Relocations:     LISTS.LIST;
+	Relocations:     LISTS.tpList;
 
 PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
 	BEGIN
@@ -156,7 +155,7 @@ PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_E
 		ExportDir.MinorVersion           :=  0X;
 		ExportDir.Name                   :=  program.modname + DataRVA;
 		ExportDir.Base                   :=  0;
-		ExportDir.NumberOfFunctions      :=  LISTS.count(program.exp_list);
+		ExportDir.NumberOfFunctions      :=  LISTS.Count_Get(program.exp_list);
 		ExportDir.NumberOfNames          :=  ExportDir.NumberOfFunctions;
 		ExportDir.AddressOfFunctions     :=  SIZE_OF_IMAGE_EXPORT_DIRECTORY;
 		ExportDir.AddressOfNames         :=  ExportDir.AddressOfFunctions + ExportDir.NumberOfFunctions * SIZE_OF_DWORD;
@@ -190,7 +189,7 @@ PROCEDURE GetProcCount (lib: BIN.IMPRT): INTEGER;
 		RETURN res
 	END GetProcCount;
 
-PROCEDURE GetImportSize (imp_list: LISTS.LIST): INTEGER;
+PROCEDURE GetImportSize (imp_list: LISTS.tpList): INTEGER;
 	VAR
 		import: BIN.IMPRT;
 		libcnt,
@@ -252,7 +251,7 @@ PROCEDURE fixup (program: BIN.PROGRAM; Address: VIRTUAL_ADDR);
 		RVACode := Address.Code - PEHeader.OptionalHeader.ImageBase;
 
 		NEW(Reloc);
-		LISTS.push(Relocations, Reloc);
+		LISTS.Add(Relocations, Reloc);
 		Reloc.Page := RVACode;
 		Reloc.Size := 2 * SIZE_OF_DWORD;
 
@@ -271,7 +270,7 @@ PROCEDURE fixup (program: BIN.PROGRAM; Address: VIRTUAL_ADDR);
 
 				IF Reloc.Page DIV 4096 # RVA DIV 4096 THEN
 					NEW(Reloc);
-					LISTS.push(Relocations, Reloc);
+					LISTS.Add(Relocations, Reloc);
 					Reloc.Page := (RVA DIV 4096) * 4096;
 					Reloc.Size := 2 * SIZE_OF_DWORD
 				END;
@@ -516,7 +515,7 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: IN
 
 
 	BEGIN
-		Relocations := LISTS.create(NIL);
+		Relocations := LISTS.New(NIL);
 
 		Size.Code  := CHL.Length(program.code);
 		Size.Data  := CHL.Length(program.data);
