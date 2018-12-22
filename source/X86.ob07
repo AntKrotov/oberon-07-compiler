@@ -7,7 +7,18 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, TARGETS, MACHINE, CHL := CHUNKLISTS, PATHS;
+IMPORT CODE,
+	REG,
+	UTILS,
+	LISTS,
+	BIN,
+	PE32,
+	KOS,
+	MSCOFF,
+	mConst := modConstante,
+	MACHINE,
+	CHL := CHUNKLISTS,
+	PATHS;
 
 
 CONST
@@ -2150,7 +2161,7 @@ BEGIN
     entry := NewLabel();
     SetLabel(entry);
 
-    IF target = TARGETS.DLL THEN
+    IF target = mConst.Target_iDLL THEN
         OutByte(55H);             // push ebp
         OutByte2(89H, 0E5H);      // mov ebp,esp
         OutByte3(0FFH, 75H, 16);  // push dword[ebp+16]
@@ -2159,7 +2170,7 @@ BEGIN
         CallRTL(pic, CODE._dllentry);
         test(eax);
         jcc(je, dllret)
-    ELSIF target = TARGETS.OBJ THEN
+    ELSIF target = mConst.Target_iObject THEN
         SetLabel(dllinit)
     END;
 
@@ -2173,12 +2184,12 @@ BEGIN
         Reloc(BIN.RCODE, entry)
     END;
 
-    IF target = TARGETS.KOS THEN
+    IF target = mConst.Target_iKolibry THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.IMPTAB, 0);
         push(reg1);     // push IMPORT
         drop
-    ELSIF target = TARGETS.OBJ THEN
+    ELSIF target = mConst.Target_iObject THEN
         OutByte(068H);  // push IMPORT
         Reloc(BIN.IMPTAB, 0)
     ELSE
@@ -2246,15 +2257,15 @@ VAR
 
 BEGIN
 
-    IF target IN {TARGETS.CONSOLE, TARGETS.GUI, TARGETS.KOS} THEN
+    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibry} THEN
         pushc(0);
         CallRTL(pic, CODE._exit);
-    ELSIF target = TARGETS.DLL THEN
+    ELSIF target = mConst.Target_iDLL THEN
         SetLabel(dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
         OutByte3(0C2H, 00CH, 000H) // ret 12
-    ELSIF target = TARGETS.OBJ THEN
+    ELSIF target = mConst.Target_iObject THEN
         movrc(eax, 1);
         OutByte(0C3H)  // ret
     END;
@@ -2279,7 +2290,7 @@ BEGIN
     BIN.PutDataStr(program, ext);
     BIN.PutData(program, 0);
 
-    IF target = TARGETS.OBJ THEN
+    IF target = mConst.Target_iObject THEN
         BIN.Export(program, "lib_init", dllinit);
     END;
 
@@ -2314,7 +2325,7 @@ BEGIN
     dllinit := NewLabel();
     dllret  := NewLabel();
 
-    IF target = TARGETS.OBJ THEN
+    IF target = mConst.Target_iObject THEN
         pic := FALSE
     END;
 
@@ -2326,14 +2337,14 @@ BEGIN
 
     BIN.fixup(program);
 
-    IF target IN {TARGETS.CONSOLE, TARGETS.GUI, TARGETS.DLL} THEN
+    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
         IF pic THEN
             reloc := FALSE
         END;
-        PE32.write(program, outname, base, target = TARGETS.CONSOLE, target = TARGETS.DLL, pic, reloc)
-    ELSIF target = TARGETS.KOS THEN
+        PE32.write(program, outname, base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, pic, reloc)
+    ELSIF target = mConst.Target_iKolibry THEN
         KOS.write(program, outname)
-    ELSIF target = TARGETS.OBJ THEN
+    ELSIF target = mConst.Target_iObject THEN
         MSCOFF.write(program, outname, ver)
     END
 

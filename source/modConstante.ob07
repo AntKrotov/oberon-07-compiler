@@ -1,15 +1,24 @@
 MODULE modConstante;
-(*
-
-		Defined constante for all compiler
-		propspero.78.su@gmail.com 2018-12-22 12:22
+(*		Defined constante for all compiler
+		propspero.78.su@gmail.com 2018-12-22 12:09
 	*)
 
 CONST
 	FILE_EXT*       = ".ob07";
-	TARGET_CONSOLE* = "console";
-	TARGET_GUI*     = "gui";
-	TARGET_DLL*     = "dll";
-	TARGET_KOLIBRY* = "kos";
+	
+	(* target out binary file *)
+		Target_sConsole* = "console";
+		Target_sGUI*     = "gui";
+		Target_sDLL*     = "dll";
+		Target_sKolibry* = "kos";
+		Target_sObject*  = "obj";
+		Target_sWin64*   = "win64";
+		
+		Target_iConsole* =  1;
+		Target_iGUI*     =  Target_iConsole + 1;
+		Target_iDLL*     =  Target_iGUI     + 1;
+		Target_iKolibry* =  Target_iDLL     + 1;
+		Target_iObject*  =  Target_iKolibry + 1;
+		Target_iWin64*   =  Target_iObject  + 1;
 
 END modConstante.

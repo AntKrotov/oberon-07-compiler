@@ -8,7 +8,6 @@
 MODULE Compiler;
 
 IMPORT mSt := STATEMENTS,
-	mTarg := TARGETS,
 	mPars := PARS,
 	mUtil := UTILS,
 	mPath := PATHS,
@@ -25,18 +24,18 @@ PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
 	VAR
 		iRes: INTEGER;
 	BEGIN
-		IF pTarget = mConst.TARGET_CONSOLE THEN
-			iRes := mTarg.CONSOLE
-		ELSIF pTarget = mConst.TARGET_GUI THEN
-			iRes := mTarg.GUI
-		ELSIF pTarget = mConst.TARGET_DLL THEN
-			iRes := mTarg.DLL
-		ELSIF pTarget = mConst.TARGET_KOLIBRY THEN
-			iRes := mTarg.KOS
-		ELSIF pTarget = "obj" THEN
-			iRes := mTarg.OBJ
-		ELSIF pTarget = "win64" THEN
-			iRes := mTarg.WIN64
+		IF pTarget = mConst.Target_sConsole THEN
+			iRes := mConst.Target_iConsole
+		ELSIF pTarget = mConst.Target_sGUI THEN
+			iRes := mConst.Target_iGUI
+		ELSIF pTarget = mConst.Target_sDLL THEN
+			iRes := mConst.Target_iDLL
+		ELSIF pTarget = mConst.Target_sKolibry THEN
+			iRes := mConst.Target_iKolibry
+		ELSIF pTarget = mConst.Target_sObject THEN
+			iRes := mConst.Target_iObject
+		ELSIF pTarget = mConst.Target_sWin64 THEN
+			iRes := mConst.Target_iWin64
 		ELSE
 			iRes := 0
 		END
@@ -218,7 +217,7 @@ PROCEDURE Main;
 			mErr.error1("bad parameter <target>")
 		END;
 
-		IF target = mTarg.WIN64 THEN
+		IF target = mConst.Target_iWin64 THEN
 			IF mUtil.bit_depth = 32 THEN           
 				mErr.error1("bad parameter <target>")
 			END;
@@ -227,24 +226,24 @@ PROCEDURE Main;
 			mPars.init(32)
 		END;
 
-		mPars.program.dll := target IN {mTarg.DLL, mTarg.OBJ};
-		mPars.program.obj := target = mTarg.OBJ;
+		mPars.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject};
+		mPars.program.obj := target = mConst.Target_iObject;
 
 		mStr.append(lib_path, "lib");
 		mStr.append(lib_path, mUtil.slash);
 
-		IF target IN {mTarg.CONSOLE, mTarg.GUI, mTarg.DLL} THEN
-			IF target = mTarg.DLL THEN
+		IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
+			IF target = mConst.Target_iDLL THEN
 				BaseAdr := 10000000H
 			ELSE
 				BaseAdr := 400000H
 			END;
 			mStr.append(lib_path, "Windows32")
 
-		ELSIF target IN {mTarg.KOS, mTarg.OBJ} THEN
+		ELSIF target IN {mConst.Target_iKolibry, mConst.Target_iObject} THEN
 			mStr.append(lib_path, "KolibriOS")
 
-		ELSIF target = mTarg.WIN64 THEN
+		ELSIF target = mConst.Target_iWin64 THEN
 			mStr.append(lib_path, "Windows64")
 
 		END;
