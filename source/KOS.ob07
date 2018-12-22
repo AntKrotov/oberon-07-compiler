@@ -6,11 +6,11 @@
 	All rights reserved.
 	*)
 
-IMPORT BIN, WR := WRITER, LISTS, CHL := CHUNKLISTS;
-
-CONST
-	HEADER_SIZE = 36;
-	SIZE_OF_DWORD = 4;
+IMPORT BIN,
+	WR := WRITER,
+	LISTS,
+	CHL := CHUNKLISTS,
+	mConst := modConstante;
 
 TYPE
 	FILE = WR.tpFile;
@@ -45,10 +45,10 @@ PROCEDURE Import* (program: BIN.PROGRAM; idata: INTEGER; VAR ImportTable: CHL.IN
 		END;
 
 		len  := libcount * 2 + 2;
-		size := (LISTS.count(program.imp_list) + len + 1) * SIZE_OF_DWORD;
+		size := (LISTS.count(program.imp_list) + len + 1) * mConst.Kolibry_SizeDWORD;
 
 		ImportTable := CHL.CreateIntList();
-		FOR i := 0 TO size DIV SIZE_OF_DWORD - 1 DO
+		FOR i := 0 TO size DIV mConst.Kolibry_SizeHeader - 1 DO
 			CHL.PushInt(ImportTable, 0)
 		END;
 
@@ -59,13 +59,13 @@ PROCEDURE Import* (program: BIN.PROGRAM; idata: INTEGER; VAR ImportTable: CHL.IN
 			IF import.label = 0 THEN
 				CHL.SetInt(ImportTable, len, 0);
 				INC(len);
-				CHL.SetInt(ImportTable, i, idata + len * SIZE_OF_DWORD);
+				CHL.SetInt(ImportTable, i, idata + len * mConst.Kolibry_SizeDWORD);
 				INC(i);
 				CHL.SetInt(ImportTable, i, import.nameoffs + size + idata);
 				INC(i)
 			ELSE
 				CHL.SetInt(ImportTable, len, import.nameoffs + size + idata);
-				import.label := len * SIZE_OF_DWORD;
+				import.label := len * mConst.Kolibry_SizeDWORD;
 				INC(len)
 			END;
 
@@ -108,7 +108,7 @@ PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
 		dcount := CHL.Length(program.data);
 		ccount := CHL.Length(program.code);
 
-		text  := base + HEADER_SIZE;
+		text  := base + mConst.Kolibry_SizeHeader;
 		data  := align(text + ccount, FileAlignment);
 		idata := align(data + dcount, FileAlignment);
 

@@ -4,10 +4,13 @@ MODULE modConstante;
 	*)
 
 CONST
-	FILE_EXT*       = ".ob07";
+	FILE_EXT* = ".ob07";
 	(* version for self build *)
 		Version_Major* = 0;
 		Version_Minor* = 93;
+	(* Platform depended constante *)
+		Kolibry_SizeHeader* = 36;
+		Kolibry_SizeDWORD*  = 4;
 	(* target out binary file *)
 		Target_sConsole* = "console";
 		Target_sGUI*     = "gui";
@@ -22,5 +25,6 @@ CONST
 		Target_iKolibry* =  Target_iDLL     + 1;
 		Target_iObject*  =  Target_iKolibry + 1;
 		Target_iWin64*   =  Target_iObject  + 1;
+	
 
 END modConstante.
