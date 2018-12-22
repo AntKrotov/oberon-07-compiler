@@ -23,25 +23,25 @@ PROCEDURE Push* (pCollection: tpCollection; item: tpItem);
 
 PROCEDURE Pop* (pCollection: tpCollection): tpItem;
 	VAR
-		item: tpItem;
+		_item: tpItem;
 	BEGIN
-		item := pCollection.last;
-		IF item # NIL THEN
-			pCollection.last := item.link
+		_item := pCollection.last;
+		IF _item # NIL THEN
+			pCollection.last := _item.link
 		END
 
-		RETURN item
+		RETURN _item
 	END Pop;
 
 PROCEDURE New* (): tpCollection;
 	VAR
-		colRes: tpCollection;
+		_collect: tpCollection;
 
 	BEGIN
-		NEW(colRes);
-		colRes.last := NIL
+		NEW(_collect);
+		_collect.last := NIL
 
-		RETURN colRes
+		RETURN _collect
 	END New;
 
 END COLLECTIONS.

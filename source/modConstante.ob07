@@ -8,9 +8,14 @@ CONST
 	(* version for self build *)
 		Version_Major* = 0;
 		Version_Minor* = 93;
+
 	(* Platform depended constante *)
 		Kolibry_SizeHeader* = 36;
 		Kolibry_SizeDWORD*  = 4;
+		Kolibry_SizeParam*  = 2048;
+		Kolibry_FileAlignment* = 16;
+		Kolibry_sName*      = "MENUET01";
+
 	(* target out binary file *)
 		Target_sConsole* = "console";
 		Target_sGUI*     = "gui";

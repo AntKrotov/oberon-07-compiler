@@ -6,195 +6,186 @@
 	All rights reserved.
 	*)
 
-IMPORT BIN,
-	WR := WRITER,
-	LISTS,
-	CHL := CHUNKLISTS,
+IMPORT mBin := BIN,
+	mWrit := WRITER,
+	mList := LISTS,
+	mChl := CHUNKLISTS,
 	mConst := modConstante;
 
 TYPE
-	FILE = WR.tpFile;
+	tpFile = mWrit.tpFile;
 
-	HEADER = RECORD
+	tHeader = RECORD
 			menuet01: ARRAY 9 OF CHAR;
 			ver, start, size, mem, sp, param, path: INTEGER
 		END;
 
-PROCEDURE align (n, _align: INTEGER): INTEGER;
+PROCEDURE Aligh_Get (pNum, pAlign: INTEGER): INTEGER;
 	BEGIN
-		IF n MOD _align # 0 THEN
-			n := n + _align - (n MOD _align)
+		IF pNum MOD pAlign # 0 THEN
+			pNum := pNum + pAlign - (pNum MOD pAlign)
 		END
 
-		RETURN n
-	END align;
+		RETURN pNum
+	END Aligh_Get;
 
-PROCEDURE Import* (program: BIN.PROGRAM; idata: INTEGER; VAR ImportTable: CHL.INTLIST; VAR len, libcount, size: INTEGER);
+PROCEDURE Import* (pProgram: mBin.PROGRAM; pData: INTEGER; VAR pImportTable: mChl.INTLIST; VAR pLen, pLibCount, pSize: INTEGER);
 	VAR
-		i:      INTEGER;
-		import: BIN.IMPRT;
-
+		_i:      INTEGER;
+		_import: mBin.IMPRT;
 	BEGIN
-		libcount  := 0;
-		import := program.imp_list.first(BIN.IMPRT);
-		WHILE import # NIL DO
-			IF import.label = 0 THEN
-				INC(libcount)
+		pLibCount  := 0;
+		_import := pProgram.imp_list.first(mBin.IMPRT);
+		WHILE _import # NIL DO
+			IF _import.label = 0 THEN
+				INC(pLibCount)
 			END;
-			import := import.next(BIN.IMPRT)
+			_import := _import.next(mBin.IMPRT)
 		END;
 
-		len  := libcount * 2 + 2;
-		size := (LISTS.count(program.imp_list) + len + 1) * mConst.Kolibry_SizeDWORD;
+		pLen  := pLibCount * 2 + 2;
+		pSize := (mList.count(pProgram.imp_list) + pLen + 1) * mConst.Kolibry_SizeDWORD;
 
-		ImportTable := CHL.CreateIntList();
-		FOR i := 0 TO size DIV mConst.Kolibry_SizeHeader - 1 DO
-			CHL.PushInt(ImportTable, 0)
+		pImportTable := mChl.CreateIntList();
+		FOR _i := 0 TO pSize DIV mConst.Kolibry_SizeHeader - 1 DO
+			mChl.PushInt(pImportTable, 0)
 		END;
 
-		i := 0;
-		import := program.imp_list.first(BIN.IMPRT);
-		WHILE import # NIL DO
+		_i := 0;
+		_import := pProgram.imp_list.first(mBin.IMPRT);
+		WHILE _import # NIL DO
 
-			IF import.label = 0 THEN
-				CHL.SetInt(ImportTable, len, 0);
-				INC(len);
-				CHL.SetInt(ImportTable, i, idata + len * mConst.Kolibry_SizeDWORD);
-				INC(i);
-				CHL.SetInt(ImportTable, i, import.nameoffs + size + idata);
-				INC(i)
+			IF _import.label = 0 THEN
+				mChl.SetInt(pImportTable, pLen, 0);
+				INC(pLen);
+				mChl.SetInt(pImportTable, _i, pData + pLen * mConst.Kolibry_SizeDWORD);
+				INC(_i);
+				mChl.SetInt(pImportTable, _i, _import.nameoffs + pSize + pData);
+				INC(_i)
 			ELSE
-				CHL.SetInt(ImportTable, len, import.nameoffs + size + idata);
-				import.label := len * mConst.Kolibry_SizeDWORD;
-				INC(len)
+				mChl.SetInt(pImportTable, pLen, _import.nameoffs + pSize + pData);
+				_import.label := pLen * mConst.Kolibry_SizeDWORD;
+				INC(pLen)
 			END;
 
-			import := import.next(BIN.IMPRT)
+			_import := _import.next(mBin.IMPRT)
 		END;
-		CHL.SetInt(ImportTable, len, 0);
-		CHL.SetInt(ImportTable, i, 0);
-		CHL.SetInt(ImportTable, i + 1, 0);
-		INC(len);
-		size := size + CHL.Length(program.import)
+		mChl.SetInt(pImportTable, pLen, 0);
+		mChl.SetInt(pImportTable, _i, 0);
+		mChl.SetInt(pImportTable, _i + 1, 0);
+		INC(pLen);
+		pSize := pSize + mChl.Length(pProgram.import)
 	END Import;
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
-	CONST
-
-		PARAM_SIZE    = 2048;
-		FileAlignment = 16;
+PROCEDURE Write* (pProgram: mBin.PROGRAM; pFileName: ARRAY OF CHAR);
 	VAR
-		header: HEADER;
-
-		base, text, data, idata, bss: INTEGER;
-
-		reloc:   BIN.RELOC;
-		iproc:   BIN.IMPRT;
-		L:       INTEGER;
-		delta:   INTEGER;
-
-		i: INTEGER;
-
-		File: FILE;
-
-		ImportTable: CHL.INTLIST;
-		ILen, libcount, isize: INTEGER;
-
-		icount, dcount, ccount: INTEGER;
+		_header: tHeader;
+		_base, _text, _data, _idata, _bss: INTEGER;
+		_reloc:   mBin.RELOC;
+		_iproc:   mBin.IMPRT;
+		_L:       INTEGER;
+		_delta:   INTEGER;
+		_i: INTEGER;
+		_file: tpFile;
+		_importTable: mChl.INTLIST;
+		_ILen, _libCount, _isize: INTEGER;
+		_icount, _dcount, _ccount: INTEGER;
 	BEGIN
-		base := 0;
+		_base := 0;
 
-		icount := CHL.Length(program.import);
-		dcount := CHL.Length(program.data);
-		ccount := CHL.Length(program.code);
+		_icount := mChl.Length(pProgram.import);
+		_dcount := mChl.Length(pProgram.data);
+		_ccount := mChl.Length(pProgram.code);
 
-		text  := base + mConst.Kolibry_SizeHeader;
-		data  := align(text + ccount, FileAlignment);
-		idata := align(data + dcount, FileAlignment);
+		_text  := _base + mConst.Kolibry_SizeHeader;
+		_data  := Aligh_Get(_text + _ccount, mConst.Kolibry_FileAlignment);
+		_idata := Aligh_Get(_data + _dcount, mConst.Kolibry_FileAlignment);
 
-		Import(program, idata, ImportTable, ILen, libcount, isize);
+		Import(pProgram, _idata, _importTable, _ILen, _libCount, _isize);
 
-		bss := align(idata + isize, FileAlignment);
+		_bss := Aligh_Get(_idata + _isize, mConst.Kolibry_FileAlignment);
 
-		header.menuet01 := "MENUET01";
-		header.ver      :=  1;
-		header.start    :=  text;
-		header.size     :=  idata + isize - base;
-		header.mem      :=  align(header.size + program.stack + program.bss + PARAM_SIZE * 2 + 4096, FileAlignment);
-		header.sp       :=  base + header.mem - PARAM_SIZE * 2;
-		header.param    :=  header.sp;
-		header.path     :=  header.param + PARAM_SIZE;
+		_header.menuet01 := mConst.Kolibry_sName;
+		_header.ver      :=  1;
+		_header.start    :=  _text;
+		_header.size     :=  _idata + _isize - _base;
+		_header.mem      :=  Aligh_Get(_header.size + pProgram.stack + pProgram.bss + 
+									mConst.Kolibry_SizeParam * 2 + 4096,
+									mConst.Kolibry_FileAlignment);
+		_header.sp       :=  _base + _header.mem - mConst.Kolibry_SizeParam * 2;
+		_header.param    :=  _header.sp;
+		_header.path     :=  _header.param + mConst.Kolibry_SizeParam;
 
 
-		reloc := program.rel_list.first(BIN.RELOC);
-		WHILE reloc # NIL DO
+		_reloc := pProgram.rel_list.first(mBin.RELOC);
+		WHILE _reloc # NIL DO
 
-			L := BIN.get32le(program.code, reloc.offset);
-			delta := 3 - reloc.offset - text;
+			_L := mBin.get32le(pProgram.code, _reloc.offset);
+			_delta := 3 - _reloc.offset - _text;
 
-			CASE reloc.opcode OF
+			CASE _reloc.opcode OF
 
-			|BIN.RIMP:
-				  iproc := BIN.GetIProc(program, L);
-				  BIN.put32le(program.code, reloc.offset, idata + iproc.label)
+			|mBin.RIMP:
+				  _iproc := mBin.GetIProc(pProgram, _L);
+				  mBin.put32le(pProgram.code, _reloc.offset, _idata + _iproc.label)
 
-			|BIN.RBSS:
-				  BIN.put32le(program.code, reloc.offset, L + bss)
+			|mBin.RBSS:
+				  mBin.put32le(pProgram.code, _reloc.offset, _L + _bss)
 
-			|BIN.RDATA:
-				  BIN.put32le(program.code, reloc.offset, L + data)
+			|mBin.RDATA:
+				  mBin.put32le(pProgram.code, _reloc.offset, _L + _data)
 
-			|BIN.RCODE:
-				  BIN.put32le(program.code, reloc.offset, BIN.GetLabel(program, L) + text)
+			|mBin.RCODE:
+				  mBin.put32le(pProgram.code, _reloc.offset, mBin.GetLabel(pProgram, _L) + _text)
 
-			|BIN.PICDATA:
-				  BIN.put32le(program.code, reloc.offset, L + data + delta)
+			|mBin.PICDATA:
+				  mBin.put32le(pProgram.code, _reloc.offset, _L + _data + _delta)
 
-			|BIN.PICCODE:
-				  BIN.put32le(program.code, reloc.offset, BIN.GetLabel(program, L) + text + delta)
+			|mBin.PICCODE:
+				  mBin.put32le(pProgram.code, _reloc.offset, mBin.GetLabel(pProgram, _L) + _text + _delta)
 
-			|BIN.PICBSS:
-				  BIN.put32le(program.code, reloc.offset, L + bss + delta)
+			|mBin.PICBSS:
+				  mBin.put32le(pProgram.code, _reloc.offset, _L + _bss + _delta)
 
-			|BIN.PICIMP:
-				  iproc := BIN.GetIProc(program, L);
-				  BIN.put32le(program.code, reloc.offset, idata + iproc.label + delta)
+			|mBin.PICIMP:
+				  _iproc := mBin.GetIProc(pProgram, _L);
+				  mBin.put32le(pProgram.code, _reloc.offset, _idata + _iproc.label + _delta)
 
-			|BIN.IMPTAB:
-				  BIN.put32le(program.code, reloc.offset, idata + delta)
+			|mBin.IMPTAB:
+				  mBin.put32le(pProgram.code, _reloc.offset, _idata + _delta)
 
 			END;
 
-			reloc := reloc.next(BIN.RELOC)
+			_reloc := _reloc.next(mBin.RELOC)
 		END;
 
-		File := WR.Create(FileName);
+		_file := mWrit.Create(pFileName);
 
-		FOR i := 0 TO 7 DO
-			WR.Byte_Write(File, ORD(header.menuet01[i]))
+		FOR _i := 0 TO 7 DO
+			mWrit.Byte_Write(_file, ORD(_header.menuet01[_i]))
 		END;
 
-		WR.Write32LE(File, header.ver);
-		WR.Write32LE(File, header.start);
-		WR.Write32LE(File, header.size);
-		WR.Write32LE(File, header.mem);
-		WR.Write32LE(File, header.sp);
-		WR.Write32LE(File, header.param);
-		WR.Write32LE(File, header.path);
+		mWrit.Write32LE(_file, _header.ver);
+		mWrit.Write32LE(_file, _header.start);
+		mWrit.Write32LE(_file, _header.size);
+		mWrit.Write32LE(_file, _header.mem);
+		mWrit.Write32LE(_file, _header.sp);
+		mWrit.Write32LE(_file, _header.param);
+		mWrit.Write32LE(_file, _header.path);
 		
-		CHL.WriteToFile(File, program.code);
-		WR.Padding(File, FileAlignment);
+		mChl.WriteToFile(_file, pProgram.code);
+		mWrit.Padding(_file, mConst.Kolibry_FileAlignment);
 
-		CHL.WriteToFile(File, program.data);
-		WR.Padding(File, FileAlignment);
+		mChl.WriteToFile(_file, pProgram.data);
+		mWrit.Padding(_file, mConst.Kolibry_FileAlignment);
 
-		FOR i := 0 TO ILen - 1 DO
-			WR.Write32LE(File, CHL.GetInt(ImportTable, i))
+		FOR _i := 0 TO _ILen - 1 DO
+			mWrit.Write32LE(_file, mChl.GetInt(_importTable, _i))
 		END;      
 		
-		CHL.WriteToFile(File, program.import);
+		mChl.WriteToFile(_file, pProgram.import);
 
-		WR.Close(File)
-	END write;
+		mWrit.Close(_file)
+	END Write;
 
 END KOS.
