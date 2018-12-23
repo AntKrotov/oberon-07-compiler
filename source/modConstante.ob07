@@ -67,5 +67,14 @@ CONST
 		codeMOD*   = codeDIV     + 1;
 		codeDIVL*  = codeMOD     + 1;
 		codeMODL*  = codeDIVL    + 1;
+		codeDIVR*  = codeMODL    + 1;
+		codeMODR*  = codeDIVR    + 1;
+		codeUMINUS* = codeMODR   + 1;
+		codeADD*   = codeUMINUS  + 1;
+		codeSUB*   = codeADD     + 1;
+		codeADDL*  = codeSUB     + 1;
+		codeSUBL*  = codeADDL    + 1;
+		codeADDR*  = codeSUBL    + 1;
+		codeSUBR*  = codeADDR    + 1;
 
 END modConstante.

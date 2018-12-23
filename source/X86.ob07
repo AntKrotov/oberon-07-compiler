@@ -849,16 +849,16 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				UnOp(reg1);
 				OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
 
-			|CODE.opUMINUS:
+			|mConst.codeUMINUS:
 				UnOp(reg1);
 				neg(reg1)
 
-			|CODE.opADD:
+			|mConst.codeADD:
 				BinOp(reg1, reg2);
 				add(reg1, reg2);
 				drop
 
-			|CODE.opADDL, CODE.opADDR:
+			|mConst.codeADDL, mConst.codeADDR:
 				next := cmd.next(COMMAND);
 				IF next.opCode = CODE.opLOAD32 THEN
 					next2 := next.next(COMMAND);
@@ -895,12 +895,12 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opSUB:
+			|mConst.codeSUB:
 				BinOp(reg1, reg2);
 				OutByte2(29H, 0C0H + reg2 * 8 + reg1); // sub reg1, reg2
 				drop
 
-			|CODE.opSUBR, CODE.opSUBL:
+			|mConst.codeSUBR, mConst.codeSUBL:
 				UnOp(reg1);
 				n := param2;
 				IF n = 1 THEN
@@ -911,7 +911,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					OutByte2(81H + 2 * ORD(isByte(n)), 0E8H + reg1); // sub reg, n
 					OutIntByte(n)
 				END;
-				IF cmd.opCode = CODE.opSUBL THEN
+				IF cmd.opCode = mConst.codeSUBL THEN
 					neg(reg1)
 				END
 
@@ -1608,7 +1608,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._div);
 				ASSERT(REG.GetReg(R, eax))
 
-			|CODE.opDIVR:
+			|mConst.codeDIVR:
 				a := param2;
 				IF a > 1 THEN
 					n := log2(a)
@@ -1664,7 +1664,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._mod);
 				ASSERT(REG.GetReg(R, eax))
 
-			|CODE.opMODR:
+			|mConst.codeMODR:
 				a := param2;
 				IF a > 1 THEN
 					n := log2(a)

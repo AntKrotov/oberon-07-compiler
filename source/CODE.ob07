@@ -15,9 +15,6 @@ IMPORT mList := LISTS,
 CONST
 	numRegsFloat* = 8; (* NOT CHANGE!!! This num CPU Float Registers!! *)
 
-	opDIVR* = 14; opMODR* = 15;
-	opUMINUS* = 16;
-	opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
 	opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
 	opNOT* = 29;
 

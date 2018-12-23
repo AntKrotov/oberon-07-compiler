@@ -1322,7 +1322,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				CODE.Cmd0_Add(mConst.codeMUL);
 				DEC(n)
 			END;
-			CODE.Cmd0_Add(CODE.opADD);
+			CODE.Cmd0_Add(mConst.codeADD);
 			offset := e.ident.offset - 1;
 			n := k;
 			WHILE n > 0 DO
@@ -1362,7 +1362,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				e.obj := eVPAR
 			END;
 			IF field.offset # 0 THEN
-				CODE.Cmd_Add(CODE.opADDR, field.offset)
+				CODE.Cmd_Add(mConst.codeADDR, field.offset)
 			END;
 			PARS.Next(parser);
 			e.ident := NIL
@@ -1380,7 +1380,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e.type.length > 0 THEN
 						PARS.check(ARITH.IsRange(idx.value, 0, e.type.length - 1), parser, pos, 83);
 						IF ARITH.Int(idx.value) > 0 THEN
-							CODE.Cmd_Add(CODE.opADDR, ARITH.Int(idx.value) * e.type.base.size)
+							CODE.Cmd_Add(mConst.codeADDR, ARITH.Int(idx.value) * e.type.base.size)
 						END
 					ELSE
 						PARS.check(ARITH.IsRange(idx.value, 0, MACHINE.target.maxInt), parser, pos, 83);
@@ -1395,7 +1395,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						IF e.type.base.size # 1 THEN
 							CODE.Cmd_Add(mConst.codeMULC, e.type.base.size)
 						END;
-						CODE.Cmd0_Add(CODE.opADD)
+						CODE.Cmd0_Add(mConst.codeADD)
 					ELSE
 						OpenIdx(parser, pos, e)
 					END
@@ -1843,7 +1843,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							CODE.Label_Set(label1);
 							CODE.Cmd_Add(mConst.codeMOD + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
-							CODE.Cmd_Add(CODE.opDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
+							CODE.Cmd_Add(mConst.codeDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
 						ELSE
 							CODE.OnError(pos.line, errDIV);
 							CODE.Label_Set(label1);
@@ -1905,7 +1905,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF e.obj # eCONST THEN
 					IF minus THEN
 						IF isInt(e) THEN
-							CODE.Cmd0_Add(CODE.opUMINUS)
+							CODE.Cmd0_Add(mConst.codeUMINUS)
 						ELSIF isReal(e) THEN
 							CODE.Cmd0_Add(CODE.opUMINF)
 						ELSIF isSet(e) THEN
@@ -1965,11 +1965,11 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						IF isInt(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.Cmd_Add(CODE.opADDL + ORD(op = ORD("-")), ARITH.Int(e.value))
+								CODE.Cmd_Add(mConst.codeADDL + ORD(op = ORD("-")), ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.Cmd_Add(CODE.opADDR + ORD(op = ORD("-")), ARITH.Int(e1.value))
+								CODE.Cmd_Add(mConst.codeADDR + ORD(op = ORD("-")), ARITH.Int(e1.value))
 							ELSE
-								CODE.Cmd0_Add(CODE.opADD  + ORD(op = ORD("-")))
+								CODE.Cmd0_Add(mConst.codeADD  + ORD(op = ORD("-")))
 							END
 						ELSIF isReal(e) THEN
 							IF e.obj = eCONST THEN
@@ -2855,7 +2855,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			CODE.Load(PARS.program.target.word)
 		ELSIF isPtr(e) THEN
 			deref(pos, e, FALSE, errPTR);
-			CODE.Cmd_Add(CODE.opSUBR, PARS.program.target.word);
+			CODE.Cmd_Add(mConst.codeSUBR, PARS.program.target.word);
 			CODE.Load(PARS.program.target.word)
 		END;
 
