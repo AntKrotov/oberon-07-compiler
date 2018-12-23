@@ -153,8 +153,8 @@ TYPE
 
 	tpCodes* = POINTER TO RECORD
 			last:       tpCommand;
-			begcall:    tpCmdStack;
-			endcall:    tpCmdStack;
+			call_beg:    tpCmdStack;
+			call_end:    tpCmdStack;
 			commands*:  mList.tpList;
 			export*:    mList.tpList;
 			import*:    mList.tpList;
@@ -275,39 +275,39 @@ PROCEDURE MinDataSize_Set* (size: INTEGER);
 		codes.dmin := mChl.Length(codes.data) + size
 	END MinDataSize_Set;
 
-PROCEDURE push (stk: tpCmdStack; cmd: tpCommand);
+PROCEDURE Push (pStack: tpCmdStack; pCmd: tpCommand);
 	BEGIN
-		INC(stk.top);
-		stk.aData[stk.top] := cmd
-	END push;
+		INC(pStack.top);
+		pStack.aData[pStack.top] := pCmd
+	END Push;
 
-PROCEDURE pop (stk: tpCmdStack): tpCommand;
+PROCEDURE Pop (pStack: tpCmdStack): tpCommand;
 	VAR
 		_res: tpCommand;
 	BEGIN
-		_res := stk.aData[stk.top];
-		DEC(stk.top)
+		_res := pStack.aData[pStack.top];
+		DEC(pStack.top)
 		RETURN _res
-	END pop;
+	END Pop;
 
-PROCEDURE pushBegEnd* (VAR beg, end: tpCommand);
+PROCEDURE BegEnd_Push* (VAR pBeg, pEnd: tpCommand);
 	BEGIN
-		push(codes.begcall, beg);
-		push(codes.endcall, end);
-		beg := codes.last;
-		end := beg.next(tpCommand)
-	END pushBegEnd;
+		Push(codes.call_beg, pBeg);
+		Push(codes.call_end, pEnd);
+		pBeg := codes.last;
+		pEnd := pBeg.next(tpCommand)
+	END BegEnd_Push;
 
-PROCEDURE popBegEnd* (VAR beg, end: tpCommand);
+PROCEDURE BegEnd_Pop* (VAR pBeg, pEnd: tpCommand);
 	BEGIN
-		beg := pop(codes.begcall);
-		end := pop(codes.endcall)
-	END popBegEnd;
+		pBeg := Pop(codes.call_beg);
+		pEnd := Pop(codes.call_end)
+	END BegEnd_Pop;
 
-PROCEDURE AddRec* (base: INTEGER);
+PROCEDURE Rec_Add* (pBase: INTEGER);
 	BEGIN
-		mChl.PushInt(codes.types, base)
-	END AddRec;
+		mChl.PushInt(codes.types, pBase)
+	END Rec_Add;
 
 PROCEDURE insert (cur, nov: tpCommand);
 	BEGIN
@@ -929,10 +929,10 @@ PROCEDURE init*;
 		pNum_i:      INTEGER;
 	BEGIN
 		NEW(codes);
-		NEW(codes.begcall);
-		codes.begcall.top := -1;
-		NEW(codes.endcall);
-		codes.endcall.top := -1;
+		NEW(codes.call_beg);
+		codes.call_beg.top := -1;
+		NEW(codes.call_end);
+		codes.call_end.top := -1;
 		codes.commands := mList.New(NIL);
 		codes.export   := mList.New(NIL);
 		codes.import   := mList.New(NIL);
@@ -943,7 +943,7 @@ PROCEDURE init*;
 		codes.last := cmd;
 		NEW(cmd); cmd.opCode := opNOP; mList.Add(codes.commands, cmd);
 
-		AddRec(0);
+		Rec_Add(0);
 
 		codes.lcount := 0;
 
