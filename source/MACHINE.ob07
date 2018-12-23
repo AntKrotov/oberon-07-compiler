@@ -21,39 +21,28 @@ VAR
 
 	b64to32*, bInitialized: BOOLEAN;
 
-PROCEDURE BitDepth_Set* (bBitDepth: INTEGER);
-	VAR
-		_i: INTEGER;
+PROCEDURE BitDepth_Set* (pBitDepth: INTEGER);
 	BEGIN
-		ASSERT((bBitDepth = 32) OR (bBitDepth = 64));
+		ASSERT(mConst.bit_depth >= pBitDepth);
+		ASSERT((pBitDepth = 32) OR (pBitDepth = 64));
 
-		native.bit_depth := 0;
-		_i := 1;
-		REPEAT
-			_i := ROR(_i, 1);
-			INC(native.bit_depth)
-		UNTIL _i = 1;
-
-		native.maxSet      := native.bit_depth - 1;
-		native.maxHex      := native.bit_depth DIV 4;
-		native.minInt      := 1;
-		native.minInt      := ROR(native.minInt, 1);
-		native.maxInt      := -2;
-		native.maxInt      := ROR(native.maxInt, 1);
+		native.bit_depth   := mConst.bit_depth;
+		native.maxSet      := mConst.bit_depth - 1;
+		native.maxHex      := mConst.bit_depth DIV 4;
+		native.minInt      := mConst.minint;
+		native.maxInt      := mConst.maxint;
 		native.maxReal     := 1.9;
 		PACK(native.maxReal, 1023);
 
-		target.bit_depth   := bBitDepth;
-		bBitDepth := MIN(native.bit_depth, bBitDepth);
-
-		target.maxSet      := bBitDepth - 1;
-		target.maxHex      := bBitDepth DIV 4;
-		target.minInt      := ASR(native.minInt, native.bit_depth - bBitDepth);
-		target.maxInt      := ASR(native.maxInt, native.bit_depth - bBitDepth);
+		target.bit_depth   := pBitDepth;
+		target.maxSet      := pBitDepth - 1;
+		target.maxHex      := pBitDepth DIV 4;
+		target.minInt      := ASR(mConst.minint, mConst.bit_depth - pBitDepth);
+		target.maxInt      := ASR(mConst.maxint, mConst.bit_depth - pBitDepth);
 		target.maxReal     := 1.9;
 		PACK(target.maxReal, 1023);
 
-		b64to32 := (target.bit_depth = 32) & (native.bit_depth = 64);
+		b64to32 := (pBitDepth = 32) & (mConst.bit_depth = 64);
 
 		bInitialized := TRUE
 	END BitDepth_Set;

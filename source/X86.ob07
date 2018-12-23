@@ -2140,7 +2140,7 @@ PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack, dllinit, dllret
 			Reloc(BIN.RCODE, entry)
 		END;
 
-		IF target = mConst.Target_iKolibry THEN
+		IF target = mConst.Target_iKolibri THEN
 			reg1 := REG.GetAnyReg(R);
 			Pic(reg1, BIN.IMPTAB, 0);
 			push(reg1);     // push IMPORT
@@ -2212,7 +2212,7 @@ PROCEDURE epilog (code: CODE.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target
 
 	BEGIN
 
-		IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibry} THEN
+		IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibri} THEN
 			pushc(0);
 			CallRTL(pic, CODE._exit);
 		ELSIF target = mConst.Target_iDLL THEN
@@ -2296,7 +2296,7 @@ PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, bas
 				reloc := FALSE
 			END;
 			PE32.write(program, outname, base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, pic, reloc)
-		ELSIF target = mConst.Target_iKolibry THEN
+		ELSIF target = mConst.Target_iKolibri THEN
 			KOS.Write(program, outname)
 		ELSIF target = mConst.Target_iObject THEN
 			MSCOFF.write(program, outname, ver)

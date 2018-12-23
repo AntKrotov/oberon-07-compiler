@@ -44,10 +44,10 @@ PROCEDURE Import* (pProgram: mBin.PROGRAM; pData: INTEGER; VAR pImportTable: mCh
 		END;
 
 		pLen  := pLibCount * 2 + 2;
-		pSize := (mList.Count_Get(pProgram.imp_list) + pLen + 1) * mConst.Kolibry_SizeDWORD;
+		pSize := (mList.Count_Get(pProgram.imp_list) + pLen + 1) * mConst.Kolibri_SizeDWORD;
 
 		pImportTable := mChl.CreateIntList();
-		FOR _i := 0 TO pSize DIV mConst.Kolibry_SizeHeader - 1 DO
+		FOR _i := 0 TO pSize DIV mConst.Kolibri_SizeDWORD - 1 DO
 			mChl.PushInt(pImportTable, 0)
 		END;
 
@@ -58,13 +58,13 @@ PROCEDURE Import* (pProgram: mBin.PROGRAM; pData: INTEGER; VAR pImportTable: mCh
 			IF _import.label = 0 THEN
 				mChl.SetInt(pImportTable, pLen, 0);
 				INC(pLen);
-				mChl.SetInt(pImportTable, _i, pData + pLen * mConst.Kolibry_SizeDWORD);
+				mChl.SetInt(pImportTable, _i, pData + pLen * mConst.Kolibri_SizeDWORD);
 				INC(_i);
 				mChl.SetInt(pImportTable, _i, _import.nameoffs + pSize + pData);
 				INC(_i)
 			ELSE
 				mChl.SetInt(pImportTable, pLen, _import.nameoffs + pSize + pData);
-				_import.label := pLen * mConst.Kolibry_SizeDWORD;
+				_import.label := pLen * mConst.Kolibri_SizeDWORD;
 				INC(pLen)
 			END;
 
@@ -97,24 +97,24 @@ PROCEDURE Write* (pProgram: mBin.PROGRAM; pFileName: ARRAY OF CHAR);
 		_dcount := mChl.Length(pProgram.data);
 		_ccount := mChl.Length(pProgram.code);
 
-		_text  := _base + mConst.Kolibry_SizeHeader;
-		_data  := Aligh_Get(_text + _ccount, mConst.Kolibry_FileAlignment);
-		_idata := Aligh_Get(_data + _dcount, mConst.Kolibry_FileAlignment);
+		_text  := _base + mConst.Kolibri_SizeHeader;
+		_data  := Aligh_Get(_text + _ccount, mConst.Kolibri_FileAlignment);
+		_idata := Aligh_Get(_data + _dcount, mConst.Kolibri_FileAlignment);
 
 		Import(pProgram, _idata, _importTable, _ILen, _libCount, _isize);
 
-		_bss := Aligh_Get(_idata + _isize, mConst.Kolibry_FileAlignment);
+		_bss := Aligh_Get(_idata + _isize, mConst.Kolibri_FileAlignment);
 
-		_header.menuet01 := mConst.Kolibry_sName;
+		_header.menuet01 := mConst.Kolibri_sName;
 		_header.ver      :=  1;
 		_header.start    :=  _text;
 		_header.size     :=  _idata + _isize - _base;
-		_header.mem      :=  Aligh_Get(_header.size + pProgram.stack + pProgram.bss + 
-									mConst.Kolibry_SizeParam * 2 + 4096,
-									mConst.Kolibry_FileAlignment);
-		_header.sp       :=  _base + _header.mem - mConst.Kolibry_SizeParam * 2;
+		_header.mem      :=  Aligh_Get(_header.size + pProgram.stack + pProgram.bss +
+									mConst.Kolibri_SizeParam * 2 + 4096,
+									mConst.Kolibri_FileAlignment);
+		_header.sp       :=  _base + _header.mem - mConst.Kolibri_SizeParam * 2;
 		_header.param    :=  _header.sp;
-		_header.path     :=  _header.param + mConst.Kolibry_SizeParam;
+		_header.path     :=  _header.param + mConst.Kolibri_SizeParam;
 
 
 		_reloc := pProgram.rel_list.first(mBin.RELOC);
@@ -172,17 +172,17 @@ PROCEDURE Write* (pProgram: mBin.PROGRAM; pFileName: ARRAY OF CHAR);
 		mWrit.Write32LE(_file, _header.sp);
 		mWrit.Write32LE(_file, _header.param);
 		mWrit.Write32LE(_file, _header.path);
-		
+
 		mChl.WriteToFile(_file, pProgram.code);
-		mWrit.Padding(_file, mConst.Kolibry_FileAlignment);
+		mWrit.Padding(_file, mConst.Kolibri_FileAlignment);
 
 		mChl.WriteToFile(_file, pProgram.data);
-		mWrit.Padding(_file, mConst.Kolibry_FileAlignment);
+		mWrit.Padding(_file, mConst.Kolibri_FileAlignment);
 
 		FOR _i := 0 TO _ILen - 1 DO
 			mWrit.Write32LE(_file, mChl.GetInt(_importTable, _i))
-		END;      
-		
+		END;
+
 		mChl.WriteToFile(_file, pProgram.import);
 
 		mWrit.Close(_file)

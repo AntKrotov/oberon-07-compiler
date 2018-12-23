@@ -13,7 +13,7 @@ UTF-8 с BOM-сигнатурой.
   1) имя главного модуля
   2) имя результирующего файла
   3) тип приложения и платформа
-      "con" - Windows console
+      "console" - Windows console
       "gui" - Windows GUI
       "dll" - Windows DLL
       "kos" - KolibriOS

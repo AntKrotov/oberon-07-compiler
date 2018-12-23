@@ -8,7 +8,7 @@
 
 IMPORT mFile := FILES,
 	mErr := ERRORS,
-	mMash := MACHINE;
+	mMach := MACHINE;
 
 TYPE
 	tpFile* = mFile.tpFile;
@@ -50,7 +50,7 @@ PROCEDURE Write64LE* (pFile: tpFile; pLen: INTEGER);
 		_i: INTEGER;
 	BEGIN
 		FOR _i := 0 TO 7 DO
-			Byte_Write(pFile, mMash.Byte_Get(pLen, _i))
+			Byte_Write(pFile, mMach.Byte_Get(pLen, _i))
 		END
 	END Write64LE;
 
@@ -59,14 +59,14 @@ PROCEDURE Write32LE* (pFile: tpFile; pLen: INTEGER);
 		_i: INTEGER;
 	BEGIN
 		FOR _i := 0 TO 3 DO
-			Byte_Write(pFile, mMash.Byte_Get(pLen, _i))
+			Byte_Write(pFile, mMach.Byte_Get(pLen, _i))
 		END
 	END Write32LE;
 
 PROCEDURE Write16LE* (pFile: tpFile; pLen: INTEGER);
 	BEGIN
-		Byte_Write(pFile, mMash.Byte_Get(pLen, 0));
-		Byte_Write(pFile, mMash.Byte_Get(pLen, 1))
+		Byte_Write(pFile, mMach.Byte_Get(pLen, 0));
+		Byte_Write(pFile, mMach.Byte_Get(pLen, 1))
 	END Write16LE;
 
 PROCEDURE Padding* (pFile: tpFile; FileAlignment: INTEGER);

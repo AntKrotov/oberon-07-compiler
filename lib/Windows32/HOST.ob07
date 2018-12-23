@@ -14,9 +14,11 @@ CONST
 
     OS* = "WIN";
 
-    slash* = "\"; 
-    
-    bit_depth* = 32;
+    slash* = "\";
+
+    bit_depth* = 32; 
+    maxint* = 7FFFFFFFH;
+    minint* = 80000000H;
 
     OFS_MAXPATHNAME = 128;
 

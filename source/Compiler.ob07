@@ -28,8 +28,8 @@ PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
 			iRes := mConst.Target_iGUI
 		ELSIF pTarget = mConst.Target_sDLL THEN
 			iRes := mConst.Target_iDLL
-		ELSIF pTarget = mConst.Target_sKolibry THEN
-			iRes := mConst.Target_iKolibry
+		ELSIF pTarget = mConst.Target_sKolibri THEN
+			iRes := mConst.Target_iKolibri
 		ELSIF pTarget = mConst.Target_sObject THEN
 			iRes := mConst.Target_iObject
 		ELSIF pTarget = mConst.Target_sWin64 THEN
@@ -174,7 +174,7 @@ PROCEDURE Main;
 		IF inname = "" THEN
 			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mConst.Version_Major); mCons.String("."); mCons.Int2Ln(mConst.Version_Minor); mCons.Ln;
 			mCons.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln;
-			mCons.StringLn('target = "con" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln;
+			mCons.StringLn('target = "console" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln;
 			mCons.StringLn("optional settings:"); mCons.Ln;
 			mCons.StringLn("  -stk <size>            set size of stack in megabytes"); mCons.Ln;
 			mCons.StringLn("  -base <address>        set base address of image in kilobytes"); mCons.Ln;
@@ -210,13 +210,13 @@ PROCEDURE Main;
 		END;
 
 		target := Target_Get(param);
-		
+
 		IF target = 0 THEN
 			mErr.Error1("bad parameter <target>")
 		END;
 
 		IF target = mConst.Target_iWin64 THEN
-			IF mUtil.bit_depth = 32 THEN           
+			IF mUtil.bit_depth = 32 THEN
 				mErr.Error1("bad parameter <target>")
 			END;
 			mPars.init(64)
@@ -238,7 +238,7 @@ PROCEDURE Main;
 			END;
 			mStr.append(lib_path, "Windows32")
 
-		ELSIF target IN {mConst.Target_iKolibry, mConst.Target_iObject} THEN
+		ELSIF target IN {mConst.Target_iKolibri, mConst.Target_iObject} THEN
 			mStr.append(lib_path, "KolibriOS")
 
 		ELSIF target = mConst.Target_iWin64 THEN

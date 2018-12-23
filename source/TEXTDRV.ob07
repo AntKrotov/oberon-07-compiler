@@ -52,7 +52,6 @@ PROCEDURE load (text: TEXT);
 	BEGIN
 		IF ~text.eof THEN
 			text.size := FILES.Read(text.file, text.chunk, LEN(text.chunk));
-			//CONSOLE.Int(text.size); CONSOLE.Ln;
 			text.pos := 0;
 			IF text.size = 0 THEN
 				text.eof := TRUE;
