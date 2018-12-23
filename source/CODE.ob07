@@ -141,7 +141,7 @@ TYPE
 		END;
 
 	tpLibImport* = POINTER TO RECORD (mList.tpItem)
-			name*:   mScan.LEXSTR;
+			lexName*:   mScan.LEXSTR;
 			procs*:  mList.tpList
 		END;
 
@@ -885,13 +885,13 @@ PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
 		p:   IMPORT_PROC;
 	BEGIN
 		lib := codes.import.first(tpLibImport);
-		WHILE (lib # NIL) & (lib.name # dll) DO
+		WHILE (lib # NIL) & (lib.lexName # dll) DO
 			lib := lib.next(tpLibImport)
 		END;
 
 		IF lib = NIL THEN
 			NEW(lib);
-			lib.name := dll;
+			lib.lexName := dll;
 			lib.procs := mList.New(NIL);
 			mList.Add(codes.import, lib)
 		END;

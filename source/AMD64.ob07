@@ -1912,7 +1912,7 @@ PROCEDURE epilog (code: CODE.tpCodes; modname: ARRAY OF CHAR; pic: BOOLEAN);
 			lib := code.import.first(CODE.tpLibImport);
 			n := 0;
 			WHILE lib # NIL DO
-				Write("lib_name"); WriteHex(n); Write(" db '"); Write(lib.name); WriteLn("',0");
+				Write("lib_name"); WriteHex(n); Write(" db '"); Write(lib.lexName); WriteLn("',0");
 				lib := lib.next(CODE.tpLibImport);
 				INC(n)
 			END;
