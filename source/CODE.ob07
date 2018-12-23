@@ -13,8 +13,7 @@ IMPORT mList := LISTS,
 	mConst := modConstante;
 
 CONST
-
-	opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
+	 opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
 	opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
 	opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
 	opUMINUS* = 16;
@@ -445,7 +444,7 @@ END AddJmpCmd;
 PROCEDURE OnError* (line, error: INTEGER);
 BEGIN
 	AddCmd(opERRC, LSL(line, 4) + error);
-	AddJmpCmd(opJMP, codes.errlabel)
+	AddJmpCmd(mConst.codeJMP, codes.errlabel)
 END OnError;
 
 

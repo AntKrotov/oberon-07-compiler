@@ -975,7 +975,7 @@ PROCEDURE parse (parser: PARSER);
 		CONSOLE.Ln;
 
 		label := CODE.NewLabel();
-		CODE.AddJmpCmd(CODE.opJMP, label);
+		CODE.AddJmpCmd(mConst.codeJMP, label);
 
 		name := CODE.putstr(unit.name.s);
 

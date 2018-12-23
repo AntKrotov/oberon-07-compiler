@@ -1,5 +1,5 @@
 ﻿MODULE modConstante;
-(*              Defined constante for all compiler
+(*		Defined constante for all compiler
 		propspero.78.su@gmail.com 2018-12-22 12:09
 	*)
 
@@ -26,23 +26,9 @@ CONST
 		Target_sObject*  = "obj";
 		Target_sWin64*   = "win64";
 
-		Target_iConsole* =  1;
-		Target_iGUI*     =  Target_iConsole + 1;
-		Target_iDLL*     =  Target_iGUI     + 1;
-		Target_iKolibri* =  Target_iDLL     + 1;
-		Target_iObject*  =  Target_iKolibri + 1;
-		Target_iWin64*   =  Target_iObject  + 1;
-
 	(* for path *)
 		slash* = mUtil.slash;
 		pathLen* = 2048;
-
-	(* for architecture *)
-		min32* = -2147483647-1;
-		max32* = 2147483647;
-		bit_depth* = mUtil.bit_depth;
-		maxint* = mUtil.maxint;
-		minint* = mUtil.minint;
 
 	(* Define internal types *)
 		typeInteger* = 1;
@@ -53,7 +39,28 @@ CONST
 		typeWChar*  = 6;
 		typeString*  = 7;
 
+	(* for architecture *)
+		min32* = -2147483647-1;
+		max32* = 2147483647;
+		bit_depth* = mUtil.bit_depth;
+		maxint* = mUtil.maxint;
+		minint* = mUtil.minint;
+		Target_iConsole* =  1;
+		Target_iGUI*     =  Target_iConsole + 1;
+		Target_iDLL*     =  Target_iGUI     + 1;
+		Target_iKolibri* =  Target_iDLL     + 1;
+		Target_iObject*  =  Target_iKolibri + 1;
+		Target_iWin64*   =  Target_iObject  + 1;
+
 	(* for CODE *)
 		codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
+		codeJMP* = Target_iWin64 + 1000;
+
+
+
+
+
+
+
 
 END modConstante.

@@ -2452,7 +2452,7 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 
 			IF e.obj = eCONST THEN
 				IF ~ARITH.Bool_Get(e.value) THEN
-					CODE.AddJmpCmd(CODE.opJMP, label)
+					CODE.AddJmpCmd(mConst.codeJMP, label)
 				END
 			ELSE
 				CODE.AddJmpCmd(CODE.opJNE, label)
@@ -2467,7 +2467,7 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 			PARS.Next(parser);
 			parser.StatSeq(parser);
 
-			CODE.AddJmpCmd(CODE.opJMP, L);
+			CODE.AddJmpCmd(mConst.codeJMP, L);
 			CODE.SetLabel(label)
 
 		UNTIL parser.sym # SCAN.lxELSIF;
@@ -2503,7 +2503,7 @@ PROCEDURE RepeatStatement (parser: PARS.PARSER);
 
 		IF e.obj = eCONST THEN
 			IF ~ARITH.Bool_Get(e.value) THEN
-				CODE.AddJmpCmd(CODE.opJMP, label)
+				CODE.AddJmpCmd(mConst.codeJMP, label)
 			END
 		ELSE
 			CODE.AddJmpCmd(CODE.opJNE, label)
@@ -2710,7 +2710,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				END;
 
 				parser.StatSeq(parser);
-				CODE.AddJmpCmd(CODE.opJMP, end);
+				CODE.AddJmpCmd(mConst.codeJMP, end);
 
 				IF isRecPtr(caseExpr) THEN
 					caseExpr.ident.type := t
@@ -2759,7 +2759,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				CODE.SetLabel(node.data(CASE_LABEL).self);
 				CODE.case(range.a, range.b, L, R);
 				IF v.processed THEN
-					CODE.AddJmpCmd(CODE.opJMP, node.data(CASE_LABEL).variant)
+					CODE.AddJmpCmd(mConst.codeJMP, node.data(CASE_LABEL).variant)
 				END;
 				v.processed := TRUE;
 
@@ -2794,7 +2794,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			else  := CODE.NewLabel();
 			table := CODE.NewLabel();
 			CODE.AddCmd(CODE.opSWITCH, ORD(isRecPtr(e)));
-			CODE.AddJmpCmd(CODE.opJMP, table);
+			CODE.AddJmpCmd(mConst.codeJMP, table);
 
 			tree := NIL;
 
@@ -2808,7 +2808,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			IF parser.sym = SCAN.lxELSE THEN
 				PARS.Next(parser);
 				parser.StatSeq(parser);
-				CODE.AddJmpCmd(CODE.opJMP, end)
+				CODE.AddJmpCmd(mConst.codeJMP, end)
 			ELSE
 				CODE.OnError(pos.line, errCASE)
 			END;
@@ -2819,7 +2819,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			IF isRecPtr(e) THEN
 				CODE.SetLabel(table);
 				TableT(tree);
-				CODE.AddJmpCmd(CODE.opJMP, else)
+				CODE.AddJmpCmd(mConst.codeJMP, else)
 			ELSE
 				tree.data(CASE_LABEL).self := table;
 				Table(tree, else)
@@ -2961,7 +2961,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 			END
 		END;
 
-		CODE.AddJmpCmd(CODE.opJMP, L1);
+		CODE.AddJmpCmd(mConst.codeJMP, L1);
 
 		PARS.checklex(parser, SCAN.lxEND);
 		PARS.Next(parser);

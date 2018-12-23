@@ -505,7 +505,7 @@ PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN; stroffs: INTEGER);
 
 			CASE cmd.opcode OF
 
-			|CODE.opJMP:
+			|mConst.codeJMP:
 				jmp(param1)
 
 			|CODE.opCALL:
