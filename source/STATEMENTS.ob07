@@ -1841,13 +1841,13 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						IF e.obj = eCONST THEN
 							CODE.OnError(pos.line, errDIV);
 							CODE.Label_Set(label1);
-							CODE.Cmd_Add(CODE.opDIVL + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
+							CODE.Cmd_Add(mConst.codeMOD + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
 							CODE.Cmd_Add(CODE.opDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
 						ELSE
 							CODE.OnError(pos.line, errDIV);
 							CODE.Label_Set(label1);
-							CODE.Cmd0_Add(CODE.opDIV  + ORD(op = SCAN.lxMOD))
+							CODE.Cmd0_Add(mConst.codeDIV  + ORD(op = SCAN.lxMOD))
 						END;
 						e.obj := eEXPR
 					END

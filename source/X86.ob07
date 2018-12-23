@@ -1603,7 +1603,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				pushc(param2);
 				CallRTL(pic, CODE._excl)
 
-			|CODE.opDIV:
+			|mConst.codeDIV:
 				PushAll(2);
 				CallRTL(pic, CODE._div);
 				ASSERT(REG.GetReg(R, eax))
@@ -1653,13 +1653,13 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opDIVL:
+			|mConst.codeDIVL:
 				PushAll(1);
 				pushc(param2);
 				CallRTL(pic, CODE._div2);
 				ASSERT(REG.GetReg(R, eax))
 
-			|CODE.opMOD:
+			|mConst.codeMOD:
 				PushAll(2);
 				CallRTL(pic, CODE._mod);
 				ASSERT(REG.GetReg(R, eax))
@@ -1702,7 +1702,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opMODL:
+			|mConst.codeMODL:
 				PushAll(1);
 				pushc(param2);
 				CallRTL(pic, CODE._mod2);
