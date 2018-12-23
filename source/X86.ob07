@@ -480,7 +480,7 @@ PROCEDURE PushAll (NumberOfParameters: INTEGER);
 PROCEDURE NewLabel (): INTEGER;
 	BEGIN
 		BIN.NewLabel(program)
-		RETURN CODE.NewLabel()
+		RETURN CODE.Label_New()
 	END NewLabel;
 
 PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);

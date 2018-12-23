@@ -309,54 +309,54 @@ PROCEDURE Rec_Add* (pBase: INTEGER);
 		mChl.PushInt(codes.types, pBase)
 	END Rec_Add;
 
-PROCEDURE insert (cur, nov: tpCommand);
+PROCEDURE Insert (pCur, pNow: tpCommand); (* pNow = pNew ???? *)
 	BEGIN
-		mList.Insert(codes.commands, cur, nov);
-		codes.last := nov
-	END insert;
+		mList.Insert(codes.commands, pCur, pNow);
+		codes.last := pNow
+	END Insert;
 
-PROCEDURE AddCmd* (opcode: INTEGER; param: INTEGER);
+PROCEDURE Cmd_Add* (pOpCode: INTEGER; pNum: INTEGER);
 	VAR
-		cmd: tpCommand;
+		_cmd: tpCommand;
 	BEGIN
-		NEW(cmd);
-		cmd.opCode := opcode;
-		cmd.param1 := 0;
-		cmd.param2 := param;
-		insert(codes.last, cmd)
-	END AddCmd;
+		NEW(_cmd);
+		_cmd.opCode := pOpCode;
+		_cmd.param1 := 0;
+		_cmd.param2 := pNum;
+		Insert(codes.last, _cmd)
+	END Cmd_Add;
 
-PROCEDURE AddCmd2* (opcode: INTEGER; param1, param2: INTEGER);
+PROCEDURE Cmd2_Add* (pOpCode: INTEGER; param1, param2: INTEGER);
 	VAR
-		cmd: tpCommand;
+		_cmd: tpCommand;
 	BEGIN
-		NEW(cmd);
-		cmd.opCode := opcode;
-		cmd.param1 := param1;
-		cmd.param2 := param2;
-		insert(codes.last, cmd)
-	END AddCmd2;
+		NEW(_cmd);
+		_cmd.opCode := pOpCode;
+		_cmd.param1 := param1;
+		_cmd.param2 := param2;
+		Insert(codes.last, _cmd)
+	END Cmd2_Add;
 
-PROCEDURE NewLabel* (): INTEGER;
+PROCEDURE Label_New* (): INTEGER;
 	BEGIN
 		INC(codes.lcount)
 		RETURN codes.lcount - 1
-	END NewLabel;
+	END Label_New;
 
-PROCEDURE SetLabel* (label: INTEGER);
+PROCEDURE Label_Set* (label: INTEGER);
 	BEGIN
-		AddCmd(mConst.codeLABEL, label)
-	END SetLabel;
+		Cmd_Add(mConst.codeLABEL, label)
+	END Label_Set;
 
 PROCEDURE SetErrLabel*;
 	BEGIN
-		codes.errLabel := NewLabel();
-		SetLabel(codes.errLabel)
+		codes.errLabel := Label_New();
+		Label_Set(codes.errLabel)
 	END SetErrLabel;
 
-PROCEDURE AddCmd0* (opcode: INTEGER);
+PROCEDURE AddCmd0* (pOpCode: INTEGER);
 	BEGIN
-		AddCmd(opcode, 0)
+		Cmd_Add(pOpCode, 0)
 	END AddCmd0;
 
 PROCEDURE delete (cmd: tpCommand);
@@ -364,7 +364,7 @@ PROCEDURE delete (cmd: tpCommand);
 		mList.Del(codes.commands, cmd)
 	END delete;
 
-PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
+PROCEDURE AddJmpCmd* (pOpCode: INTEGER; label: INTEGER);
 	VAR
 		prev: tpCommand;
 		not:  BOOLEAN;
@@ -372,15 +372,15 @@ PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
 		prev := codes.last;
 		not := prev.opCode = opNOT;
 		IF not THEN
-			IF opcode = opJE THEN
-				opcode := opJNE
-			ELSIF opcode = opJNE THEN
-				opcode := opJE
+			IF pOpCode = opJE THEN
+				pOpCode := opJNE
+			ELSIF pOpCode = opJNE THEN
+				pOpCode := opJE
 			ELSE
 				not := FALSE
 			END
 		END;
-		AddCmd2(opcode, label, label);
+		Cmd2_Add(pOpCode, label, label);
 		IF not THEN
 			delete(prev)
 		END
@@ -388,7 +388,7 @@ PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
 
 PROCEDURE OnError* (line, error: INTEGER);
 	BEGIN
-		AddCmd(opERRC, LSL(line, 4) + error);
+		Cmd_Add(opERRC, LSL(line, 4) + error);
 		AddJmpCmd(mConst.codeJMP, codes.errLabel)
 	END OnError;
 
@@ -396,36 +396,36 @@ PROCEDURE TypeGuard* (op, t: INTEGER; line, error: INTEGER);
 	VAR
 		label: INTEGER;
 	BEGIN
-		AddCmd(op, t);
-		label := NewLabel();
+		Cmd_Add(op, t);
+		label := Label_New();
 		AddJmpCmd(opJE, label);
 		OnError(line, error);
-		SetLabel(label)
+		Label_Set(label)
 	END TypeGuard;
 
 PROCEDURE TypeCheck* (t: INTEGER);
 	BEGIN
-		AddCmd(opIS, t)
+		Cmd_Add(opIS, t)
 	END TypeCheck;
 
 PROCEDURE TypeCheckRec* (t: INTEGER);
 	BEGIN
-		AddCmd(opISREC, t)
+		Cmd_Add(opISREC, t)
 	END TypeCheckRec;
 
 PROCEDURE New* (size, typenum: INTEGER);
 	BEGIN
-		AddCmd2(opNEW, typenum, size)
+		Cmd2_Add(opNEW, typenum, size)
 	END New;
 
-PROCEDURE fcmp* (opcode: BYTE);
+PROCEDURE fcmp* (pOpCode: BYTE);
 	BEGIN
-		AddCmd(opcode, 0);
+		Cmd_Add(pOpCode, 0);
 		DEC(codes.fregs, 2);
 		ASSERT(codes.fregs >= 0)
 	END fcmp;
 
-PROCEDURE isCmp (opcode: BYTE): BOOLEAN;
+PROCEDURE isCmp (pOpCode: BYTE): BOOLEAN;
 	(*
 		opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
 		opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
@@ -442,86 +442,86 @@ PROCEDURE isCmp (opcode: BYTE): BOOLEAN;
 		opEQP* = 143; opNEP* = 144;
 																					  *)
 
-		RETURN (opEQ <= opcode) & (opcode <= opGER) OR (opEQS <= opcode) & (opcode <= opGES) OR
-				(opEQS2 <= opcode) & (opcode <= opGES2) OR (opEQSW <= opcode) & (opcode <= opGESW) OR
-				(opEQSW2 <= opcode) & (opcode <= opGESW2) OR
-				(opEQF <= opcode) & (opcode <= opGEFI) OR (opcode = opEQP) OR (opcode = opNEP)
+		RETURN (opEQ <= pOpCode) & (pOpCode <= opGER) OR (opEQS <= pOpCode) & (pOpCode <= opGES) OR
+				(opEQS2 <= pOpCode) & (pOpCode <= opGES2) OR (opEQSW <= pOpCode) & (pOpCode <= opGESW) OR
+				(opEQSW2 <= pOpCode) & (pOpCode <= opGESW2) OR
+				(opEQF <= pOpCode) & (pOpCode <= opGEFI) OR (pOpCode = opEQP) OR (pOpCode = opNEP)
 	END isCmp;
 
-PROCEDURE InvCmp (opcode: BYTE): INTEGER;
+PROCEDURE InvCmp (pOpCode: BYTE): INTEGER;
 	BEGIN
 
-		CASE opcode OF
+		CASE pOpCode OF
 
-		|opEQ:    opcode := opNE
-		|opNE:    opcode := opEQ
-		|opLT:    opcode := opGE
-		|opLE:    opcode := opGT
-		|opGT:    opcode := opLE
-		|opGE:    opcode := opLT
+		|opEQ:    pOpCode := opNE
+		|opNE:    pOpCode := opEQ
+		|opLT:    pOpCode := opGE
+		|opLE:    pOpCode := opGT
+		|opGT:    pOpCode := opLE
+		|opGE:    pOpCode := opLT
 
-		|opEQR:   opcode := opNER
-		|opNER:   opcode := opEQR
-		|opLTR:   opcode := opGER
-		|opLER:   opcode := opGTR
-		|opGTR:   opcode := opLER
-		|opGER:   opcode := opLTR
+		|opEQR:   pOpCode := opNER
+		|opNER:   pOpCode := opEQR
+		|opLTR:   pOpCode := opGER
+		|opLER:   pOpCode := opGTR
+		|opGTR:   pOpCode := opLER
+		|opGER:   pOpCode := opLTR
 
-		|opEQL:   opcode := opNEL
-		|opNEL:   opcode := opEQL
-		|opLTL:   opcode := opGEL
-		|opLEL:   opcode := opGTL
-		|opGTL:   opcode := opLEL
-		|opGEL:   opcode := opLTL
+		|opEQL:   pOpCode := opNEL
+		|opNEL:   pOpCode := opEQL
+		|opLTL:   pOpCode := opGEL
+		|opLEL:   pOpCode := opGTL
+		|opGTL:   pOpCode := opLEL
+		|opGEL:   pOpCode := opLTL
 
-		|opEQS:   opcode := opNES
-		|opNES:   opcode := opEQS
-		|opLTS:   opcode := opGES
-		|opLES:   opcode := opGTS
-		|opGTS:   opcode := opLES
-		|opGES:   opcode := opLTS
+		|opEQS:   pOpCode := opNES
+		|opNES:   pOpCode := opEQS
+		|opLTS:   pOpCode := opGES
+		|opLES:   pOpCode := opGTS
+		|opGTS:   pOpCode := opLES
+		|opGES:   pOpCode := opLTS
 
-		|opEQS2:  opcode := opNES2
-		|opNES2:  opcode := opEQS2
-		|opLTS2:  opcode := opGES2
-		|opLES2:  opcode := opGTS2
-		|opGTS2:  opcode := opLES2
-		|opGES2:  opcode := opLTS2
+		|opEQS2:  pOpCode := opNES2
+		|opNES2:  pOpCode := opEQS2
+		|opLTS2:  pOpCode := opGES2
+		|opLES2:  pOpCode := opGTS2
+		|opGTS2:  pOpCode := opLES2
+		|opGES2:  pOpCode := opLTS2
 
-		|opEQSW:  opcode := opNESW
-		|opNESW:  opcode := opEQSW
-		|opLTSW:  opcode := opGESW
-		|opLESW:  opcode := opGTSW
-		|opGTSW:  opcode := opLESW
-		|opGESW:  opcode := opLTSW
+		|opEQSW:  pOpCode := opNESW
+		|opNESW:  pOpCode := opEQSW
+		|opLTSW:  pOpCode := opGESW
+		|opLESW:  pOpCode := opGTSW
+		|opGTSW:  pOpCode := opLESW
+		|opGESW:  pOpCode := opLTSW
 
-		|opEQSW2: opcode := opNESW2
-		|opNESW2: opcode := opEQSW2
-		|opLTSW2: opcode := opGESW2
-		|opLESW2: opcode := opGTSW2
-		|opGTSW2: opcode := opLESW2
-		|opGESW2: opcode := opLTSW2
+		|opEQSW2: pOpCode := opNESW2
+		|opNESW2: pOpCode := opEQSW2
+		|opLTSW2: pOpCode := opGESW2
+		|opLESW2: pOpCode := opGTSW2
+		|opGTSW2: pOpCode := opLESW2
+		|opGESW2: pOpCode := opLTSW2
 
-		|opEQF:   opcode := opNEF
-		|opNEF:   opcode := opEQF
-		|opLTF:   opcode := opGEF
-		|opLEF:   opcode := opGTF
-		|opGTF:   opcode := opLEF
-		|opGEF:   opcode := opLTF
+		|opEQF:   pOpCode := opNEF
+		|opNEF:   pOpCode := opEQF
+		|opLTF:   pOpCode := opGEF
+		|opLEF:   pOpCode := opGTF
+		|opGTF:   pOpCode := opLEF
+		|opGEF:   pOpCode := opLTF
 
-		|opEQFI:  opcode := opNEFI
-		|opNEFI:  opcode := opEQFI
-		|opLTFI:  opcode := opGEFI
-		|opLEFI:  opcode := opGTFI
-		|opGTFI:  opcode := opLEFI
-		|opGEFI:  opcode := opLTFI
+		|opEQFI:  pOpCode := opNEFI
+		|opNEFI:  pOpCode := opEQFI
+		|opLTFI:  pOpCode := opGEFI
+		|opLEFI:  pOpCode := opGTFI
+		|opGTFI:  pOpCode := opLEFI
+		|opGEFI:  pOpCode := opLTFI
 
-		|opEQP:   opcode := opNEP
-		|opNEP:   opcode := opEQP
+		|opEQP:   pOpCode := opNEP
+		|opNEP:   pOpCode := opEQP
 
 		END
 
-		RETURN opcode
+		RETURN pOpCode
 	END InvCmp;
 
 PROCEDURE not*;
@@ -541,7 +541,7 @@ PROCEDURE not*;
 
 PROCEDURE Enter* (label: INTEGER): tpCommand;
 	BEGIN
-		AddCmd2(opENTER, label, 0)
+		Cmd2_Add(opENTER, label, 0)
 		RETURN codes.last
 	END Enter;
 
@@ -549,12 +549,12 @@ PROCEDURE Leave* (result, float: BOOLEAN; paramsize: INTEGER): tpCommand;
 	BEGIN
 		IF result THEN
 			IF float THEN
-				AddCmd(opLEAVEF, paramsize)
+				Cmd_Add(opLEAVEF, paramsize)
 			ELSE
-				AddCmd(opLEAVER, paramsize)
+				Cmd_Add(opLEAVER, paramsize)
 			END
 		ELSE
-			AddCmd(opLEAVE, paramsize)
+			Cmd_Add(opLEAVE, paramsize)
 		END
 
 		RETURN codes.last
@@ -615,7 +615,7 @@ PROCEDURE ProcImpCmp* (proc: mList.tpItem; eq: BOOLEAN);
 
 PROCEDURE SysGet* (size: INTEGER);
 	BEGIN
-		AddCmd(opGET, size)
+		Cmd_Add(opGET, size)
 	END SysGet;
 
 PROCEDURE load* (size: INTEGER);
@@ -708,16 +708,16 @@ PROCEDURE inf* (): BOOLEAN;
 		RETURN codes.fregs < mConst.codeFregs
 	END inf;
 
-PROCEDURE fbinop* (opcode: BYTE);
+PROCEDURE fbinop* (pOpCode: BYTE);
 	BEGIN
-		AddCmd0(opcode);
+		AddCmd0(pOpCode);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs > 0)
 	END fbinop;
 
 PROCEDURE saves* (offset, length: INTEGER);
 	BEGIN
-		AddCmd2(opSAVES, length, offset)
+		Cmd2_Add(opSAVES, length, offset)
 	END saves;
 
 PROCEDURE abs* (real: BOOLEAN);
@@ -768,30 +768,30 @@ PROCEDURE shift_minmax* (op: CHAR);
 PROCEDURE shift_minmax1* (op: CHAR; x: INTEGER);
 	BEGIN
 		CASE op OF
-		|"A": AddCmd(opASR1, x)
-		|"L": AddCmd(opLSL1, x)
-		|"O": AddCmd(opROR1, x)
-		|"R": AddCmd(opLSR1, x)
-		|"m": AddCmd(opMINC, x)
-		|"x": AddCmd(opMAXC, x)
+		|"A": Cmd_Add(opASR1, x)
+		|"L": Cmd_Add(opLSL1, x)
+		|"O": Cmd_Add(opROR1, x)
+		|"R": Cmd_Add(opLSR1, x)
+		|"m": Cmd_Add(opMINC, x)
+		|"x": Cmd_Add(opMAXC, x)
 		END
 	END shift_minmax1;
 
 PROCEDURE shift_minmax2* (op: CHAR; x: INTEGER);
 	BEGIN
 		CASE op OF
-		|"A": AddCmd(opASR2, x)
-		|"L": AddCmd(opLSL2, x)
-		|"O": AddCmd(opROR2, x)
-		|"R": AddCmd(opLSR2, x)
-		|"m": AddCmd(opMINC, x)
-		|"x": AddCmd(opMAXC, x)
+		|"A": Cmd_Add(opASR2, x)
+		|"L": Cmd_Add(opLSL2, x)
+		|"O": Cmd_Add(opROR2, x)
+		|"R": Cmd_Add(opLSR2, x)
+		|"m": Cmd_Add(opMINC, x)
+		|"x": Cmd_Add(opMAXC, x)
 		END
 	END shift_minmax2;
 
 PROCEDURE len* (dim: INTEGER);
 	BEGIN
-		AddCmd(opLEN, dim)
+		Cmd_Add(opLEN, dim)
 	END len;
 
 PROCEDURE Float* (r: REAL);
@@ -801,7 +801,7 @@ PROCEDURE Float* (r: REAL);
 		NEW(cmd);
 		cmd.opCode := opCONSTF;
 		cmd.valFloat := r;
-		insert(codes.last, cmd);
+		Insert(codes.last, cmd);
 		INC(codes.fregs);
 		ASSERT(codes.fregs <= mConst.codeFregs)
 	END Float;
@@ -811,21 +811,21 @@ PROCEDURE precall* (flt: BOOLEAN): INTEGER;
 		res: INTEGER;
 	BEGIN
 		res := codes.fregs;
-		AddCmd2(opPRECALL, ORD(flt), res);
+		Cmd2_Add(opPRECALL, ORD(flt), res);
 		codes.fregs := 0
 		RETURN res
 	END precall;
 
 PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
 	BEGIN
-		AddCmd(opRESF, fregs);
+		Cmd_Add(opRESF, fregs);
 		codes.fregs := fregs + 1
 		RETURN codes.fregs < mConst.codeFregs
 	END resf;
 
 PROCEDURE res* (fregs: INTEGER);
 	BEGIN
-		AddCmd(opRES, fregs);
+		Cmd_Add(opRES, fregs);
 		codes.fregs := fregs
 	END res;
 
@@ -851,16 +851,16 @@ PROCEDURE case* (a, b, L, R: INTEGER);
 			cmd.param1 := a;
 			cmd.param2 := L;
 			cmd.param3 := R;
-			insert(codes.last, cmd)
+			Insert(codes.last, cmd)
 		ELSE
-			AddCmd2(opCASEL, a, L);
-			AddCmd2(opCASER, b, R)
+			Cmd2_Add(opCASEL, a, L);
+			Cmd2_Add(opCASER, b, R)
 		END
 	END case;
 
 PROCEDURE caset* (a, label: INTEGER);
 	BEGIN
-		AddCmd2(opCASET, label, a)
+		Cmd2_Add(opCASET, label, a)
 	END caset;
 
 PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
@@ -898,7 +898,7 @@ PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): tpProcImport;
 		IF p = NIL THEN
 			NEW(p);
 			p.lexName  := proc;
-			p.label := NewLabel();
+			p.label := Label_New();
 			p.lib   := lib;
 			p.count := 1;
 			mList.Add(lib.procs, p)

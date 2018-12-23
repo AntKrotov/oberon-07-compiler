@@ -834,7 +834,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 
 			IF import = NIL THEN
 
-				label := CODE.NewLabel();
+				label := CODE.Label_New();
 				proc.proc.label := label;
 
 				IF parser.main & proc.export & program.dll THEN
@@ -973,19 +973,19 @@ PROCEDURE parse (parser: PARSER);
 		END;
 		CONSOLE.Ln;
 
-		label := CODE.NewLabel();
+		label := CODE.Label_New();
 		CODE.AddJmpCmd(mConst.codeJMP, label);
 
 		name := CODE.Str_Put(unit.name.s);
 
 		CODE.SetErrLabel;
-		CODE.AddCmd(CODE.opSADR, name);
-		CODE.AddCmd(CODE.opPARAM, 1);
+		CODE.Cmd_Add(CODE.opSADR, name);
+		CODE.Cmd_Add(CODE.opPARAM, 1);
 		CODE.AddCmd0(CODE.opERR);
 
 		endmod := DeclarationSequence(parser);
 
-		CODE.SetLabel(label);
+		CODE.Label_Set(label);
 
 		IF ~endmod THEN
 

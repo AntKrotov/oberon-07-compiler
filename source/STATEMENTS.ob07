@@ -319,10 +319,10 @@ PROCEDURE CheckRange (range, line, errno: INTEGER);
 		label: INTEGER;
 
 	BEGIN
-		label := CODE.NewLabel();
-		CODE.AddCmd2(CODE.opCHKIDX, label, range);
+		label := CODE.Label_New();
+		CODE.Cmd2_Add(CODE.opCHKIDX, label, range);
 		CODE.OnError(line, errno);
-		CODE.SetLabel(label)
+		CODE.Label_Set(label)
 	END CheckRange;
 
 PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
@@ -343,18 +343,18 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 			res := TRUE;
 			IF arrcomp(e.type, t) THEN
 				IF ~PROG.isOpenArray(t) THEN
-					CODE.AddCmd(CODE.opCONST, t.length);
-					CODE.AddCmd(CODE.opROT, 3)
+					CODE.Cmd_Add(CODE.opCONST, t.length);
+					CODE.Cmd_Add(CODE.opROT, 3)
 				END;
-				CODE.AddCmd(CODE.opCOPYA, t.base.size);
-				label := CODE.NewLabel();
+				CODE.Cmd_Add(CODE.opCOPYA, t.base.size);
+				label := CODE.Label_New();
 				CODE.AddJmpCmd(CODE.opJE, label);
 				CODE.OnError(line, errCOPY);
-				CODE.SetLabel(label)
+				CODE.Label_Set(label)
 			ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
 				IF t.typ = PROG.tINTEGER THEN
 					IF e.obj = eCONST THEN
-						CODE.AddCmd(CODE.opSAVEC, ARITH.Int(e.value))
+						CODE.Cmd_Add(CODE.opSAVEC, ARITH.Int(e.value))
 					ELSE
 						CODE.AddCmd0(CODE.opSAVE)
 					END
@@ -362,7 +362,7 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 					IF e.obj = eCONST THEN
 						res := ARITH.IsRange(e.value, 0, 255);
 						IF res THEN
-							CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
+							CODE.Cmd_Add(CODE.opSAVE8C, ARITH.Int(e.value))
 						END
 					ELSE
 						IF chkBYTE IN checking THEN
@@ -373,13 +373,13 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				END
 			ELSIF isSet(e) & (t.typ = PROG.typeSet) THEN
 				IF e.obj = eCONST THEN
-					CODE.AddCmd(CODE.opSAVEC, ARITH.Int(e.value))
+					CODE.Cmd_Add(CODE.opSAVEC, ARITH.Int(e.value))
 				ELSE
 					CODE.AddCmd0(CODE.opSAVE)
 				END
 			ELSIF isBoolean(e) & (t.typ = PROG.typeBoolean) THEN
 				IF e.obj = eCONST THEN
-					CODE.AddCmd(CODE.opSBOOLC, ARITH.Int(e.value))
+					CODE.Cmd_Add(CODE.opSBOOLC, ARITH.Int(e.value))
 				ELSE
 					CODE.AddCmd0(CODE.opSBOOL)
 				END
@@ -390,17 +390,17 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				CODE.savef
 			ELSIF isChar(e) & (t.typ = PROG.typeChar) THEN
 				IF e.obj = eCONST THEN
-					CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
+					CODE.Cmd_Add(CODE.opSAVE8C, ARITH.Int(e.value))
 				ELSE
 					CODE.AddCmd0(CODE.opSAVE8)
 				END
 			ELSIF (e.obj = eCONST) & isChar(e) & (t.typ = PROG.typeWChar) THEN
-				CODE.AddCmd(CODE.opSAVE16C, ARITH.Int(e.value))
+				CODE.Cmd_Add(CODE.opSAVE16C, ARITH.Int(e.value))
 			ELSIF isStringW1(e) & (t.typ = PROG.typeWChar) THEN
-				CODE.AddCmd(CODE.opSAVE16C, StrToWChar(e.value.string(SCAN.IDENT).s))
+				CODE.Cmd_Add(CODE.opSAVE16C, StrToWChar(e.value.string(SCAN.IDENT).s))
 			ELSIF isCharW(e) & (t.typ = PROG.typeWChar) THEN
 				IF e.obj = eCONST THEN
-					CODE.AddCmd(CODE.opSAVE16C, ARITH.Int(e.value))
+					CODE.Cmd_Add(CODE.opSAVE16C, ARITH.Int(e.value))
 				ELSE
 					CODE.AddCmd0(CODE.opSAVE16)
 				END
@@ -408,7 +408,7 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				IF t.typ = PROG.tPOINTER THEN
 					CODE.AddCmd0(CODE.opSAVE)
 				ELSE
-					CODE.AddCmd(CODE.opCOPY, t.size)
+					CODE.Cmd_Add(CODE.opCOPY, t.size)
 				END
 			ELSIF (e.type.typ = PROG.tCARD32) & (t.typ = PROG.tCARD32) THEN
 				CODE.AddCmd0(CODE.opSAVE32)
@@ -425,11 +425,11 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 					IF t.typ = PROG.tPROCEDURE THEN
 						CODE.AddCmd0(CODE.opSAVE)
 					ELSE
-						CODE.AddCmd(CODE.opCOPY, t.size)
+						CODE.Cmd_Add(CODE.opCOPY, t.size)
 					END
 				END
 			ELSIF isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
-				CODE.AddCmd(CODE.opSAVEC, 0)
+				CODE.Cmd_Add(CODE.opSAVEC, 0)
 			ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.typeChar) & (t.length > strlen(e))) THEN
 				CODE.saves(String(e), strlen(e) + 1)
 			ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.typeWChar) & (t.length > utf8strlen(e))) THEN
@@ -445,7 +445,7 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 
 PROCEDURE LoadConst (e: PARS.EXPR);
 	BEGIN
-		CODE.AddCmd(CODE.opCONST, ARITH.Int(e.value))
+		CODE.Cmd_Add(CODE.opCONST, ARITH.Int(e.value))
 	END LoadConst;
 
 PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: PROG.PARAM);
@@ -486,11 +486,11 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 			d1, d2: INTEGER;
 		BEGIN
 			IF t.length # 0 THEN
-				CODE.AddCmd(CODE.opPARAM, 1);
+				CODE.Cmd_Add(CODE.opPARAM, 1);
 				n := PROG.Dim(t2) - 1;
 				WHILE n >= 0 DO
-					CODE.AddCmd(CODE.opCONST, ArrLen(t, n));
-					CODE.AddCmd(CODE.opPARAM, 1);
+					CODE.Cmd_Add(CODE.opCONST, ArrLen(t, n));
+					CODE.Cmd_Add(CODE.opPARAM, 1);
 					DEC(n)
 				END
 			ELSE
@@ -499,16 +499,16 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				IF d1 # d2 THEN
 					n := d2 - d1;
 					WHILE d2 > d1 DO
-						CODE.AddCmd(CODE.opCONST, ArrLen(t, d2 - 1));
+						CODE.Cmd_Add(CODE.opCONST, ArrLen(t, d2 - 1));
 						DEC(d2)
 					END;
 					d2 := PROG.Dim(t2);
 					WHILE n > 0 DO
-						CODE.AddCmd(CODE.opROT, d2);
+						CODE.Cmd_Add(CODE.opROT, d2);
 						DEC(n)
 					END
 				END;
-				CODE.AddCmd(CODE.opPARAM, PROG.Dim(t2) + 1)
+				CODE.Cmd_Add(CODE.opPARAM, PROG.Dim(t2) + 1)
 			END
 		END OpenArray;
 
@@ -521,20 +521,20 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				PARS.check(PROG.isBaseOf(p.type, e.type), parser, pos, 66);
 				IF e.obj = eVREC THEN
 					IF e.ident # NIL THEN
-						CODE.AddCmd(CODE.opVADR, e.ident.offset - 1)
+						CODE.Cmd_Add(CODE.opVADR, e.ident.offset - 1)
 					ELSE
 						CODE.AddCmd0(CODE.opPUSHT)
 					END
 				ELSE
-					CODE.AddCmd(CODE.opCONST, e.type.num)
+					CODE.Cmd_Add(CODE.opCONST, e.type.num)
 				END;
-				CODE.AddCmd(CODE.opPARAM, 2)
+				CODE.Cmd_Add(CODE.opPARAM, 2)
 			ELSIF PROG.isOpenArray(p.type) THEN
 				PARS.check(arrcomp(e, p), parser, pos, 66);
 				OpenArray(e.type, p.type)
 			ELSE
 				PARS.check(PROG.isTypeEq(e.type, p.type), parser, pos, 66);
-				CODE.AddCmd(CODE.opPARAM, 1)
+				CODE.Cmd_Add(CODE.opPARAM, 1)
 			END;
 			PARS.check(~e.readOnly, parser, pos, 94)
 
@@ -545,15 +545,15 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 					PARS.check(arrcomp(e, p), parser, pos, 66);
 					OpenArray(e.type, p.type)
 				ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.typeChar) THEN
-					CODE.AddCmd(CODE.opSADR, String(e));
-					CODE.AddCmd(CODE.opPARAM, 1);
-					CODE.AddCmd(CODE.opCONST, strlen(e) + 1);
-					CODE.AddCmd(CODE.opPARAM, 1)
+					CODE.Cmd_Add(CODE.opSADR, String(e));
+					CODE.Cmd_Add(CODE.opPARAM, 1);
+					CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1);
+					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.typeWChar) THEN
-					CODE.AddCmd(CODE.opSADR, StringW(e));
-					CODE.AddCmd(CODE.opPARAM, 1);
-					CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1);
-					CODE.AddCmd(CODE.opPARAM, 1)
+					CODE.Cmd_Add(CODE.opSADR, StringW(e));
+					CODE.Cmd_Add(CODE.opPARAM, 1);
+					CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
+					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSE
 					PARS.error(parser, pos, 66)
 				END
@@ -565,38 +565,38 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 						CODE.Float(ARITH.Float_Get(e.value));
 						CODE.pushf
 					ELSIF e.type.typ = PROG.tNIL THEN
-						CODE.AddCmd(CODE.opCONST, 0);
-						CODE.AddCmd(CODE.opPARAM, 1)
+						CODE.Cmd_Add(CODE.opCONST, 0);
+						CODE.Cmd_Add(CODE.opPARAM, 1)
 					ELSIF isStringW1(e) & (p.type.typ = PROG.typeWChar) THEN
-						CODE.AddCmd(CODE.opCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
-						CODE.AddCmd(CODE.opPARAM, 1)
+						CODE.Cmd_Add(CODE.opCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
+						CODE.Cmd_Add(CODE.opPARAM, 1)
 					ELSIF (e.type.typ = PROG.typeString) OR
 						  (e.type.typ IN {PROG.typeChar, PROG.typeWChar}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.typeChar, PROG.typeWChar}) THEN
 						CODE.MinDataSize_Set(p.type.size);
 						IF p.type.base.typ = PROG.typeChar THEN
-							CODE.AddCmd(CODE.opSADR, String(e))
+							CODE.Cmd_Add(CODE.opSADR, String(e))
 						ELSE (* WCHAR *)
-							CODE.AddCmd(CODE.opSADR, StringW(e))
+							CODE.Cmd_Add(CODE.opSADR, StringW(e))
 						END;
-						CODE.AddCmd(CODE.opPARAM, 1)
+						CODE.Cmd_Add(CODE.opPARAM, 1)
 					ELSE
 						LoadConst(e);
-						CODE.AddCmd(CODE.opPARAM, 1)
+						CODE.Cmd_Add(CODE.opPARAM, 1)
 					END
 				ELSIF e.obj = ePROC THEN
 					PARS.check(e.ident.global, parser, pos, 85);
 					CODE.PushProc(e.ident.proc.label);
-					CODE.AddCmd(CODE.opPARAM, 1)
+					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF e.obj = eIMP THEN
 					CODE.PushImpProc(e.ident.import);
-					CODE.AddCmd(CODE.opPARAM, 1)
+					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF isExpr(e) & (e.type.typ = PROG.typeReal) THEN
 					CODE.pushf
 				ELSE
 					IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN checking) THEN
 						CheckRange(256, pos.line, errBYTE)
 					END;
-					CODE.AddCmd(CODE.opPARAM, 1)
+					CODE.Cmd_Add(CODE.opPARAM, 1)
 				END
 			END
 
@@ -657,10 +657,10 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						CODE.OnError(pos.line, errASSERT)
 					END
 				ELSE
-					label := CODE.NewLabel();
+					label := CODE.Label_New();
 					CODE.AddJmpCmd(CODE.opJE, label);
 					CODE.OnError(pos.line, errASSERT);
-					CODE.SetLabel(label)
+					CODE.Label_Set(label)
 				END
 
 			|PROG.stINC, PROG.stDEC:
@@ -671,7 +671,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						parser.expression(parser, e2);
 						PARS.check(isInt(e2), parser, pos, 66);
 						IF e2.obj = eCONST THEN
-							CODE.AddCmd(CODE.opINCC + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
+							CODE.Cmd_Add(CODE.opINCC + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
 						ELSE
 							CODE.AddCmd0(CODE.opINC + ORD(proc = PROG.stDEC))
 						END
@@ -684,7 +684,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						parser.expression(parser, e2);
 						PARS.check(isInt(e2), parser, pos, 66);
 						IF e2.obj = eCONST THEN
-							CODE.AddCmd(CODE.opINCCB + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
+							CODE.Cmd_Add(CODE.opINCCB + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
 						ELSE
 							CODE.AddCmd0(CODE.opINCB + ORD(proc = PROG.stDEC))
 						END
@@ -702,7 +702,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 				IF e2.obj = eCONST THEN
 					PARS.check(ARITH.IsRange(e2.value, 0, MACHINE.target.maxSet), parser, pos, 56);
-					CODE.AddCmd(CODE.opINCLC + ORD(proc = PROG.stEXCL), ARITH.Int(e2.value))
+					CODE.Cmd_Add(CODE.opINCLC + ORD(proc = PROG.stEXCL), ARITH.Int(e2.value))
 				ELSE
 					CODE.AddCmd0(CODE.opINCL + ORD(proc = PROG.stEXCL))
 				END
@@ -722,7 +722,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				parser.expression(parser, e2);
 				PARS.check(isInt(e2), parser, pos, 66);
 				IF e2.obj = eCONST THEN
-					CODE.AddCmd(CODE.opPACKC, ARITH.Int(e2.value))
+					CODE.Cmd_Add(CODE.opPACKC, ARITH.Int(e2.value))
 				ELSE
 					CODE.AddCmd0(CODE.opPACK)
 				END
@@ -745,7 +745,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				END;
 
 				IF isCharArrayX(e) & ~PROG.isOpenArray(e.type) THEN
-					CODE.AddCmd(CODE.opCONST, e.type.length)
+					CODE.Cmd_Add(CODE.opCONST, e.type.length)
 				END;
 
 				PARS.checklex(parser, SCAN.lxCOMMA);
@@ -764,20 +764,20 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				END;
 
 				IF ~PROG.isOpenArray(e1.type) THEN
-					CODE.AddCmd(CODE.opCONST, e1.type.length)
+					CODE.Cmd_Add(CODE.opCONST, e1.type.length)
 				END;
 
 				IF e.obj = eCONST THEN
 					IF wchar THEN
-						CODE.AddCmd(CODE.opSADR, StringW(e));
-						CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1)
+						CODE.Cmd_Add(CODE.opSADR, StringW(e));
+						CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1)
 					ELSE
-						CODE.AddCmd(CODE.opSADR, String(e));
-						CODE.AddCmd(CODE.opCONST, strlen(e) + 1)
+						CODE.Cmd_Add(CODE.opSADR, String(e));
+						CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1)
 					END;
-					CODE.AddCmd(CODE.opCOPYS2, e1.type.base.size)
+					CODE.Cmd_Add(CODE.opCOPYS2, e1.type.base.size)
 				ELSE
-					CODE.AddCmd(CODE.opCOPYS, e1.type.base.size)
+					CODE.Cmd_Add(CODE.opCOPYS, e1.type.base.size)
 				END
 
 			|PROG.sysGET, PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16:
@@ -880,7 +880,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						PARS.checklex(parser, SCAN.lxRROUND)
 					END;
-					CODE.AddCmd(CODE.opCODE, ARITH.Int_Get(code))
+					CODE.Cmd_Add(CODE.opCODE, ARITH.Int_Get(code))
 				UNTIL parser.sym = SCAN.lxRROUND
 
 			END;
@@ -986,12 +986,12 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				parser.expression(parser, e);
 				IF isCharArray(e) THEN
 					IF e.type.length > 0 THEN
-						CODE.AddCmd(CODE.opCONST, e.type.length)
+						CODE.Cmd_Add(CODE.opCONST, e.type.length)
 					END;
 					CODE.AddCmd0(CODE.opLENGTH)
 				ELSIF isCharArrayW(e) THEN
 					IF e.type.length > 0 THEN
-						CODE.AddCmd(CODE.opCONST, e.type.length)
+						CODE.Cmd_Add(CODE.opCONST, e.type.length)
 					END;
 					CODE.AddCmd0(CODE.opLENGTHW)
 				ELSE
@@ -1053,14 +1053,14 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			|PROG.sysSADR:
 				parser.expression(parser, e);
 				PARS.check(isString(e), parser, pos, 66);
-				CODE.AddCmd(CODE.opSADR, String(e));
+				CODE.Cmd_Add(CODE.opSADR, String(e));
 				e.type := PARS.program.stTypes.tINTEGER;
 				e.obj := eEXPR
 
 			|PROG.sysWSADR:
 				parser.expression(parser, e);
 				PARS.check(isStringW(e), parser, pos, 66);
-				CODE.AddCmd(CODE.opSADR, StringW(e));
+				CODE.Cmd_Add(CODE.opSADR, StringW(e));
 				e.type := PARS.program.stTypes.tINTEGER;
 				e.obj := eEXPR
 
@@ -1237,10 +1237,10 @@ PROCEDURE deref (pos: SCAN.POSITION; e: PARS.EXPR; load: BOOLEAN; error: INTEGER
 		END;
 
 		IF chkPTR IN checking THEN
-			label := CODE.NewLabel();
+			label := CODE.Label_New();
 			CODE.AddJmpCmd(CODE.opJNZ, label);
 			CODE.OnError(pos.line, error);
-			CODE.SetLabel(label)
+			CODE.Label_Set(label)
 		END
 	END deref;
 
@@ -1262,7 +1262,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				offset := e.ident.offset;
 				n := PROG.Dim(e.type);
 				WHILE n >= 0 DO
-					CODE.AddCmd(CODE.opVADR, offset);
+					CODE.Cmd_Add(CODE.opVADR, offset);
 					DEC(offset);
 					DEC(n)
 				END
@@ -1273,23 +1273,23 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			IF e.obj = eVAR THEN
 				offset := PROG.getOffset(PARS.program, e.ident);
 				IF e.ident.global THEN
-					CODE.AddCmd(CODE.opGADR, offset)
+					CODE.Cmd_Add(CODE.opGADR, offset)
 				ELSE
-					CODE.AddCmd(CODE.opLADR, -offset)
+					CODE.Cmd_Add(CODE.opLADR, -offset)
 				END
 			ELSIF e.obj = ePARAM THEN
 				IF (e.type.typ = PROG.tRECORD) OR ((e.type.typ = PROG.tARRAY) & (e.type.length > 0)) THEN
-					CODE.AddCmd(CODE.opVADR, e.ident.offset)
+					CODE.Cmd_Add(CODE.opVADR, e.ident.offset)
 				ELSIF PROG.isOpenArray(e.type) THEN
 					OpenArray(e)
 				ELSE
-					CODE.AddCmd(CODE.opLADR, e.ident.offset)
+					CODE.Cmd_Add(CODE.opLADR, e.ident.offset)
 				END
 			ELSIF e.obj IN {eVPAR, eVREC} THEN
 				IF PROG.isOpenArray(e.type) THEN
 					OpenArray(e)
 				ELSE
-					CODE.AddCmd(CODE.opVADR, e.ident.offset)
+					CODE.Cmd_Add(CODE.opVADR, e.ident.offset)
 				END
 			END
 		END LoadAdr;
@@ -1304,17 +1304,17 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		BEGIN
 
 			IF chkIDX IN checking THEN
-				label := CODE.NewLabel();
-				CODE.AddCmd2(CODE.opCHKIDX2, label, 0);
+				label := CODE.Label_New();
+				CODE.Cmd2_Add(CODE.opCHKIDX2, label, 0);
 				CODE.OnError(pos.line, errIDX);
-				CODE.SetLabel(label)
+				CODE.Label_Set(label)
 			ELSE
-				CODE.AddCmd(CODE.opCHKIDX2, -1)
+				CODE.Cmd_Add(CODE.opCHKIDX2, -1)
 			END;
 
 			type := PROG.OpenBase(e.type);
 			IF type.size # 1 THEN
-				CODE.AddCmd(CODE.opMULC, type.size)
+				CODE.Cmd_Add(CODE.opMULC, type.size)
 			END;
 			n := PROG.Dim(e.type) - 1;
 			k := n;
@@ -1326,7 +1326,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			offset := e.ident.offset - 1;
 			n := k;
 			WHILE n > 0 DO
-				CODE.AddCmd(CODE.opVADR, offset);
+				CODE.Cmd_Add(CODE.opVADR, offset);
 				DEC(offset);
 				DEC(n)
 			END
@@ -1362,7 +1362,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				e.obj := eVPAR
 			END;
 			IF field.offset # 0 THEN
-				CODE.AddCmd(CODE.opADDR, field.offset)
+				CODE.Cmd_Add(CODE.opADDR, field.offset)
 			END;
 			PARS.Next(parser);
 			e.ident := NIL
@@ -1380,7 +1380,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e.type.length > 0 THEN
 						PARS.check(ARITH.IsRange(idx.value, 0, e.type.length - 1), parser, pos, 83);
 						IF ARITH.Int(idx.value) > 0 THEN
-							CODE.AddCmd(CODE.opADDR, ARITH.Int(idx.value) * e.type.base.size)
+							CODE.Cmd_Add(CODE.opADDR, ARITH.Int(idx.value) * e.type.base.size)
 						END
 					ELSE
 						PARS.check(ARITH.IsRange(idx.value, 0, MACHINE.target.maxInt), parser, pos, 83);
@@ -1393,7 +1393,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							CheckRange(e.type.length, pos.line, errIDX)
 						END;
 						IF e.type.base.size # 1 THEN
-							CODE.AddCmd(CODE.opMULC, e.type.base.size)
+							CODE.Cmd_Add(CODE.opMULC, e.type.base.size)
 						END;
 						CODE.AddCmd0(CODE.opADD)
 					ELSE
@@ -1434,7 +1434,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e.ident = NIL THEN
 						CODE.TypeGuard(CODE.opTYPEGD, t.type.num, pos.line, errGUARD)
 					ELSE
-						CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);
+						CODE.Cmd_Add(CODE.opVADR, e.ident.offset - 1);
 						CODE.TypeGuard(CODE.opTYPEGR, t.type.num, pos.line, errGUARD)
 					END
 				END;
@@ -1524,9 +1524,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			ELSE
 				IF range THEN
 					IF e1.obj = eCONST THEN
-						CODE.AddCmd(CODE.opRSETL, ARITH.Int(e1.value))
+						CODE.Cmd_Add(CODE.opRSETL, ARITH.Int(e1.value))
 					ELSIF e2.obj = eCONST THEN
-						CODE.AddCmd(CODE.opRSETR, ARITH.Int(e2.value))
+						CODE.Cmd_Add(CODE.opRSETR, ARITH.Int(e2.value))
 					ELSE
 						CODE.AddCmd0(CODE.opRSET)
 					END
@@ -1566,9 +1566,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						ARITH.OpSet_Set(e.value, e1.value, "+")
 					ELSE
 						IF e.obj = eCONST THEN
-							CODE.AddCmd(CODE.opADDSL, ARITH.Int(e.value))
+							CODE.Cmd_Add(CODE.opADDSL, ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opADDSR, ARITH.Int(e1.value))
+							CODE.Cmd_Add(CODE.opADDSR, ARITH.Int(e1.value))
 						ELSE
 							CODE.AddCmd0(CODE.opADDS)
 						END;
@@ -1653,7 +1653,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 
 						IF cconv = PROG.cdecl THEN
-							CODE.AddCmd(CODE.opCLEANUP, params)
+							CODE.Cmd_Add(CODE.opCLEANUP, params)
 						END;
 
 						IF e.type.typ = PROG.typeReal THEN
@@ -1672,7 +1672,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						CODE.CallP;
 
 						IF cconv = PROG.cdecl THEN
-							CODE.AddCmd(CODE.opCLEANUP, params)
+							CODE.Cmd_Add(CODE.opCLEANUP, params)
 						END;
 
 						IF e.type.typ = PROG.typeReal THEN
@@ -1732,11 +1732,11 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF ~parser.constexp THEN
 
 						IF label = -1 THEN
-							label := CODE.NewLabel()
+							label := CODE.Label_New()
 						END;
 
 						IF e.obj = eCONST THEN
-							CODE.AddCmd(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
+							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
 						END;
 						CODE.AddCmd0(CODE.opACC);
 						CODE.AddJmpCmd(CODE.opJZ, label);
@@ -1760,9 +1760,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						IF isInt(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.AddCmd(CODE.opMULC, ARITH.Int(e.value))
+								CODE.Cmd_Add(CODE.opMULC, ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.AddCmd(CODE.opMULC, ARITH.Int(e1.value))
+								CODE.Cmd_Add(CODE.opMULC, ARITH.Int(e1.value))
 							ELSE
 								CODE.AddCmd0(CODE.opMUL)
 							END
@@ -1775,9 +1775,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							CODE.fbinop(CODE.opMULF)
 						ELSIF isSet(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.AddCmd(CODE.opMULSC, ARITH.Int(e.value))
+								CODE.Cmd_Add(CODE.opMULSC, ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.AddCmd(CODE.opMULSC, ARITH.Int(e1.value))
+								CODE.Cmd_Add(CODE.opMULSC, ARITH.Int(e1.value))
 							ELSE
 								CODE.AddCmd0(CODE.opMULS)
 							END
@@ -1810,9 +1810,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							END
 						ELSIF isSet(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.AddCmd(CODE.opDIVSC, ARITH.Int(e.value))
+								CODE.Cmd_Add(CODE.opDIVSC, ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.AddCmd(CODE.opDIVSC, ARITH.Int(e1.value))
+								CODE.Cmd_Add(CODE.opDIVSC, ARITH.Int(e1.value))
 							ELSE
 								CODE.AddCmd0(CODE.opDIVS)
 							END
@@ -1835,18 +1835,18 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 					ELSE
 						IF e1.obj # eCONST THEN
-							label1 := CODE.NewLabel();
+							label1 := CODE.Label_New();
 							CODE.AddJmpCmd(CODE.opJNZ, label1)
 						END;
 						IF e.obj = eCONST THEN
 							CODE.OnError(pos.line, errDIV);
-							CODE.SetLabel(label1);
-							CODE.AddCmd(CODE.opDIVL + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
+							CODE.Label_Set(label1);
+							CODE.Cmd_Add(CODE.opDIVL + ORD(op = SCAN.lxMOD), ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
+							CODE.Cmd_Add(CODE.opDIVR + ORD(op = SCAN.lxMOD), ARITH.Int(e1.value))
 						ELSE
 							CODE.OnError(pos.line, errDIV);
-							CODE.SetLabel(label1);
+							CODE.Label_Set(label1);
 							CODE.AddCmd0(CODE.opDIV  + ORD(op = SCAN.lxMOD))
 						END;
 						e.obj := eEXPR
@@ -1860,7 +1860,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						e.obj := eEXPR;
 						IF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
+							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
 						END;
 						CODE.AddCmd0(CODE.opACC)
 					END
@@ -1869,7 +1869,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			END;
 
 			IF label # -1 THEN
-				CODE.SetLabel(label)
+				CODE.Label_Set(label)
 			END
 		END term;
 
@@ -1929,11 +1929,11 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF ~parser.constexp THEN
 
 						IF label = -1 THEN
-							label := CODE.NewLabel()
+							label := CODE.Label_New()
 						END;
 
 						IF e.obj = eCONST THEN
-							CODE.AddCmd(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
+							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
 						END;
 						CODE.AddCmd0(CODE.opACC);
 						CODE.AddJmpCmd(CODE.opJNZ, label);
@@ -1965,9 +1965,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						IF isInt(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.AddCmd(CODE.opADDL + ORD(op = ORD("-")), ARITH.Int(e.value))
+								CODE.Cmd_Add(CODE.opADDL + ORD(op = ORD("-")), ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.AddCmd(CODE.opADDR + ORD(op = ORD("-")), ARITH.Int(e1.value))
+								CODE.Cmd_Add(CODE.opADDR + ORD(op = ORD("-")), ARITH.Int(e1.value))
 							ELSE
 								CODE.AddCmd0(CODE.opADD  + ORD(op = ORD("-")))
 							END
@@ -1983,9 +1983,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							END
 						ELSIF isSet(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.AddCmd(CODE.opADDSL + ORD(op = ORD("-")), ARITH.Int(e.value))
+								CODE.Cmd_Add(CODE.opADDSL + ORD(op = ORD("-")), ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.AddCmd(CODE.opADDSR + ORD(op = ORD("-")), ARITH.Int(e1.value))
+								CODE.Cmd_Add(CODE.opADDSR + ORD(op = ORD("-")), ARITH.Int(e1.value))
 							ELSE
 								CODE.AddCmd0(CODE.opADDS  + ORD(op = ORD("-")))
 							END
@@ -2002,7 +2002,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						e.obj := eEXPR;
 						IF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
+							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
 						END;
 						CODE.AddCmd0(CODE.opACC)
 					END
@@ -2011,7 +2011,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			END;
 
 			IF label # -1 THEN
-				CODE.SetLabel(label)
+				CODE.Label_Set(label)
 			END
 
 		END SimpleExpression;
@@ -2053,33 +2053,33 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			res := TRUE;
 
 			IF isString(e) & isCharArray(e1) THEN
-				CODE.AddCmd(CODE.opSADR, String(e));
-				CODE.AddCmd(CODE.opCONST, strlen(e) + 1);
+				CODE.Cmd_Add(CODE.opSADR, String(e));
+				CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1);
 				CODE.AddCmd0(CODE.opEQS2 + cmpcode(op))
 
 			ELSIF isString(e) & isCharArrayW(e1) THEN
-				CODE.AddCmd(CODE.opSADR, StringW(e));
-				CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1);
+				CODE.Cmd_Add(CODE.opSADR, StringW(e));
+				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
 				CODE.AddCmd0(CODE.opEQSW2 + cmpcode(op))
 
 			ELSIF isStringW(e) & isCharArrayW(e1) THEN
-				CODE.AddCmd(CODE.opSADR, StringW(e));
-				CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1);
+				CODE.Cmd_Add(CODE.opSADR, StringW(e));
+				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
 				CODE.AddCmd0(CODE.opEQSW2 + cmpcode(op))
 
 			ELSIF isCharArray(e) & isString(e1) THEN
-				CODE.AddCmd(CODE.opSADR, String(e1));
-				CODE.AddCmd(CODE.opCONST, strlen(e1) + 1);
+				CODE.Cmd_Add(CODE.opSADR, String(e1));
+				CODE.Cmd_Add(CODE.opCONST, strlen(e1) + 1);
 				CODE.AddCmd0(CODE.opEQS + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isString(e1) THEN
-				CODE.AddCmd(CODE.opSADR, StringW(e1));
-				CODE.AddCmd(CODE.opCONST, utf8strlen(e1) + 1);
+				CODE.Cmd_Add(CODE.opSADR, StringW(e1));
+				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e1) + 1);
 				CODE.AddCmd0(CODE.opEQSW + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isStringW(e1) THEN
-				CODE.AddCmd(CODE.opSADR, StringW(e1));
-				CODE.AddCmd(CODE.opCONST, utf8strlen(e1) + 1);
+				CODE.Cmd_Add(CODE.opSADR, StringW(e1));
+				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e1) + 1);
 				CODE.AddCmd0(CODE.opEQSW + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isCharArrayW(e1) THEN
@@ -2103,7 +2103,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		SimpleExpression(parser, e);
 		IF relation(parser.sym) THEN
 			IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
-				CODE.AddCmd(CODE.opCONST, e.type.length)
+				CODE.Cmd_Add(CODE.opCONST, e.type.length)
 			END;
 			op  := parser.sym;
 			getpos(parser, pos);
@@ -2113,7 +2113,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			SimpleExpression(parser, e1);
 
 			IF (isCharArray(e1) OR isCharArrayW(e1)) & (e1.type.length # 0) THEN
-				CODE.AddCmd(CODE.opCONST, e1.type.length)
+				CODE.Cmd_Add(CODE.opCONST, e1.type.length)
 			END;
 
 			constant := (e.obj = eCONST) & (e1.obj = eCONST);
@@ -2143,19 +2143,19 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						ARITH.Relation_Set(e.value, e1.value, operator, error)
 					ELSE
 						IF e.obj = eCONST THEN
-							CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6,  ARITH.Int(e.value))
+							CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 6,  ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
+							CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
 						ELSE
 							CODE.AddCmd0(CODE.opEQ + cmpcode(op))
 						END
 					END
 
 				ELSIF isStringW1(e) & isCharW(e1) THEN
-					CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
+					CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
 
 				ELSIF isStringW1(e1) & isCharW(e) THEN
-					CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
+					CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
 
 				ELSIF isBoolean(e) & isBoolean(e1) THEN
 					IF constant THEN
@@ -2263,19 +2263,19 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						ARITH.Relation_Set(e.value, e1.value, operator, error)
 					ELSE
 						IF e.obj = eCONST THEN
-							CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, ARITH.Int(e.value))
+							CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 6, ARITH.Int(e.value))
 						ELSIF e1.obj = eCONST THEN
-							CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
+							CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
 						ELSE
 							CODE.AddCmd0(CODE.opEQ + cmpcode(op))
 						END
 					END
 
 				ELSIF isStringW1(e) & isCharW(e1) THEN
-					CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
+					CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
 
 				ELSIF isStringW1(e1) & isCharW(e) THEN
-					CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
+					CODE.Cmd_Add(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
 
 				ELSIF isReal(e) & isReal(e1) THEN
 					IF constant THEN
@@ -2310,9 +2310,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ARITH.Relation_Set(e.value, e1.value, operator, error)
 				ELSE
 					IF e.obj = eCONST THEN
-						CODE.AddCmd(CODE.opINL, ARITH.Int(e.value))
+						CODE.Cmd_Add(CODE.opINL, ARITH.Int(e.value))
 					ELSIF e1.obj = eCONST THEN
-						CODE.AddCmd(CODE.opINR, ARITH.Int(e1.value))
+						CODE.Cmd_Add(CODE.opINR, ARITH.Int(e1.value))
 					ELSE
 						CODE.AddCmd0(CODE.opIN)
 					END
@@ -2330,7 +2330,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e.ident = NIL THEN
 						CODE.TypeCheck(e1.type.num)
 					ELSE
-						CODE.AddCmd(CODE.opVADR, e.ident.offset - 1);
+						CODE.Cmd_Add(CODE.opVADR, e.ident.offset - 1);
 						CODE.TypeCheckRec(e1.type.num)
 					END
 				ELSE
@@ -2423,7 +2423,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 		CODE.BegEnd_Pop(begcall, endcall);
 
 		IF cconv = PROG.cdecl THEN
-			CODE.AddCmd(CODE.opCLEANUP, params)
+			CODE.Cmd_Add(CODE.opCLEANUP, params)
 		END
 
 	END ElementaryStatement;
@@ -2436,16 +2436,16 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 		label, L: INTEGER;
 
 	BEGIN
-		L := CODE.NewLabel();
+		L := CODE.Label_New();
 
 		IF ~if THEN
-			CODE.SetLabel(L)
+			CODE.Label_Set(L)
 		END;
 
 		REPEAT
 			NextPos(parser, pos);
 
-			label := CODE.NewLabel();
+			label := CODE.Label_New();
 
 			expression(parser, e);
 			PARS.check(isBoolean(e), parser, pos, 72);
@@ -2468,7 +2468,7 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 			parser.StatSeq(parser);
 
 			CODE.AddJmpCmd(mConst.codeJMP, L);
-			CODE.SetLabel(label)
+			CODE.Label_Set(label)
 
 		UNTIL parser.sym # SCAN.lxELSIF;
 
@@ -2477,7 +2477,7 @@ PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 				PARS.Next(parser);
 				parser.StatSeq(parser)
 			END;
-			CODE.SetLabel(L)
+			CODE.Label_Set(L)
 		END;
 
 		PARS.checklex(parser, SCAN.lxEND);
@@ -2491,8 +2491,8 @@ PROCEDURE RepeatStatement (parser: PARS.PARSER);
 		label: INTEGER;
 
 	BEGIN
-		label := CODE.NewLabel();
-		CODE.SetLabel(label);
+		label := CODE.Label_New();
+		CODE.Label_Set(label);
 
 		PARS.Next(parser);
 		parser.StatSeq(parser);
@@ -2634,7 +2634,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			END;
 
 			label.variant := variant;
-			label.self := CODE.NewLabel();
+			label.self := CODE.Label_New();
 
 			getpos(parser, pos1);
 			range.a := Label(parser, caseExpr, label.type);
@@ -2693,7 +2693,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		BEGIN
 			sym := parser.sym;
 			IF sym # SCAN.lxBAR THEN
-				variant := CODE.NewLabel();
+				variant := CODE.Label_New();
 				node := CaseLabelList(parser, caseExpr, tree, variant);
 				PARS.checklex(parser, SCAN.lxCOLON);
 				PARS.Next(parser);
@@ -2703,7 +2703,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				END;
 
 				last := CODE.Last_Get();
-				CODE.SetLabel(variant);
+				CODE.Label_Set(variant);
 
 				IF ~isRecPtr(caseExpr) THEN
 					LISTS.Add(CaseVariants, NewVariant(variant, last))
@@ -2756,7 +2756,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				ASSERT((v # NIL) & (v.label # 0));
 				CODE.Last_Set(v.cmd);
 
-				CODE.SetLabel(node.data(CASE_LABEL).self);
+				CODE.Label_Set(node.data(CASE_LABEL).self);
 				CODE.case(range.a, range.b, L, R);
 				IF v.processed THEN
 					CODE.AddJmpCmd(mConst.codeJMP, node.data(CASE_LABEL).variant)
@@ -2790,10 +2790,10 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 
 		BEGIN
 			LISTS.Add(CaseVariants, NewVariant(0, NIL));
-			end   := CODE.NewLabel();
-			else  := CODE.NewLabel();
-			table := CODE.NewLabel();
-			CODE.AddCmd(CODE.opSWITCH, ORD(isRecPtr(e)));
+			end   := CODE.Label_New();
+			else  := CODE.Label_New();
+			table := CODE.Label_New();
+			CODE.Cmd_Add(CODE.opSWITCH, ORD(isRecPtr(e)));
 			CODE.AddJmpCmd(mConst.codeJMP, table);
 
 			tree := NIL;
@@ -2804,7 +2804,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				case(parser, e, tree, end)
 			END;
 
-			CODE.SetLabel(else);
+			CODE.Label_Set(else);
 			IF parser.sym = SCAN.lxELSE THEN
 				PARS.Next(parser);
 				parser.StatSeq(parser);
@@ -2817,7 +2817,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			PARS.Next(parser);
 
 			IF isRecPtr(e) THEN
-				CODE.SetLabel(table);
+				CODE.Label_Set(table);
 				TableT(tree);
 				CODE.AddJmpCmd(mConst.codeJMP, else)
 			ELSE
@@ -2826,7 +2826,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			END;
 
 			AVL.Destroy(tree, DestroyLabel);
-			CODE.SetLabel(end);
+			CODE.Label_Set(end);
 			CODE.AddCmd0(CODE.opENDSW);
 
 			REPEAT
@@ -2851,11 +2851,11 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			LoadConst(e)
 		ELSIF isRec(e) THEN
 			CODE.drop;
-			CODE.AddCmd(CODE.opLADR, e.ident.offset - 1);
+			CODE.Cmd_Add(CODE.opLADR, e.ident.offset - 1);
 			CODE.load(PARS.program.target.word)
 		ELSIF isPtr(e) THEN
 			deref(pos, e, FALSE, errPTR);
-			CODE.AddCmd(CODE.opSUBR, PARS.program.target.word);
+			CODE.Cmd_Add(CODE.opSUBR, PARS.program.target.word);
 			CODE.load(PARS.program.target.word)
 		END;
 
@@ -2875,8 +2875,8 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		L1, L2:  INTEGER;
 
 	BEGIN
-		L1 := CODE.NewLabel();
-		L2 := CODE.NewLabel();
+		L1 := CODE.Label_New();
+		L2 := CODE.Label_New();
 
 		PARS.ExpectSym(parser, SCAN.lxIDENT);
 		ident := parser.unit.idents.get(parser.unit, parser.lex.ident, TRUE);
@@ -2887,9 +2887,9 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		offset := PROG.getOffset(PARS.program, ident);
 
 		IF ident.global THEN
-			CODE.AddCmd(CODE.opGADR, offset)
+			CODE.Cmd_Add(CODE.opGADR, offset)
 		ELSE
-			CODE.AddCmd(CODE.opLADR, -offset)
+			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
 
 		PARS.ExpectSym(parser, SCAN.lxASSIGN);
@@ -2899,12 +2899,12 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 
 		ASSERT(assign(e, ident.type, 0));
 
-		CODE.SetLabel(L1);
+		CODE.Label_Set(L1);
 
 		IF ident.global THEN
-			CODE.AddCmd(CODE.opGADR, offset)
+			CODE.Cmd_Add(CODE.opGADR, offset)
 		ELSE
-			CODE.AddCmd(CODE.opLADR, -offset)
+			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
 		CODE.load(ident.type.size);
 
@@ -2925,9 +2925,9 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 
 		IF e.obj = eCONST THEN
 			IF st > 0 THEN
-				CODE.AddCmd(CODE.opLER, ARITH.Int(e.value))
+				CODE.Cmd_Add(CODE.opLER, ARITH.Int(e.value))
 			ELSE
-				CODE.AddCmd(CODE.opGER, ARITH.Int(e.value))
+				CODE.Cmd_Add(CODE.opGER, ARITH.Int(e.value))
 			END
 		ELSE
 			IF st > 0 THEN
@@ -2944,9 +2944,9 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		parser.StatSeq(parser);
 
 		IF ident.global THEN
-			CODE.AddCmd(CODE.opGADR, offset)
+			CODE.Cmd_Add(CODE.opGADR, offset)
 		ELSE
-			CODE.AddCmd(CODE.opLADR, -offset)
+			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
 
 		IF st = 1 THEN
@@ -2955,9 +2955,9 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 			CODE.AddCmd0(CODE.opDEC1)
 		ELSE
 			IF st > 0 THEN
-				CODE.AddCmd(CODE.opINCC, st)
+				CODE.Cmd_Add(CODE.opINCC, st)
 			ELSE
-				CODE.AddCmd(CODE.opDECC, -st)
+				CODE.Cmd_Add(CODE.opDECC, -st)
 			END
 		END;
 
@@ -2966,7 +2966,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		PARS.checklex(parser, SCAN.lxEND);
 		PARS.Next(parser);
 
-		CODE.SetLabel(L2);
+		CODE.Label_Set(L2);
 
 	END ForStatement;
 
@@ -3012,7 +3012,7 @@ PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN
 				IF e.type.typ = PROG.typeReal THEN
 					CODE.Float(ARITH.Float_Get(e.value))
 				ELSIF e.type.typ = PROG.tNIL THEN
-					CODE.AddCmd(CODE.opCONST, 0)
+					CODE.Cmd_Add(CODE.opCONST, 0)
 				ELSE
 					LoadConst(e)
 				END
