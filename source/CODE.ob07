@@ -127,7 +127,7 @@ TYPE
 	END;
 
 	tpCommandFloat* = POINTER TO RECORD (tpCommand)
-		float*:   REAL
+		valFloat*:   REAL
 	END;
 
 	CMDSTACK = POINTER TO RECORD
@@ -812,7 +812,7 @@ PROCEDURE Float* (r: REAL);
 	BEGIN
 		NEW(cmd);
 		cmd.opCode := opCONSTF;
-		cmd.float := r;
+		cmd.valFloat := r;
 		insert(codes.last, cmd);
 		INC(codes.fregs);
 		ASSERT(codes.fregs <= mConst.codeFregs)
