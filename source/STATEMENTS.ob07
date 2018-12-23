@@ -1698,7 +1698,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				factor(parser, e);
 				PARS.check(isBoolean(e), parser, pos, 72);
 				IF e.obj # eCONST THEN
-					CODE.not;
+					CODE.Not;
 					e.obj := eEXPR
 				ELSE
 					ASSERT(ARITH.IsNeg(e.value))

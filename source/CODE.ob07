@@ -270,9 +270,9 @@ PROCEDURE Str_PutW1* (pNum: INTEGER): INTEGER;
 		RETURN _res
 	END Str_PutW1;
 
-PROCEDURE MinDataSize_Set* (size: INTEGER);
+PROCEDURE MinDataSize_Set* (pSize: INTEGER);
 	BEGIN
-		codes.dmin := mChl.Length(codes.data) + size
+		codes.dmin := mChl.Length(codes.data) + pSize
 	END MinDataSize_Set;
 
 PROCEDURE Push (pStack: tpCmdStack; pCmd: tpCommand);
@@ -413,9 +413,9 @@ PROCEDURE TypeRec_Check* (pType: INTEGER);
 		Cmd_Add(opISREC, pType)
 	END TypeRec_Check;
 
-PROCEDURE New* (size, typenum: INTEGER);
+PROCEDURE New* (pSize, pTypeNum: INTEGER);
 	BEGIN
-		Cmd2_Add(opNEW, typenum, size)
+		Cmd2_Add(opNEW, pTypeNum, pSize)
 	END New;
 
 PROCEDURE fcmp* (pOpCode: BYTE);
@@ -425,7 +425,7 @@ PROCEDURE fcmp* (pOpCode: BYTE);
 		ASSERT(codes.fregs >= 0)
 	END fcmp;
 
-PROCEDURE isCmp (pOpCode: BYTE): BOOLEAN;
+PROCEDURE IsCmp (pOpCode: BYTE): BOOLEAN;
 	(*
 		opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
 		opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
@@ -446,11 +446,10 @@ PROCEDURE isCmp (pOpCode: BYTE): BOOLEAN;
 				(opEQS2 <= pOpCode) & (pOpCode <= opGES2) OR (opEQSW <= pOpCode) & (pOpCode <= opGESW) OR
 				(opEQSW2 <= pOpCode) & (pOpCode <= opGESW2) OR
 				(opEQF <= pOpCode) & (pOpCode <= opGEFI) OR (pOpCode = opEQP) OR (pOpCode = opNEP)
-	END isCmp;
+	END IsCmp;
 
-PROCEDURE InvCmp (pOpCode: BYTE): INTEGER;
+PROCEDURE Cmp_Inv (pOpCode: BYTE): INTEGER;
 	BEGIN
-
 		CASE pOpCode OF
 
 		|opEQ:    pOpCode := opNE
@@ -522,9 +521,9 @@ PROCEDURE InvCmp (pOpCode: BYTE): INTEGER;
 		END
 
 		RETURN pOpCode
-	END InvCmp;
+	END Cmp_Inv;
 
-PROCEDURE not*;
+PROCEDURE Not*;
 	VAR
 		_prev: tpCommand;
 	BEGIN
@@ -532,12 +531,12 @@ PROCEDURE not*;
 		IF _prev.opCode = opNOT THEN
 			codes.last := _prev.prev(tpCommand);
 			Delete(_prev)
-		ELSIF isCmp(_prev.opCode) THEN
-			_prev.opCode := InvCmp(_prev.opCode)
+		ELSIF IsCmp(_prev.opCode) THEN
+			_prev.opCode := Cmp_Inv(_prev.opCode)
 		ELSE
 			Cmd0_Add(opNOT)
 		END
-	END not;
+	END Not;
 
 PROCEDURE Enter* (label: INTEGER): tpCommand;
 	BEGIN
@@ -613,17 +612,17 @@ PROCEDURE ProcImpCmp* (proc: mList.tpItem; eq: BOOLEAN);
 		END
 	END ProcImpCmp;
 
-PROCEDURE SysGet* (size: INTEGER);
+PROCEDURE SysGet* (pSize: INTEGER);
 	BEGIN
-		Cmd_Add(opGET, size)
+		Cmd_Add(opGET, pSize)
 	END SysGet;
 
-PROCEDURE load* (size: INTEGER);
+PROCEDURE load* (pSize: INTEGER);
 	VAR
 		last: tpCommand;
 	BEGIN
 		last := codes.last;
-		CASE size OF
+		CASE pSize OF
 		|1:
 			IF last.opCode = opLADR THEN
 				last.opCode := opLLOAD8
@@ -670,9 +669,9 @@ PROCEDURE load* (size: INTEGER);
 		END
 	END load;
 
-PROCEDURE SysPut* (size: INTEGER);
+PROCEDURE SysPut* (pSize: INTEGER);
 	BEGIN
-		CASE size OF
+		CASE pSize OF
 		|1: Cmd0_Add(opSAVE8)
 		|2: Cmd0_Add(opSAVE16)
 		|4: Cmd0_Add(opSAVE32)
