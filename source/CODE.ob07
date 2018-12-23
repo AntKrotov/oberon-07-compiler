@@ -229,7 +229,7 @@ PROCEDURE Str_Put1* (pNum: INTEGER): INTEGER;
 
 PROCEDURE Str_PutW* (pStr: ARRAY OF CHAR): INTEGER;
 	VAR
-		pNum_i, _n, _res: INTEGER;
+		_i, _n, _res: INTEGER;
 	BEGIN
 		_res := mChl.Length(codes.data);
 		IF ODD(_res) THEN
@@ -237,11 +237,11 @@ PROCEDURE Str_PutW* (pStr: ARRAY OF CHAR): INTEGER;
 			INC(_res)
 		END;
 		_n := mStr.Utf8To16(pStr, codes.wstr);
-		pNum_i := 0;
-		WHILE pNum_i < _n DO
-			Byte_Put(codes, ORD(codes.wstr[pNum_i]) MOD 256);
-			Byte_Put(codes, ORD(codes.wstr[pNum_i]) DIV 256);
-			INC(pNum_i)
+		_i := 0;
+		WHILE _i < _n DO
+			Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256);
+			Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256);
+			INC(_i)
 		END;
 		Byte_Put(codes, 0);
 		Byte_Put(codes, 0)
@@ -841,93 +841,92 @@ PROCEDURE Drop*;
 		Cmd0_Add(opDROP)
 	END Drop;
 
-PROCEDURE case* (a, b, L, R: INTEGER);
+PROCEDURE Case* (pA, pB, pL, pR: INTEGER);
 	VAR
 		_cmd: tpCommand3;
-
 	BEGIN
-		IF a = b THEN
+		IF pA = pB THEN
 			NEW(_cmd);
 			_cmd.opCode := opCASELR;
-			_cmd.param1 := a;
-			_cmd.param2 := L;
-			_cmd.param3 := R;
+			_cmd.param1 := pA;
+			_cmd.param2 := pL;
+			_cmd.param3 := pR;
 			Insert(codes.last, _cmd)
 		ELSE
-			Cmd2_Add(opCASEL, a, L);
-			Cmd2_Add(opCASER, b, R)
+			Cmd2_Add(opCASEL, pA, pL);
+			Cmd2_Add(opCASER, pB, pR)
 		END
-	END case;
+	END Case;
 
-PROCEDURE caset* (a, label: INTEGER);
+PROCEDURE Case_Set* (pA, pLabel: INTEGER);
 	BEGIN
-		Cmd2_Add(opCASET, label, a)
-	END caset;
+		Cmd2_Add(opCASET, pLabel, pA)
+	END Case_Set;
 
-PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
+PROCEDURE ProcExport_Add* (pLabel: INTEGER; pName: mScan.LEXSTR);
 	VAR
 		exp: tpProcExport;
 	BEGIN
 		NEW(exp);
-		exp.label := label;
-		exp.lexName  := name;
+		exp.label := pLabel;
+		exp.lexName  := pName;
 		mList.Add(codes.export, exp)
-	END AddExp;
+	END ProcExport_Add;
 
-PROCEDURE AddImp* (dll, pProc: mScan.LEXSTR): tpProcImport;
+PROCEDURE Imp_Add* (pDll, pProc: mScan.LEXSTR): tpProcImport;
 	VAR
-		lib: tpLibImport;
-		p:   tpProcImport;
+		_lib: tpLibImport;
+		_proc:   tpProcImport;
 	BEGIN
-		lib := codes.import.first(tpLibImport);
-		WHILE (lib # NIL) & (lib.lexName # dll) DO
-			lib := lib.next(tpLibImport)
+		_lib := codes.import.first(tpLibImport);
+		WHILE (_lib # NIL) & (_lib.lexName # pDll) DO
+			_lib := _lib.next(tpLibImport)
 		END;
 
-		IF lib = NIL THEN
-			NEW(lib);
-			lib.lexName := dll;
-			lib.procs := mList.New(NIL);
-			mList.Add(codes.import, lib)
+		IF _lib = NIL THEN
+			NEW(_lib);
+			_lib.lexName := pDll;
+			_lib.procs := mList.New(NIL);
+			mList.Add(codes.import, _lib)
 		END;
 
-		p := lib.procs.first(tpProcImport);
-		WHILE (p # NIL) & (p.lexName # pProc) DO
-			p := p.next(tpProcImport)
+		_proc := _lib.procs.first(tpProcImport);
+		WHILE (_proc # NIL) & (_proc.lexName # pProc) DO
+			_proc := _proc.next(tpProcImport)
 		END;
 
-		IF p = NIL THEN
-			NEW(p);
-			p.lexName  := pProc;
-			p.label := Label_New();
-			p.lib   := lib;
-			p.count := 1;
-			mList.Add(lib.procs, p)
+		IF _proc = NIL THEN
+			NEW(_proc);
+			_proc.lexName  := pProc;
+			_proc.label := Label_New();
+			_proc.lib   := _lib;
+			_proc.count := 1;
+			mList.Add(_lib.procs, _proc)
 		ELSE
-			INC(p.count)
+			INC(_proc.count)
 		END
 
-		RETURN p
-	END AddImp;
+		RETURN _proc
+	END Imp_Add;
 
-PROCEDURE DelImport* (imp: mList.tpItem);
+PROCEDURE Import_Del* (pImport: mList.tpItem);
 	VAR
-		lib: tpLibImport;
+		_lib: tpLibImport;
 	BEGIN
-		DEC(imp(tpProcImport).count);
-		IF imp(tpProcImport).count = 0 THEN
-			lib := imp(tpProcImport).lib;
-			mList.Del(lib.procs, imp);
-			IF lib.procs.first = NIL THEN
-				mList.Del(codes.import, lib)
+		DEC(pImport(tpProcImport).count);
+		IF pImport(tpProcImport).count = 0 THEN
+			_lib := pImport(tpProcImport).lib;
+			mList.Del(_lib.procs, pImport);
+			IF _lib.procs.first = NIL THEN
+				mList.Del(codes.import, _lib)
 			END
 		END
-	END DelImport;
+	END Import_Del;
 
-PROCEDURE init*;
+PROCEDURE Init*;
 	VAR
 		_cmd:    tpCommand;
-		pNum_i:      INTEGER;
+		_i:      INTEGER;
 	BEGIN
 		NEW(codes);
 		NEW(codes.call_beg);
@@ -938,7 +937,7 @@ PROCEDURE init*;
 		codes.export   := mList.New(NIL);
 		codes.import   := mList.New(NIL);
 		codes.types    := mChl.CreateIntList();
-		codes.data    := mChl.CreateByteList();
+		codes.data     := mChl.CreateByteList();
 
 		NEW(_cmd); _cmd.opCode := opNOP; mList.Add(codes.commands, _cmd);
 		codes.last := _cmd;
@@ -950,13 +949,13 @@ PROCEDURE init*;
 
 		codes.fregs := 0;
 
-		FOR pNum_i := 0 TO LEN(codes.charoffs) - 1 DO
-			codes.charoffs[pNum_i] := -1
+		FOR _i := 0 TO LEN(codes.charoffs) - 1 DO
+			codes.charoffs[_i] := -1
 		END;
 
-		FOR pNum_i := 0 TO LEN(codes.wcharoffs) - 1 DO
-			codes.wcharoffs[pNum_i] := -1
+		FOR _i := 0 TO LEN(codes.wcharoffs) - 1 DO
+			codes.wcharoffs[_i] := -1
 		END
-	END init;
+	END Init;
 
 END CODE.

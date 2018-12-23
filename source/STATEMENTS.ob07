@@ -2757,7 +2757,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				CODE.Last_Set(v.cmd);
 
 				CODE.Label_Set(node.data(CASE_LABEL).self);
-				CODE.case(range.a, range.b, L, R);
+				CODE.Case(range.a, range.b, L, R);
 				IF v.processed THEN
 					CODE.CmdJmp_Add(mConst.codeJMP, node.data(CASE_LABEL).variant)
 				END;
@@ -2774,7 +2774,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		PROCEDURE TableT (node: AVL.tpNode);
 		BEGIN
 			IF node # NIL THEN
-				CODE.caset(node.data(CASE_LABEL).range.a, node.data(CASE_LABEL).variant);
+				CODE.Case_Set(node.data(CASE_LABEL).range.a, node.data(CASE_LABEL).variant);
 
 				TableT(node.left);
 				TableT(node.right)
@@ -3107,7 +3107,7 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.tPath; target, v
 		LISTS.Add(CaseVariants, NewVariant(0, NIL));
 
 		checking := chk;
-		CODE.init;
+		CODE.Init;
 
 		parser := PARS.create(path, lib_path, ext, StatSeq, expression, designator, chkreturn);
 		IF parser.open(parser, "RTL") THEN
@@ -3137,7 +3137,7 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.tPath; target, v
 
 		setrtl;
 
-		PROG.DelUnused(PARS.program, CODE.DelImport);
+		PROG.DelUnused(PARS.program, CODE.Import_Del);
 
 		CODE.codes.bss := PARS.program.bss;
 		IF target = mConst.Target_iWin64 THEN

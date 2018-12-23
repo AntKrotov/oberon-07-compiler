@@ -495,7 +495,7 @@ PROCEDURE procflag (parser: PARSER; VAR import: CODE.tpProcImport; isProc: BOOLE
 				ExpectSym(parser, SCAN.lxSTRING);
 				proc := parser.lex.s;
 				Next(parser);
-				import := CODE.AddImp(dll, proc)
+				import := CODE.Imp_Add(dll, proc)
 			END;
 			checklex(parser, SCAN.lxRSQUARE);
 			Next(parser)
@@ -841,7 +841,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 					IF program.obj THEN
 						check((proc.name.s # "lib_init") & (proc.name.s # "version"), parser, pos, 114)
 					END;
-					CODE.AddExp(label, proc.name.s);
+					CODE.ProcExport_Add(label, proc.name.s);
 					proc.proc.used := TRUE
 				END;
 
