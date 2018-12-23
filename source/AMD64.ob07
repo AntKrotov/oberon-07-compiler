@@ -1361,21 +1361,21 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				UnOp(reg1);
 				andrc(reg1, 1)
 
-			|CODE.opUMINUS:
+			|mConst.codeUMINUS:
 				UnOp(reg1);
 				neg(reg1)
 
-			|CODE.opADD:
+			|mConst.codeADD:
 				BinOp(reg1, reg2);
 				oprr("add", reg1, reg2);
 				drop
 
-			|CODE.opSUB:
+			|mConst.codeSUB:
 				BinOp(reg1, reg2);
 				oprr("sub", reg1, reg2);
 				drop
 
-			|CODE.opSUBR, CODE.opSUBL:
+			|mConst.codeSUBR, mConst.codeSUBL:
 				UnOp(reg1);
 				n := param2;
 				IF n = 1 THEN
@@ -1385,11 +1385,11 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				ELSIF n # 0 THEN
 					oprc("sub", reg1, n)
 				END;
-				IF cmd.opCode = CODE.opSUBL THEN
+				IF cmd.opCode = mConst.codeSUBL THEN
 					neg(reg1)
 				END
 
-			|CODE.opADDL, CODE.opADDR:
+			|mConst.codeADDL, mConst.codeADDR:
 				next := cmd.next(COMMAND);
 				IF next.opCode = CODE.opLOAD64 THEN
 					next2 := next.next(COMMAND);
@@ -1451,7 +1451,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._div);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opDIVR:
+			|mConst.codeDIVR:
 				a := param2;
 				IF a > 1 THEN
 					n := log2(a)
@@ -1499,7 +1499,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._mod);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opMODR:
+			|mConst.codeMODR:
 				a := param2;
 				IF a > 1 THEN
 					n := log2(a)
