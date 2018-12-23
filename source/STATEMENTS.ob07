@@ -343,10 +343,10 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 			res := TRUE;
 			IF arrcomp(e.type, t) THEN
 				IF ~PROG.isOpenArray(t) THEN
-					CODE.Cmd_Add(CODE.opCONST, t.length);
+					CODE.Cmd_Add(mConst.codeCONST, t.length);
 					CODE.Cmd_Add(CODE.opROT, 3)
 				END;
-				CODE.Cmd_Add(CODE.opCOPYA, t.base.size);
+				CODE.Cmd_Add(mConst.codeCOPYA, t.base.size);
 				label := CODE.Label_New();
 				CODE.CmdJmp_Add(CODE.opJE, label);
 				CODE.OnError(line, errCOPY);
@@ -445,7 +445,7 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 
 PROCEDURE LoadConst (e: PARS.EXPR);
 	BEGIN
-		CODE.Cmd_Add(CODE.opCONST, ARITH.Int(e.value))
+		CODE.Cmd_Add(mConst.codeCONST, ARITH.Int(e.value))
 	END LoadConst;
 
 PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: PROG.PARAM);
@@ -489,7 +489,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				CODE.Cmd_Add(CODE.opPARAM, 1);
 				n := PROG.Dim(t2) - 1;
 				WHILE n >= 0 DO
-					CODE.Cmd_Add(CODE.opCONST, ArrLen(t, n));
+					CODE.Cmd_Add(mConst.codeCONST, ArrLen(t, n));
 					CODE.Cmd_Add(CODE.opPARAM, 1);
 					DEC(n)
 				END
@@ -499,7 +499,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				IF d1 # d2 THEN
 					n := d2 - d1;
 					WHILE d2 > d1 DO
-						CODE.Cmd_Add(CODE.opCONST, ArrLen(t, d2 - 1));
+						CODE.Cmd_Add(mConst.codeCONST, ArrLen(t, d2 - 1));
 						DEC(d2)
 					END;
 					d2 := PROG.Dim(t2);
@@ -526,7 +526,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 						CODE.Cmd0_Add(CODE.opPUSHT)
 					END
 				ELSE
-					CODE.Cmd_Add(CODE.opCONST, e.type.num)
+					CODE.Cmd_Add(mConst.codeCONST, e.type.num)
 				END;
 				CODE.Cmd_Add(CODE.opPARAM, 2)
 			ELSIF PROG.isOpenArray(p.type) THEN
@@ -547,12 +547,12 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.typeChar) THEN
 					CODE.Cmd_Add(CODE.opSADR, String(e));
 					CODE.Cmd_Add(CODE.opPARAM, 1);
-					CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1);
+					CODE.Cmd_Add(mConst.codeCONST, strlen(e) + 1);
 					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.typeWChar) THEN
 					CODE.Cmd_Add(CODE.opSADR, StringW(e));
 					CODE.Cmd_Add(CODE.opPARAM, 1);
-					CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
+					CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e) + 1);
 					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSE
 					PARS.error(parser, pos, 66)
@@ -565,10 +565,10 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 						CODE.Float(ARITH.Float_Get(e.value));
 						CODE.Float_Push
 					ELSIF e.type.typ = PROG.tNIL THEN
-						CODE.Cmd_Add(CODE.opCONST, 0);
+						CODE.Cmd_Add(mConst.codeCONST, 0);
 						CODE.Cmd_Add(CODE.opPARAM, 1)
 					ELSIF isStringW1(e) & (p.type.typ = PROG.typeWChar) THEN
-						CODE.Cmd_Add(CODE.opCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
+						CODE.Cmd_Add(mConst.codeCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
 						CODE.Cmd_Add(CODE.opPARAM, 1)
 					ELSIF (e.type.typ = PROG.typeString) OR
 						  (e.type.typ IN {PROG.typeChar, PROG.typeWChar}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.typeChar, PROG.typeWChar}) THEN
@@ -745,7 +745,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				END;
 
 				IF isCharArrayX(e) & ~PROG.isOpenArray(e.type) THEN
-					CODE.Cmd_Add(CODE.opCONST, e.type.length)
+					CODE.Cmd_Add(mConst.codeCONST, e.type.length)
 				END;
 
 				PARS.checklex(parser, SCAN.lxCOMMA);
@@ -764,20 +764,20 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				END;
 
 				IF ~PROG.isOpenArray(e1.type) THEN
-					CODE.Cmd_Add(CODE.opCONST, e1.type.length)
+					CODE.Cmd_Add(mConst.codeCONST, e1.type.length)
 				END;
 
 				IF e.obj = eCONST THEN
 					IF wchar THEN
 						CODE.Cmd_Add(CODE.opSADR, StringW(e));
-						CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1)
+						CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e) + 1)
 					ELSE
 						CODE.Cmd_Add(CODE.opSADR, String(e));
-						CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1)
+						CODE.Cmd_Add(mConst.codeCONST, strlen(e) + 1)
 					END;
 					CODE.Cmd_Add(CODE.opCOPYS2, e1.type.base.size)
 				ELSE
-					CODE.Cmd_Add(CODE.opCOPYS, e1.type.base.size)
+					CODE.Cmd_Add(mConst.codeCOPYS, e1.type.base.size)
 				END
 
 			|PROG.sysGET, PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16:
@@ -986,12 +986,12 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				parser.expression(parser, e);
 				IF isCharArray(e) THEN
 					IF e.type.length > 0 THEN
-						CODE.Cmd_Add(CODE.opCONST, e.type.length)
+						CODE.Cmd_Add(mConst.codeCONST, e.type.length)
 					END;
 					CODE.Cmd0_Add(CODE.opLENGTH)
 				ELSIF isCharArrayW(e) THEN
 					IF e.type.length > 0 THEN
-						CODE.Cmd_Add(CODE.opCONST, e.type.length)
+						CODE.Cmd_Add(mConst.codeCONST, e.type.length)
 					END;
 					CODE.Cmd0_Add(CODE.opLENGTHW)
 				ELSE
@@ -1273,7 +1273,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			IF e.obj = eVAR THEN
 				offset := PROG.getOffset(PARS.program, e.ident);
 				IF e.ident.global THEN
-					CODE.Cmd_Add(CODE.opGADR, offset)
+					CODE.Cmd_Add(mConst.codeGADR, offset)
 				ELSE
 					CODE.Cmd_Add(CODE.opLADR, -offset)
 				END
@@ -1314,12 +1314,12 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 			type := PROG.OpenBase(e.type);
 			IF type.size # 1 THEN
-				CODE.Cmd_Add(CODE.opMULC, type.size)
+				CODE.Cmd_Add(mConst.codeMULC, type.size)
 			END;
 			n := PROG.Dim(e.type) - 1;
 			k := n;
 			WHILE n > 0 DO
-				CODE.Cmd0_Add(CODE.opMUL);
+				CODE.Cmd0_Add(mConst.codeMUL);
 				DEC(n)
 			END;
 			CODE.Cmd0_Add(CODE.opADD);
@@ -1393,7 +1393,7 @@ PROCEDURE designator (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							CheckRange(e.type.length, pos.line, errIDX)
 						END;
 						IF e.type.base.size # 1 THEN
-							CODE.Cmd_Add(CODE.opMULC, e.type.base.size)
+							CODE.Cmd_Add(mConst.codeMULC, e.type.base.size)
 						END;
 						CODE.Cmd0_Add(CODE.opADD)
 					ELSE
@@ -1736,7 +1736,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 
 						IF e.obj = eCONST THEN
-							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
+							CODE.Cmd_Add(mConst.codeCONST, ORD(ARITH.Bool_Get(e.value)))
 						END;
 						CODE.Cmd0_Add(CODE.opACC);
 						CODE.CmdJmp_Add(CODE.opJZ, label);
@@ -1760,11 +1760,11 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						IF isInt(e) THEN
 							IF e.obj = eCONST THEN
-								CODE.Cmd_Add(CODE.opMULC, ARITH.Int(e.value))
+								CODE.Cmd_Add(mConst.codeMULC, ARITH.Int(e.value))
 							ELSIF e1.obj = eCONST THEN
-								CODE.Cmd_Add(CODE.opMULC, ARITH.Int(e1.value))
+								CODE.Cmd_Add(mConst.codeMULC, ARITH.Int(e1.value))
 							ELSE
-								CODE.Cmd0_Add(CODE.opMUL)
+								CODE.Cmd0_Add(mConst.codeMUL)
 							END
 						ELSIF isReal(e) THEN
 							IF e.obj = eCONST THEN
@@ -1860,7 +1860,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						e.obj := eEXPR;
 						IF e1.obj = eCONST THEN
-							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
+							CODE.Cmd_Add(mConst.codeCONST, ORD(ARITH.Bool_Get(e1.value)))
 						END;
 						CODE.Cmd0_Add(CODE.opACC)
 					END
@@ -1933,7 +1933,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 
 						IF e.obj = eCONST THEN
-							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e.value)))
+							CODE.Cmd_Add(mConst.codeCONST, ORD(ARITH.Bool_Get(e.value)))
 						END;
 						CODE.Cmd0_Add(CODE.opACC);
 						CODE.CmdJmp_Add(CODE.opJNZ, label);
@@ -2002,7 +2002,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSE
 						e.obj := eEXPR;
 						IF e1.obj = eCONST THEN
-							CODE.Cmd_Add(CODE.opCONST, ORD(ARITH.Bool_Get(e1.value)))
+							CODE.Cmd_Add(mConst.codeCONST, ORD(ARITH.Bool_Get(e1.value)))
 						END;
 						CODE.Cmd0_Add(CODE.opACC)
 					END
@@ -2054,32 +2054,32 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 
 			IF isString(e) & isCharArray(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, String(e));
-				CODE.Cmd_Add(CODE.opCONST, strlen(e) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, strlen(e) + 1);
 				CODE.Cmd0_Add(CODE.opEQS2 + cmpcode(op))
 
 			ELSIF isString(e) & isCharArrayW(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, StringW(e));
-				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e) + 1);
 				CODE.Cmd0_Add(CODE.opEQSW2 + cmpcode(op))
 
 			ELSIF isStringW(e) & isCharArrayW(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, StringW(e));
-				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e) + 1);
 				CODE.Cmd0_Add(CODE.opEQSW2 + cmpcode(op))
 
 			ELSIF isCharArray(e) & isString(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, String(e1));
-				CODE.Cmd_Add(CODE.opCONST, strlen(e1) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, strlen(e1) + 1);
 				CODE.Cmd0_Add(CODE.opEQS + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isString(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, StringW(e1));
-				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e1) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e1) + 1);
 				CODE.Cmd0_Add(CODE.opEQSW + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isStringW(e1) THEN
 				CODE.Cmd_Add(CODE.opSADR, StringW(e1));
-				CODE.Cmd_Add(CODE.opCONST, utf8strlen(e1) + 1);
+				CODE.Cmd_Add(mConst.codeCONST, utf8strlen(e1) + 1);
 				CODE.Cmd0_Add(CODE.opEQSW + cmpcode(op))
 
 			ELSIF isCharArrayW(e) & isCharArrayW(e1) THEN
@@ -2103,7 +2103,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 		SimpleExpression(parser, e);
 		IF relation(parser.sym) THEN
 			IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
-				CODE.Cmd_Add(CODE.opCONST, e.type.length)
+				CODE.Cmd_Add(mConst.codeCONST, e.type.length)
 			END;
 			op  := parser.sym;
 			getpos(parser, pos);
@@ -2113,7 +2113,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			SimpleExpression(parser, e1);
 
 			IF (isCharArray(e1) OR isCharArrayW(e1)) & (e1.type.length # 0) THEN
-				CODE.Cmd_Add(CODE.opCONST, e1.type.length)
+				CODE.Cmd_Add(mConst.codeCONST, e1.type.length)
 			END;
 
 			constant := (e.obj = eCONST) & (e1.obj = eCONST);
@@ -2887,7 +2887,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		offset := PROG.getOffset(PARS.program, ident);
 
 		IF ident.global THEN
-			CODE.Cmd_Add(CODE.opGADR, offset)
+			CODE.Cmd_Add(mConst.codeGADR, offset)
 		ELSE
 			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
@@ -2902,7 +2902,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		CODE.Label_Set(L1);
 
 		IF ident.global THEN
-			CODE.Cmd_Add(CODE.opGADR, offset)
+			CODE.Cmd_Add(mConst.codeGADR, offset)
 		ELSE
 			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
@@ -2944,7 +2944,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		parser.StatSeq(parser);
 
 		IF ident.global THEN
-			CODE.Cmd_Add(CODE.opGADR, offset)
+			CODE.Cmd_Add(mConst.codeGADR, offset)
 		ELSE
 			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
@@ -3012,7 +3012,7 @@ PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN
 				IF e.type.typ = PROG.typeReal THEN
 					CODE.Float(ARITH.Float_Get(e.value))
 				ELSIF e.type.typ = PROG.tNIL THEN
-					CODE.Cmd_Add(CODE.opCONST, 0)
+					CODE.Cmd_Add(mConst.codeCONST, 0)
 				ELSE
 					LoadConst(e)
 				END

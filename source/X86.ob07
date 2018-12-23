@@ -629,7 +629,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					OutIntByte(n)
 				END
 
-			|CODE.opCONST:
+			|mConst.codeCONST:
 				next := cmd.next(COMMAND);
 				IF (next.opCode = CODE.opPARAM) & (next.param2 = 1) THEN
 					pushc(param2);
@@ -644,7 +644,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 
 			|CODE.opNOP:
 
-			|CODE.opGADR:
+			|mConst.codeGADR:
 
 				next := cmd.next(COMMAND);
 				IF pic THEN
@@ -770,7 +770,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 
 				END
 
-			|CODE.opLLOAD32:
+			|mConst.codeLLOAD32:
 				next := cmd.next(COMMAND);
 				n := param2 * 4;
 				IF (next.opCode = CODE.opPARAM) & (next.param2 = 1) THEN
@@ -915,7 +915,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					neg(reg1)
 				END
 
-			|CODE.opMULC:
+			|mConst.codeMULC:
 				UnOp(reg1);
 
 				a := param2;
@@ -950,7 +950,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opMUL:
+			|mConst.codeMUL:
 				BinOp(reg1, reg2);
 				OutByte3(0FH, 0AFH, 0C0H + reg1 * 8 + reg2); // imul reg1, reg2
 				drop
@@ -1727,13 +1727,13 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				PushAll(3);
 				CallRTL(pic, CODE._move2)
 
-			|CODE.opCOPYA:
+			|mConst.codeCOPYA:
 				PushAll(4);
 				pushc(param2);
 				CallRTL(pic, CODE._arrcpy);
 				ASSERT(REG.GetReg(R, eax))
 
-			|CODE.opCOPYS:
+			|mConst.codeCOPYS:
 				PushAll(4);
 				pushc(param2);
 				CallRTL(pic, CODE._strcpy)
@@ -1892,7 +1892,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._guardrec);
 				ASSERT(REG.GetReg(R, eax))
 
-			|CODE.opCASET:
+			|mConst.codeCASET:
 				push(ecx);
 				push(ecx);
 				pushc(param2);

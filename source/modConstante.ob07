@@ -55,5 +55,13 @@ CONST
 	(* for CODE *)
 		codeJMP* = Target_iWin64 + 1000;
 		codeLABEL* = 0; (* codeJMP       + 1;*)
+		codeCOPYS* = 2;
+		codeGADR* = 3;
+		codeCONST* = 4;
+		codeLLOAD32* = 5;
+		codeCOPYA* = 6;
+		codeCASET* = 7;
+		codeMULC* = 8;
+		codeMUL* = 9;
 
 END modConstante.
