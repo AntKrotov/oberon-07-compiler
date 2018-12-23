@@ -1121,7 +1121,7 @@ PROCEDURE ActualParameters (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			WHILE param # NIL DO
 				getpos(parser, pos);
 
-				CODE.setlast(begcall);
+				CODE.Last_Set(begcall);
 
 				IF param(PROG.PARAM).vPar THEN
 					parser.designator(parser, e1)
@@ -1642,9 +1642,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e1.obj IN {ePROC, eIMP} THEN
 						cconv := e1.ident.type.call;
 						params := e1.ident.type.params.size;
-						CODE.setlast(begcall);
+						CODE.Last_Set(begcall);
 						fregs := CODE.precall(e.type.typ = PROG.typeReal);
-						CODE.setlast(endcall.prev(CODE.tpCommand));
+						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 
 						IF e1.obj = eIMP THEN
 							CODE.CallImp(e1.ident.import)
@@ -1665,9 +1665,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSIF isExpr(e1) THEN
 						cconv := e1.type.call;
 						params := e1.type.params.size;
-						CODE.setlast(begcall);
+						CODE.Last_Set(begcall);
 						fregs := CODE.precall(e.type.typ = PROG.typeReal);
-						CODE.setlast(endcall.prev(CODE.tpCommand));
+						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 						deref(pos, e1, FALSE, errPROC);
 						CODE.CallP;
 
@@ -2400,9 +2400,9 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 			IF e.obj IN {ePROC, eIMP} THEN
 				cconv := e.ident.type.call;
 				params := e.ident.type.params.size;
-				CODE.setlast(begcall);
+				CODE.Last_Set(begcall);
 				ASSERT(CODE.precall(FALSE) = 0);
-				CODE.setlast(endcall.prev(CODE.tpCommand));
+				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				IF e.obj = eIMP THEN
 					CODE.CallImp(e.ident.import)
 				ELSE
@@ -2412,9 +2412,9 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 			ELSIF isExpr(e) THEN
 				cconv := e.type.call;
 				params := e.type.params.size;
-				CODE.setlast(begcall);
+				CODE.Last_Set(begcall);
 				ASSERT(CODE.precall(FALSE) = 0);
-				CODE.setlast(endcall.prev(CODE.tpCommand));
+				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				deref(pos, e, TRUE, errPROC);
 				CODE.CallP
 			END
@@ -2702,7 +2702,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 					caseExpr.ident.type := node.data(CASE_LABEL).type
 				END;
 
-				last := CODE.getlast();
+				last := CODE.Last_Get();
 				CODE.SetLabel(variant);
 
 				IF ~isRecPtr(caseExpr) THEN
@@ -2746,7 +2746,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 					R := else
 				END;
 
-				last := CODE.getlast();
+				last := CODE.Last_Get();
 
 				v := CaseVariants.last(CASE_VARIANT);
 				WHILE (v # NIL) & (v.label # 0) & (v.label # node.data(CASE_LABEL).variant) DO
@@ -2754,7 +2754,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				END;
 
 				ASSERT((v # NIL) & (v.label # 0));
-				CODE.setlast(v.cmd);
+				CODE.Last_Set(v.cmd);
 
 				CODE.SetLabel(node.data(CASE_LABEL).self);
 				CODE.case(range.a, range.b, L, R);
@@ -2763,7 +2763,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 				END;
 				v.processed := TRUE;
 
-				CODE.setlast(last);
+				CODE.Last_Set(last);
 
 				Table(left, else);
 				Table(right, else)

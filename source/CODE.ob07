@@ -115,7 +115,6 @@ CONST
 	_strcmpw2  *=  31;
 
 TYPE
-
 	tpCommand* = POINTER TO RECORD (mList.tpItem)
 			opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
 			param1*:  INTEGER; (* Param1 for opCode *)
@@ -153,45 +152,44 @@ TYPE
 		END;
 
 	tpCodes* = POINTER TO RECORD
-		last:       tpCommand;
-		begcall:    tpCmdStack;
-		endcall:    tpCmdStack;
-		commands*:  mList.tpList;
-		export*:    mList.tpList;
-		import*:    mList.tpList;
-		types*:     mChl.INTLIST;
-		data*:      mChl.BYTELIST;
-		dmin*:      INTEGER;
-		lcount*:    INTEGER;
-		bss*:       INTEGER;
-		rtl*:       ARRAY 32 OF INTEGER;
+			last:       tpCommand;
+			begcall:    tpCmdStack;
+			endcall:    tpCmdStack;
+			commands*:  mList.tpList;
+			export*:    mList.tpList;
+			import*:    mList.tpList;
+			types*:     mChl.INTLIST;
+			data*:      mChl.BYTELIST;
+			dmin*:      INTEGER;
+			lcount*:    INTEGER;
+			bss*:       INTEGER;
+			rtl*:       ARRAY 32 OF INTEGER;
 
-		charoffs:   ARRAY 256 OF INTEGER;
-		wcharoffs:  ARRAY 65536 OF INTEGER;
+			charoffs:   ARRAY 256 OF INTEGER;
+			wcharoffs:  ARRAY 65536 OF INTEGER;
 
-		fregs:      INTEGER;
-		wstr:       ARRAY 4*1024 OF WCHAR;
+			fregs:      INTEGER;
+			wstr:       ARRAY 4*1024 OF WCHAR;
 
-		errlabel*:  INTEGER
-
-	END;
+			errLabel*:  INTEGER
+		END;
 
 VAR
 	codes*: tpCodes;
 
-PROCEDURE setlast* (cmd: tpCommand);
+PROCEDURE Last_Set* (pCmd: tpCommand);
 	BEGIN
-		codes.last := cmd
-	END setlast;
+		codes.last := pCmd
+	END Last_Set;
 
-PROCEDURE getlast* (): tpCommand;
+PROCEDURE Last_Get* (): tpCommand;
 		RETURN codes.last
-	END getlast;
+	END Last_Get;
 
-PROCEDURE PutByte (codes: tpCodes; b: BYTE);
+PROCEDURE Byte_Put (codes: tpCodes; b: BYTE);
 	BEGIN
 		mChl.PushByte(codes.data, b)
-	END PutByte;
+	END Byte_Put;
 
 PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 	VAR
@@ -202,11 +200,11 @@ PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 		i := 0;
 		n := LENGTH(s);
 		WHILE i < n DO
-			PutByte(codes, ORD(s[i]));
+			Byte_Put(codes, ORD(s[i]));
 			INC(i)
 		END;
 
-		PutByte(codes, 0)
+		Byte_Put(codes, 0)
 
 		RETURN res
 	END putstr;
@@ -217,8 +215,8 @@ PROCEDURE putstr1* (c: INTEGER): INTEGER;
 	BEGIN
 		IF codes.charoffs[c] = -1 THEN
 			res := mChl.Length(codes.data);
-			PutByte(codes, c);
-			PutByte(codes, 0);
+			Byte_Put(codes, c);
+			Byte_Put(codes, 0);
 			codes.charoffs[c] := res
 		ELSE
 			res := codes.charoffs[c]
@@ -233,18 +231,18 @@ PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
 	BEGIN
 		res := mChl.Length(codes.data);
 		IF ODD(res) THEN
-			PutByte(codes, 0);
+			Byte_Put(codes, 0);
 			INC(res)
 		END;
 		n := mStr.Utf8To16(s, codes.wstr);
 		i := 0;
 		WHILE i < n DO
-			PutByte(codes, ORD(codes.wstr[i]) MOD 256);
-			PutByte(codes, ORD(codes.wstr[i]) DIV 256);
+			Byte_Put(codes, ORD(codes.wstr[i]) MOD 256);
+			Byte_Put(codes, ORD(codes.wstr[i]) DIV 256);
 			INC(i)
 		END;
-		PutByte(codes, 0);
-		PutByte(codes, 0)
+		Byte_Put(codes, 0);
+		Byte_Put(codes, 0)
 		RETURN res
 	END putstrW;
 
@@ -256,14 +254,14 @@ PROCEDURE putstrW1* (c: INTEGER): INTEGER;
 			res := mChl.Length(codes.data);
 
 			IF ODD(res) THEN
-				PutByte(codes, 0);
+				Byte_Put(codes, 0);
 				INC(res)
 			END;
 
-			PutByte(codes, c MOD 256);
-			PutByte(codes, c DIV 256);
-			PutByte(codes, 0);
-			PutByte(codes, 0);
+			Byte_Put(codes, c MOD 256);
+			Byte_Put(codes, c DIV 256);
+			Byte_Put(codes, 0);
+			Byte_Put(codes, 0);
 
 			codes.wcharoffs[c] := res
 		ELSE
@@ -352,8 +350,8 @@ PROCEDURE SetLabel* (label: INTEGER);
 
 PROCEDURE SetErrLabel*;
 	BEGIN
-		codes.errlabel := NewLabel();
-		SetLabel(codes.errlabel)
+		codes.errLabel := NewLabel();
+		SetLabel(codes.errLabel)
 	END SetErrLabel;
 
 PROCEDURE AddCmd0* (opcode: INTEGER);
@@ -391,7 +389,7 @@ PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
 PROCEDURE OnError* (line, error: INTEGER);
 	BEGIN
 		AddCmd(opERRC, LSL(line, 4) + error);
-		AddJmpCmd(mConst.codeJMP, codes.errlabel)
+		AddJmpCmd(mConst.codeJMP, codes.errLabel)
 	END OnError;
 
 PROCEDURE TypeGuard* (op, t: INTEGER; line, error: INTEGER);
