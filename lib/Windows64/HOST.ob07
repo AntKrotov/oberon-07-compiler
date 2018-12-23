@@ -23,8 +23,6 @@ CONST
     OFS_MAXPATHNAME = 128;
 
     MAX_PARAM = 1024;
-
-    SW_SHOW = 5; 
     
 
 TYPE
