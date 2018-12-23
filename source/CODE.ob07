@@ -186,94 +186,94 @@ PROCEDURE Last_Get* (): tpCommand;
 		RETURN codes.last
 	END Last_Get;
 
-PROCEDURE Byte_Put (codes: tpCodes; b: BYTE);
+PROCEDURE Byte_Put (pCodes: tpCodes; pByte: BYTE);
 	BEGIN
-		mChl.PushByte(codes.data, b)
+		mChl.PushByte(pCodes.data, pByte)
 	END Byte_Put;
 
-PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
+PROCEDURE Str_Put* (pStr: ARRAY OF CHAR): INTEGER;
 	VAR
-		i, n, res: INTEGER;
+		_i, _n, _res: INTEGER;
 	BEGIN
-		res := mChl.Length(codes.data);
+		_res := mChl.Length(codes.data);
 
-		i := 0;
-		n := LENGTH(s);
-		WHILE i < n DO
-			Byte_Put(codes, ORD(s[i]));
-			INC(i)
+		_i := 0;
+		_n := LENGTH(pStr);
+		WHILE _i < _n DO
+			Byte_Put(codes, ORD(pStr[_i]));
+			INC(_i)
 		END;
 
 		Byte_Put(codes, 0)
 
-		RETURN res
-	END putstr;
+		RETURN _res
+	END Str_Put;
 
-PROCEDURE putstr1* (c: INTEGER): INTEGER;
+PROCEDURE Str_Put1* (pNum: INTEGER): INTEGER;
 	VAR
-		res: INTEGER;
+		_res: INTEGER;
 	BEGIN
-		IF codes.charoffs[c] = -1 THEN
-			res := mChl.Length(codes.data);
-			Byte_Put(codes, c);
+		IF codes.charoffs[pNum] = -1 THEN
+			_res := mChl.Length(codes.data);
+			Byte_Put(codes, pNum);
 			Byte_Put(codes, 0);
-			codes.charoffs[c] := res
+			codes.charoffs[pNum] := _res
 		ELSE
-			res := codes.charoffs[c]
+			_res := codes.charoffs[pNum]
 		END
 
-		RETURN res
-	END putstr1;
+		RETURN _res
+	END Str_Put1;
 
-PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
+PROCEDURE Str_PutW* (pStr: ARRAY OF CHAR): INTEGER;
 	VAR
-		i, n, res: INTEGER;
+		pNum_i, _n, _res: INTEGER;
 	BEGIN
-		res := mChl.Length(codes.data);
-		IF ODD(res) THEN
+		_res := mChl.Length(codes.data);
+		IF ODD(_res) THEN
 			Byte_Put(codes, 0);
-			INC(res)
+			INC(_res)
 		END;
-		n := mStr.Utf8To16(s, codes.wstr);
-		i := 0;
-		WHILE i < n DO
-			Byte_Put(codes, ORD(codes.wstr[i]) MOD 256);
-			Byte_Put(codes, ORD(codes.wstr[i]) DIV 256);
-			INC(i)
+		_n := mStr.Utf8To16(pStr, codes.wstr);
+		pNum_i := 0;
+		WHILE pNum_i < _n DO
+			Byte_Put(codes, ORD(codes.wstr[pNum_i]) MOD 256);
+			Byte_Put(codes, ORD(codes.wstr[pNum_i]) DIV 256);
+			INC(pNum_i)
 		END;
 		Byte_Put(codes, 0);
 		Byte_Put(codes, 0)
-		RETURN res
-	END putstrW;
+		RETURN _res
+	END Str_PutW;
 
-PROCEDURE putstrW1* (c: INTEGER): INTEGER;
+PROCEDURE Str_PutW1* (pNum: INTEGER): INTEGER;
 	VAR
-		res: INTEGER;
+		_res: INTEGER;
 	BEGIN
-		IF codes.wcharoffs[c] = -1 THEN
-			res := mChl.Length(codes.data);
+		IF codes.wcharoffs[pNum] = -1 THEN
+			_res := mChl.Length(codes.data);
 
-			IF ODD(res) THEN
+			IF ODD(_res) THEN
 				Byte_Put(codes, 0);
-				INC(res)
+				INC(_res)
 			END;
 
-			Byte_Put(codes, c MOD 256);
-			Byte_Put(codes, c DIV 256);
+			Byte_Put(codes, pNum MOD 256);
+			Byte_Put(codes, pNum DIV 256);
 			Byte_Put(codes, 0);
 			Byte_Put(codes, 0);
 
-			codes.wcharoffs[c] := res
+			codes.wcharoffs[pNum] := _res
 		ELSE
-			res := codes.wcharoffs[c]
+			_res := codes.wcharoffs[pNum]
 		END
-		RETURN res
-	END putstrW1;
+		RETURN _res
+	END Str_PutW1;
 
-PROCEDURE SetMinDataSize* (size: INTEGER);
+PROCEDURE MinDataSize_Set* (size: INTEGER);
 	BEGIN
 		codes.dmin := mChl.Length(codes.data) + size
-	END SetMinDataSize;
+	END MinDataSize_Set;
 
 PROCEDURE push (stk: tpCmdStack; cmd: tpCommand);
 	BEGIN
@@ -283,11 +283,11 @@ PROCEDURE push (stk: tpCmdStack; cmd: tpCommand);
 
 PROCEDURE pop (stk: tpCmdStack): tpCommand;
 	VAR
-		res: tpCommand;
+		_res: tpCommand;
 	BEGIN
-		res := stk.aData[stk.top];
+		_res := stk.aData[stk.top];
 		DEC(stk.top)
-		RETURN res
+		RETURN _res
 	END pop;
 
 PROCEDURE pushBegEnd* (VAR beg, end: tpCommand);
@@ -926,7 +926,7 @@ PROCEDURE DelImport* (imp: mList.tpItem);
 PROCEDURE init*;
 	VAR
 		cmd:    tpCommand;
-		i:      INTEGER;
+		pNum_i:      INTEGER;
 	BEGIN
 		NEW(codes);
 		NEW(codes.begcall);
@@ -949,12 +949,12 @@ PROCEDURE init*;
 
 		codes.fregs := 0;
 
-		FOR i := 0 TO LEN(codes.charoffs) - 1 DO
-			codes.charoffs[i] := -1
+		FOR pNum_i := 0 TO LEN(codes.charoffs) - 1 DO
+			codes.charoffs[pNum_i] := -1
 		END;
 
-		FOR i := 0 TO LEN(codes.wcharoffs) - 1 DO
-			codes.wcharoffs[i] := -1
+		FOR pNum_i := 0 TO LEN(codes.wcharoffs) - 1 DO
+			codes.wcharoffs[pNum_i] := -1
 		END
 	END init;
 

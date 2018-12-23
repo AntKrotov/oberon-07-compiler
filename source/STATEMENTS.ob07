@@ -277,11 +277,11 @@ PROCEDURE String (e: PARS.EXPR): INTEGER;
 		IF strlen(e) # 1 THEN
 			string := e.value.string(SCAN.IDENT);
 			IF string.offset = -1 THEN
-				string.offset := CODE.putstr(string.s);
+				string.offset := CODE.Str_Put(string.s);
 			END;
 			offset := string.offset
 		ELSE
-			offset := CODE.putstr1(ARITH.Int(e.value))
+			offset := CODE.Str_Put1(ARITH.Int(e.value))
 		END
 
 		RETURN offset
@@ -296,16 +296,16 @@ PROCEDURE StringW (e: PARS.EXPR): INTEGER;
 		IF utf8strlen(e) # 1 THEN
 			string := e.value.string(SCAN.IDENT);
 			IF string.offsetW = -1 THEN
-				string.offsetW := CODE.putstrW(string.s);
+				string.offsetW := CODE.Str_PutW(string.s);
 			END;
 			offset := string.offsetW
 		ELSE
 			IF e.type.typ IN {PROG.typeWChar, PROG.typeChar} THEN
-				offset := CODE.putstrW1(ARITH.Int(e.value))
+				offset := CODE.Str_PutW1(ARITH.Int(e.value))
 			ELSE (* e.type.typ = PROG.typeString *)
 				string := e.value.string(SCAN.IDENT);
 				IF string.offsetW = -1 THEN
-					string.offsetW := CODE.putstrW(string.s);
+					string.offsetW := CODE.Str_PutW(string.s);
 				END;
 				offset := string.offsetW
 			END
@@ -572,7 +572,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 						CODE.AddCmd(CODE.opPARAM, 1)
 					ELSIF (e.type.typ = PROG.typeString) OR
 						  (e.type.typ IN {PROG.typeChar, PROG.typeWChar}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.typeChar, PROG.typeWChar}) THEN
-						CODE.SetMinDataSize(p.type.size);
+						CODE.MinDataSize_Set(p.type.size);
 						IF p.type.base.typ = PROG.typeChar THEN
 							CODE.AddCmd(CODE.opSADR, String(e))
 						ELSE (* WCHAR *)

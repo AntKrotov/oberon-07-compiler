@@ -976,7 +976,7 @@ PROCEDURE parse (parser: PARSER);
 		label := CODE.NewLabel();
 		CODE.AddJmpCmd(mConst.codeJMP, label);
 
-		name := CODE.putstr(unit.name.s);
+		name := CODE.Str_Put(unit.name.s);
 
 		CODE.SetErrLabel;
 		CODE.AddCmd(CODE.opSADR, name);
