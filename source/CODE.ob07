@@ -766,68 +766,68 @@ PROCEDURE ShiftMinMax_Set* (pOp: CHAR);
 		END
 	END ShiftMinMax_Set;
 
-PROCEDURE shift_minmax1* (pOp: CHAR; x: INTEGER);
+PROCEDURE ShiftMinMax1_Set* (pOp: CHAR; pNum: INTEGER);
 	BEGIN
 		CASE pOp OF
-		|"A": Cmd_Add(opASR1, x)
-		|"L": Cmd_Add(opLSL1, x)
-		|"O": Cmd_Add(opROR1, x)
-		|"R": Cmd_Add(opLSR1, x)
-		|"m": Cmd_Add(opMINC, x)
-		|"x": Cmd_Add(opMAXC, x)
+		|"A": Cmd_Add(opASR1, pNum)
+		|"L": Cmd_Add(opLSL1, pNum)
+		|"O": Cmd_Add(opROR1, pNum)
+		|"R": Cmd_Add(opLSR1, pNum)
+		|"m": Cmd_Add(opMINC, pNum)
+		|"x": Cmd_Add(opMAXC, pNum)
 		END
-	END shift_minmax1;
+	END ShiftMinMax1_Set;
 
-PROCEDURE shift_minmax2* (pOp: CHAR; x: INTEGER);
+PROCEDURE ShiftMinMax2_Set* (pOp: CHAR; pNum: INTEGER);
 	BEGIN
 		CASE pOp OF
-		|"A": Cmd_Add(opASR2, x)
-		|"L": Cmd_Add(opLSL2, x)
-		|"O": Cmd_Add(opROR2, x)
-		|"R": Cmd_Add(opLSR2, x)
-		|"m": Cmd_Add(opMINC, x)
-		|"x": Cmd_Add(opMAXC, x)
+		|"A": Cmd_Add(opASR2, pNum)
+		|"L": Cmd_Add(opLSL2, pNum)
+		|"O": Cmd_Add(opROR2, pNum)
+		|"R": Cmd_Add(opLSR2, pNum)
+		|"m": Cmd_Add(opMINC, pNum)
+		|"x": Cmd_Add(opMAXC, pNum)
 		END
-	END shift_minmax2;
+	END ShiftMinMax2_Set;
 
-PROCEDURE len* (dim: INTEGER);
+PROCEDURE Len* (pDim: INTEGER);
 	BEGIN
-		Cmd_Add(opLEN, dim)
-	END len;
+		Cmd_Add(opLEN, pDim)
+	END Len;
 
-PROCEDURE Float* (r: REAL);
+PROCEDURE Float* (bFloat: REAL);
 	VAR
-		cmd: tpCommandFloat;
+		_cmd: tpCommandFloat;
 	BEGIN
-		NEW(cmd);
-		cmd.opCode := opCONSTF;
-		cmd.valFloat := r;
-		Insert(codes.last, cmd);
+		NEW(_cmd);
+		_cmd.opCode := opCONSTF;
+		_cmd.valFloat := bFloat;
+		Insert(codes.last, _cmd);
 		INC(codes.fregs);
 		ASSERT(codes.fregs <= numRegsFloat)
 	END Float;
 
-PROCEDURE precall* (IsFloat: BOOLEAN): INTEGER;
+PROCEDURE Pre_Call* (pIsFloat: BOOLEAN): INTEGER;
 	VAR
 		res: INTEGER;
 	BEGIN
 		res := codes.fregs;
-		Cmd2_Add(opPRECALL, ORD(IsFloat), res);
+		Cmd2_Add(opPRECALL, ORD(pIsFloat), res);
 		codes.fregs := 0
 		RETURN res
-	END precall;
+	END Pre_Call;
 
-PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
+PROCEDURE IsResFloat* (pRegsFloat: INTEGER): BOOLEAN;
 	BEGIN
-		Cmd_Add(opRESF, fregs);
-		codes.fregs := fregs + 1
+		Cmd_Add(opRESF, pRegsFloat);
+		codes.fregs := pRegsFloat + 1
 		RETURN codes.fregs < numRegsFloat
-	END resf;
+	END IsResFloat;
 
-PROCEDURE res* (fregs: INTEGER);
+PROCEDURE res* (pRegsFloat: INTEGER);
 	BEGIN
-		Cmd_Add(opRES, fregs);
-		codes.fregs := fregs
+		Cmd_Add(opRES, pRegsFloat);
+		codes.fregs := pRegsFloat
 	END res;
 
 PROCEDURE retf*;
@@ -836,23 +836,23 @@ PROCEDURE retf*;
 		ASSERT(codes.fregs = 0)
 	END retf;
 
-PROCEDURE drop*;
+PROCEDURE Drop*;
 	BEGIN
 		Cmd0_Add(opDROP)
-	END drop;
+	END Drop;
 
 PROCEDURE case* (a, b, L, R: INTEGER);
 	VAR
-		cmd: tpCommand3;
+		_cmd: tpCommand3;
 
 	BEGIN
 		IF a = b THEN
-			NEW(cmd);
-			cmd.opCode := opCASELR;
-			cmd.param1 := a;
-			cmd.param2 := L;
-			cmd.param3 := R;
-			Insert(codes.last, cmd)
+			NEW(_cmd);
+			_cmd.opCode := opCASELR;
+			_cmd.param1 := a;
+			_cmd.param2 := L;
+			_cmd.param3 := R;
+			Insert(codes.last, _cmd)
 		ELSE
 			Cmd2_Add(opCASEL, a, L);
 			Cmd2_Add(opCASER, b, R)
@@ -926,7 +926,7 @@ PROCEDURE DelImport* (imp: mList.tpItem);
 
 PROCEDURE init*;
 	VAR
-		cmd:    tpCommand;
+		_cmd:    tpCommand;
 		pNum_i:      INTEGER;
 	BEGIN
 		NEW(codes);
@@ -940,9 +940,9 @@ PROCEDURE init*;
 		codes.types    := mChl.CreateIntList();
 		codes.data    := mChl.CreateByteList();
 
-		NEW(cmd); cmd.opCode := opNOP; mList.Add(codes.commands, cmd);
-		codes.last := cmd;
-		NEW(cmd); cmd.opCode := opNOP; mList.Add(codes.commands, cmd);
+		NEW(_cmd); _cmd.opCode := opNOP; mList.Add(codes.commands, _cmd);
+		codes.last := _cmd;
+		NEW(_cmd); _cmd.opCode := opNOP; mList.Add(codes.commands, _cmd);
 
 		Rec_Add(0);
 

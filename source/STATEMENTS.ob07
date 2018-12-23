@@ -855,7 +855,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					PARS.check(isVar(e), parser, pos, 93);
 					n := PROG.Dim(e.type);
 					WHILE n > 0 DO
-						CODE.drop;
+						CODE.Drop;
 						DEC(n)
 					END;
 					PARS.checklex(parser, SCAN.lxCOMMA);
@@ -912,9 +912,9 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ASSERT(ARITH.IsOpInt(e.value, e2.value, shift_minmax(proc)))
 				ELSE
 					IF e.obj = eCONST THEN
-						CODE.shift_minmax1(shift_minmax(proc), ARITH.Int(e.value))
+						CODE.ShiftMinMax1_Set(shift_minmax(proc), ARITH.Int(e.value))
 					ELSIF e2.obj = eCONST THEN
-						CODE.shift_minmax2(shift_minmax(proc), ARITH.Int(e2.value))
+						CODE.ShiftMinMax2_Set(shift_minmax(proc), ARITH.Int(e2.value))
 					ELSE
 						CODE.ShiftMinMax_Set(shift_minmax(proc))
 					END;
@@ -974,11 +974,11 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			|PROG.stLEN:
 				varparam(parser, pos, isArr, FALSE, e);
 				IF e.type.length > 0 THEN
-					CODE.drop;
+					CODE.Drop;
 					ASSERT(ARITH.Int_Set(e.value, e.type.length));
 					e.obj := eCONST
 				ELSE
-					CODE.len(PROG.Dim(e.type))
+					CODE.Len(PROG.Dim(e.type))
 				END;
 				e.type := PARS.program.stTypes.tINTEGER
 
@@ -1038,7 +1038,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF isVar(e) THEN
 					n := PROG.Dim(e.type);
 					WHILE n > 0 DO
-						CODE.drop;
+						CODE.Drop;
 						DEC(n)
 					END
 				ELSIF e.obj = ePROC THEN
@@ -1643,7 +1643,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						cconv := e1.ident.type.call;
 						params := e1.ident.type.params.size;
 						CODE.Last_Set(begcall);
-						fregs := CODE.precall(e.type.typ = PROG.typeReal);
+						fregs := CODE.Pre_Call(e.type.typ = PROG.typeReal);
 						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 
 						IF e1.obj = eIMP THEN
@@ -1657,7 +1657,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 
 						IF e.type.typ = PROG.typeReal THEN
-							PARS.check(CODE.resf(fregs), parser, pos, 41)
+							PARS.check(CODE.IsResFloat(fregs), parser, pos, 41)
 						ELSE
 							CODE.res(fregs)
 						END
@@ -1666,7 +1666,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						cconv := e1.type.call;
 						params := e1.type.params.size;
 						CODE.Last_Set(begcall);
-						fregs := CODE.precall(e.type.typ = PROG.typeReal);
+						fregs := CODE.Pre_Call(e.type.typ = PROG.typeReal);
 						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 						deref(pos, e1, FALSE, errPROC);
 						CODE.Proc_Call;
@@ -1676,7 +1676,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 
 						IF e.type.typ = PROG.typeReal THEN
-							PARS.check(CODE.resf(fregs), parser, pos, 41)
+							PARS.check(CODE.IsResFloat(fregs), parser, pos, 41)
 						ELSE
 							CODE.res(fregs)
 						END
@@ -1740,7 +1740,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 						CODE.Cmd0_Add(CODE.opACC);
 						CODE.CmdJmp_Add(CODE.opJZ, label);
-						CODE.drop
+						CODE.Drop
 					END
 				END;
 
@@ -1937,7 +1937,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END;
 						CODE.Cmd0_Add(CODE.opACC);
 						CODE.CmdJmp_Add(CODE.opJNZ, label);
-						CODE.drop
+						CODE.Drop
 					END
 
 				END;
@@ -2401,7 +2401,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				cconv := e.ident.type.call;
 				params := e.ident.type.params.size;
 				CODE.Last_Set(begcall);
-				ASSERT(CODE.precall(FALSE) = 0);
+				ASSERT(CODE.Pre_Call(FALSE) = 0);
 				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				IF e.obj = eIMP THEN
 					CODE.Imp_Call(e.ident.import)
@@ -2413,7 +2413,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				cconv := e.type.call;
 				params := e.type.params.size;
 				CODE.Last_Set(begcall);
-				ASSERT(CODE.precall(FALSE) = 0);
+				ASSERT(CODE.Pre_Call(FALSE) = 0);
 				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				deref(pos, e, TRUE, errPROC);
 				CODE.Proc_Call
@@ -2850,7 +2850,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		IF e.obj = eCONST THEN
 			LoadConst(e)
 		ELSIF isRec(e) THEN
-			CODE.drop;
+			CODE.Drop;
 			CODE.Cmd_Add(CODE.opLADR, e.ident.offset - 1);
 			CODE.Load(PARS.program.target.word)
 		ELSIF isPtr(e) THEN
