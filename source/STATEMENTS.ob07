@@ -3046,7 +3046,7 @@ PROCEDURE setrtl;
 			id := rtl.idents.get(rtl, SCAN.enterid(name), FALSE);
 
 			IF (id # NIL) & (id.import # NIL) THEN
-				CODE.codes.rtl[idx] := -id.import(CODE.IMPORT_PROC).label;
+				CODE.codes.rtl[idx] := -id.import(CODE.tpProcImport).label;
 				id.proc.used := TRUE
 			ELSIF (id # NIL) & (id.proc # NIL) THEN
 				CODE.codes.rtl[idx] := id.proc.label;

@@ -1881,7 +1881,7 @@ PROCEDURE epilog (code: CODE.tpCodes; modname: ARRAY OF CHAR; pic: BOOLEAN);
 		PROCEDURE import (code: CODE.tpCodes);
 		VAR
 			lib: CODE.tpLibImport;
-			proc: CODE.IMPORT_PROC;
+			proc: CODE.tpProcImport;
 			n: INTEGER;
 
 		BEGIN
@@ -1899,10 +1899,10 @@ PROCEDURE epilog (code: CODE.tpCodes; modname: ARRAY OF CHAR; pic: BOOLEAN);
 			n := 0;
 			WHILE lib # NIL DO
 				Write("lib_table"); WriteHex(n); WriteLn(":");
-				proc := lib.procs.first(CODE.IMPORT_PROC);
+				proc := lib.procs.first(CODE.tpProcImport);
 				WHILE proc # NIL DO
 					Write("P"); WriteHex(proc.label); Write(" dq RVA N"); WriteHexLn(proc.label);
-					proc := proc.next(CODE.IMPORT_PROC)
+					proc := proc.next(CODE.tpProcImport)
 				END;
 				WriteLn("dq 0");
 				lib := lib.next(CODE.tpLibImport);
@@ -1920,11 +1920,11 @@ PROCEDURE epilog (code: CODE.tpCodes; modname: ARRAY OF CHAR; pic: BOOLEAN);
 			lib := code.import.first(CODE.tpLibImport);
 			n := 0;
 			WHILE lib # NIL DO
-				proc := lib.procs.first(CODE.IMPORT_PROC);
+				proc := lib.procs.first(CODE.tpProcImport);
 				WHILE proc # NIL DO
 					Write("N"); WriteHex(proc.label); WriteLn(" dw 0");
 					Write("db '"); Write(proc.name); WriteLn("',0");
-					proc := proc.next(CODE.IMPORT_PROC)
+					proc := proc.next(CODE.tpProcImport)
 				END;
 				lib := lib.next(CODE.tpLibImport);
 				INC(n)

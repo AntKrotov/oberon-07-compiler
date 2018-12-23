@@ -145,15 +145,12 @@ TYPE
 			procs*:  mList.tpList
 		END;
 
-	IMPORT_PROC* = POINTER TO RECORD (mList.tpItem)
-
-		label*: INTEGER;
-		lib*:   tpLibImport;
-		name*:  mScan.LEXSTR;
-		count:  INTEGER
-
-	END;
-
+	tpProcImport* = POINTER TO RECORD (mList.tpItem)
+			label*: INTEGER;
+			lib*:   tpLibImport;
+			name*:  mScan.LEXSTR;
+			count:  INTEGER
+		END;
 
 	tpCodes* = POINTER TO RECORD
 
@@ -573,7 +570,7 @@ PROCEDURE Call* (proc: INTEGER);
 
 PROCEDURE CallImp* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
+		AddJmpCmd(opCALLI, proc(tpProcImport).label)
 	END CallImp;
 
 PROCEDURE CallP*;
@@ -588,7 +585,7 @@ PROCEDURE AssignProc* (proc: INTEGER);
 
 PROCEDURE AssignImpProc* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opSAVEIP, proc(IMPORT_PROC).label)
+		AddJmpCmd(opSAVEIP, proc(tpProcImport).label)
 	END AssignImpProc;
 
 PROCEDURE PushProc* (proc: INTEGER);
@@ -598,7 +595,7 @@ PROCEDURE PushProc* (proc: INTEGER);
 
 PROCEDURE PushImpProc* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opPUSHIP, proc(IMPORT_PROC).label)
+		AddJmpCmd(opPUSHIP, proc(tpProcImport).label)
 	END PushImpProc;
 
 PROCEDURE ProcCmp* (proc: INTEGER; eq: BOOLEAN);
@@ -613,9 +610,9 @@ PROCEDURE ProcCmp* (proc: INTEGER; eq: BOOLEAN);
 PROCEDURE ProcImpCmp* (proc: mList.tpItem; eq: BOOLEAN);
 	BEGIN
 		IF eq THEN
-			AddJmpCmd(opEQIP, proc(IMPORT_PROC).label)
+			AddJmpCmd(opEQIP, proc(tpProcImport).label)
 		ELSE
-			AddJmpCmd(opNEIP, proc(IMPORT_PROC).label)
+			AddJmpCmd(opNEIP, proc(tpProcImport).label)
 		END
 	END ProcImpCmp;
 
@@ -879,10 +876,10 @@ PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
 		mList.Add(codes.export, exp)
 	END AddExp;
 
-PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
+PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): tpProcImport;
 	VAR
 		lib: tpLibImport;
-		p:   IMPORT_PROC;
+		p:   tpProcImport;
 	BEGIN
 		lib := codes.import.first(tpLibImport);
 		WHILE (lib # NIL) & (lib.lexName # dll) DO
@@ -896,9 +893,9 @@ PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
 			mList.Add(codes.import, lib)
 		END;
 
-		p := lib.procs.first(IMPORT_PROC);
+		p := lib.procs.first(tpProcImport);
 		WHILE (p # NIL) & (p.name # proc) DO
-			p := p.next(IMPORT_PROC)
+			p := p.next(tpProcImport)
 		END;
 
 		IF p = NIL THEN
@@ -919,9 +916,9 @@ PROCEDURE DelImport* (imp: mList.tpItem);
 	VAR
 		lib: tpLibImport;
 	BEGIN
-		DEC(imp(IMPORT_PROC).count);
-		IF imp(IMPORT_PROC).count = 0 THEN
-			lib := imp(IMPORT_PROC).lib;
+		DEC(imp(tpProcImport).count);
+		IF imp(tpProcImport).count = 0 THEN
+			lib := imp(tpProcImport).lib;
 			mList.Del(lib.procs, imp);
 			IF lib.procs.first = NIL THEN
 				mList.Del(codes.import, lib)

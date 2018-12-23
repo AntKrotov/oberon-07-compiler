@@ -471,11 +471,10 @@ PROCEDURE sysflag (parser: PARSER): INTEGER;
 		RETURN res
 	END sysflag;
 
-PROCEDURE procflag (parser: PARSER; VAR import: CODE.IMPORT_PROC; isProc: BOOLEAN): INTEGER;
+PROCEDURE procflag (parser: PARSER; VAR import: CODE.tpProcImport; isProc: BOOLEAN): INTEGER;
 	VAR
 		call: INTEGER;
 		dll, proc: SCAN.LEXSTR;
-
 	BEGIN
 
 		import := NIL;
@@ -523,7 +522,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 		baseIdent:  SCAN.IDENT;
 		a, b:       INTEGER;
 		RecFlag:    INTEGER;
-		import:     CODE.IMPORT_PROC;
+		import:     CODE.tpProcImport;
 
 	BEGIN
 		unit := parser.unit;
@@ -788,7 +787,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 			enter:      CODE.tpCommand;
 			call:       INTEGER;
 			t:          PROG.TYPE_;
-			import:     CODE.IMPORT_PROC;
+			import:     CODE.tpProcImport;
 			endmod, b:  BOOLEAN;
 
 		BEGIN
