@@ -605,21 +605,21 @@ PROCEDURE Proc_Cmp* (pProc: INTEGER; pEqu: BOOLEAN);
 		END
 	END Proc_Cmp;
 
-PROCEDURE ProcImpCmp* (pProc: mList.tpItem; pEqu: BOOLEAN);
+PROCEDURE ProcImp_Cmp* (pProc: mList.tpItem; pEqu: BOOLEAN);
 	BEGIN
 		IF pEqu THEN
 			CmdJmp_Add(opEQIP, pProc(tpProcImport).label)
 		ELSE
 			CmdJmp_Add(opNEIP, pProc(tpProcImport).label)
 		END
-	END ProcImpCmp;
+	END ProcImp_Cmp;
 
-PROCEDURE SysGet* (pSize: INTEGER);
+PROCEDURE Sys_Get* (pSize: INTEGER);
 	BEGIN
 		Cmd_Add(opGET, pSize)
-	END SysGet;
+	END Sys_Get;
 
-PROCEDURE load* (pSize: INTEGER);
+PROCEDURE Load* (pSize: INTEGER);
 	VAR
 		last: tpCommand;
 	BEGIN
@@ -669,9 +669,9 @@ PROCEDURE load* (pSize: INTEGER);
 				Cmd0_Add(opLOAD64)
 			END
 		END
-	END load;
+	END Load;
 
-PROCEDURE SysPut* (pSize: INTEGER);
+PROCEDURE Sys_Put* (pSize: INTEGER);
 	BEGIN
 		CASE pSize OF
 		|1: Cmd0_Add(opSAVE8)
@@ -679,35 +679,35 @@ PROCEDURE SysPut* (pSize: INTEGER);
 		|4: Cmd0_Add(opSAVE32)
 		|8: Cmd0_Add(opSAVE64)
 		END
-	END SysPut;
+	END Sys_Put;
 
-PROCEDURE savef*;
+PROCEDURE Float_Save*;
 	BEGIN
 		Cmd0_Add(opSAVEF);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
-	END savef;
+	END Float_Save;
 
-PROCEDURE pushf*;
+PROCEDURE Float_Push*;
 	BEGIN
 		Cmd0_Add(opPUSHF);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
-	END pushf;
+	END Float_Push;
 
-PROCEDURE loadf* (): BOOLEAN;
+PROCEDURE Float_Load* (): BOOLEAN;
 	BEGIN
 		Cmd0_Add(opLOADF);
 		INC(codes.fregs)
 		RETURN codes.fregs < numRegsFloat
-	END loadf;
+	END Float_Load;
 
-PROCEDURE inf* (): BOOLEAN;
+PROCEDURE IsInf* (): BOOLEAN;
 	BEGIN
 		Cmd0_Add(opINF);
 		INC(codes.fregs)
 		RETURN codes.fregs < numRegsFloat
-	END inf;
+	END IsInf;
 
 PROCEDURE fbinop* (pOpCode: BYTE);
 	BEGIN
@@ -716,45 +716,45 @@ PROCEDURE fbinop* (pOpCode: BYTE);
 		ASSERT(codes.fregs > 0)
 	END fbinop;
 
-PROCEDURE saves* (offset, length: INTEGER);
+PROCEDURE Str_Save* (pOffset, pLen: INTEGER);
 	BEGIN
-		Cmd2_Add(opSAVES, length, offset)
-	END saves;
+		Cmd2_Add(opSAVES, pLen, pOffset)
+	END Str_Save;
 
-PROCEDURE abs* (real: BOOLEAN);
+PROCEDURE Abs_Set* (pFloat: BOOLEAN);
 	BEGIN
-		IF real THEN
+		IF pFloat THEN
 			Cmd0_Add(opFABS)
 		ELSE
 			Cmd0_Add(opABS)
 		END
-	END abs;
+	END Abs_Set;
 
-PROCEDURE floor*;
+PROCEDURE Floor_Set*;
 	BEGIN
 		Cmd0_Add(opFLOOR);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
-	END floor;
+	END Floor_Set;
 
-PROCEDURE flt* (): BOOLEAN;
+PROCEDURE IsFloat* (): BOOLEAN;
 	BEGIN
 		Cmd0_Add(opFLT);
 		INC(codes.fregs)
 		RETURN codes.fregs < numRegsFloat
-	END flt;
+	END IsFloat;
 
-PROCEDURE odd*;
+PROCEDURE Odd_Set*;
 	BEGIN
 		Cmd0_Add(opODD)
-	END odd;
+	END Odd_Set;
 
-PROCEDURE ord*;
+PROCEDURE Ord_Set*;
 	BEGIN
 		Cmd0_Add(opORD)
-	END ord;
+	END Ord_Set;
 
-PROCEDURE shift_minmax* (pOp: CHAR);
+PROCEDURE ShiftMinMax_Set* (pOp: CHAR);
 	BEGIN
 		CASE pOp OF
 		|"A": Cmd0_Add(opASR)
@@ -764,7 +764,7 @@ PROCEDURE shift_minmax* (pOp: CHAR);
 		|"m": Cmd0_Add(opMIN)
 		|"x": Cmd0_Add(opMAX)
 		END
-	END shift_minmax;
+	END ShiftMinMax_Set;
 
 PROCEDURE shift_minmax1* (pOp: CHAR; x: INTEGER);
 	BEGIN
@@ -807,12 +807,12 @@ PROCEDURE Float* (r: REAL);
 		ASSERT(codes.fregs <= numRegsFloat)
 	END Float;
 
-PROCEDURE precall* (flt: BOOLEAN): INTEGER;
+PROCEDURE precall* (IsFloat: BOOLEAN): INTEGER;
 	VAR
 		res: INTEGER;
 	BEGIN
 		res := codes.fregs;
-		Cmd2_Add(opPRECALL, ORD(flt), res);
+		Cmd2_Add(opPRECALL, ORD(IsFloat), res);
 		codes.fregs := 0
 		RETURN res
 	END precall;

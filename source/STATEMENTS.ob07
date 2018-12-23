@@ -387,7 +387,7 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				IF e.obj = eCONST THEN
 					CODE.Float(ARITH.Float_Get(e.value))
 				END;
-				CODE.savef
+				CODE.Float_Save
 			ELSIF isChar(e) & (t.typ = PROG.typeChar) THEN
 				IF e.obj = eCONST THEN
 					CODE.Cmd_Add(CODE.opSAVE8C, ARITH.Int(e.value))
@@ -431,9 +431,9 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 			ELSIF isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
 				CODE.Cmd_Add(CODE.opSAVEC, 0)
 			ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.typeChar) & (t.length > strlen(e))) THEN
-				CODE.saves(String(e), strlen(e) + 1)
+				CODE.Str_Save(String(e), strlen(e) + 1)
 			ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.typeWChar) & (t.length > utf8strlen(e))) THEN
-				CODE.saves(StringW(e), (utf8strlen(e) + 1) * 2)
+				CODE.Str_Save(StringW(e), (utf8strlen(e) + 1) * 2)
 			ELSE
 				res := FALSE
 			END
@@ -563,7 +563,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 				IF e.obj = eCONST THEN
 					IF e.type.typ = PROG.typeReal THEN
 						CODE.Float(ARITH.Float_Get(e.value));
-						CODE.pushf
+						CODE.Float_Push
 					ELSIF e.type.typ = PROG.tNIL THEN
 						CODE.Cmd_Add(CODE.opCONST, 0);
 						CODE.Cmd_Add(CODE.opPARAM, 1)
@@ -591,7 +591,7 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 					CODE.ProcImp_Push(e.ident.import);
 					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF isExpr(e) & (e.type.typ = PROG.typeReal) THEN
-					CODE.pushf
+					CODE.Float_Push
 				ELSE
 					IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN checking) THEN
 						CheckRange(256, pos.line, errBYTE)
@@ -792,7 +792,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					parser.designator(parser, e2);
 					PARS.check(isVar(e2), parser, pos, 93);
 					PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
-					CODE.SysGet(e2.type.size)
+					CODE.Sys_Get(e2.type.size)
 				ELSIF proc = PROG.sysPUT THEN
 					parser.expression(parser, e2);
 					PARS.check(isExpr(e2), parser, pos, 66);
@@ -800,18 +800,18 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					IF e2.obj = eCONST THEN
 						IF e2.type.typ = PROG.typeReal THEN
 							CODE.Float(ARITH.Float_Get(e2.value));
-							CODE.savef
+							CODE.Float_Save
 						ELSE
 							LoadConst(e2);
-							CODE.SysPut(e2.type.size)
+							CODE.Sys_Put(e2.type.size)
 						END
 					ELSE
 						IF e2.type.typ = PROG.typeReal THEN
-							CODE.savef
+							CODE.Float_Save
 						ELSIF e2.type.typ = PROG.tBYTE THEN
-							CODE.SysPut(PARS.program.stTypes.tINTEGER.size)
+							CODE.Sys_Put(PARS.program.stTypes.tINTEGER.size)
 						ELSE
-							CODE.SysPut(e2.type.size)
+							CODE.Sys_Put(e2.type.size)
 						END
 					END
 
@@ -824,9 +824,9 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						LoadConst(e2)
 					END;
 					IF proc = PROG.sysPUT8 THEN
-						CODE.SysPut(1)
+						CODE.Sys_Put(1)
 					ELSE
-						CODE.SysPut(2)
+						CODE.Sys_Put(2)
 					END
 
 				END
@@ -897,7 +897,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF e.obj = eCONST THEN
 					ARITH.Abs_Set(e.value)
 				ELSE
-					CODE.abs(isReal(e))
+					CODE.Abs_Set(isReal(e))
 				END
 
 			|PROG.stASR, PROG.stLSL, PROG.stROR, PROG.stLSR, PROG.stMIN, PROG.stMAX:
@@ -916,7 +916,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSIF e2.obj = eCONST THEN
 						CODE.shift_minmax2(shift_minmax(proc), ARITH.Int(e2.value))
 					ELSE
-						CODE.shift_minmax(shift_minmax(proc))
+						CODE.ShiftMinMax_Set(shift_minmax(proc))
 					END;
 					e.obj := eEXPR
 				END
@@ -958,7 +958,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF e.obj = eCONST THEN
 					PARS.check(ARITH.IsFloor(e.value), parser, pos, 39)
 				ELSE
-					CODE.floor
+					CODE.Floor_Set
 				END
 
 			|PROG.stFLT:
@@ -968,7 +968,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF e.obj = eCONST THEN
 					ARITH.Float_Set(e.value)
 				ELSE
-					PARS.check(CODE.flt(), parser, pos, 41)
+					PARS.check(CODE.IsFloat(), parser, pos, 41)
 				END
 
 			|PROG.stLEN:
@@ -1006,7 +1006,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				IF e.obj = eCONST THEN
 					ARITH.Odd_Set(e.value)
 				ELSE
-					CODE.odd
+					CODE.Odd_Set
 				END
 
 			|PROG.stORD:
@@ -1020,7 +1020,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					END
 				ELSE
 					IF isBoolean(e) THEN
-						CODE.ord
+						CODE.Ord_Set
 					END
 				END;
 				e.type := PARS.program.stTypes.tINTEGER
@@ -1078,7 +1078,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 				e.type := PARS.program.stTypes.tINTEGER
 
 			|PROG.sysINF:
-				PARS.check(CODE.inf(), parser, pos, 41);
+				PARS.check(CODE.IsInf(), parser, pos, 41);
 				e.obj := eEXPR;
 				e.type := PARS.program.stTypes.typeReal
 
@@ -1233,7 +1233,7 @@ PROCEDURE deref (pos: SCAN.POSITION; e: PARS.EXPR; load: BOOLEAN; error: INTEGER
 
 	BEGIN
 		IF load THEN
-			CODE.load(e.type.size)
+			CODE.Load(e.type.size)
 		END;
 
 		IF chkPTR IN checking THEN
@@ -1594,9 +1594,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			BEGIN
 				IF ~(e.type.typ IN {PROG.tRECORD, PROG.tARRAY}) THEN
 					IF e.type.typ = PROG.typeReal THEN
-						PARS.check(CODE.loadf(), parser, pos, 41)
+						PARS.check(CODE.Float_Load(), parser, pos, 41)
 					ELSE
-						CODE.load(e.type.size)
+						CODE.Load(e.type.size)
 					END
 				END
 			END LoadVar;
@@ -2237,9 +2237,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSIF e1.obj = ePROC THEN
 						CODE.Proc_Cmp(e1.ident.proc.label, cmpcode(op) = 0)
 					ELSIF e.obj = eIMP THEN
-						CODE.ProcImpCmp(e.ident.import, cmpcode(op) = 0)
+						CODE.ProcImp_Cmp(e.ident.import, cmpcode(op) = 0)
 					ELSIF e1.obj = eIMP THEN
-						CODE.ProcImpCmp(e1.ident.import, cmpcode(op) = 0)
+						CODE.ProcImp_Cmp(e1.ident.import, cmpcode(op) = 0)
 					ELSE
 						CODE.Cmd0_Add(CODE.opEQ + cmpcode(op))
 					END
@@ -2852,11 +2852,11 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 		ELSIF isRec(e) THEN
 			CODE.drop;
 			CODE.Cmd_Add(CODE.opLADR, e.ident.offset - 1);
-			CODE.load(PARS.program.target.word)
+			CODE.Load(PARS.program.target.word)
 		ELSIF isPtr(e) THEN
 			deref(pos, e, FALSE, errPTR);
 			CODE.Cmd_Add(CODE.opSUBR, PARS.program.target.word);
-			CODE.load(PARS.program.target.word)
+			CODE.Load(PARS.program.target.word)
 		END;
 
 		PARS.checklex(parser, SCAN.lxOF);
@@ -2906,7 +2906,7 @@ PROCEDURE ForStatement (parser: PARS.PARSER);
 		ELSE
 			CODE.Cmd_Add(CODE.opLADR, -offset)
 		END;
-		CODE.load(ident.type.size);
+		CODE.Load(ident.type.size);
 
 		PARS.checklex(parser, SCAN.lxTO);
 		NextPos(parser, pos);
