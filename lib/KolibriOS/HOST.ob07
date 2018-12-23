@@ -13,9 +13,11 @@ CONST
 
     OS* = "KOS";
 
-    slash* = "/"; 
-    
-    bit_depth* = 32;
+    slash* = "/";
+
+    bit_depth* = 32;  
+    maxint* = 7FFFFFFFH;
+    minint* = 80000000H;
 
     MAX_PARAM = 1024;
 
