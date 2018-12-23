@@ -1,56 +1,59 @@
-MODULE modConstante;
-(*		Defined constante for all compiler
-		propspero.78.su@gmail.com 2018-12-22 12:09
-	*)
+﻿MODULE modConstante;
+(*              Defined constante for all compiler
+                propspero.78.su@gmail.com 2018-12-22 12:09
+        *)
 
 IMPORT mUtil := UTILS;
 
 CONST
-	FILE_EXT* = ".ob07";
-	(* version for self build *)
-		Version_Major* = 0;
-		Version_Minor* = 93;
+        FILE_EXT* = ".ob07";
+        (* version for self build *)
+                Version_Major* = 0;
+                Version_Minor* = 93;
 
-	(* Platform depended constante *)
-		Kolibry_SizeHeader* = 36;
-		Kolibry_SizeDWORD*  = 4;
-		Kolibry_SizeParam*  = 2048;
-		Kolibry_FileAlignment* = 16;
-		Kolibry_sName*      = "MENUET01";
+        (* Platform depended constante *)
+                Kolibri_SizeHeader* = 36;
+                Kolibri_SizeDWORD*  = 4;
+                Kolibri_SizeParam*  = 2048;
+                Kolibri_FileAlignment* = 16;
+                Kolibri_sName*      = "MENUET01";
 
-	(* target out binary file *)
-		Target_sConsole* = "console";
-		Target_sGUI*     = "gui";
-		Target_sDLL*     = "dll";
-		Target_sKolibry* = "kos";
-		Target_sObject*  = "obj";
-		Target_sWin64*   = "win64";
-		
-		Target_iConsole* =  1;
-		Target_iGUI*     =  Target_iConsole + 1;
-		Target_iDLL*     =  Target_iGUI     + 1;
-		Target_iKolibry* =  Target_iDLL     + 1;
-		Target_iObject*  =  Target_iKolibry + 1;
-		Target_iWin64*   =  Target_iObject  + 1;
+        (* target out binary file *)
+                Target_sConsole* = "console";
+                Target_sGUI*     = "gui";
+                Target_sDLL*     = "dll";
+                Target_sKolibri* = "kos";
+                Target_sObject*  = "obj";
+                Target_sWin64*   = "win64";
 
-	(* for path *)
-		slash* = mUtil.slash; 
-		pathLen* = 2048;
+                Target_iConsole* =  1;
+                Target_iGUI*     =  Target_iConsole + 1;
+                Target_iDLL*     =  Target_iGUI     + 1;
+                Target_iKolibri* =  Target_iDLL     + 1;
+                Target_iObject*  =  Target_iKolibri + 1;
+                Target_iWin64*   =  Target_iObject  + 1;
 
-	(* for architecture *)
-		min32* = -2147483647-1;
-		max32* = 2147483647;
-	
-	(* Define internal types *)
-		typeInteger* = 1; 
-		typeReal* = 2;
-		typeSet*    = 3;
-		typeBoolean* = 4;
-		typeChar* = 5;
-		typeWChar*  = 6;
-		typeString*  = 7;
+        (* for path *)
+                slash* = mUtil.slash;
+                pathLen* = 2048;
 
-	(* for CODE *)
-		codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
+        (* for architecture *)
+                min32* = -2147483647-1;
+                max32* = 2147483647;
+                bit_depth* = mUtil.bit_depth;
+                maxint* = mUtil.maxint;
+                minint* = mUtil.minint;
+
+        (* Define internal types *)
+                typeInteger* = 1;
+                typeReal* = 2;
+                typeSet*    = 3;
+                typeBoolean* = 4;
+                typeChar* = 5;
+                typeWChar*  = 6;
+                typeString*  = 7;
+
+        (* for CODE *)
+                codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
 
 END modConstante.
