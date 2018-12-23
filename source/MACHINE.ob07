@@ -1,102 +1,102 @@
 ﻿MODULE MACHINE;
 (*
-        BSD 2-Clause License
+	BSD 2-Clause License
 
-        Copyright (c) 2018, Anton Krotov
-        All rights reserved.
-        *)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
 IMPORT mConst := modConstante;
 
 VAR
-        target*,
-        native*: RECORD
-                        bit_depth*,
-                        maxInt*,
-                        minInt*,
-                        maxSet*,
-                        maxHex*:    INTEGER;
-                        maxReal*:   REAL
-                END;
+	target*,
+	native*: RECORD
+			bit_depth*,
+			maxInt*,
+			minInt*,
+			maxSet*,
+			maxHex*:    INTEGER;
+			maxReal*:   REAL
+		END;
 
-        b64to32*, bInitialized: BOOLEAN;
+	b64to32*, bInitialized: BOOLEAN;
 
 PROCEDURE BitDepth_Set* (pBitDepth: INTEGER);
-        BEGIN        
-                ASSERT(mConst.bit_depth >= pBitDepth);
-                ASSERT((pBitDepth = 32) OR (pBitDepth = 64));
+	BEGIN
+		ASSERT(mConst.bit_depth >= pBitDepth);
+		ASSERT((pBitDepth = 32) OR (pBitDepth = 64));
 
-                native.bit_depth   := mConst.bit_depth;
-                native.maxSet      := mConst.bit_depth - 1;
-                native.maxHex      := mConst.bit_depth DIV 4;
-                native.minInt      := mConst.minint;
-                native.maxInt      := mConst.maxint;
-                native.maxReal     := 1.9;
-                PACK(native.maxReal, 1023);
+		native.bit_depth   := mConst.bit_depth;
+		native.maxSet      := mConst.bit_depth - 1;
+		native.maxHex      := mConst.bit_depth DIV 4;
+		native.minInt      := mConst.minint;
+		native.maxInt      := mConst.maxint;
+		native.maxReal     := 1.9;
+		PACK(native.maxReal, 1023);
 
-                target.bit_depth   := pBitDepth;
-                target.maxSet      := pBitDepth - 1;
-                target.maxHex      := pBitDepth DIV 4;
-                target.minInt      := ASR(mConst.minint, mConst.bit_depth - pBitDepth);
-                target.maxInt      := ASR(mConst.maxint, mConst.bit_depth - pBitDepth);
-                target.maxReal     := 1.9;
-                PACK(target.maxReal, 1023);
+		target.bit_depth   := pBitDepth;
+		target.maxSet      := pBitDepth - 1;
+		target.maxHex      := pBitDepth DIV 4;
+		target.minInt      := ASR(mConst.minint, mConst.bit_depth - pBitDepth);
+		target.maxInt      := ASR(mConst.maxint, mConst.bit_depth - pBitDepth);
+		target.maxReal     := 1.9;
+		PACK(target.maxReal, 1023);
 
-                b64to32 := (pBitDepth = 32) & (mConst.bit_depth = 64);
+		b64to32 := (pBitDepth = 32) & (mConst.bit_depth = 64);
 
-                bInitialized := TRUE
-        END BitDepth_Set;
+		bInitialized := TRUE
+	END BitDepth_Set;
 
 PROCEDURE Byte_Get* (pNum: INTEGER; pIdx: INTEGER): BYTE;
-        BEGIN
-                WHILE pIdx > 0 DO
-                        pNum := ASR(pNum, 8);
-                        DEC(pIdx)
-                END
+	BEGIN
+		WHILE pIdx > 0 DO
+			pNum := ASR(pNum, 8);
+			DEC(pIdx)
+		END
 
-                RETURN ORD(BITS(pNum) * {0..7})
-        END Byte_Get;
+		RETURN ORD(BITS(pNum) * {0..7})
+	END Byte_Get;
 
 PROCEDURE IsAlign* (VAR pBytes: INTEGER; pAlign: INTEGER): BOOLEAN;
-        VAR
-                _bRes: BOOLEAN;
-        BEGIN
-                ASSERT(bInitialized);
-                IF pBytes MOD pAlign # 0 THEN
-                        _bRes  := native.maxInt - pBytes >= pAlign - (pBytes MOD pAlign);
-                        IF _bRes THEN
-                                pBytes := pBytes + pAlign - (pBytes MOD pAlign)
-                        END
-                ELSE
-                        _bRes := TRUE
-                END
-                RETURN _bRes
-        END IsAlign;
+	VAR
+		_bRes: BOOLEAN;
+	BEGIN
+		ASSERT(bInitialized);
+		IF pBytes MOD pAlign # 0 THEN
+			_bRes  := native.maxInt - pBytes >= pAlign - (pBytes MOD pAlign);
+			IF _bRes THEN
+				pBytes := pBytes + pAlign - (pBytes MOD pAlign)
+			END
+		ELSE
+			_bRes := TRUE
+		END
+		RETURN _bRes
+	END IsAlign;
 
 PROCEDURE Int32To64* (pValue: INTEGER): INTEGER;
-        BEGIN
-                IF native.bit_depth = 64 THEN
-                        pValue := LSL(pValue, 16);
-                        pValue := LSL(pValue, 16);
-                        pValue := ASR(pValue, 16);
-                        pValue := ASR(pValue, 16)
-                END
+	BEGIN
+		IF native.bit_depth = 64 THEN
+			pValue := LSL(pValue, 16);
+			pValue := LSL(pValue, 16);
+			pValue := ASR(pValue, 16);
+			pValue := ASR(pValue, 16)
+		END
 
-                RETURN pValue
-        END Int32To64;
+		RETURN pValue
+	END Int32To64;
 
 PROCEDURE Int64To32* (pValue: INTEGER): INTEGER;
-        BEGIN
-                IF native.bit_depth = 64 THEN
-                        pValue := LSL(pValue, 16);
-                        pValue := LSL(pValue, 16);
-                        pValue := LSR(pValue, 16);
-                        pValue := LSR(pValue, 16)
-                END
+	BEGIN
+		IF native.bit_depth = 64 THEN
+			pValue := LSL(pValue, 16);
+			pValue := LSL(pValue, 16);
+			pValue := LSR(pValue, 16);
+			pValue := LSR(pValue, 16)
+		END
 
-                RETURN pValue
-        END Int64To32;
+		RETURN pValue
+	END Int64To32;
 
 BEGIN
-        bInitialized := FALSE
+	bInitialized := FALSE
 END MACHINE.
