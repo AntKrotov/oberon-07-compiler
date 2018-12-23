@@ -148,12 +148,11 @@ TYPE
 	tpProcImport* = POINTER TO RECORD (mList.tpItem)
 			label*: INTEGER;
 			lib*:   tpLibImport;
-			name*:  mScan.LEXSTR;
+			lexName*:  mScan.LEXSTR;
 			count:  INTEGER
 		END;
 
 	tpCodes* = POINTER TO RECORD
-
 		last:       tpCommand;
 		begcall:    tpCmdStack;
 		endcall:    tpCmdStack;
@@ -894,13 +893,13 @@ PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): tpProcImport;
 		END;
 
 		p := lib.procs.first(tpProcImport);
-		WHILE (p # NIL) & (p.name # proc) DO
+		WHILE (p # NIL) & (p.lexName # proc) DO
 			p := p.next(tpProcImport)
 		END;
 
 		IF p = NIL THEN
 			NEW(p);
-			p.name  := proc;
+			p.lexName  := proc;
 			p.label := NewLabel();
 			p.lib   := lib;
 			p.count := 1;

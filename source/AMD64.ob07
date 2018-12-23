@@ -1923,7 +1923,7 @@ PROCEDURE epilog (code: CODE.tpCodes; modname: ARRAY OF CHAR; pic: BOOLEAN);
 				proc := lib.procs.first(CODE.tpProcImport);
 				WHILE proc # NIL DO
 					Write("N"); WriteHex(proc.label); WriteLn(" dw 0");
-					Write("db '"); Write(proc.name); WriteLn("',0");
+					Write("db '"); Write(proc.lexName); WriteLn("',0");
 					proc := proc.next(CODE.tpProcImport)
 				END;
 				lib := lib.next(CODE.tpLibImport);

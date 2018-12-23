@@ -2201,7 +2201,7 @@ PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; targ
 				BIN.Import(program, lib.lexName, 0);
 				proc := lib.procs.first(CODE.tpProcImport);
 				WHILE proc # NIL DO
-					BIN.Import(program, proc.name, proc.label);
+					BIN.Import(program, proc.lexName, proc.label);
 					proc := proc.next(CODE.tpProcImport)
 				END;
 				lib := lib.next(CODE.tpLibImport)
