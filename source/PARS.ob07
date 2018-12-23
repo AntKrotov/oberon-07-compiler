@@ -640,7 +640,7 @@ PROCEDURE type (parser: PARSER; VAR t: PROG.TYPE_; flags: SET);
 
 			t.closed := TRUE;
 
-			CODE.AddRec(t.base.num);
+			CODE.Rec_Add(t.base.num);
 
 			IF ~t.noalign THEN
 				check1(MACHINE.IsAlign(t.size, t.align), parser, 104);

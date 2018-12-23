@@ -1628,7 +1628,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 			ELSIF sym = SCAN.lxIDENT THEN
 				getpos(parser, pos);
 
-				CODE.pushBegEnd(begcall, endcall);
+				CODE.BegEnd_Push(begcall, endcall);
 
 				designator(parser, e);
 				IF isVar(e) THEN
@@ -1682,7 +1682,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END
 					END
 				END;
-				CODE.popBegEnd(begcall, endcall)
+				CODE.BegEnd_Pop(begcall, endcall)
 
 			ELSIF sym = SCAN.lxLROUND THEN
 				PARS.Next(parser);
@@ -2365,7 +2365,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 	BEGIN
 		getpos(parser, pos);
 
-		CODE.pushBegEnd(begcall, endcall);
+		CODE.BegEnd_Push(begcall, endcall);
 
 		designator(parser, e);
 
@@ -2420,7 +2420,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 			END
 		END;
 
-		CODE.popBegEnd(begcall, endcall);
+		CODE.BegEnd_Pop(begcall, endcall);
 
 		IF cconv = PROG.cdecl THEN
 			CODE.AddCmd(CODE.opCLEANUP, params)
