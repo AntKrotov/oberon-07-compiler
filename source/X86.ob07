@@ -2251,7 +2251,7 @@ PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; targ
 
 		exp := code.export.first(CODE.tpProcExport);
 		WHILE exp # NIL DO
-			BIN.Export(program, exp.name, exp.label);
+			BIN.Export(program, exp.lexName, exp.label);
 			exp := exp.next(CODE.tpProcExport)
 		END;
 

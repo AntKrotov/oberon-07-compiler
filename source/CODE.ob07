@@ -138,7 +138,7 @@ TYPE
 	tpProcExport* = POINTER TO RECORD (mList.tpItem)
 
 		label*: INTEGER;
-		name*:  mScan.LEXSTR
+		lexName*:  mScan.LEXSTR
 
 	END;
 
@@ -879,7 +879,7 @@ PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
 	BEGIN
 		NEW(exp);
 		exp.label := label;
-		exp.name  := name;
+		exp.lexName  := name;
 		mList.Add(codes.export, exp)
 	END AddExp;
 
