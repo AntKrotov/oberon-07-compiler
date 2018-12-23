@@ -117,25 +117,23 @@ CONST
 TYPE
 
 	tpCommand* = POINTER TO RECORD (mList.tpItem)
-		opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
-		param1*:  INTEGER; (* Param1 for opCode *)
-		param2*:  INTEGER  (* Param2 for opCode *)
-	END;
+			opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
+			param1*:  INTEGER; (* Param1 for opCode *)
+			param2*:  INTEGER  (* Param2 for opCode *)
+		END;
 
 	tpCommand3* = POINTER TO RECORD (tpCommand)
-		param3*:  INTEGER
-	END;
+			param3*:  INTEGER
+		END;
 
 	tpCommandFloat* = POINTER TO RECORD (tpCommand)
-		valFloat*:   REAL
-	END;
+			valFloat*:   REAL
+		END;
 
-	CMDSTACK = POINTER TO RECORD
-
-		data: ARRAY 1000 OF tpCommand;
-		top:  INTEGER
-
-	END;
+	tpCmdStack = POINTER TO RECORD
+			data: ARRAY 1000 OF tpCommand;
+			top:  INTEGER
+		END;
 
 	EXPORT_PROC* = POINTER TO RECORD (mList.tpItem)
 
@@ -164,8 +162,8 @@ TYPE
 	tpCodes* = POINTER TO RECORD
 
 		last:       tpCommand;
-		begcall:    CMDSTACK;
-		endcall:    CMDSTACK;
+		begcall:    tpCmdStack;
+		endcall:    tpCmdStack;
 		commands*:  mList.tpList;
 		export*:    mList.tpList;
 		import*:    mList.tpList;
@@ -287,13 +285,13 @@ PROCEDURE SetMinDataSize* (size: INTEGER);
 		codes.dmin := mChl.Length(codes.data) + size
 	END SetMinDataSize;
 
-PROCEDURE push (stk: CMDSTACK; cmd: tpCommand);
+PROCEDURE push (stk: tpCmdStack; cmd: tpCommand);
 	BEGIN
 		INC(stk.top);
 		stk.data[stk.top] := cmd
 	END push;
 
-PROCEDURE pop (stk: CMDSTACK): tpCommand;
+PROCEDURE pop (stk: tpCmdStack): tpCommand;
 	VAR
 		res: tpCommand;
 	BEGIN
