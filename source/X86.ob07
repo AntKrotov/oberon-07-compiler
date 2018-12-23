@@ -2191,12 +2191,12 @@ PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; targ
 
 		PROCEDURE import (imp: LISTS.tpList);
 		VAR
-			lib:  CODE.IMPORT_LIB;
+			lib:  CODE.tpLibImport;
 			proc: CODE.IMPORT_PROC;
 
 		BEGIN
 
-			lib := imp.first(CODE.IMPORT_LIB);
+			lib := imp.first(CODE.tpLibImport);
 			WHILE lib # NIL DO
 				BIN.Import(program, lib.name, 0);
 				proc := lib.procs.first(CODE.IMPORT_PROC);
@@ -2204,7 +2204,7 @@ PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; targ
 					BIN.Import(program, proc.name, proc.label);
 					proc := proc.next(CODE.IMPORT_PROC)
 				END;
-				lib := lib.next(CODE.IMPORT_LIB)
+				lib := lib.next(CODE.tpLibImport)
 			END
 
 		END import;

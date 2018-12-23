@@ -136,23 +136,19 @@ TYPE
 		END;
 
 	tpProcExport* = POINTER TO RECORD (mList.tpItem)
+			label*: INTEGER;
+			lexName*:  mScan.LEXSTR
+		END;
 
-		label*: INTEGER;
-		lexName*:  mScan.LEXSTR
-
-	END;
-
-	IMPORT_LIB* = POINTER TO RECORD (mList.tpItem)
-
-		name*:   mScan.LEXSTR;
-		procs*:  mList.tpList
-
-	END;
+	tpLibImport* = POINTER TO RECORD (mList.tpItem)
+			name*:   mScan.LEXSTR;
+			procs*:  mList.tpList
+		END;
 
 	IMPORT_PROC* = POINTER TO RECORD (mList.tpItem)
 
 		label*: INTEGER;
-		lib*:   IMPORT_LIB;
+		lib*:   tpLibImport;
 		name*:  mScan.LEXSTR;
 		count:  INTEGER
 
@@ -885,12 +881,12 @@ PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
 
 PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
 	VAR
-		lib: IMPORT_LIB;
+		lib: tpLibImport;
 		p:   IMPORT_PROC;
 	BEGIN
-		lib := codes.import.first(IMPORT_LIB);
+		lib := codes.import.first(tpLibImport);
 		WHILE (lib # NIL) & (lib.name # dll) DO
-			lib := lib.next(IMPORT_LIB)
+			lib := lib.next(tpLibImport)
 		END;
 
 		IF lib = NIL THEN
@@ -921,7 +917,7 @@ PROCEDURE AddImp* (dll, proc: mScan.LEXSTR): IMPORT_PROC;
 
 PROCEDURE DelImport* (imp: mList.tpItem);
 	VAR
-		lib: IMPORT_LIB;
+		lib: tpLibImport;
 	BEGIN
 		DEC(imp(IMPORT_PROC).count);
 		IF imp(IMPORT_PROC).count = 0 THEN
