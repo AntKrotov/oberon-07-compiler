@@ -974,14 +974,14 @@ PROCEDURE parse (parser: PARSER);
 		CONSOLE.Ln;
 
 		label := CODE.Label_New();
-		CODE.AddJmpCmd(mConst.codeJMP, label);
+		CODE.CmdJmp_Add(mConst.codeJMP, label);
 
 		name := CODE.Str_Put(unit.name.s);
 
-		CODE.SetErrLabel;
+		CODE.LabelErr_Set;
 		CODE.Cmd_Add(CODE.opSADR, name);
 		CODE.Cmd_Add(CODE.opPARAM, 1);
-		CODE.AddCmd0(CODE.opERR);
+		CODE.Cmd0_Add(CODE.opERR);
 
 		endmod := DeclarationSequence(parser);
 

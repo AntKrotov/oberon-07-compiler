@@ -348,70 +348,70 @@ PROCEDURE Label_Set* (label: INTEGER);
 		Cmd_Add(mConst.codeLABEL, label)
 	END Label_Set;
 
-PROCEDURE SetErrLabel*;
+PROCEDURE LabelErr_Set*;
 	BEGIN
 		codes.errLabel := Label_New();
 		Label_Set(codes.errLabel)
-	END SetErrLabel;
+	END LabelErr_Set;
 
-PROCEDURE AddCmd0* (pOpCode: INTEGER);
+PROCEDURE Cmd0_Add* (pOpCode: INTEGER);
 	BEGIN
 		Cmd_Add(pOpCode, 0)
-	END AddCmd0;
+	END Cmd0_Add;
 
-PROCEDURE delete (cmd: tpCommand);
+PROCEDURE Delete (pCmd: tpCommand);
 	BEGIN
-		mList.Del(codes.commands, cmd)
-	END delete;
+		mList.Del(codes.commands, pCmd)
+	END Delete;
 
-PROCEDURE AddJmpCmd* (pOpCode: INTEGER; label: INTEGER);
+PROCEDURE CmdJmp_Add* (pOpCode: INTEGER; pLabel: INTEGER);
 	VAR
-		prev: tpCommand;
-		not:  BOOLEAN;
+		_prev: tpCommand;
+		_not:  BOOLEAN;
 	BEGIN
-		prev := codes.last;
-		not := prev.opCode = opNOT;
-		IF not THEN
+		_prev := codes.last;
+		_not := _prev.opCode = opNOT;
+		IF _not THEN
 			IF pOpCode = opJE THEN
 				pOpCode := opJNE
 			ELSIF pOpCode = opJNE THEN
 				pOpCode := opJE
 			ELSE
-				not := FALSE
+				_not := FALSE
 			END
 		END;
-		Cmd2_Add(pOpCode, label, label);
-		IF not THEN
-			delete(prev)
+		Cmd2_Add(pOpCode, pLabel, pLabel);
+		IF _not THEN
+			Delete(_prev)
 		END
-	END AddJmpCmd;
+	END CmdJmp_Add;
 
-PROCEDURE OnError* (line, error: INTEGER);
+PROCEDURE OnError* (pLine, pError: INTEGER);
 	BEGIN
-		Cmd_Add(opERRC, LSL(line, 4) + error);
-		AddJmpCmd(mConst.codeJMP, codes.errLabel)
+		Cmd_Add(opERRC, LSL(pLine, 4) + pError);
+		CmdJmp_Add(mConst.codeJMP, codes.errLabel)
 	END OnError;
 
-PROCEDURE TypeGuard* (op, t: INTEGER; line, error: INTEGER);
+PROCEDURE Type_Guard* (pOp, pType: INTEGER; pLine, pError: INTEGER);
 	VAR
-		label: INTEGER;
+		_label: INTEGER;
 	BEGIN
-		Cmd_Add(op, t);
-		label := Label_New();
-		AddJmpCmd(opJE, label);
-		OnError(line, error);
-		Label_Set(label)
-	END TypeGuard;
+		Cmd_Add(pOp, pType);
+		_label := Label_New();
+		CmdJmp_Add(opJE, _label);
+		OnError(pLine, pError);
+		Label_Set(_label)
+	END Type_Guard;
 
-PROCEDURE TypeCheck* (t: INTEGER);
+PROCEDURE Type_Check* (pType: INTEGER);
 	BEGIN
-		Cmd_Add(opIS, t)
-	END TypeCheck;
+		Cmd_Add(opIS, pType)
+	END Type_Check;
 
-PROCEDURE TypeCheckRec* (t: INTEGER);
+PROCEDURE TypeRec_Check* (pType: INTEGER);
 	BEGIN
-		Cmd_Add(opISREC, t)
-	END TypeCheckRec;
+		Cmd_Add(opISREC, pType)
+	END TypeRec_Check;
 
 PROCEDURE New* (size, typenum: INTEGER);
 	BEGIN
@@ -526,16 +526,16 @@ PROCEDURE InvCmp (pOpCode: BYTE): INTEGER;
 
 PROCEDURE not*;
 	VAR
-		prev: tpCommand;
+		_prev: tpCommand;
 	BEGIN
-		prev := codes.last;
-		IF prev.opCode = opNOT THEN
-			codes.last := prev.prev(tpCommand);
-			delete(prev)
-		ELSIF isCmp(prev.opCode) THEN
-			prev.opCode := InvCmp(prev.opCode)
+		_prev := codes.last;
+		IF _prev.opCode = opNOT THEN
+			codes.last := _prev.prev(tpCommand);
+			Delete(_prev)
+		ELSIF isCmp(_prev.opCode) THEN
+			_prev.opCode := InvCmp(_prev.opCode)
 		ELSE
-			AddCmd0(opNOT)
+			Cmd0_Add(opNOT)
 		END
 	END not;
 
@@ -562,54 +562,54 @@ PROCEDURE Leave* (result, float: BOOLEAN; paramsize: INTEGER): tpCommand;
 
 PROCEDURE Call* (proc: INTEGER);
 	BEGIN
-		AddJmpCmd(opCALL, proc)
+		CmdJmp_Add(opCALL, proc)
 	END Call;
 
 PROCEDURE CallImp* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opCALLI, proc(tpProcImport).label)
+		CmdJmp_Add(opCALLI, proc(tpProcImport).label)
 	END CallImp;
 
 PROCEDURE CallP*;
 	BEGIN
-		AddCmd0(opCALLP)
+		Cmd0_Add(opCALLP)
 	END CallP;
 
 PROCEDURE AssignProc* (proc: INTEGER);
 	BEGIN
-		AddJmpCmd(opSAVEP, proc)
+		CmdJmp_Add(opSAVEP, proc)
 	END AssignProc;
 
 PROCEDURE AssignImpProc* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opSAVEIP, proc(tpProcImport).label)
+		CmdJmp_Add(opSAVEIP, proc(tpProcImport).label)
 	END AssignImpProc;
 
 PROCEDURE PushProc* (proc: INTEGER);
 	BEGIN
-		AddJmpCmd(opPUSHP, proc)
+		CmdJmp_Add(opPUSHP, proc)
 	END PushProc;
 
 PROCEDURE PushImpProc* (proc: mList.tpItem);
 	BEGIN
-		AddJmpCmd(opPUSHIP, proc(tpProcImport).label)
+		CmdJmp_Add(opPUSHIP, proc(tpProcImport).label)
 	END PushImpProc;
 
 PROCEDURE ProcCmp* (proc: INTEGER; eq: BOOLEAN);
 	BEGIN
 		IF eq THEN
-			AddJmpCmd(opEQP, proc)
+			CmdJmp_Add(opEQP, proc)
 		ELSE
-			AddJmpCmd(opNEP, proc)
+			CmdJmp_Add(opNEP, proc)
 		END
 	END ProcCmp;
 
 PROCEDURE ProcImpCmp* (proc: mList.tpItem; eq: BOOLEAN);
 	BEGIN
 		IF eq THEN
-			AddJmpCmd(opEQIP, proc(tpProcImport).label)
+			CmdJmp_Add(opEQIP, proc(tpProcImport).label)
 		ELSE
-			AddJmpCmd(opNEIP, proc(tpProcImport).label)
+			CmdJmp_Add(opNEIP, proc(tpProcImport).label)
 		END
 	END ProcImpCmp;
 
@@ -632,7 +632,7 @@ PROCEDURE load* (size: INTEGER);
 			ELSIF last.opCode = opGADR THEN
 				last.opCode := opGLOAD8
 			ELSE
-				AddCmd0(opLOAD8)
+				Cmd0_Add(opLOAD8)
 			END
 
 		|2:
@@ -643,7 +643,7 @@ PROCEDURE load* (size: INTEGER);
 			ELSIF last.opCode = opGADR THEN
 				last.opCode := opGLOAD16
 			ELSE
-				AddCmd0(opLOAD16)
+				Cmd0_Add(opLOAD16)
 			END
 
 		|4:
@@ -654,7 +654,7 @@ PROCEDURE load* (size: INTEGER);
 			ELSIF last.opCode = opGADR THEN
 				last.opCode := opGLOAD32
 			ELSE
-				AddCmd0(opLOAD32)
+				Cmd0_Add(opLOAD32)
 			END
 
 		|8:
@@ -665,7 +665,7 @@ PROCEDURE load* (size: INTEGER);
 			ELSIF last.opCode = opGADR THEN
 				last.opCode := opGLOAD64
 			ELSE
-				AddCmd0(opLOAD64)
+				Cmd0_Add(opLOAD64)
 			END
 		END
 	END load;
@@ -673,44 +673,44 @@ PROCEDURE load* (size: INTEGER);
 PROCEDURE SysPut* (size: INTEGER);
 	BEGIN
 		CASE size OF
-		|1: AddCmd0(opSAVE8)
-		|2: AddCmd0(opSAVE16)
-		|4: AddCmd0(opSAVE32)
-		|8: AddCmd0(opSAVE64)
+		|1: Cmd0_Add(opSAVE8)
+		|2: Cmd0_Add(opSAVE16)
+		|4: Cmd0_Add(opSAVE32)
+		|8: Cmd0_Add(opSAVE64)
 		END
 	END SysPut;
 
 PROCEDURE savef*;
 	BEGIN
-		AddCmd0(opSAVEF);
+		Cmd0_Add(opSAVEF);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
 	END savef;
 
 PROCEDURE pushf*;
 	BEGIN
-		AddCmd0(opPUSHF);
+		Cmd0_Add(opPUSHF);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
 	END pushf;
 
 PROCEDURE loadf* (): BOOLEAN;
 	BEGIN
-		AddCmd0(opLOADF);
+		Cmd0_Add(opLOADF);
 		INC(codes.fregs)
 		RETURN codes.fregs < mConst.codeFregs
 	END loadf;
 
 PROCEDURE inf* (): BOOLEAN;
 	BEGIN
-		AddCmd0(opINF);
+		Cmd0_Add(opINF);
 		INC(codes.fregs)
 		RETURN codes.fregs < mConst.codeFregs
 	END inf;
 
 PROCEDURE fbinop* (pOpCode: BYTE);
 	BEGIN
-		AddCmd0(pOpCode);
+		Cmd0_Add(pOpCode);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs > 0)
 	END fbinop;
@@ -723,51 +723,51 @@ PROCEDURE saves* (offset, length: INTEGER);
 PROCEDURE abs* (real: BOOLEAN);
 	BEGIN
 		IF real THEN
-			AddCmd0(opFABS)
+			Cmd0_Add(opFABS)
 		ELSE
-			AddCmd0(opABS)
+			Cmd0_Add(opABS)
 		END
 	END abs;
 
 PROCEDURE floor*;
 	BEGIN
-		AddCmd0(opFLOOR);
+		Cmd0_Add(opFLOOR);
 		DEC(codes.fregs);
 		ASSERT(codes.fregs >= 0)
 	END floor;
 
 PROCEDURE flt* (): BOOLEAN;
 	BEGIN
-		AddCmd0(opFLT);
+		Cmd0_Add(opFLT);
 		INC(codes.fregs)
 		RETURN codes.fregs < mConst.codeFregs
 	END flt;
 
 PROCEDURE odd*;
 	BEGIN
-		AddCmd0(opODD)
+		Cmd0_Add(opODD)
 	END odd;
 
 PROCEDURE ord*;
 	BEGIN
-		AddCmd0(opORD)
+		Cmd0_Add(opORD)
 	END ord;
 
-PROCEDURE shift_minmax* (op: CHAR);
+PROCEDURE shift_minmax* (pOp: CHAR);
 	BEGIN
-		CASE op OF
-		|"A": AddCmd0(opASR)
-		|"L": AddCmd0(opLSL)
-		|"O": AddCmd0(opROR)
-		|"R": AddCmd0(opLSR)
-		|"m": AddCmd0(opMIN)
-		|"x": AddCmd0(opMAX)
+		CASE pOp OF
+		|"A": Cmd0_Add(opASR)
+		|"L": Cmd0_Add(opLSL)
+		|"O": Cmd0_Add(opROR)
+		|"R": Cmd0_Add(opLSR)
+		|"m": Cmd0_Add(opMIN)
+		|"x": Cmd0_Add(opMAX)
 		END
 	END shift_minmax;
 
-PROCEDURE shift_minmax1* (op: CHAR; x: INTEGER);
+PROCEDURE shift_minmax1* (pOp: CHAR; x: INTEGER);
 	BEGIN
-		CASE op OF
+		CASE pOp OF
 		|"A": Cmd_Add(opASR1, x)
 		|"L": Cmd_Add(opLSL1, x)
 		|"O": Cmd_Add(opROR1, x)
@@ -777,9 +777,9 @@ PROCEDURE shift_minmax1* (op: CHAR; x: INTEGER);
 		END
 	END shift_minmax1;
 
-PROCEDURE shift_minmax2* (op: CHAR; x: INTEGER);
+PROCEDURE shift_minmax2* (pOp: CHAR; x: INTEGER);
 	BEGIN
-		CASE op OF
+		CASE pOp OF
 		|"A": Cmd_Add(opASR2, x)
 		|"L": Cmd_Add(opLSL2, x)
 		|"O": Cmd_Add(opROR2, x)
@@ -837,7 +837,7 @@ PROCEDURE retf*;
 
 PROCEDURE drop*;
 	BEGIN
-		AddCmd0(opDROP)
+		Cmd0_Add(opDROP)
 	END drop;
 
 PROCEDURE case* (a, b, L, R: INTEGER);
