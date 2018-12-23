@@ -15,9 +15,7 @@ IMPORT mList := LISTS,
 CONST
 	numRegsFloat* = 8; (* NOT CHANGE!!! This num CPU Float Registers!! *)
 
-	opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
-	opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
-	opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
+	opDIVR* = 14; opMODR* = 15;
 	opUMINUS* = 16;
 	opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
 	opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
@@ -630,7 +628,7 @@ PROCEDURE Load* (pSize: INTEGER);
 				last.opCode := opLLOAD8
 			ELSIF last.opCode = opVADR THEN
 				last.opCode := opVLOAD8
-			ELSIF last.opCode = opGADR THEN
+			ELSIF last.opCode = mConst.codeGADR THEN
 				last.opCode := opGLOAD8
 			ELSE
 				Cmd0_Add(opLOAD8)
@@ -641,7 +639,7 @@ PROCEDURE Load* (pSize: INTEGER);
 				last.opCode := opLLOAD16
 			ELSIF last.opCode = opVADR THEN
 				last.opCode := opVLOAD16
-			ELSIF last.opCode = opGADR THEN
+			ELSIF last.opCode = mConst.codeGADR THEN
 				last.opCode := opGLOAD16
 			ELSE
 				Cmd0_Add(opLOAD16)
@@ -649,10 +647,10 @@ PROCEDURE Load* (pSize: INTEGER);
 
 		|4:
 			IF last.opCode = opLADR THEN
-				last.opCode := opLLOAD32
+				last.opCode := mConst.codeLLOAD32
 			ELSIF last.opCode = opVADR THEN
 				last.opCode := opVLOAD32
-			ELSIF last.opCode = opGADR THEN
+			ELSIF last.opCode = mConst.codeGADR THEN
 				last.opCode := opGLOAD32
 			ELSE
 				Cmd0_Add(opLOAD32)
@@ -663,7 +661,7 @@ PROCEDURE Load* (pSize: INTEGER);
 				last.opCode := opLLOAD64
 			ELSIF last.opCode = opVADR THEN
 				last.opCode := opVLOAD64
-			ELSIF last.opCode = opGADR THEN
+			ELSIF last.opCode = mConst.codeGADR THEN
 				last.opCode := opGLOAD64
 			ELSE
 				Cmd0_Add(opLOAD64)
@@ -860,7 +858,7 @@ PROCEDURE Case* (pA, pB, pL, pR: INTEGER);
 
 PROCEDURE Case_Set* (pA, pLabel: INTEGER);
 	BEGIN
-		Cmd2_Add(opCASET, pLabel, pA)
+		Cmd2_Add(mConst.codeCASET, pLabel, pA)
 	END Case_Set;
 
 PROCEDURE ProcExport_Add* (pLabel: INTEGER; pName: mScan.LEXSTR);

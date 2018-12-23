@@ -539,7 +539,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 					Write("lea "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(n); WriteLn("]");
 				END
 
-			|CODE.opGADR:
+			|mConst.codeGADR:
 				next := cmd.next(COMMAND);
 				IF next.opCode = CODE.opSAVEC THEN
 					IF isLong(next.param2) THEN
@@ -700,7 +700,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 					Write("call qword[P"); WriteHex(param1); WriteLn("]")
 				END
 
-			|CODE.opCONST:
+			|mConst.codeCONST:
 				next := cmd.next(COMMAND);
 				IF (next.opCode = CODE.opPARAM) & (next.param2 = 1) THEN
 					pushc(param2);
@@ -1158,13 +1158,13 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				PushAll(3);
 				CallRTL(pic, CODE._move2)
 
-			|CODE.opCOPYA:
+			|mConst.codeCOPYA:
 				PushAll(4);
 				pushc(param2);
 				CallRTL(pic, CODE._arrcpy);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opCOPYS:
+			|mConst.codeCOPYS:
 				PushAll(4);
 				pushc(param2);
 				CallRTL(pic, CODE._strcpy)
@@ -1231,7 +1231,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				CallRTL(pic, CODE._guardrec);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opCASET:
+			|mConst.codeCASET:
 				push(rcx);
 				push(rcx);
 				pushc(param2);
@@ -1446,7 +1446,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opDIV:
+			|mConst.codeDIV:
 				PushAll(2);
 				CallRTL(pic, CODE._div);
 				ASSERT(REG.GetReg(R, rax))
@@ -1488,13 +1488,13 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opDIVL:
+			|mConst.codeDIVL:
 				PushAll(1);
 				pushc(param2);
 				CallRTL(pic, CODE._div2);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opMOD:
+			|mConst.codeMOD:
 				PushAll(2);
 				CallRTL(pic, CODE._mod);
 				ASSERT(REG.GetReg(R, rax))
@@ -1532,18 +1532,18 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 					END
 				END
 
-			|CODE.opMODL:
+			|mConst.codeMODL:
 				PushAll(1);
 				pushc(param2);
 				CallRTL(pic, CODE._mod2);
 				ASSERT(REG.GetReg(R, rax))
 
-			|CODE.opMUL:
+			|mConst.codeMUL:
 				BinOp(reg1, reg2);
 				oprr("imul", reg1, reg2);
 				drop
 
-			|CODE.opMULC:
+			|mConst.codeMULC:
 				UnOp(reg1);
 
 				a := param2;
@@ -1842,7 +1842,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				drop
 
 		  (*
-			|CODE.opLLOAD32:
+			|mConst.codeLLOAD32:
 			|CODE.opVLOAD32:
 			|CODE.opGLOAD32:
 			|CODE.opLOAD32:

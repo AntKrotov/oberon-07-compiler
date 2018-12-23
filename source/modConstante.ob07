@@ -53,7 +53,19 @@ CONST
 		Target_iWin64*   =  Target_iObject  + 1;
 
 	(* for CODE *)
-		codeJMP* = Target_iWin64 + 1000;
-		codeLABEL* = 0; (* codeJMP       + 1;*)
+		codeJMP*   = 0;
+		codeLABEL* = codeJMP     + 1; (* 0 *)
+		codeCOPYS* = codeLABEL   + 1;
+		codeGADR*  = codeCOPYS   + 1;
+		codeCONST* = codeGADR    + 1;
+		codeLLOAD32* = codeCONST + 1;
+		codeCOPYA* = codeLLOAD32 + 1;
+		codeCASET* = codeCOPYA   + 1;
+		codeMULC*  = codeCASET   + 1;
+		codeMUL*   = codeMULC    + 1;
+		codeDIV*   = codeMUL     + 1;
+		codeMOD*   = codeDIV     + 1;
+		codeDIVL*  = codeMOD     + 1;
+		codeMODL*  = codeDIVL    + 1;
 
 END modConstante.
