@@ -131,7 +131,7 @@ TYPE
 		END;
 
 	tpCmdStack = POINTER TO RECORD
-			data: ARRAY 1000 OF tpCommand;
+			aData: ARRAY 1000 OF tpCommand;
 			top:  INTEGER
 		END;
 
@@ -288,14 +288,14 @@ PROCEDURE SetMinDataSize* (size: INTEGER);
 PROCEDURE push (stk: tpCmdStack; cmd: tpCommand);
 	BEGIN
 		INC(stk.top);
-		stk.data[stk.top] := cmd
+		stk.aData[stk.top] := cmd
 	END push;
 
 PROCEDURE pop (stk: tpCmdStack): tpCommand;
 	VAR
 		res: tpCommand;
 	BEGIN
-		res := stk.data[stk.top];
+		res := stk.aData[stk.top];
 		DEC(stk.top)
 		RETURN res
 	END pop;
@@ -947,7 +947,7 @@ PROCEDURE init*;
 		codes.export   := mList.New(NIL);
 		codes.import   := mList.New(NIL);
 		codes.types    := mChl.CreateIntList();
-		codes.data     := mChl.CreateByteList();
+		codes.data    := mChl.CreateByteList();
 
 		NEW(cmd); cmd.opCode := opNOP; mList.Add(codes.commands, cmd);
 		codes.last := cmd;
