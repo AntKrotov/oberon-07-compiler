@@ -2183,7 +2183,7 @@ PROCEDURE prolog (code: CODE.tpCodes; pic: BOOLEAN; target, stack, dllinit, dllr
 PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret: INTEGER);
 	VAR
 		i, n:  INTEGER;
-		exp:   CODE.EXPORT_PROC;
+		exp:   CODE.tpProcExport;
 		path, name, ext: PATHS.tPath;
 
 		tcount, dcount: INTEGER;
@@ -2249,10 +2249,10 @@ PROCEDURE epilog (code: CODE.tpCodes; pic: BOOLEAN; modname: ARRAY OF CHAR; targ
 			BIN.Export(program, "lib_init", dllinit);
 		END;
 
-		exp := code.export.first(CODE.EXPORT_PROC);
+		exp := code.export.first(CODE.tpProcExport);
 		WHILE exp # NIL DO
 			BIN.Export(program, exp.name, exp.label);
-			exp := exp.next(CODE.EXPORT_PROC)
+			exp := exp.next(CODE.tpProcExport)
 		END;
 
 		import(code.import);

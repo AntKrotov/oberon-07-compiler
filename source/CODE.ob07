@@ -135,7 +135,7 @@ TYPE
 			top:  INTEGER
 		END;
 
-	EXPORT_PROC* = POINTER TO RECORD (mList.tpItem)
+	tpProcExport* = POINTER TO RECORD (mList.tpItem)
 
 		label*: INTEGER;
 		name*:  mScan.LEXSTR
@@ -875,7 +875,7 @@ PROCEDURE caset* (a, label: INTEGER);
 
 PROCEDURE AddExp* (label: INTEGER; name: mScan.LEXSTR);
 	VAR
-		exp: EXPORT_PROC;
+		exp: tpProcExport;
 	BEGIN
 		NEW(exp);
 		exp.label := label;
