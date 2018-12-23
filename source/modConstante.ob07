@@ -1,0 +1,56 @@
+MODULE modConstante;
+(*		Defined constante for all compiler
+		propspero.78.su@gmail.com 2018-12-22 12:09
+	*)
+
+IMPORT mUtil := UTILS;
+
+CONST
+	FILE_EXT* = ".ob07";
+	(* version for self build *)
+		Version_Major* = 0;
+		Version_Minor* = 93;
+
+	(* Platform depended constante *)
+		Kolibry_SizeHeader* = 36;
+		Kolibry_SizeDWORD*  = 4;
+		Kolibry_SizeParam*  = 2048;
+		Kolibry_FileAlignment* = 16;
+		Kolibry_sName*      = "MENUET01";
+
+	(* target out binary file *)
+		Target_sConsole* = "console";
+		Target_sGUI*     = "gui";
+		Target_sDLL*     = "dll";
+		Target_sKolibry* = "kos";
+		Target_sObject*  = "obj";
+		Target_sWin64*   = "win64";
+		
+		Target_iConsole* =  1;
+		Target_iGUI*     =  Target_iConsole + 1;
+		Target_iDLL*     =  Target_iGUI     + 1;
+		Target_iKolibry* =  Target_iDLL     + 1;
+		Target_iObject*  =  Target_iKolibry + 1;
+		Target_iWin64*   =  Target_iObject  + 1;
+
+	(* for path *)
+		slash* = mUtil.slash; 
+		pathLen* = 2048;
+
+	(* for architecture *)
+		min32* = -2147483647-1;
+		max32* = 2147483647;
+	
+	(* Define internal types *)
+		typeInteger* = 1; 
+		typeReal* = 2;
+		typeSet*    = 3;
+		typeBoolean* = 4;
+		typeChar* = 5;
+		typeWChar*  = 6;
+		typeString*  = 7;
+
+	(* for CODE *)
+		codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
+
+END modConstante.

@@ -1,197 +1,172 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE AVLTREES;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
-MODULE AVLTREES; 
-
-IMPORT C := COLLECTIONS;
-
+IMPORT mCol := COLLECTIONS;
 
 TYPE
+	tpData* = POINTER TO RECORD (mCol.tpItem) END;
 
-    DATA* = POINTER TO RECORD (C.ITEM) END;
+	tpNode* = POINTER TO RECORD (mCol.tpItem)
+			data*: tpData;
+			height: INTEGER;
+			left*, right*: tpNode
+		END;
 
-    NODE* = POINTER TO RECORD (C.ITEM)
+	tCMP = PROCEDURE (a, b: tpData): INTEGER;
 
-        data*: DATA;
-
-        height: INTEGER;
-
-        left*, right*: NODE
-
-    END;
-
-    CMP* = PROCEDURE (a, b: DATA): INTEGER;
-
-    DESTRUCTOR* = PROCEDURE (VAR data: DATA);
-
+	tDesctuctor = PROCEDURE (VAR data: tpData);
 
 VAR
+	nodes: mCol.tpCollection;
 
-    nodes: C.COLLECTION;
+PROCEDURE New (pData: tpData): tpNode;
+	VAR
+		_node:  tpNode;
+		_colItem: mCol.tpItem;
+	BEGIN  
+		_colItem := mCol.Pop(nodes);
+		IF _colItem = NIL THEN
+			NEW(_node)
+		ELSE
+			_node := _colItem(tpNode)
+		END;
 
+		_node.data := pData;
+		_node.left := NIL;
+		_node.right := NIL;
+		_node.height := 1
 
-PROCEDURE NewNode (data: DATA): NODE;
-VAR
-    node:  NODE;
-    citem: C.ITEM;
+		RETURN _node
+	END New;
 
-BEGIN  
-    citem := C.pop(nodes);
-    IF citem = NIL THEN
-        NEW(node)
-    ELSE
-        node := citem(NODE)
-    END;
+PROCEDURE Height_Get (pNode: tpNode): INTEGER;
+	VAR
+		_res: INTEGER;
+	BEGIN
+		IF pNode = NIL THEN
+			_res := 0
+		ELSE
+			_res := pNode.height
+		END
 
-    node.data := data;
-    node.left := NIL;
-    node.right := NIL;
-    node.height := 1
+		RETURN _res
+	END Height_Get;
 
-    RETURN node
-END NewNode;
+PROCEDURE BFactor_Get (pNode: tpNode): INTEGER;
+		RETURN Height_Get(pNode.right) - Height_Get(pNode.left)
+	END BFactor_Get;
 
+PROCEDURE Height_Fix (pNode: tpNode);
+	BEGIN
+		pNode.height := MAX(Height_Get(pNode.left), Height_Get(pNode.right)) + 1
+	END Height_Fix;
 
-PROCEDURE height (p: NODE): INTEGER;
-VAR
-    res: INTEGER;
+PROCEDURE RotateR (pNode: tpNode): tpNode;
+	VAR
+		_node: tpNode;
+	BEGIN
+		_node := pNode.left;
+		pNode.left := _node.right;
+		_node.right := pNode;
+		Height_Fix(pNode);
+		Height_Fix(_node)
 
-BEGIN
-    IF p = NIL THEN
-        res := 0
-    ELSE
-        res := p.height
-    END
+		RETURN _node
+	END RotateR;
 
-    RETURN res
-END height;
+PROCEDURE RotateL (pNode: tpNode): tpNode;
+	VAR
+		_node: tpNode;
+	BEGIN
+		_node := pNode.right;
+		pNode.right := _node.left;
+		_node.left := pNode;
+		Height_Fix(pNode);
+		Height_Fix(_node)
 
+		RETURN _node
+	END RotateL;
 
-PROCEDURE bfactor (p: NODE): INTEGER;
-    RETURN height(p.right) - height(p.left)
-END bfactor;
+PROCEDURE Node_Balance (pNode: tpNode): tpNode;
+	VAR
+		_node: tpNode;
+	BEGIN
+		Height_Fix(pNode);
 
+		IF BFactor_Get(pNode) = 2 THEN
+			IF BFactor_Get(pNode.right) < 0 THEN
+				pNode.right := RotateR(pNode.right)
+			END;
+			_node := RotateL(pNode)
 
-PROCEDURE fixheight (p: NODE);
-BEGIN
-    p.height := MAX(height(p.left), height(p.right)) + 1
-END fixheight;
+		ELSIF BFactor_Get(pNode) = -2 THEN
+			IF BFactor_Get(pNode.left) > 0 THEN
+				pNode.left := RotateL(pNode.left)
+			END;
+			_node := RotateR(pNode)
 
+		ELSE
+			_node := pNode
+		END
 
-PROCEDURE rotateright (p: NODE): NODE;
-VAR
-    q: NODE;
+		RETURN _node
+	END Node_Balance;
 
-BEGIN
-    q := p.left;
-    p.left := q.right;
-    q.right := p;
-    fixheight(p);
-    fixheight(q)
+PROCEDURE Insert* (pNode: tpNode; pData: tpData; cmp: tCMP; VAR pNewNode: BOOLEAN; VAR pNode2: tpNode): tpNode;
+	VAR
+		_node: tpNode;
+		_resCmp: INTEGER;
+	BEGIN
+		IF pNode = NIL THEN
+			_node := New(pData);
+			pNode2 := _node;
+			pNewNode := TRUE
+		ELSE
 
-    RETURN q
-END rotateright;
+			_resCmp := cmp(pData, pNode.data);
+			IF _resCmp < 0 THEN
+				pNode.left := Insert(pNode.left, pData, cmp, pNewNode, pNode2);
+				_node := Node_Balance(pNode)
+			ELSIF _resCmp > 0 THEN
+				pNode.right := Insert(pNode.right, pData, cmp, pNewNode, pNode2);
+				_node := Node_Balance(pNode)
+			ELSE
+				_node := pNode;
+				pNode2 := _node;
+				pNewNode := FALSE
+			END
 
+		END
 
-PROCEDURE rotateleft (q: NODE): NODE;
-VAR
-    p: NODE;
+		RETURN _node
+	END Insert;
 
-BEGIN
-    p := q.right;
-    q.right := p.left;
-    p.left := q;
-    fixheight(q);
-    fixheight(p)
+PROCEDURE Destroy* (VAR pNode: tpNode; pDestructor: tDesctuctor);
+	VAR
+		left, right: tpNode;
 
-    RETURN p
-END rotateleft;
+	BEGIN
+		IF pNode # NIL THEN
+			left  := pNode.left;
+			right := pNode.right;
 
+			IF pDestructor # NIL THEN
+				pDestructor(pNode.data)
+			END; 
+			
+			mCol.Push(nodes, pNode);
+			pNode := NIL;
 
-PROCEDURE balance (p: NODE): NODE;
-VAR
-    res: NODE;
-
-BEGIN
-    fixheight(p);
-
-    IF bfactor(p) = 2 THEN
-        IF bfactor(p.right) < 0 THEN
-            p.right := rotateright(p.right)
-        END;
-        res := rotateleft(p)
-
-    ELSIF bfactor(p) = -2 THEN
-        IF bfactor(p.left) > 0 THEN
-            p.left := rotateleft(p.left)
-        END;
-        res := rotateright(p)
-
-    ELSE
-        res := p
-    END
-
-    RETURN res
-END balance;
-
-
-PROCEDURE insert* (p: NODE; data: DATA; cmp: CMP; VAR newnode: BOOLEAN; VAR node: NODE): NODE;
-VAR
-    res: NODE;
-    rescmp: INTEGER;
-
-BEGIN
-    IF p = NIL THEN
-        res := NewNode(data);
-        node := res;
-        newnode := TRUE
-    ELSE
-
-        rescmp := cmp(data, p.data);
-        IF rescmp < 0 THEN
-            p.left := insert(p.left, data, cmp, newnode, node);
-            res := balance(p)
-        ELSIF rescmp > 0 THEN
-            p.right := insert(p.right, data, cmp, newnode, node);
-            res := balance(p)
-        ELSE
-            res := p;
-            node := res;
-            newnode := FALSE
-        END
-
-    END
-
-    RETURN res
-END insert;
-
-
-PROCEDURE destroy* (VAR node: NODE; destructor: DESTRUCTOR);
-VAR
-    left, right: NODE;
-
-BEGIN
-    IF node # NIL THEN
-        left  := node.left;
-        right := node.right;
-
-        IF destructor # NIL THEN
-            destructor(node.data)
-        END; 
-        
-        C.push(nodes, node);
-        node := NIL;
-
-        destroy(left, destructor);
-        destroy(right, destructor)
-    END
-END destroy;
-
+			Destroy(left, pDestructor);
+			Destroy(right, pDestructor)
+		END
+	END Destroy;
 
 BEGIN
-    nodes := C.create()
+	nodes := mCol.New()
 END AVLTREES.

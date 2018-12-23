@@ -1,53 +1,47 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE ERRORS;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
-MODULE ERRORS;
+IMPORT mCons := CONSOLE,
+	mUtil := UTILS;
 
-IMPORT C := CONSOLE, UTILS;
+PROCEDURE Msg_Hint* (pName: ARRAY OF CHAR; pLine, pCol, pHint: INTEGER);
+	BEGIN
+		IF pHint = 0 THEN
+			mCons.String("  hint ("); mCons.Int(pLine); mCons.String(":"); mCons.Int(pCol); mCons.String(")");
+			mCons.String(" variable "); mCons.String(22X); mCons.String(pName); mCons.String(22X); mCons.StringLn(" never used");
+		END
+	END Msg_Hint;
 
+PROCEDURE Msg_Err* (pFileName: ARRAY OF CHAR; pLine, pCol, pErrNo: INTEGER);
+	BEGIN
+		mCons.String("error: ");  mCons.IntLn(pErrNo);
+		mCons.String("line:  ");  mCons.IntLn(pLine);
+		mCons.String("col:   ");  mCons.IntLn(pCol);
+		mCons.String("file:  ");  mCons.StringLn(pFileName);
+		mUtil.Exit(1)
+	END Msg_Err;
 
-PROCEDURE hintmsg* (name: ARRAY OF CHAR; line, col, hint: INTEGER);
-BEGIN
-    IF hint = 0 THEN
-        C.String("  hint ("); C.Int(line); C.String(":"); C.Int(col); C.String(")");
-        C.String(" variable "); C.String(22X); C.String(name); C.String(22X); C.String(" never used"); C.Ln
-    END
-END hintmsg;
+PROCEDURE Error1* (pMsg: ARRAY OF CHAR);
+	BEGIN
+		mCons.StringLn(pMsg);
+		mUtil.Exit(1)
+	END Error1;
 
+PROCEDURE Error3* (pMsg1, pMsg2, pMsg3: ARRAY OF CHAR);
+	BEGIN
+		mCons.String(pMsg1); mCons.String(pMsg2); mCons.StringLn(pMsg3);
+		mUtil.Exit(1)
+	END Error3;
 
-PROCEDURE errormsg* (fname: ARRAY OF CHAR; line, col, errno: INTEGER);
-BEGIN
-    C.String("error: ");  C.Int(errno);     C.Ln;
-    C.String("line:  ");  C.Int(line);      C.Ln;
-    C.String("col:   ");  C.Int(col);       C.Ln;
-    C.String("file:  ");  C.String(fname);  C.Ln;
-    UTILS.Exit(1)
-END errormsg;
-
-
-PROCEDURE error1* (s1: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.Ln;
-    UTILS.Exit(1)
-END error1;
-
-
-PROCEDURE error3* (s1, s2, s3: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.String(s2); C.String(s3); C.Ln;
-    UTILS.Exit(1)
-END error3;
-
-
-PROCEDURE error5* (s1, s2, s3, s4, s5: ARRAY OF CHAR);
-BEGIN
-    C.String(s1); C.String(s2); C.String(s3); C.String(s4); C.String(s5); C.Ln;
-    UTILS.Exit(1)
-END error5;
-
+PROCEDURE Error5* (pMsg1, pMsg2, pMsg3, pMsg4, pMsg5: ARRAY OF CHAR);
+	BEGIN
+		mCons.String(pMsg1); mCons.String(pMsg2); mCons.String(pMsg3); mCons.String(pMsg4); mCons.StringLn(pMsg5);
+		mUtil.Exit(1)
+	END Error5;
 
 END ERRORS.

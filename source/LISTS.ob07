@@ -1,184 +1,163 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE LISTS;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
-MODULE LISTS;
-
-IMPORT C := COLLECTIONS;
-
+IMPORT mCol := COLLECTIONS;
 
 TYPE
+	tpItem* = POINTER TO RECORD (mCol.tpItem)
+		prev*, next*: tpItem
+	END;
 
-    ITEM* = POINTER TO RECORD (C.ITEM)
+	tpList* = POINTER TO RECORD
+		first*, last*: tpItem
+	END;
 
-        prev*, next*: ITEM
+PROCEDURE Add* (pList: tpList; pItem: tpItem);
+	BEGIN
+		ASSERT(pList # NIL);
+		ASSERT(pItem # NIL);
 
-    END;
+		IF pList.first = NIL THEN
+			pList.first := pItem;
+			pList.last  := pItem;
+			pItem.prev  := NIL;
+			pItem.next  := NIL
+		ELSE
+			ASSERT(pList.last # NIL);
 
-    LIST* = POINTER TO RECORD
+			pItem.prev := pList.last;
+			pList.last.next := pItem;
+			pItem.next := NIL;
+			pList.last := pItem
+		END
+	END Add;
 
-        first*, last*: ITEM
+PROCEDURE Delete* (pList: tpList): tpItem;
+	VAR
+		_last: tpItem;
+	BEGIN
+		ASSERT(pList # NIL);
 
-    END;
+		_last := pList.last;
 
+		IF _last # NIL THEN
+			IF _last = pList.first THEN
+				pList.first := NIL;
+				pList.last := NIL
+			ELSE
+				pList.last := _last.prev;
+				pList.last.next := NIL
+			END;
 
-PROCEDURE push* (list: LIST; item: ITEM);
-BEGIN
-    ASSERT(list # NIL);
-    ASSERT(item # NIL);
+			_last.next := NIL;
+			_last.prev := NIL
+		END
 
-    IF list.first = NIL THEN
-        list.first := item;
-        list.last  := item;
-        item.prev  := NIL;
-        item.next  := NIL
-    ELSE
-        ASSERT(list.last # NIL);
+		RETURN _last
+	END Delete;
 
-        item.prev := list.last;
-        list.last.next := item;
-        item.next := NIL;
-        list.last := item
-    END
-END push;
+PROCEDURE Insert* (pList: tpList; pCur, pNov: tpItem);
+	VAR
+		_next: tpItem;
+	BEGIN
+		ASSERT(pList # NIL);
+		ASSERT(pNov # NIL);
+		ASSERT(pCur # NIL);
 
+		_next := pCur.next;
 
-PROCEDURE pop* (list: LIST): ITEM;
-VAR
-    last: ITEM;
+		IF _next # NIL THEN
+			_next.prev := pNov;
+			pNov.next := _next;
+			pCur.next := pNov;
+			pNov.prev := pCur
+		ELSE
+			Add(pList, pNov)
+		END
 
-BEGIN
-    ASSERT(list # NIL);
+	END Insert;
 
-    last := list.last;
+PROCEDURE InsertL* (pList: tpList; pCur, pNov: tpItem);
+	VAR
+		_prev: tpItem;
+	BEGIN
+		ASSERT(pList # NIL);
+		ASSERT(pNov # NIL);
+		ASSERT(pCur # NIL);
 
-    IF last # NIL THEN
-        IF last = list.first THEN
-            list.first := NIL;
-            list.last := NIL
-        ELSE
-            list.last := last.prev;
-            list.last.next := NIL
-        END;
+		_prev := pCur.prev;
 
-        last.next := NIL;
-        last.prev := NIL
-    END
+		IF _prev # NIL THEN
+			_prev.next := pNov;
+			pNov.prev := _prev;
+			pCur.prev := pNov;
+			pNov.next := pCur
+		ELSE
+			pNov.prev := NIL;
+			pCur.prev := pNov;
+			pNov.next := pCur;
+			pList.first := pNov
+		END
 
-    RETURN last
-END pop;
+	END InsertL;
 
+PROCEDURE Del* (pList: tpList; pItem: tpItem);
+	VAR
+		_prev, _next: tpItem;
+	BEGIN
+		ASSERT(pList # NIL);
+		ASSERT(pItem # NIL);
 
-PROCEDURE insert* (list: LIST; cur, nov: ITEM);
-VAR
-    next: ITEM;
+		_prev := pItem.prev;
+		_next := pItem.next;
 
-BEGIN
-    ASSERT(list # NIL);
-    ASSERT(nov # NIL);
-    ASSERT(cur # NIL);
+		IF (_next # NIL) & (_prev # NIL) THEN
+			_prev.next := _next;
+			_next.prev := _prev
+		ELSIF (_next = NIL) & (_prev = NIL) THEN
+			pList.first := NIL;
+			pList.last := NIL
+		ELSIF (_next = NIL) & (_prev # NIL) THEN
+			_prev.next := NIL;
+			pList.last := _prev
+		ELSIF (_next # NIL) & (_prev = NIL) THEN
+			_next.prev := NIL;
+			pList.first := _next
+		END
+	END Del;
 
-    next := cur.next;
+PROCEDURE Count_Get* (pList: tpList): INTEGER;
+	VAR
+		_item: tpItem;
+		res:  INTEGER;
+	BEGIN
+		ASSERT(pList # NIL);
+		res := 0;
 
-    IF next # NIL THEN
-        next.prev := nov;
-        nov.next := next;
-        cur.next := nov;
-        nov.prev := cur
-    ELSE
-        push(list, nov)
-    END
+		_item := pList.first;
+		WHILE _item # NIL DO
+			INC(res);
+			_item := _item.next
+		END
 
-END insert;
+		RETURN res
+	END Count_Get;
 
+PROCEDURE New* (pList: tpList): tpList;
+	BEGIN
+		IF pList = NIL THEN
+			NEW(pList)
+		END;
 
-PROCEDURE insertL* (list: LIST; cur, nov: ITEM);
-VAR
-    prev: ITEM;
+		pList.first  := NIL;
+		pList.last   := NIL
 
-BEGIN
-    ASSERT(list # NIL);
-    ASSERT(nov # NIL);
-    ASSERT(cur # NIL);
-
-    prev := cur.prev;
-
-    IF prev # NIL THEN
-        prev.next := nov;
-        nov.prev := prev;
-        cur.prev := nov;
-        nov.next := cur
-    ELSE
-        nov.prev := NIL;
-        cur.prev := nov;
-        nov.next := cur;
-        list.first := nov
-    END
-
-END insertL;
-
-
-PROCEDURE delete* (list: LIST; item: ITEM);
-VAR
-    prev, next: ITEM;
-
-BEGIN
-    ASSERT(list # NIL);
-    ASSERT(item # NIL);
-
-    prev := item.prev;
-    next := item.next;
-
-    IF (next # NIL) & (prev # NIL) THEN
-        prev.next := next;
-        next.prev := prev
-    ELSIF (next = NIL) & (prev = NIL) THEN
-        list.first := NIL;
-        list.last := NIL
-    ELSIF (next = NIL) & (prev # NIL) THEN
-        prev.next := NIL;
-        list.last := prev
-    ELSIF (next # NIL) & (prev = NIL) THEN
-        next.prev := NIL;
-        list.first := next
-    END
-
-END delete;
-
-
-PROCEDURE count* (list: LIST): INTEGER;
-VAR
-    item: ITEM;
-    res:  INTEGER;
-
-BEGIN
-    ASSERT(list # NIL);
-    res := 0;
-
-    item := list.first;
-    WHILE item # NIL DO
-        INC(res);
-        item := item.next
-    END
-
-    RETURN res
-END count;
-
-
-PROCEDURE create* (list: LIST): LIST;
-BEGIN
-    IF list = NIL THEN
-        NEW(list)
-    END;
-
-    list.first  := NIL;
-    list.last   := NIL
-
-    RETURN list
-END create;
-
+		RETURN pList
+	END New;
 
 END LISTS.

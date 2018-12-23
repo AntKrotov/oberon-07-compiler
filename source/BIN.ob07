@@ -1,353 +1,349 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE BIN;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
-
-MODULE BIN;
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
 IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH;
 
-
 CONST
 
-    RCODE*    = 1;
-    RDATA*    = 2;
-    RBSS*     = 3;
-    RIMP*     = 4;
+	RCODE*    = 1;
+	RDATA*    = 2;
+	RBSS*     = 3;
+	RIMP*     = 4;
 
-    PICCODE*  = 5;
-    PICDATA*  = 6;
-    PICBSS*   = 7;
-    PICIMP*   = 8;
+	PICCODE*  = 5;
+	PICDATA*  = 6;
+	PICBSS*   = 7;
+	PICIMP*   = 8;
 
-    IMPTAB*   = 9;
-
+	IMPTAB*   = 9;
 
 TYPE
 
-    RELOC* = POINTER TO RECORD (LISTS.ITEM)
+	RELOC* = POINTER TO RECORD (LISTS.tpItem)
 
-        opcode*: INTEGER;
-        offset*: INTEGER
+		opcode*: INTEGER;
+		offset*: INTEGER
 
-    END;
+	END;
 
-    IMPRT* = POINTER TO RECORD (LISTS.ITEM)
+	IMPRT* = POINTER TO RECORD (LISTS.tpItem)
 
-        nameoffs*: INTEGER;
-        label*:    INTEGER;
+		nameoffs*: INTEGER;
+		label*:    INTEGER;
 
-        OriginalFirstThunk*,
-        FirstThunk*: INTEGER
+		OriginalFirstThunk*,
+		FirstThunk*: INTEGER
 
-    END;
+	END;
 
-    EXPRT* = POINTER TO RECORD (LISTS.ITEM)
+	EXPRT* = POINTER TO RECORD (LISTS.tpItem)
 
-        nameoffs*: INTEGER;
-        label*:    INTEGER
+		nameoffs*: INTEGER;
+		label*:    INTEGER
 
-    END;
+	END;
 
-    PROGRAM* = POINTER TO RECORD
+	PROGRAM* = POINTER TO RECORD
 
-        code*:      CHL.BYTELIST;
-        data*:      CHL.BYTELIST;
-        labels:     CHL.INTLIST;
-        bss*:       INTEGER;
-        stack*:     INTEGER;
-        vmajor*,
-        vminor*:    WCHAR;
-        modname*:   INTEGER;
-        import*:    CHL.BYTELIST;
-        export*:    CHL.BYTELIST;
-        rel_list*:  LISTS.LIST;
-        imp_list*:  LISTS.LIST;
-        exp_list*:  LISTS.LIST
+		code*:      CHL.BYTELIST;
+		data*:      CHL.BYTELIST;
+		labels:     CHL.INTLIST;
+		bss*:       INTEGER;
+		stack*:     INTEGER;
+		vmajor*,
+		vminor*:    WCHAR;
+		modname*:   INTEGER;
+		import*:    CHL.BYTELIST;
+		export*:    CHL.BYTELIST;
+		rel_list*:  LISTS.tpList;
+		imp_list*:  LISTS.tpList;
+		exp_list*:  LISTS.tpList
 
-    END;
-
+	END;
 
 PROCEDURE create* (NumberOfLabels: INTEGER): PROGRAM;
 VAR
-    program:  PROGRAM;
-    i:        INTEGER;
+	program:  PROGRAM;
+	i:        INTEGER;
 
 BEGIN
-    NEW(program);
+	NEW(program);
 
-    program.bss := 0;
+	program.bss := 0;
 
-    program.labels := CHL.CreateIntList();
-    FOR i := 0 TO NumberOfLabels - 1 DO
-        CHL.PushInt(program.labels, 0)
-    END;
+	program.labels := CHL.CreateIntList();
+	FOR i := 0 TO NumberOfLabels - 1 DO
+		CHL.PushInt(program.labels, 0)
+	END;
 
-    program.rel_list := LISTS.create(NIL);
-    program.imp_list := LISTS.create(NIL);
-    program.exp_list := LISTS.create(NIL);
+	program.rel_list := LISTS.New(NIL);
+	program.imp_list := LISTS.New(NIL);
+	program.exp_list := LISTS.New(NIL);
 
-    program.data   := CHL.CreateByteList();
-    program.code   := CHL.CreateByteList();
-    program.import := CHL.CreateByteList();
-    program.export := CHL.CreateByteList()
+	program.data   := CHL.CreateByteList();
+	program.code   := CHL.CreateByteList();
+	program.import := CHL.CreateByteList();
+	program.export := CHL.CreateByteList()
 
-    RETURN program
+	RETURN program
 END create;
 
 
 PROCEDURE SetParams* (program: PROGRAM; bss, stack: INTEGER; vmajor, vminor: WCHAR);
 BEGIN
-    IF bss = 0 THEN
-        bss := 4
-    END;
-    program.bss    := bss;
-    program.stack  := stack;
-    program.vmajor := vmajor;
-    program.vminor := vminor
+	IF bss = 0 THEN
+		bss := 4
+	END;
+	program.bss    := bss;
+	program.stack  := stack;
+	program.vmajor := vmajor;
+	program.vminor := vminor
 END SetParams;
 
 
 PROCEDURE PutReloc* (program: PROGRAM; opcode: INTEGER);
 VAR
-    cmd: RELOC;
+	cmd: RELOC;
 
 BEGIN
-    NEW(cmd);
-    cmd.opcode := opcode;
-    cmd.offset := CHL.Length(program.code);
-    LISTS.push(program.rel_list, cmd)
+	NEW(cmd);
+	cmd.opcode := opcode;
+	cmd.offset := CHL.Length(program.code);
+	LISTS.Add(program.rel_list, cmd)
 END PutReloc;
 
 
 PROCEDURE PutData* (program: PROGRAM; b: BYTE);
 BEGIN
-    CHL.PushByte(program.data, b)
+	CHL.PushByte(program.data, b)
 END PutData;
 
 
 PROCEDURE get32le* (array: CHL.BYTELIST; idx: INTEGER): INTEGER;
 VAR
-    i: INTEGER;
-    x: INTEGER;
+	i: INTEGER;
+	x: INTEGER;
 
 BEGIN
-    x := 0;
+	x := 0;
 
-    FOR i := 3 TO 0 BY -1 DO
-        x := LSL(x, 8) + CHL.GetByte(array, idx + i)
-    END;
+	FOR i := 3 TO 0 BY -1 DO
+		x := LSL(x, 8) + CHL.GetByte(array, idx + i)
+	END;
 
-    IF MACHINE.native.bit_depth = 64 THEN 
-        x := MACHINE.Int32To64(x)
-    END
+	IF MACHINE.native.bit_depth = 64 THEN 
+		x := MACHINE.Int32To64(x)
+	END
 
-    RETURN x
+	RETURN x
 END get32le;
 
 
 PROCEDURE put32le* (array: CHL.BYTELIST; idx: INTEGER; x: INTEGER);
 VAR
-    i: INTEGER;
+	i: INTEGER;
 
 BEGIN
-    FOR i := 0 TO 3 DO
-        CHL.SetByte(array, idx + i, MACHINE.Byte(x, i))
-    END
+	FOR i := 0 TO 3 DO
+		CHL.SetByte(array, idx + i, MACHINE.Byte_Get(x, i))
+	END
 END put32le;
 
 
 PROCEDURE PutData32LE* (program: PROGRAM; x: INTEGER);
 VAR
-    i: INTEGER;
+	i: INTEGER;
 
 BEGIN
-    FOR i := 0 TO 3 DO
-        CHL.PushByte(program.data, MACHINE.Byte(x, i))
-    END
+	FOR i := 0 TO 3 DO
+		CHL.PushByte(program.data, MACHINE.Byte_Get(x, i))
+	END
 END PutData32LE;
 
 
 PROCEDURE PutDataStr* (program: PROGRAM; s: ARRAY OF CHAR);
 VAR
-    i: INTEGER;
+	i: INTEGER;
 
 BEGIN
-    i := 0;
-    WHILE s[i] # 0X DO
-        PutData(program, ORD(s[i]));
-        INC(i)
-    END
+	i := 0;
+	WHILE s[i] # 0X DO
+		PutData(program, ORD(s[i]));
+		INC(i)
+	END
 END PutDataStr;
 
 
 PROCEDURE PutCode* (program: PROGRAM; b: BYTE);
 BEGIN
-    CHL.PushByte(program.code, b)
+	CHL.PushByte(program.code, b)
 END PutCode;
 
 
 PROCEDURE PutCode32LE* (program: PROGRAM; x: INTEGER);
 VAR
-    i: INTEGER;
+	i: INTEGER;
 
 BEGIN
-    FOR i := 0 TO 3 DO
-        CHL.PushByte(program.code, MACHINE.Byte(x, i))
-    END
+	FOR i := 0 TO 3 DO
+		CHL.PushByte(program.code, MACHINE.Byte_Get(x, i))
+	END
 END PutCode32LE;
 
 
 PROCEDURE SetLabel* (program: PROGRAM; label, offset: INTEGER);
 BEGIN
-    CHL.SetInt(program.labels, label, offset)
+	CHL.SetInt(program.labels, label, offset)
 END SetLabel;
 
 
 PROCEDURE Import* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
-    imp: IMPRT;
-    i:   INTEGER;
+	imp: IMPRT;
+	i:   INTEGER;
 
 BEGIN
-    CHL.PushByte(program.import, 0);
-    CHL.PushByte(program.import, 0);
+	CHL.PushByte(program.import, 0);
+	CHL.PushByte(program.import, 0);
 
-    IF ODD(CHL.Length(program.import)) THEN
-        CHL.PushByte(program.import, 0)
-    END;
+	IF ODD(CHL.Length(program.import)) THEN
+		CHL.PushByte(program.import, 0)
+	END;
 
-    NEW(imp);
-    imp.nameoffs := CHL.Length(program.import);
-    imp.label := label;
-    LISTS.push(program.imp_list, imp);
+	NEW(imp);
+	imp.nameoffs := CHL.Length(program.import);
+	imp.label := label;
+	LISTS.Add(program.imp_list, imp);
 
-    i := 0;
-    WHILE name[i] # 0X DO
-        CHL.PushByte(program.import, ORD(name[i]));
-        INC(i)
-    END;
-    CHL.PushByte(program.import, 0)
+	i := 0;
+	WHILE name[i] # 0X DO
+		CHL.PushByte(program.import, ORD(name[i]));
+		INC(i)
+	END;
+	CHL.PushByte(program.import, 0)
 END Import;
 
 
 PROCEDURE less (bytes: CHL.BYTELIST; a, b: EXPRT): BOOLEAN;
 VAR
-    i, j: INTEGER;
+	i, j: INTEGER;
 
 BEGIN
-    i := a.nameoffs;
-    j := b.nameoffs;
+	i := a.nameoffs;
+	j := b.nameoffs;
 
-    WHILE (CHL.GetByte(bytes, i) # 0) & (CHL.GetByte(bytes, j) # 0) &
-          (CHL.GetByte(bytes, i) = CHL.GetByte(bytes, j)) DO
-        INC(i);
-        INC(j)
-    END
+	WHILE (CHL.GetByte(bytes, i) # 0) & (CHL.GetByte(bytes, j) # 0) &
+		  (CHL.GetByte(bytes, i) = CHL.GetByte(bytes, j)) DO
+		INC(i);
+		INC(j)
+	END
 
-    RETURN CHL.GetByte(bytes, i) < CHL.GetByte(bytes, j)
+	RETURN CHL.GetByte(bytes, i) < CHL.GetByte(bytes, j)
 END less;
 
 
 PROCEDURE Export* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
-    exp, cur: EXPRT;
-    i: INTEGER;
+	exp, cur: EXPRT;
+	i: INTEGER;
 
 BEGIN
-    NEW(exp);
-    exp.nameoffs := CHL.Length(program.export);
-    exp.label := CHL.GetInt(program.labels, label);
+	NEW(exp);
+	exp.nameoffs := CHL.Length(program.export);
+	exp.label := CHL.GetInt(program.labels, label);
 
-    i := 0;
-    WHILE name[i] # 0X DO
-        CHL.PushByte(program.export, ORD(name[i]));
-        INC(i)
-    END;
-    CHL.PushByte(program.export, 0);
+	i := 0;
+	WHILE name[i] # 0X DO
+		CHL.PushByte(program.export, ORD(name[i]));
+		INC(i)
+	END;
+	CHL.PushByte(program.export, 0);
 
-    cur := program.exp_list.first(EXPRT);
-    WHILE (cur # NIL) & less(program.export, cur, exp) DO
-        cur := cur.next(EXPRT)
-    END;
+	cur := program.exp_list.first(EXPRT);
+	WHILE (cur # NIL) & less(program.export, cur, exp) DO
+		cur := cur.next(EXPRT)
+	END;
 
-    IF cur # NIL THEN
-        IF cur.prev # NIL THEN
-            LISTS.insert(program.exp_list, cur.prev, exp)
-        ELSE
-            LISTS.insertL(program.exp_list, cur, exp)
-        END
-    ELSE
-        LISTS.push(program.exp_list, exp)
-    END
+	IF cur # NIL THEN
+		IF cur.prev # NIL THEN
+			LISTS.Insert(program.exp_list, cur.prev, exp)
+		ELSE
+			LISTS.InsertL(program.exp_list, cur, exp)
+		END
+	ELSE
+		LISTS.Add(program.exp_list, exp)
+	END
 
 END Export;
 
 
 PROCEDURE GetIProc* (program: PROGRAM; n: INTEGER): IMPRT;
 VAR
-    import: IMPRT;
-    res:    IMPRT;
+	import: IMPRT;
+	res:    IMPRT;
 
 BEGIN
-    import  := program.imp_list.first(IMPRT);
+	import  := program.imp_list.first(IMPRT);
 
-    res := NIL;
-    WHILE (import # NIL) & (n >= 0) DO
-        IF import.label # 0 THEN
-            res := import;
-            DEC(n)
-        END;
-        import := import.next(IMPRT)
-    END;
+	res := NIL;
+	WHILE (import # NIL) & (n >= 0) DO
+		IF import.label # 0 THEN
+			res := import;
+			DEC(n)
+		END;
+		import := import.next(IMPRT)
+	END;
 
-    ASSERT(n = -1)
-    RETURN res
+	ASSERT(n = -1)
+	RETURN res
 END GetIProc;
 
 
 PROCEDURE GetLabel* (program: PROGRAM; label: INTEGER): INTEGER;
-    RETURN CHL.GetInt(program.labels, label)
+	RETURN CHL.GetInt(program.labels, label)
 END GetLabel;
 
 
 PROCEDURE NewLabel* (program: PROGRAM);
 BEGIN
-    CHL.PushInt(program.labels, 0)
+	CHL.PushInt(program.labels, 0)
 END NewLabel;
 
 
 PROCEDURE fixup* (program: PROGRAM);
 VAR
-    rel:    RELOC;
-    imp:    IMPRT;
-    nproc:  INTEGER;
-    L:      INTEGER;
+	rel:    RELOC;
+	imp:    IMPRT;
+	nproc:  INTEGER;
+	L:      INTEGER;
 
 BEGIN
 
-    nproc := 0;
-    imp := program.imp_list.first(IMPRT);
-    WHILE imp # NIL DO
-        IF imp.label # 0 THEN
-            CHL.SetInt(program.labels, imp.label, nproc);
-            INC(nproc)
-        END;
-        imp := imp.next(IMPRT)
-    END;
+	nproc := 0;
+	imp := program.imp_list.first(IMPRT);
+	WHILE imp # NIL DO
+		IF imp.label # 0 THEN
+			CHL.SetInt(program.labels, imp.label, nproc);
+			INC(nproc)
+		END;
+		imp := imp.next(IMPRT)
+	END;
 
-    rel := program.rel_list.first(RELOC);
-    WHILE rel # NIL DO
+	rel := program.rel_list.first(RELOC);
+	WHILE rel # NIL DO
 
-        IF rel.opcode IN {RIMP, PICIMP} THEN
-            L := get32le(program.code, rel.offset);
-            put32le(program.code, rel.offset, GetLabel(program, L))
-        END;
+		IF rel.opcode IN {RIMP, PICIMP} THEN
+			L := get32le(program.code, rel.offset);
+			put32le(program.code, rel.offset, GetLabel(program, L))
+		END;
 
-        rel := rel.next(RELOC)
-    END
+		rel := rel.next(RELOC)
+	END
 
 END fixup;
 

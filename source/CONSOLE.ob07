@@ -1,51 +1,67 @@
-﻿(*
-    BSD 2-Clause License
+﻿MODULE CONSOLE;
+(*
+	BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
-    All rights reserved.
-*)
+	Copyright (c) 2018, Anton Krotov
+	All rights reserved.
+	*)
 
-MODULE CONSOLE;
+IMPORT mUtil := UTILS,
+	mStr := STRINGS;
 
-IMPORT UTILS, STRINGS;
+PROCEDURE String* (pStr: ARRAY OF CHAR);
+	VAR
+		_i: INTEGER;
 
+	BEGIN
+		_i := 0;
+		WHILE (_i < LEN(pStr)) & (pStr[_i] # 0X) DO
+			mUtil.OutChar(pStr[_i]);
+			INC(_i)
+		END
+	END String;
 
-PROCEDURE String* (s: ARRAY OF CHAR);
-VAR
-    i: INTEGER;
+PROCEDURE Int* (pInt: INTEGER);
+	VAR
+		_str: ARRAY 32 OF CHAR;
 
-BEGIN
-    i := 0;
-    WHILE (i < LEN(s)) & (s[i] # 0X) DO
-        UTILS.OutChar(s[i]);
-        INC(i)
-    END
-END String;
+	BEGIN
+		mStr.IntToStr(pInt, _str);
+		String(_str)
+	END Int;
 
-
-PROCEDURE Int* (n: INTEGER);
-VAR
-    s: ARRAY 32 OF CHAR;
-
-BEGIN
-    STRINGS.IntToStr(n, s);
-    String(s)
-END Int;
-
-
-PROCEDURE Int2* (n: INTEGER);
-BEGIN
-    IF n < 10 THEN
-        String("0")
-    END;
-    Int(n)
-END Int2;
-
+PROCEDURE Int2* (pInt: INTEGER);
+	BEGIN
+		IF pInt < 10 THEN
+			String("0")
+		END;
+		Int(pInt)
+	END Int2;
 
 PROCEDURE Ln*;
-BEGIN
-    String(UTILS.eol)
-END Ln;
+	BEGIN
+		String(mUtil.eol)
+	END Ln;
 
+PROCEDURE StringLn* (pStr: ARRAY OF CHAR);
+	(* Out string to console with Ln *)
+	BEGIN
+		String(pStr);
+		String(mUtil.eol)
+	END StringLn;
+
+PROCEDURE IntLn* (pInt: INTEGER);
+	(* Out integer to console with Ln *)
+	BEGIN
+		Int(pInt);
+		Ln()
+	END IntLn;
+
+PROCEDURE Int2Ln* (pInt: INTEGER);
+	(* Out integer to console with Ln *)
+	BEGIN
+		Int2(pInt);
+		Ln()
+	END Int2Ln;
 
 END CONSOLE.
