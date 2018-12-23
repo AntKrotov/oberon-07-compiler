@@ -1612,7 +1612,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 			|CODE.opCASELR:
 				cmprc(rax, param1);
 				jcc(jl, param2);
-				jcc(jg, cmd(CODE.COMMAND3).param3)
+				jcc(jg, cmd(CODE.tpCommand3).param3)
 
 			|CODE.opASR, CODE.opROR, CODE.opLSL, CODE.opLSR:
 				UnOp(reg1);

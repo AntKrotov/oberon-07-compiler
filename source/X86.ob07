@@ -1234,7 +1234,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 			|CODE.opCASELR:
 				cmprc(eax, param1);
 				jcc(jl, param2);
-				jcc(jg, cmd(CODE.COMMAND3).param3)
+				jcc(jg, cmd(CODE.tpCommand3).param3)
 
 			|CODE.opCODE:
 				OutByte(Byte(param2))

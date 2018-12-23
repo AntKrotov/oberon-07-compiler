@@ -117,17 +117,13 @@ CONST
 TYPE
 
 	tpCommand* = POINTER TO RECORD (mList.tpItem)
-
-		opCode*:  INTEGER;
+		opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
 		param1*:  INTEGER;
 		param2*:  INTEGER
-
 	END;
 
-	COMMAND3* = POINTER TO RECORD (tpCommand)
-
+	tpCommand3* = POINTER TO RECORD (tpCommand)
 		param3*:  INTEGER
-
 	END;
 
 	COMMANDF* = POINTER TO RECORD (tpCommand)
@@ -860,7 +856,7 @@ PROCEDURE drop*;
 
 PROCEDURE case* (a, b, L, R: INTEGER);
 	VAR
-		cmd: COMMAND3;
+		cmd: tpCommand3;
 
 	BEGIN
 		IF a = b THEN
