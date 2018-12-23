@@ -118,18 +118,16 @@ TYPE
 
 	tpCommand* = POINTER TO RECORD (mList.tpItem)
 		opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
-		param1*:  INTEGER;
-		param2*:  INTEGER
+		param1*:  INTEGER; (* Param1 for opCode *)
+		param2*:  INTEGER  (* Param2 for opCode *)
 	END;
 
 	tpCommand3* = POINTER TO RECORD (tpCommand)
 		param3*:  INTEGER
 	END;
 
-	COMMANDF* = POINTER TO RECORD (tpCommand)
-
+	tpCommandFloat* = POINTER TO RECORD (tpCommand)
 		float*:   REAL
-
 	END;
 
 	CMDSTACK = POINTER TO RECORD
@@ -810,7 +808,7 @@ PROCEDURE len* (dim: INTEGER);
 
 PROCEDURE Float* (r: REAL);
 	VAR
-		cmd: COMMANDF;
+		cmd: tpCommandFloat;
 	BEGIN
 		NEW(cmd);
 		cmd.opCode := opCONSTF;

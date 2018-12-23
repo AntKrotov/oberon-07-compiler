@@ -1943,7 +1943,7 @@ PROCEDURE translate (code: CODE.tpCodes; pic: BOOLEAN; stroffs: INTEGER);
 				drop
 
 			|CODE.opCONSTF:
-				float := cmd(CODE.COMMANDF).float;
+				float := cmd(CODE.tpCommandFloat).float;
 				IF float = 0.0 THEN
 					OutByte2(0D9H, 0EEH)      // fldz
 				ELSIF float = 1.0 THEN

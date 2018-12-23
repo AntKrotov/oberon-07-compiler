@@ -939,7 +939,7 @@ PROCEDURE translate (commands: LISTS.tpList; pic: BOOLEAN; stroffs: INTEGER);
 				WriteLn("fstp qword[rsp]")
 
 			|CODE.opCONSTF:
-				float := cmd(CODE.COMMANDF).float;
+				float := cmd(CODE.tpCommandFloat).float;
 				IF float = 0.0 THEN
 					WriteLn("fldz")
 				ELSIF float = 1.0 THEN
