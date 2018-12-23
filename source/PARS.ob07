@@ -785,7 +785,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 			e:          EXPR;
 			pos:        SCAN.POSITION;
 			label:      INTEGER;
-			enter:      CODE.COMMAND;
+			enter:      CODE.tpCommand;
 			call:       INTEGER;
 			t:          PROG.TYPE_;
 			import:     CODE.IMPORT_PROC;

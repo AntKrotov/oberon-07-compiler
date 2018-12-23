@@ -55,13 +55,13 @@ TYPE
 	CASE_VARIANT = POINTER TO RECORD (LISTS.tpItem)
 
 		label:      INTEGER;
-		cmd:        CODE.COMMAND;
+		cmd:        CODE.tpCommand;
 		processed:  BOOLEAN
 
 	END;
 
 VAR
-	begcall, endcall: CODE.COMMAND;
+	begcall, endcall: CODE.tpCommand;
 	checking: SET;
 	CaseLabels, CaseVar: C.tpCollection;
 	CaseVariants: LISTS.tpList;
@@ -1644,7 +1644,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						params := e1.ident.type.params.size;
 						CODE.setlast(begcall);
 						fregs := CODE.precall(e.type.typ = PROG.typeReal);
-						CODE.setlast(endcall.prev(CODE.COMMAND));
+						CODE.setlast(endcall.prev(CODE.tpCommand));
 
 						IF e1.obj = eIMP THEN
 							CODE.CallImp(e1.ident.import)
@@ -1667,7 +1667,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						params := e1.type.params.size;
 						CODE.setlast(begcall);
 						fregs := CODE.precall(e.type.typ = PROG.typeReal);
-						CODE.setlast(endcall.prev(CODE.COMMAND));
+						CODE.setlast(endcall.prev(CODE.tpCommand));
 						deref(pos, e1, FALSE, errPROC);
 						CODE.CallP;
 
@@ -2402,7 +2402,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				params := e.ident.type.params.size;
 				CODE.setlast(begcall);
 				ASSERT(CODE.precall(FALSE) = 0);
-				CODE.setlast(endcall.prev(CODE.COMMAND));
+				CODE.setlast(endcall.prev(CODE.tpCommand));
 				IF e.obj = eIMP THEN
 					CODE.CallImp(e.ident.import)
 				ELSE
@@ -2414,7 +2414,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				params := e.type.params.size;
 				CODE.setlast(begcall);
 				ASSERT(CODE.precall(FALSE) = 0);
-				CODE.setlast(endcall.prev(CODE.COMMAND));
+				CODE.setlast(endcall.prev(CODE.tpCommand));
 				deref(pos, e, TRUE, errPROC);
 				CODE.CallP
 			END
@@ -2534,7 +2534,7 @@ PROCEDURE DestroyLabel (VAR label: AVL.tpData);
 		label := NIL
 	END DestroyLabel;
 
-PROCEDURE NewVariant (label: INTEGER; cmd: CODE.COMMAND): CASE_VARIANT;
+PROCEDURE NewVariant (label: INTEGER; cmd: CODE.tpCommand): CASE_VARIANT;
 	VAR
 		res:   CASE_VARIANT;
 		citem: C.tpItem;
@@ -2688,7 +2688,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			t:        PROG.TYPE_;
 			variant:  INTEGER;
 			node:     AVL.tpNode;
-			last:     CODE.COMMAND;
+			last:     CODE.tpCommand;
 
 		BEGIN
 			sym := parser.sym;
@@ -2724,7 +2724,7 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 			L, R: INTEGER;
 			range: RANGE;
 			left, right: AVL.tpNode;
-			last: CODE.COMMAND;
+			last: CODE.tpCommand;
 			v: CASE_VARIANT;
 
 		BEGIN
