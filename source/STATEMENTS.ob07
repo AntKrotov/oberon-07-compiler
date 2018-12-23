@@ -418,9 +418,9 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				CODE.Cmd0_Add(CODE.opSAVE8)
 			ELSIF ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type) THEN
 				IF e.obj = ePROC THEN
-					CODE.AssignProc(e.ident.proc.label)
+					CODE.Proc_Assign(e.ident.proc.label)
 				ELSIF e.obj = eIMP THEN
-					CODE.AssignImpProc(e.ident.import)
+					CODE.ProcImp_Assign(e.ident.import)
 				ELSE
 					IF t.typ = PROG.tPROCEDURE THEN
 						CODE.Cmd0_Add(CODE.opSAVE)
@@ -585,10 +585,10 @@ PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: P
 					END
 				ELSIF e.obj = ePROC THEN
 					PARS.check(e.ident.global, parser, pos, 85);
-					CODE.PushProc(e.ident.proc.label);
+					CODE.Proc_Push(e.ident.proc.label);
 					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF e.obj = eIMP THEN
-					CODE.PushImpProc(e.ident.import);
+					CODE.ProcImp_Push(e.ident.import);
 					CODE.Cmd_Add(CODE.opPARAM, 1)
 				ELSIF isExpr(e) & (e.type.typ = PROG.typeReal) THEN
 					CODE.pushf
@@ -1042,9 +1042,9 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						DEC(n)
 					END
 				ELSIF e.obj = ePROC THEN
-					CODE.PushProc(e.ident.proc.label)
+					CODE.Proc_Push(e.ident.proc.label)
 				ELSIF e.obj = eIMP THEN
-					CODE.PushImpProc(e.ident.import)
+					CODE.ProcImp_Push(e.ident.import)
 				ELSE
 					PARS.check(FALSE, parser, pos, 108)
 				END;
@@ -1647,7 +1647,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 
 						IF e1.obj = eIMP THEN
-							CODE.CallImp(e1.ident.import)
+							CODE.Imp_Call(e1.ident.import)
 						ELSE
 							CODE.Call(e1.ident.proc.label)
 						END;
@@ -1669,7 +1669,7 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						fregs := CODE.precall(e.type.typ = PROG.typeReal);
 						CODE.Last_Set(endcall.prev(CODE.tpCommand));
 						deref(pos, e1, FALSE, errPROC);
-						CODE.CallP;
+						CODE.Proc_Call;
 
 						IF cconv = PROG.cdecl THEN
 							CODE.Cmd_Add(CODE.opCLEANUP, params)
@@ -2233,9 +2233,9 @@ PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 							ARITH.Bool_Set(e.value, e.ident # e1.ident)
 						END
 					ELSIF e.obj = ePROC THEN
-						CODE.ProcCmp(e.ident.proc.label, cmpcode(op) = 0)
+						CODE.Proc_Cmp(e.ident.proc.label, cmpcode(op) = 0)
 					ELSIF e1.obj = ePROC THEN
-						CODE.ProcCmp(e1.ident.proc.label, cmpcode(op) = 0)
+						CODE.Proc_Cmp(e1.ident.proc.label, cmpcode(op) = 0)
 					ELSIF e.obj = eIMP THEN
 						CODE.ProcImpCmp(e.ident.import, cmpcode(op) = 0)
 					ELSIF e1.obj = eIMP THEN
@@ -2404,7 +2404,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				ASSERT(CODE.precall(FALSE) = 0);
 				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				IF e.obj = eIMP THEN
-					CODE.CallImp(e.ident.import)
+					CODE.Imp_Call(e.ident.import)
 				ELSE
 					CODE.Call(e.ident.proc.label)
 				END
@@ -2416,7 +2416,7 @@ PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 				ASSERT(CODE.precall(FALSE) = 0);
 				CODE.Last_Set(endcall.prev(CODE.tpCommand));
 				deref(pos, e, TRUE, errPROC);
-				CODE.CallP
+				CODE.Proc_Call
 			END
 		END;
 
@@ -3020,9 +3020,9 @@ PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: SCAN
 				CheckRange(256, pos.line, errBYTE)
 			ELSIF e.obj = ePROC THEN
 				PARS.check(e.ident.global, parser, pos, 85);
-				CODE.PushProc(e.ident.proc.label)
+				CODE.Proc_Push(e.ident.proc.label)
 			ELSIF e.obj = eIMP THEN
-				CODE.PushImpProc(e.ident.import)
+				CODE.ProcImp_Push(e.ident.import)
 			END;
 
 			IF e.type.typ = PROG.typeReal THEN

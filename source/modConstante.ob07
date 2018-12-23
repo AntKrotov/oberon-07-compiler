@@ -53,9 +53,7 @@ CONST
 		Target_iWin64*   =  Target_iObject  + 1;
 
 	(* for CODE *)
-		codeFregs* = 8; (* NOT CHANGE!!! This CPU Registers!! *)
 		codeJMP* = Target_iWin64 + 1000;
 		codeLABEL* = 0; (* codeJMP       + 1;*)
-
 
 END modConstante.
