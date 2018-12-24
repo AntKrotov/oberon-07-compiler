@@ -826,7 +826,7 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 					ELSIF proc = PROG.sysPUT16 THEN
 						CODE.Sys_Put(2)
 					ELSIF proc = PROG.sysPUT32 THEN
-						CODE.Sys_Put(3)
+						CODE.Sys_Put(4)
 					END
 
 				END
