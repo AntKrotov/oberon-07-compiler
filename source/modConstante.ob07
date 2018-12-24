@@ -1,5 +1,6 @@
 ﻿MODULE modConstante;
-(*		Defined constante for all compiler
+(*
+		Defined constante for all compiler
 		propspero.78.su@gmail.com 2018-12-22 12:09
 	*)
 
@@ -7,6 +8,7 @@ IMPORT mUtil := UTILS;
 
 CONST
 	FILE_EXT* = ".ob07";
+	RTL_NAME* = "RTL";
 	(* version for self build *)
 		Version_Major* = 0;
 		Version_Minor* = 93;
@@ -32,11 +34,11 @@ CONST
 
 	(* Define internal types *)
 		typeInteger* = 1;
-		typeReal* = 2;
-		typeSet*    = 3;
+		typeReal*    = 2;
+		typeSet*     = 3;
 		typeBoolean* = 4;
-		typeChar* = 5;
-		typeWChar*  = 6;
+		typeChar*    = 5;
+		typeWChar*   = 6;
 		typeString*  = 7;
 
 	(* for architecture *)

@@ -13,7 +13,6 @@ IMPORT mList := LISTS,
 	mConst := modConstante;
 
 CONST
-	numRegsFloat* = 8; (* NOT CHANGE!!! This num CPU Float Registers!! *)
 
 	opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
 	opNOT* = 29;
@@ -109,7 +108,10 @@ CONST
 	_lengthw   *=  28;
 	_strcmp2   *=  29;
 	_strcmpw   *=  30;
-	_strcmpw2  *=  31;
+	_strcmpw2  *=  31; 
+		       
+	little_endian* = 0;
+	big_endian* = 1;
 
 TYPE
 	tpCommand* = POINTER TO RECORD (mList.tpItem)
@@ -173,6 +175,8 @@ TYPE
 
 VAR
 	codes*: tpCodes;
+	numRegsFloat: INTEGER; 
+	endianness: INTEGER;
 
 PROCEDURE Last_Set* (pCmd: tpCommand);
 	BEGIN
@@ -233,9 +237,14 @@ PROCEDURE Str_PutW* (pStr: ARRAY OF CHAR): INTEGER;
 		END;
 		_n := mStr.Utf8To16(pStr, codes.wstr);
 		_i := 0;
-		WHILE _i < _n DO
-			Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256);
-			Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256);
+		WHILE _i < _n DO 
+			IF endianness = little_endian THEN
+				Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256);
+				Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256)
+			ELSIF endianness = big_endian THEN
+				Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256);
+				Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256)
+			END;
 			INC(_i)
 		END;
 		Byte_Put(codes, 0);
@@ -254,9 +263,14 @@ PROCEDURE Str_PutW1* (pNum: INTEGER): INTEGER;
 				Byte_Put(codes, 0);
 				INC(_res)
 			END;
-
-			Byte_Put(codes, pNum MOD 256);
-			Byte_Put(codes, pNum DIV 256);
+			
+			IF endianness = little_endian THEN
+				Byte_Put(codes, pNum MOD 256);
+				Byte_Put(codes, pNum DIV 256)
+			ELSIF endianness = big_endian THEN
+				Byte_Put(codes, pNum DIV 256);
+				Byte_Put(codes, pNum MOD 256)
+			END;
 			Byte_Put(codes, 0);
 			Byte_Put(codes, 0);
 
@@ -306,10 +320,10 @@ PROCEDURE Rec_Add* (pBase: INTEGER);
 		mChl.PushInt(codes.types, pBase)
 	END Rec_Add;
 
-PROCEDURE Insert (pCur, pNow: tpCommand); (* pNow = pNew ???? *)
+PROCEDURE Insert (pCur, pNew: tpCommand);
 	BEGIN
-		mList.Insert(codes.commands, pCur, pNow);
-		codes.last := pNow
+		mList.Insert(codes.commands, pCur, pNew);
+		codes.last := pNew
 	END Insert;
 
 PROCEDURE Cmd_Add* (pOpCode: INTEGER; pNum: INTEGER);
@@ -918,11 +932,13 @@ PROCEDURE Import_Del* (pImport: mList.tpItem);
 		END
 	END Import_Del;
 
-PROCEDURE Init*;
+PROCEDURE Init* (pNumRegsFloat, pEndianness: INTEGER);
 	VAR
 		_cmd:    tpCommand;
 		_i:      INTEGER;
 	BEGIN
+		numRegsFloat := pNumRegsFloat;
+		endianness := pEndianness;
 		NEW(codes);
 		NEW(codes.call_beg);
 		codes.call_beg.top := -1;

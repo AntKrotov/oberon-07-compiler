@@ -27,10 +27,9 @@ CONST
 	tINTEGER* =  1;  tBYTE*      =  2;  typeChar*   =  3;  typeSet*    =  4;
 	typeBoolean* =  5;  typeReal*      =  6;  tARRAY*  =  7;  tRECORD* =  8;
 	tPOINTER* =  9;  tPROCEDURE* = 10;  typeString* = 11;  tNIL*    = 12;
-	tCARD8*   = 13;  tCARD16*    = 14;  tCARD32* = 15;  tCARD64* = 16;
-	tANYREC*  = 17;  typeWChar*     = 18;
+	tCARD16*  = 13;  tCARD32* = 14; tANYREC*  = 15;  typeWChar* = 16;
 
-	BASICTYPES* = {tINTEGER, tBYTE, typeChar, typeSet, typeBoolean, typeReal, tCARD8, tCARD16, tCARD32, tCARD64, typeWChar};
+	BASICTYPES* = {tINTEGER, tBYTE, typeChar, typeSet, typeBoolean, typeReal, tCARD16, tCARD32, typeWChar};
 
 	stABS*  =  1;  stASR*  =  2;  stCHR*    =  3;  stFLOOR* =  4;
 	stFLT*  =  5;  stLEN*  =  6;  stLSL*    =  7;  stODD*   =  8;
@@ -43,7 +42,7 @@ CONST
 	sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*   = 29;  stMAX*    = 30;
 	sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY* = 33;  sysINF*   = 34;
 	sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
-	sysWSADR*  = 39;
+	sysWSADR*  = 39;  sysPUT32*  = 40;
 
 	default* =  1; stdcall* = 2; winapi* = 3; cdecl* = 4; kosapi* = 5;
 	noalign* = 10;
@@ -228,7 +227,7 @@ TYPE
 		stTypes*:     RECORD
 
 			tINTEGER*, tBYTE*, typeChar*, typeWChar*, typeSet*, typeBoolean*, typeReal*, typeString*, tNIL*,
-			tCARD8*, tCARD16*, tCARD32*, tCARD64*, tANYREC*: TYPE_
+			tCARD16*, tCARD32*, tANYREC*: TYPE_
 
 		END;
 
@@ -763,7 +762,7 @@ PROCEDURE newunit (units: UNITS; name: SCAN.IDENT): UNIT;
 
 		unit.sysimport := FALSE;
 
-		IF unit.name.s = "RTL" THEN
+		IF unit.name.s = mConst.RTL_NAME THEN
 			unit.program.rtl := unit
 		END
 
@@ -1081,13 +1080,10 @@ PROCEDURE createSysUnit (program: PROGRAM);
 		EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
 		EnterProc(unit, "PUT8",   idSYSPROC, sysPUT8);
 		EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
+		EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
 		EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
 		EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
 		EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
-
-		ident := addIdent(unit, SCAN.enterid("CARD8"), idTYPE);
-		ident.type := program.stTypes.tCARD8;
-		ident.export := TRUE;
 
 		ident := addIdent(unit, SCAN.enterid("CARD16"), idTYPE);
 		ident.type := program.stTypes.tCARD16;
@@ -1096,11 +1092,7 @@ PROCEDURE createSysUnit (program: PROGRAM);
 		ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
 		ident.type := program.stTypes.tCARD32;
 		ident.export := TRUE;
-					(*
-		ident := addIdent(unit, SCAN.enterid("CARD64"), idTYPE);
-		ident.type := program.stTypes.tCARD64;
-		ident.export := TRUE;
-					  *)
+
 		unit.close(unit);
 
 		program.sysunit := unit
@@ -1203,10 +1195,8 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 		program.stTypes.typeString  := enterType(program, typeString,   program.target.word, 0, NIL);
 		program.stTypes.tNIL     := enterType(program, tNIL,      program.target.word, 0, NIL);
 
-		program.stTypes.tCARD8   := enterType(program, tCARD8,                      1, 0, NIL);
 		program.stTypes.tCARD16  := enterType(program, tCARD16,                     2, 0, NIL);
 		program.stTypes.tCARD32  := enterType(program, tCARD32,                     4, 0, NIL);
-		//program.stTypes.tCARD64  := enterType(program, tCARD64,                     8, 0, NIL);
 
 		program.stTypes.tANYREC  := enterType(program, tRECORD,                     0, 0, NIL);
 		program.stTypes.tANYREC.closed := TRUE;
@@ -1219,10 +1209,8 @@ PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
 		program.stTypes.typeBoolean.align := program.stTypes.typeBoolean.size;
 		program.stTypes.typeReal.align    := program.stTypes.typeReal.size;
 
-		program.stTypes.tCARD8.align    := program.stTypes.tCARD8.size;
 		program.stTypes.tCARD16.align   := program.stTypes.tCARD16.size;
 		program.stTypes.tCARD32.align   := program.stTypes.tCARD32.size;
-		//program.stTypes.tCARD64.align   := program.stTypes.tCARD64.size;
 
 		units.program := program;
 

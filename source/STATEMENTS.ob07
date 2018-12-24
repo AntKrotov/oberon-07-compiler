@@ -414,8 +414,6 @@ PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
 				CODE.Cmd0_Add(CODE.opSAVE32)
 			ELSIF (e.type.typ = PROG.tCARD16) & (t.typ = PROG.tCARD16) THEN
 				CODE.Cmd0_Add(CODE.opSAVE16)
-			ELSIF (e.type.typ = PROG.tCARD8) & (t.typ = PROG.tCARD8) THEN
-				CODE.Cmd0_Add(CODE.opSAVE8)
 			ELSIF ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type) THEN
 				IF e.obj = ePROC THEN
 					CODE.Proc_Assign(e.ident.proc.label)
@@ -815,18 +813,20 @@ PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 						END
 					END
 
-				ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) THEN
+				ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
 					parser.expression(parser, e2);
 					PARS.check(isExpr(e2), parser, pos, 66);
 					PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.typeChar, PROG.typeWChar,
-												PROG.tCARD8, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
+												PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
 					IF e2.obj = eCONST THEN
 						LoadConst(e2)
 					END;
 					IF proc = PROG.sysPUT8 THEN
 						CODE.Sys_Put(1)
-					ELSE
+					ELSIF proc = PROG.sysPUT16 THEN
 						CODE.Sys_Put(2)
+					ELSIF proc = PROG.sysPUT32 THEN
+						CODE.Sys_Put(3)
 					END
 
 				END
@@ -3052,7 +3052,7 @@ PROCEDURE setrtl;
 				CODE.codes.rtl[idx] := id.proc.label;
 				id.proc.used := TRUE
 			ELSE
-				ERRORS.Error3("procedure RTL.", name, " not found")
+				ERRORS.Error5("procedure ", mConst.RTL_NAME, ".", name, " not found")
 			END
 		END getproc;
 
@@ -3107,20 +3107,20 @@ PROCEDURE compile* (path, lib_path, modname, outname, ext: PARS.tPath; target, v
 		LISTS.Add(CaseVariants, NewVariant(0, NIL));
 
 		checking := chk;
-		CODE.Init;
+		CODE.Init(8, CODE.little_endian);
 
 		parser := PARS.create(path, lib_path, ext, StatSeq, expression, designator, chkreturn);
-		IF parser.open(parser, "RTL") THEN
+		IF parser.open(parser, mConst.RTL_NAME) THEN
 			parser.parse(parser);
 			PARS.destroy(parser)
 		ELSE
 			PARS.destroy(parser);
 			parser := PARS.create(lib_path, lib_path, ext, StatSeq, expression, designator, chkreturn);
-			IF parser.open(parser, "RTL") THEN
+			IF parser.open(parser, mConst.RTL_NAME) THEN
 				parser.parse(parser);
 				PARS.destroy(parser)
 			ELSE
-				ERRORS.Error5("file ", lib_path, "RTL", ext, " not found")
+				ERRORS.Error5("file ", lib_path, mConst.RTL_NAME, ext, " not found")
 			END
 		END;
 

@@ -13,7 +13,7 @@ PROCEDURE Msg_Hint* (pName: ARRAY OF CHAR; pLine, pCol, pHint: INTEGER);
 	BEGIN
 		IF pHint = 0 THEN
 			mCons.String("  hint ("); mCons.Int(pLine); mCons.String(":"); mCons.Int(pCol); mCons.String(")");
-			mCons.String(" variable "); mCons.String(22X); mCons.String(pName); mCons.String(22X); mCons.StringLn(" never used");
+			mCons.String(' variable "'); mCons.String(pName); mCons.StringLn('" never used')
 		END
 	END Msg_Hint;
 
