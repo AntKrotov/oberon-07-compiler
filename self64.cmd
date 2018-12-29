@@ -1,2 +1,2 @@
-Compiler64.exe source\Compiler.ob07 source\Compiler64.asm win64
+Compiler.exe source\Compiler.ob07 source\Compiler.asm console64
 @pause
