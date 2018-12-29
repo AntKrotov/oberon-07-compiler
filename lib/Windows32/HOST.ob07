@@ -12,17 +12,15 @@ IMPORT SYSTEM;
 
 CONST
 
-    OS* = "WIN";
-
     slash* = "\";
 
-    bit_depth* = 32; 
+    bit_depth* = 32;
     maxint* = 7FFFFFFFH;
     minint* = 80000000H;
 
-    OFS_MAXPATHNAME = 128;
-
     MAX_PARAM = 1024;
+
+    OFS_MAXPATHNAME = 128;
 
 
 TYPE
@@ -294,10 +292,11 @@ BEGIN
 END now;
 
 
-PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
+PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
 BEGIN
     SYSTEM.GET(SYSTEM.ADR(x),     a);
     SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
+    RETURN a
 END splitf;
 
 
