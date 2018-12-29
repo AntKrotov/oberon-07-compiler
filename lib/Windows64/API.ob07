@@ -15,158 +15,27 @@ VAR
     base*: INTEGER;
 
 
-PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
-PROCEDURE [winapi, "kernel32.dll", "GlobalAlloc"]  Alloc (uFlags, dwBytes: INTEGER): INTEGER;
-PROCEDURE [winapi, "kernel32.dll", "GlobalFree"]   Free (hMem: INTEGER): INTEGER;
+PROCEDURE [win64, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
+PROCEDURE [win64, "kernel32.dll", "ExitThread"]   ExitThread (code: INTEGER);
+PROCEDURE [win64, "kernel32.dll", "GlobalAlloc"]  Alloc (uFlags, dwBytes: INTEGER): INTEGER;
+PROCEDURE [win64, "kernel32.dll", "GlobalFree"]   Free (hMem: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "user32.dll", "MessageBoxA"]    MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
-
-
-PROCEDURE [winapi] syscall1* (procadr: INTEGER; p1: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 010H, 000H         (*  ret 16                     *)
-               )
-    RETURN 0
-END syscall1;
-
-
-PROCEDURE [winapi] syscall2* (procadr: INTEGER; p1, p2: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    048H, 08BH, 055H, 020H,  (*  mov rdx, qword [rbp + 32]  *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 018H, 000H         (*  ret 24                     *)
-               )
-    RETURN 0
-END syscall2;
-
-
-PROCEDURE [winapi] syscall3* (procadr: INTEGER; p1, p2, p3: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    048H, 08BH, 055H, 020H,  (*  mov rdx, qword [rbp + 32]  *)
-    04CH, 08BH, 045H, 028H,  (*  mov r8,  qword [rbp + 40]  *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 020H, 000H         (*  ret 32                     *)
-               )
-    RETURN 0
-END syscall3;
-
-
-PROCEDURE [winapi] syscall4* (procadr: INTEGER; p1, p2, p3, p4: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    048H, 08BH, 055H, 020H,  (*  mov rdx, qword [rbp + 32]  *)
-    04CH, 08BH, 045H, 028H,  (*  mov r8,  qword [rbp + 40]  *)
-    04CH, 08BH, 04DH, 030H,  (*  mov r9,  qword [rbp + 48]  *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 028H, 000H         (*  ret 40                     *)
-               )
-    RETURN 0
-END syscall4;
-
-
-PROCEDURE [winapi] syscall5* (procadr: INTEGER; p1, p2, p3, p4, p5: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    041H, 052H,              (*  push r10                   *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    048H, 08BH, 055H, 020H,  (*  mov rdx, qword [rbp + 32]  *)
-    04CH, 08BH, 045H, 028H,  (*  mov r8,  qword [rbp + 40]  *)
-    04CH, 08BH, 04DH, 030H,  (*  mov r9,  qword [rbp + 48]  *)
-    04CH, 08BH, 055H, 038H,  (*  mov r10, qword [rbp + 56]  *)
-    041H, 052H,              (*  push r10                   *)
-    048H, 083H, 0ECH, 020H,  (*  sub rsp, 32                *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 030H, 000H         (*  ret 48                     *)
-               )
-    RETURN 0
-END syscall5;
-
-
-PROCEDURE [winapi] syscall7* (procadr: INTEGER; p1, p2, p3, p4, p5, p6, p7: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-
-    048H, 083H, 0ECH, 040H,  (*  sub rsp, 64                *)
-    048H, 0C1H, 0ECH, 004H,  (*  shr rsp, 4                 *)
-    048H, 0C1H, 0E4H, 004H,  (*  shl rsp, 4                 *)
-    041H, 052H,              (*  push r10                   *)
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 04DH, 018H,  (*  mov rcx, qword [rbp + 24]  *)
-    048H, 08BH, 055H, 020H,  (*  mov rdx, qword [rbp + 32]  *)
-    04CH, 08BH, 045H, 028H,  (*  mov r8,  qword [rbp + 40]  *)
-    04CH, 08BH, 04DH, 030H,  (*  mov r9,  qword [rbp + 48]  *)
-    04CH, 08BH, 055H, 048H,  (*  mov r10, qword [rbp + 72]  *)
-    041H, 052H,              (*  push r10                   *)
-    04CH, 08BH, 055H, 040H,  (*  mov r10, qword [rbp + 64]  *)
-    041H, 052H,              (*  push r10                   *)
-    04CH, 08BH, 055H, 038H,  (*  mov r10, qword [rbp + 56]  *)
-    041H, 052H,              (*  push r10                   *)
-    048H, 083H, 0ECH, 020H,  (*  sub rsp, 32                *)
-    0FFH, 0D0H,              (*  call rax                   *)
-    048H, 089H, 0ECH,        (*  mov rsp, rbp               *)
-    05DH,                    (*  pop rbp                    *)
-    0C2H, 040H, 000H         (*  ret 64                     *)
-               )
-    RETURN 0
-END syscall7;
+PROCEDURE [win64, "user32.dll", "MessageBoxA"]    MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
 
 
 PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
 BEGIN
-    syscall4(SYSTEM.ADR(MessageBoxA), 0, lpText, lpCaption, 16)
+    MessageBoxA(0, lpText, lpCaption, 16)
 END DebugMsg;
 
 
 PROCEDURE _NEW* (size: INTEGER): INTEGER;
-    RETURN syscall2(SYSTEM.ADR(Alloc), 64, size)
+    RETURN Alloc(64, size)
 END _NEW;
 
 
 PROCEDURE _DISPOSE* (p: INTEGER): INTEGER;
-    RETURN syscall1(SYSTEM.ADR(Free), p)
+    RETURN Free(p)
 END _DISPOSE;
 
 
@@ -178,9 +47,15 @@ END init;
 
 
 PROCEDURE exit* (code: INTEGER);
-BEGIN
-    syscall1(SYSTEM.ADR(ExitProcess), code)
+BEGIN       
+    ExitProcess(code)
 END exit;
+
+
+PROCEDURE exit_thread* (code: INTEGER);
+BEGIN
+    ExitThread(code)
+END exit_thread;
 
 
 END API.

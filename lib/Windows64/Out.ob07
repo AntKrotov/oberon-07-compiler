@@ -17,7 +17,7 @@
 
 MODULE Out;
 
-IMPORT sys := SYSTEM, API;
+IMPORT sys := SYSTEM;
 
 CONST
 
@@ -42,17 +42,18 @@ VAR
   hConsoleOutput: INTEGER;
   Realp: PROCEDURE (x: REAL; width: INTEGER);
 
-PROCEDURE [winapi, "kernel32.dll", "GetStdHandle"]
-    _GetStdHandle (nStdHandle: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "WriteFile"]
-    _WriteFile (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
+PROCEDURE [win64, "kernel32.dll", "GetStdHandle"]
+    GetStdHandle (nStdHandle: INTEGER): INTEGER;
+
+PROCEDURE [win64, "kernel32.dll", "WriteFile"]
+    WriteFile (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
 
 PROCEDURE Char*(x: CHAR);
 VAR count: INTEGER;
 BEGIN
-    API.syscall5(sys.ADR(_WriteFile), hConsoleOutput, sys.ADR(x), 1, sys.ADR(count), 0)
+    WriteFile(hConsoleOutput, sys.ADR(x), 1, sys.ADR(count), NIL)
 END Char;
 
 PROCEDURE String*(s: ARRAY OF CHAR);
@@ -108,7 +109,7 @@ END IsInf;
 
 PROCEDURE Int*(x, width: INTEGER);
 VAR i, minInt: INTEGER;
-BEGIN        
+BEGIN
   minInt := 1;
   minInt := ROR(minInt, 1);
   IF x # minInt THEN
@@ -293,7 +294,7 @@ END FixReal;
 
 PROCEDURE Open*;
 BEGIN
-    hConsoleOutput := API.syscall1(sys.ADR(_GetStdHandle), -11)
+    hConsoleOutput := GetStdHandle(-11)
 END Open;
 
 END Out.
