@@ -1,265 +1,275 @@
-﻿MODULE Compiler;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
 
-IMPORT mSt := STATEMENTS,
-	mPars := PARS,
-	mUtil := UTILS,
-	mPath := PATHS,
-	mCons := CONSOLE,
-	mErr  := ERRORS,
-	mStr  := STRINGS,
-	mWrit := WRITER,
-	mConst:= modConstante;
+MODULE Compiler;
 
-PROCEDURE Target_Get (pTarget: ARRAY OF CHAR): INTEGER;
-	(* Compare pTarget (platform) white string constante.
-		Return associate integer constante. *)
-	VAR
-		iRes: INTEGER;
-	BEGIN
-		IF pTarget = mConst.Target_sConsole THEN
-			iRes := mConst.Target_iConsole
-		ELSIF pTarget = mConst.Target_sGUI THEN
-			iRes := mConst.Target_iGUI
-		ELSIF pTarget = mConst.Target_sDLL THEN
-			iRes := mConst.Target_iDLL
-		ELSIF pTarget = mConst.Target_sKolibri THEN
-			iRes := mConst.Target_iKolibri
-		ELSIF pTarget = mConst.Target_sObject THEN
-			iRes := mConst.Target_iObject
-		ELSIF pTarget = mConst.Target_sWin64 THEN
-			iRes := mConst.Target_iWin64
-		ELSE
-			iRes := 0
-		END
+IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER;
 
-		RETURN iRes
-	END Target_Get;
 
-PROCEDURE Keys_Set (VAR pStackSize, pBaseAddress, pVersion: INTEGER; VAR pPic, pReloc: BOOLEAN; VAR pChecking: SET);
-	(* Set keys for begin compiling. *)
-	VAR
-		param: mPars.tPath;
-		i, j:  INTEGER;
-		bEnd:  BOOLEAN;
-		value: INTEGER;
-		minor, major: INTEGER;
-
-	BEGIN
-		bEnd := FALSE;
-		i := 4;
-		REPEAT
-			mUtil.GetArg(i, param);
-
-			IF param = "-stk" THEN
-				INC(i);
-				mUtil.GetArg(i, param);
-				IF mStr.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
-					pStackSize := value
-				END;
-				IF param[0] = "-" THEN
-					DEC(i)
-				END
-
-			ELSIF param = "-base" THEN
-				INC(i);
-				mUtil.GetArg(i, param);
-				IF mStr.StrToInt(param, value) THEN
-					pBaseAddress := ((value DIV 64) * 64) * 1024
-				END;
-				IF param[0] = "-" THEN
-					DEC(i)
-				END
-
-			ELSIF param = "-nochk" THEN
-				INC(i);
-				mUtil.GetArg(i, param);
-
-				IF param[0] = "-" THEN
-					DEC(i)
-				ELSE
-					j := 0;
-					WHILE param[j] # 0X DO
-						IF    param[j] = "p" THEN
-							EXCL(pChecking, mSt.chkPTR)
-						ELSIF param[j] = "t" THEN
-							EXCL(pChecking, mSt.chkGUARD)
-						ELSIF param[j] = "i" THEN
-							EXCL(pChecking, mSt.chkIDX)
-						ELSIF param[j] = "b" THEN
-							EXCL(pChecking, mSt.chkBYTE)
-						ELSIF param[j] = "c" THEN
-							EXCL(pChecking, mSt.chkCHR)
-						ELSIF param[j] = "w" THEN
-							EXCL(pChecking, mSt.chkWCHR)
-						ELSIF param[j] = "r" THEN
-							EXCL(pChecking, mSt.chkCHR);
-							EXCL(pChecking, mSt.chkWCHR);
-							EXCL(pChecking, mSt.chkBYTE)
-						ELSIF param[j] = "a" THEN
-							pChecking := {}
-						END;
-
-						INC(j)
-					END
-				END
-
-			ELSIF param = "-ver" THEN
-				INC(i);
-				mUtil.GetArg(i, param);
-				IF mStr.StrToVer(param, major, minor) THEN
-					pVersion := major * 65536 + minor
-				END;
-				IF param[0] = "-" THEN
-					DEC(i)
-				END
-
-			ELSIF param = "-pic" THEN
-				pPic := TRUE
-
-			ELSIF param = "-reloc" THEN
-				pReloc := TRUE
-
-			ELSIF param = "" THEN
-				bEnd := TRUE
-
-			ELSE
-				mErr.Error3("bad parameter: ", param, "")
-			END;
-
-			INC(i)
-		UNTIL bEnd
-
-	END Keys_Set;
-
-PROCEDURE Main;
-	VAR
-		path:       mPars.tPath;
-		inname:     mPars.tPath;
-		ext:        mPars.tPath;
-		app_path:   mPars.tPath;
-		lib_path:   mPars.tPath;
-		modname:    mPars.tPath;
-		outname:    mPars.tPath;
-		param:      mPars.tPath;
-		temp:       mPars.tPath;
-
-		target:     INTEGER;
-
-		time:       INTEGER;
-
-		StackSize,
-		Version,
-		BaseAdr:    INTEGER;
-		pic, reloc: BOOLEAN;
-		checking:   SET;
-
-	BEGIN
-		StackSize := 1;
-		Version := 65536;
-		pic := FALSE;
-		reloc := FALSE;
-		checking := mSt.chkALL;
-
-		mPath.CurrentDirectory_Get(app_path);
-		lib_path := app_path;
-
-		mUtil.GetArg(1, inname);
-
-		IF inname = "" THEN
-			mCons.String("Akron Oberon-07/16 Compiler v"); mCons.Int(mConst.Version_Major); mCons.String("."); mCons.Int2Ln(mConst.Version_Minor); mCons.Ln;
-			mCons.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); mCons.Ln;
-			mCons.StringLn('target = "console" | "gui" | "dll" | "kos" | "obj"'); mCons.Ln;
-			mCons.StringLn("optional settings:"); mCons.Ln;
-			mCons.StringLn("  -stk <size>            set size of stack in megabytes"); mCons.Ln;
-			mCons.StringLn("  -base <address>        set base address of image in kilobytes"); mCons.Ln;
-			mCons.StringLn("  -pic                   generate position-independent code"); mCons.Ln;
-			mCons.StringLn("  -reloc                 make relocation table"); mCons.Ln;
-			mCons.StringLn('  -ver <major.minor>     set version of program ("obj" only)'); mCons.Ln;
-			mCons.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
-			mCons.StringLn('                         BYTE, CHR, WCHR)'); mCons.Ln;
-			mUtil.Exit(0)
-		END;
-
-		mPath.Split(inname, path, modname, ext);
-		IF ext # mConst.FILE_EXT THEN
-			mErr.Error3('Inputfile name extension must be "', mConst.FILE_EXT, '"')
-		END;
-		IF mPath.IsRelative(path) THEN
-			mPath.RelPath(app_path, path, temp);
-			path := temp
-		END;
-
-		mUtil.GetArg(2, outname);
-		IF outname = "" THEN
-			mErr.Error1("not enough parameters")
-		END;
-		IF mPath.IsRelative(outname) THEN
-			mPath.RelPath(app_path, outname, temp);
-			outname := temp
-		END;
-
-		mUtil.GetArg(3, param);
-		IF param = "" THEN
-			mErr.Error1("not enough parameters")
-		END;
-
-		target := Target_Get(param);
-
-		IF target = 0 THEN
-			mErr.Error1("bad parameter <target>")
-		END;
-
-		IF target = mConst.Target_iWin64 THEN
-			IF mUtil.bit_depth = 32 THEN
-				mErr.Error1("bad parameter <target>")
-			END;
-			mPars.init(64)
-		ELSE
-			mPars.init(32)
-		END;
-
-		mPars.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject};
-		mPars.program.obj := target = mConst.Target_iObject;
-
-		mStr.append(lib_path, "lib");
-		mStr.append(lib_path, mUtil.slash);
-
-		IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
-			IF target = mConst.Target_iDLL THEN
-				BaseAdr := 10000000H
-			ELSE
-				BaseAdr := 400000H
-			END;
-			mStr.append(lib_path, "Windows32")
-
-		ELSIF target IN {mConst.Target_iKolibri, mConst.Target_iObject} THEN
-			mStr.append(lib_path, "KolibriOS")
-
-		ELSIF target = mConst.Target_iWin64 THEN
-			mStr.append(lib_path, "Windows64")
-
-		END;
-
-		mStr.append(lib_path, mUtil.slash);
-
-		Keys_Set(StackSize, BaseAdr, Version, pic, reloc, checking);
-
-		mSt.compile(path, lib_path, modname, outname, mConst.FILE_EXT, target, Version, StackSize, BaseAdr, pic, reloc, checking);
-
-		time := mUtil.GetTickCount() - mUtil.time;
-
-		mCons.Int(time DIV 100); mCons.String("."); mCons.Int2(time MOD 100); mCons.String(" sec, ");
-		mCons.Int(mWrit.counter); mCons.String(" bytes"); mCons.Ln;
-
-		mUtil.Exit(0)
-	END Main;
+PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
+VAR
+    res: INTEGER;
 
 BEGIN
-	Main
+    IF s = mConst.Target_sConsole THEN
+        res := mConst.Target_iConsole
+    ELSIF s = mConst.Target_sGUI THEN
+        res := mConst.Target_iGUI
+    ELSIF s = mConst.Target_sDLL THEN
+        res := mConst.Target_iDLL
+    ELSIF s = mConst.Target_sKolibri THEN
+        res := mConst.Target_iKolibri
+    ELSIF s = mConst.Target_sObject THEN
+        res := mConst.Target_iObject
+    ELSIF s = mConst.Target_sConsole64 THEN
+        res := mConst.Target_iConsole64
+    ELSIF s = mConst.Target_sGUI64 THEN
+        res := mConst.Target_iGUI64
+    ELSIF s = mConst.Target_sDLL64 THEN
+        res := mConst.Target_iDLL64
+    ELSE
+        res := 0
+    END
+
+    RETURN res
+END Target;
+
+
+PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
+VAR
+    param: PARS.PATH;
+    i, j:  INTEGER;
+    end:   BOOLEAN;
+    value: INTEGER;
+    minor,
+    major: INTEGER;
+
+BEGIN
+    end := FALSE;
+    i := 4;
+    REPEAT
+        UTILS.GetArg(i, param);
+
+        IF param = "-stk" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
+                StackSize := value
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END
+
+        ELSIF param = "-base" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) THEN
+                BaseAddress := ((value DIV 64) * 64) * 1024
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END
+
+        ELSIF param = "-nochk" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+
+            IF param[0] = "-" THEN
+                DEC(i)
+            ELSE
+                j := 0;
+                WHILE param[j] # 0X DO
+
+                    IF    param[j] = "p" THEN
+                        EXCL(checking, ST.chkPTR)
+                    ELSIF param[j] = "t" THEN
+                        EXCL(checking, ST.chkGUARD)
+                    ELSIF param[j] = "i" THEN
+                        EXCL(checking, ST.chkIDX)
+                    ELSIF param[j] = "b" THEN
+                        EXCL(checking, ST.chkBYTE)
+                    ELSIF param[j] = "c" THEN
+                        EXCL(checking, ST.chkCHR)
+                    ELSIF param[j] = "w" THEN
+                        EXCL(checking, ST.chkWCHR)
+                    ELSIF param[j] = "r" THEN
+                        EXCL(checking, ST.chkCHR);
+                        EXCL(checking, ST.chkWCHR);
+                        EXCL(checking, ST.chkBYTE)
+                    ELSIF param[j] = "a" THEN
+                        checking := {}
+                    END;
+
+                    INC(j)
+                END
+            END
+
+        ELSIF param = "-ver" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToVer(param, major, minor) THEN
+                Version := major * 65536 + minor
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END
+
+        ELSIF param = "-pic" THEN
+            pic := TRUE
+
+        ELSIF param = "-reloc" THEN
+            reloc := TRUE
+
+        ELSIF param = "" THEN
+            end := TRUE
+
+        ELSE
+            ERRORS.error3("bad parameter: ", param, "")
+        END;
+
+        INC(i)
+    UNTIL end
+
+END keys;
+
+
+PROCEDURE main;
+VAR
+    path:       PARS.PATH;
+    inname:     PARS.PATH;
+    ext:        PARS.PATH;
+    app_path:   PARS.PATH;
+    lib_path:   PARS.PATH;
+    modname:    PARS.PATH;
+    outname:    PARS.PATH;
+    param:      PARS.PATH;
+    temp:       PARS.PATH;
+
+    target:     INTEGER;
+
+    time:       INTEGER;
+
+    StackSize,
+    Version,
+    BaseAdr:    INTEGER;
+    pic, reloc: BOOLEAN;
+    checking:   SET;
+
+    bits64: BOOLEAN;
+
+BEGIN
+    StackSize := 1;
+    Version := 65536;
+    pic := FALSE;
+    reloc := FALSE;
+    checking := ST.chkALL;
+
+    PATHS.GetCurrentDirectory(app_path);
+    lib_path := app_path;
+
+    UTILS.GetArg(1, inname);
+
+    IF inname = "" THEN
+        C.String("Akron Oberon-07/16 Compiler v"); C.Int(mConst.vMajor); C.String("."); C.Int2(mConst.vMinor);
+            C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)"); C.Ln;
+        C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
+        IF UTILS.bit_depth = 64 THEN
+            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj'); C.Ln;
+        ELSIF UTILS.bit_depth = 32 THEN
+            C.StringLn('target = console | gui | dll | kos | obj'); C.Ln;
+        END;
+        C.StringLn("optional settings:"); C.Ln;
+        C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
+        C.StringLn("  -base <address>        set base address of image in kilobytes"); C.Ln;
+        C.StringLn("  -pic                   generate position-independent code"); C.Ln;
+        C.StringLn("  -reloc                 make relocation table"); C.Ln;
+        C.StringLn('  -ver <major.minor>     set version of program ("obj" only)'); C.Ln;
+        C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
+        C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
+        UTILS.Exit(0)
+    END;
+
+    PATHS.split(inname, path, modname, ext);
+    IF ext # mConst.FILE_EXT THEN
+        ERRORS.error3('inputfile name extension must be "', mConst.FILE_EXT, '"')
+    END;
+    IF PATHS.isRelative(path) THEN
+        PATHS.RelPath(app_path, path, temp);
+        path := temp
+    END;
+
+    UTILS.GetArg(2, outname);
+    IF outname = "" THEN
+        ERRORS.error1("not enough parameters")
+    END;
+    IF PATHS.isRelative(outname) THEN
+        PATHS.RelPath(app_path, outname, temp);
+        outname := temp
+    END;
+
+    UTILS.GetArg(3, param);
+    IF param = "" THEN
+        ERRORS.error1("not enough parameters")
+    END;
+
+    target := Target(param);
+
+    IF target = 0 THEN
+        ERRORS.error1("bad parameter <target>")
+    END;
+
+    bits64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64};
+
+    IF bits64 THEN
+        IF UTILS.bit_depth = 32 THEN
+            ERRORS.error1("bad parameter <target>")
+        END;
+        PARS.init(64)
+    ELSE
+        PARS.init(32)
+    END;
+
+    PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};
+    PARS.program.obj := target = mConst.Target_iObject;
+
+    STRINGS.append(lib_path, "lib");
+    STRINGS.append(lib_path, UTILS.slash);
+
+    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
+        IF target = mConst.Target_iDLL THEN
+            BaseAdr := 10000000H
+        ELSE
+            BaseAdr := 400000H
+        END;
+        STRINGS.append(lib_path, "Windows32")
+
+    ELSIF target IN {mConst.Target_iKolibri, mConst.Target_iObject} THEN
+        STRINGS.append(lib_path, "KolibriOS")
+
+    ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
+        STRINGS.append(lib_path, "Windows64")
+
+    END;
+
+    STRINGS.append(lib_path, UTILS.slash);
+
+    keys(StackSize, BaseAdr, Version, pic, reloc, checking);
+
+    ST.compile(path, lib_path, modname, outname, target, Version, StackSize, BaseAdr, pic, reloc, checking);
+
+    time := UTILS.GetTickCount() - UTILS.time;
+
+    C.Int(time DIV 100); C.String("."); C.Int2(time MOD 100); C.String(" sec, ");
+    C.Int(WRITER.counter); C.StringLn(" bytes");
+
+    UTILS.Exit(0)
+END main;
+
+
+BEGIN
+    main
 END Compiler.

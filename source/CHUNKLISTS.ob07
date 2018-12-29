@@ -1,237 +1,251 @@
-﻿MODULE CHUNKLISTS;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE CHUNKLISTS;
 
 IMPORT LISTS, WR := WRITER;
 
+
 CONST
 
-	LENOFBYTECHUNK = 64000;
-	LENOFINTCHUNK  = 16000;
+    LENOFBYTECHUNK = 64000;
+    LENOFINTCHUNK  = 16000;
+
 
 TYPE
 
-	ANYLIST = POINTER TO RECORD (LISTS.tpList)
+    ANYLIST = POINTER TO RECORD (LISTS.LIST)
 
-		length: INTEGER
+        length: INTEGER
 
-	END;
+    END;
 
-	BYTELIST* = POINTER TO RECORD (ANYLIST) END;
+    BYTELIST* = POINTER TO RECORD (ANYLIST) END;
 
-	BYTECHUNK = POINTER TO RECORD (LISTS.tpItem)
+    BYTECHUNK = POINTER TO RECORD (LISTS.ITEM)
 
-		data:   ARRAY LENOFBYTECHUNK OF BYTE;
-		count:  INTEGER
+        data:   ARRAY LENOFBYTECHUNK OF BYTE;
+        count:  INTEGER
 
-	END;
+    END;
 
 
-	INTLIST* = POINTER TO RECORD (ANYLIST) END;
+    INTLIST* = POINTER TO RECORD (ANYLIST) END;
 
-	INTCHUNK = POINTER TO RECORD (LISTS.tpItem)
+    INTCHUNK = POINTER TO RECORD (LISTS.ITEM)
 
-		data:   ARRAY LENOFINTCHUNK OF INTEGER;
-		count:  INTEGER
+        data:   ARRAY LENOFINTCHUNK OF INTEGER;
+        count:  INTEGER
 
-	END;
+    END;
+
 
 PROCEDURE SetByte* (list: BYTELIST; idx: INTEGER; byte: BYTE);
-	VAR
-		ChunkNum: INTEGER;
-		chunk:    BYTECHUNK;
+VAR
+    ChunkNum: INTEGER;
+    chunk:    BYTECHUNK;
 
-	BEGIN
-		ASSERT(idx >= 0);
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(idx >= 0);
+    ASSERT(list # NIL);
 
-		ChunkNum := idx DIV LENOFBYTECHUNK;
-		idx      := idx MOD LENOFBYTECHUNK;
+    ChunkNum := idx DIV LENOFBYTECHUNK;
+    idx      := idx MOD LENOFBYTECHUNK;
 
-		chunk := list.first(BYTECHUNK);
+    chunk := list.first(BYTECHUNK);
 
-		WHILE (chunk # NIL) & (ChunkNum > 0) DO
-			chunk := chunk.next(BYTECHUNK);
-			DEC(ChunkNum)
-		END;
+    WHILE (chunk # NIL) & (ChunkNum > 0) DO
+        chunk := chunk.next(BYTECHUNK);
+        DEC(ChunkNum)
+    END;
 
-		ASSERT(chunk # NIL);
-		ASSERT(idx < chunk.count);
+    ASSERT(chunk # NIL);
+    ASSERT(idx < chunk.count);
 
-		chunk.data[idx] := byte
-	END SetByte;
+    chunk.data[idx] := byte
+END SetByte;
+
 
 PROCEDURE GetByte* (list: BYTELIST; idx: INTEGER): BYTE;
-	VAR
-		ChunkNum: INTEGER;
-		chunk:    BYTECHUNK;
+VAR
+    ChunkNum: INTEGER;
+    chunk:    BYTECHUNK;
 
-	BEGIN
-		ASSERT(idx >= 0);
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(idx >= 0);
+    ASSERT(list # NIL);
 
-		ChunkNum := idx DIV LENOFBYTECHUNK;
-		idx      := idx MOD LENOFBYTECHUNK;
+    ChunkNum := idx DIV LENOFBYTECHUNK;
+    idx      := idx MOD LENOFBYTECHUNK;
 
-		chunk := list.first(BYTECHUNK);
+    chunk := list.first(BYTECHUNK);
 
-		WHILE (chunk # NIL) & (ChunkNum > 0) DO
-			chunk := chunk.next(BYTECHUNK);
-			DEC(ChunkNum)
-		END;
+    WHILE (chunk # NIL) & (ChunkNum > 0) DO
+        chunk := chunk.next(BYTECHUNK);
+        DEC(ChunkNum)
+    END;
 
-		ASSERT(chunk # NIL);
-		ASSERT(idx < chunk.count)
+    ASSERT(chunk # NIL);
+    ASSERT(idx < chunk.count)
 
-		RETURN chunk.data[idx]
-	END GetByte;
+    RETURN chunk.data[idx]
+END GetByte;
+
 
 PROCEDURE PushByte* (list: BYTELIST; byte: BYTE);
-	VAR
-		chunk: BYTECHUNK;
+VAR
+    chunk: BYTECHUNK;
 
-	BEGIN
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(list # NIL);
 
-		chunk := list.last(BYTECHUNK);
+    chunk := list.last(BYTECHUNK);
 
-		IF chunk.count = LENOFBYTECHUNK THEN
-			NEW(chunk);
-			chunk.count := 0;
-			LISTS.Add(list, chunk)
-		END;
+    IF chunk.count = LENOFBYTECHUNK THEN
+        NEW(chunk);
+        chunk.count := 0;
+        LISTS.push(list, chunk)
+    END;
 
-		chunk.data[chunk.count] := byte;
-		INC(chunk.count);
+    chunk.data[chunk.count] := byte;
+    INC(chunk.count);
 
-		INC(list.length)
-	END PushByte;
+    INC(list.length)
+END PushByte;
 
-PROCEDURE WriteToFile* (file: WR.tpFile; list: BYTELIST);
-	VAR
-		chunk: BYTECHUNK;
 
-	BEGIN              
-		chunk := list.first(BYTECHUNK);
-		WHILE chunk # NIL DO
-			WR.Write(file, chunk.data, chunk.count);
-			chunk := chunk.next(BYTECHUNK)
-		END
-	END WriteToFile;
+PROCEDURE WriteToFile* (file: WR.FILE; list: BYTELIST);
+VAR
+    chunk: BYTECHUNK;
+
+BEGIN              
+    chunk := list.first(BYTECHUNK);
+    WHILE chunk # NIL DO
+        WR.Write(file, chunk.data, chunk.count);
+        chunk := chunk.next(BYTECHUNK)
+    END
+END WriteToFile;
+
 
 PROCEDURE CreateByteList* (): BYTELIST;
-	VAR
-		bytelist: BYTELIST;
-		list:     LISTS.tpList;
-		chunk:    BYTECHUNK;
+VAR
+    bytelist: BYTELIST;
+    list:     LISTS.LIST;
+    chunk:    BYTECHUNK;
 
-	BEGIN
-		NEW(bytelist);
-		list := LISTS.New(bytelist);
-		bytelist.length := 0;
+BEGIN
+    NEW(bytelist);
+    list := LISTS.create(bytelist);
+    bytelist.length := 0;
 
-		NEW(chunk);
-		chunk.count := 0;
-		LISTS.Add(list, chunk)
+    NEW(chunk);
+    chunk.count := 0;
+    LISTS.push(list, chunk)
 
-		RETURN list(BYTELIST)
-	END CreateByteList;
+    RETURN list(BYTELIST)
+END CreateByteList;
+
 
 PROCEDURE SetInt* (list: INTLIST; idx: INTEGER; int: INTEGER);
-	VAR
-		ChunkNum: INTEGER;
-		chunk:    INTCHUNK;
+VAR
+    ChunkNum: INTEGER;
+    chunk:    INTCHUNK;
 
-	BEGIN
-		ASSERT(idx >= 0);
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(idx >= 0);
+    ASSERT(list # NIL);
 
-		ChunkNum := idx DIV LENOFINTCHUNK;
-		idx      := idx MOD LENOFINTCHUNK;
+    ChunkNum := idx DIV LENOFINTCHUNK;
+    idx      := idx MOD LENOFINTCHUNK;
 
-		chunk := list.first(INTCHUNK);
+    chunk := list.first(INTCHUNK);
 
-		WHILE (chunk # NIL) & (ChunkNum > 0) DO
-			chunk := chunk.next(INTCHUNK);
-			DEC(ChunkNum)
-		END;
+    WHILE (chunk # NIL) & (ChunkNum > 0) DO
+        chunk := chunk.next(INTCHUNK);
+        DEC(ChunkNum)
+    END;
 
-		ASSERT(chunk # NIL);
-		ASSERT(idx < chunk.count);
+    ASSERT(chunk # NIL);
+    ASSERT(idx < chunk.count);
 
-		chunk.data[idx] := int
-	END SetInt;
+    chunk.data[idx] := int
+END SetInt;
+
 
 PROCEDURE GetInt* (list: INTLIST; idx: INTEGER): INTEGER;
-	VAR
-		ChunkNum: INTEGER;
-		chunk:    INTCHUNK;
+VAR
+    ChunkNum: INTEGER;
+    chunk:    INTCHUNK;
 
-	BEGIN
-		ASSERT(idx >= 0);
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(idx >= 0);
+    ASSERT(list # NIL);
 
-		ChunkNum := idx DIV LENOFINTCHUNK;
-		idx      := idx MOD LENOFINTCHUNK;
+    ChunkNum := idx DIV LENOFINTCHUNK;
+    idx      := idx MOD LENOFINTCHUNK;
 
-		chunk := list.first(INTCHUNK);
+    chunk := list.first(INTCHUNK);
 
-		WHILE (chunk # NIL) & (ChunkNum > 0) DO
-			chunk := chunk.next(INTCHUNK);
-			DEC(ChunkNum)
-		END;
+    WHILE (chunk # NIL) & (ChunkNum > 0) DO
+        chunk := chunk.next(INTCHUNK);
+        DEC(ChunkNum)
+    END;
 
-		ASSERT(chunk # NIL);
-		ASSERT(idx < chunk.count)
+    ASSERT(chunk # NIL);
+    ASSERT(idx < chunk.count)
 
-		RETURN chunk.data[idx]
-	END GetInt;
+    RETURN chunk.data[idx]
+END GetInt;
+
 
 PROCEDURE PushInt* (list: INTLIST; int: INTEGER);
-	VAR
-		chunk: INTCHUNK;
+VAR
+    chunk: INTCHUNK;
 
-	BEGIN
-		ASSERT(list # NIL);
+BEGIN
+    ASSERT(list # NIL);
 
-		chunk := list.last(INTCHUNK);
+    chunk := list.last(INTCHUNK);
 
-		IF chunk.count = LENOFINTCHUNK THEN
-			NEW(chunk);
-			chunk.count := 0;
-			LISTS.Add(list, chunk)
-		END;
+    IF chunk.count = LENOFINTCHUNK THEN
+        NEW(chunk);
+        chunk.count := 0;
+        LISTS.push(list, chunk)
+    END;
 
-		chunk.data[chunk.count] := int;
-		INC(chunk.count);
+    chunk.data[chunk.count] := int;
+    INC(chunk.count);
 
-		INC(list.length)
-	END PushInt;
+    INC(list.length)
+END PushInt;
+
 
 PROCEDURE CreateIntList* (): INTLIST;
-	VAR
-		intlist:  INTLIST;
-		list:     LISTS.tpList;
-		chunk:    INTCHUNK;
+VAR
+    intlist:  INTLIST;
+    list:     LISTS.LIST;
+    chunk:    INTCHUNK;
 
-	BEGIN
-		NEW(intlist);
-		list := LISTS.New(intlist);
-		intlist.length := 0;
+BEGIN
+    NEW(intlist);
+    list := LISTS.create(intlist);
+    intlist.length := 0;
 
-		NEW(chunk);
-		chunk.count := 0;
-		LISTS.Add(list, chunk)
+    NEW(chunk);
+    chunk.count := 0;
+    LISTS.push(list, chunk)
 
-		RETURN list(INTLIST)
-	END CreateIntList;
+    RETURN list(INTLIST)
+END CreateIntList;
+
 
 PROCEDURE Length* (list: ANYLIST): INTEGER;
-		RETURN list.length
-	END Length;
+    RETURN list.length
+END Length;
+
 
 END CHUNKLISTS.

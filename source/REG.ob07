@@ -10,9 +10,9 @@ MODULE REG;
 
 CONST
 
-    N* = 4;
+    N = 5;
 
-    R0* = 0; R1* = 1; R2* = 2; R3* = 3;
+    R0* = 0; R1* = 1; R2* = 2; R8* = 8; R9* = 9;
 
 
 TYPE
@@ -277,7 +277,7 @@ VAR
 BEGIN
     NEW(R);
 
-    R.regs := {R0, R1, R2};
+    R.regs := {R0, R1, R2, R8, R9};
     R.pushed := 0;
     R.top := -1;
 

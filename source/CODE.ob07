@@ -1,972 +1,1124 @@
-﻿MODULE CODE;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
 
-IMPORT mList := LISTS,
-	mScan := SCAN,
-	mStr  := STRINGS,
-	mChl := CHUNKLISTS,
-	mConst := modConstante;
+MODULE CODE;
+
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS;
+
 
 CONST
 
-	opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
-	opNOT* = 29;
+    little_endian* = 0;
+    big_endian* = 1;
 
-	opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
-	opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
-	opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
+    opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
+    opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
+    opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
+    opUMINUS* = 16;
+    opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
+    opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
+    opNOT* = 29;
 
-	opVLOAD32* = 48; opGLOAD32* = 49;
+    opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
+    opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
+    opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
 
-	opJNE* = 50; opJE* = 51;
+    opVLOAD32* = 48; opGLOAD32* = 49;
 
-	opEQS* = 52; opNES* = 53; opLTS* = 54; opLES* = 55; opGTS* = 56; opGES* = 57;
+    opJNE* = 50; opJE* = 51;
 
-	opSAVE32* = 58; opLLOAD8* = 59;
+    opEQS* = 52; opNES* = 53; opLTS* = 54; opLES* = 55; opGTS* = 56; opGES* = 57;
 
-	opCONSTF* = 60; opLOADF* = 61; opSAVEF* = 62; opMULF* = 63; opDIVF* = 64; opDIVFI* = 65;
-	opUMINF* = 66; opADDFI* = 67; opSUBFI* = 68; opADDF* = 69; opSUBF* = 70;
+    opSAVE32* = 58; opLLOAD8* = 59;
 
-	opINC1B* = 71; opDEC1B* = 72; opINCCB* = 73; opDECCB* = 74; opINCB* = 75; opDECB* = 76;
+    opCONSTF* = 60; opLOADF* = 61; opSAVEF* = 62; opMULF* = 63; opDIVF* = 64; opDIVFI* = 65;
+    opUMINF* = 66; opADDFI* = 67; opSUBFI* = 68; opADDF* = 69; opSUBF* = 70;
 
-	opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
+    opINC1B* = 71; opDEC1B* = 72; opINCCB* = 73; opDECCB* = 74; opINCB* = 75; opDECB* = 76;
 
-	opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
-	opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
+    opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
 
-	opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
-	opERRC* = 98; opSWITCH* = 99;
+    opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
+    opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
 
-	opSBOOL* = 100; opSBOOLC* = 101; opNOP* = 102;
+    opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
+    opERRC* = 98; opSWITCH* = 99;
 
-	opMULS* = 103; opMULSC* = 104; opDIVS* = 105; opDIVSC* = 106;
-	opADDS* = 107; opSUBS* = 108; opADDSL* = 109; opSUBSL* = 110; opADDSR* = 111; opSUBSR* = 112;
-	opUMINS* = 113; opIN* = 114; opINL* = 115; opINR* = 116;
-	opRSET* = 117; opRSETL* = 118; opRSETR* = 119; opRSET1* = 120; opLENGTH* = 121;
+    opSBOOL* = 100; opSBOOLC* = 101; opNOP* = 102;
 
-	opINC1* = 122; opDEC1* = 123; opINCC* = 124; opDECC* = 125; opINC* = 126; opDEC* = 127;
-	opINCL* = 128; opEXCL* = 129; opINCLC* = 130; opEXCLC* = 131; opNEW* = 132; opDISP* = 133;
-	opPACK* = 134; opPACKC* = 135; opUNPK* = 136; opCOPY* = 137; opENTER* = 138; opLEAVE* = 139;
-	opCALL* = 140; opSAVEP* = 141; opCALLP* = 142; opEQP* = 143; opNEP* = 144; opLEAVER* = 145;
-	opGET* = 146; opSAVE16* = 147; opABS* = 148; opFABS* = 149; opFLOOR* = 150; opFLT* = 151;
-	opODD* = 152; opORD* = 153; opASR* = 154; opLSL* = 155; opROR* = 156;
-	opASR1* = 157; opLSL1* = 158; opROR1* = 159; opASR2* = 160; opLSL2* = 161; opROR2* = 162;
-	opPUSHP* = 163; opLADR* = 164; opTYPEGP* = 165; opIS* = 166; opPUSHF* = 167; opVADR* = 168;
-	opPUSHT* = 169; opTYPEGR* = 170; opISREC* = 171; opCHKIDX* = 172; opPARAM* = 173;
-	opCHKIDX2* = 174; opLEN* = 175; opROT* = 176; opSAVES* = 177; opSADR* = 178; opERR* = 179;
+    opMULS* = 103; opMULSC* = 104; opDIVS* = 105; opDIVSC* = 106;
+    opADDS* = 107; opSUBS* = 108; opADDSL* = 109; opSUBSL* = 110; opADDSR* = 111; opSUBSR* = 112;
+    opUMINS* = 113; opIN* = 114; opINL* = 115; opINR* = 116;
+    opRSET* = 117; opRSETL* = 118; opRSETR* = 119; opRSET1* = 120; opLENGTH* = 121;
 
-	opCHR* = 180; opENDSW* = 181; opLEAVEF* = 182; opCLEANUP* = 183; opMOVE* = 184;
-	opLSR* = 185; opLSR1* = 186; opLSR2* = 187;
-	opMIN* = 188; opMINC* = 189; opMAX* = 190; opMAXC* = 191; opJNZ* = 192;
-	opEQB* = 193; opNEB* = 194; opINF* = 195; opJZ* = 196; opVLOAD8* = 197; opGLOAD8* = 198;
-	opLLOAD16* = 199; opVLOAD16* = 200; opGLOAD16* = 201;
-	opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64* = 206;
+    opINC1* = 122; opDEC1* = 123; opINCC* = 124; opDECC* = 125; opINC* = 126; opDEC* = 127;
+    opINCL* = 128; opEXCL* = 129; opINCLC* = 130; opEXCLC* = 131; opNEW* = 132; opDISP* = 133;
+    opPACK* = 134; opPACKC* = 135; opUNPK* = 136; opCOPY* = 137; opENTER* = 138; opLEAVE* = 139;
+    opCALL* = 140; opSAVEP* = 141; opCALLP* = 142; opEQP* = 143; opNEP* = 144; opLEAVER* = 145;
+    opGET* = 146; opSAVE16* = 147; opABS* = 148; opFABS* = 149; opFLOOR* = 150; opFLT* = 151;
+    opODD* = 152; opORD* = 153; opASR* = 154; opLSL* = 155; opROR* = 156;
+    opASR1* = 157; opLSL1* = 158; opROR1* = 159; opASR2* = 160; opLSL2* = 161; opROR2* = 162;
+    opPUSHP* = 163; opLADR* = 164; opTYPEGP* = 165; opIS* = 166; opPUSHF* = 167; opVADR* = 168;
+    opPUSHT* = 169; opTYPEGR* = 170; opISREC* = 171; opCHKIDX* = 172; opPARAM* = 173;
+    opCHKIDX2* = 174; opLEN* = 175; opROT* = 176; opSAVES* = 177; opSADR* = 178; opERR* = 179;
 
-	opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
-	opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
+    opCHR* = 180; opENDSW* = 181; opLEAVEF* = 182; opCLEANUP* = 183; opMOVE* = 184;
+    opLSR* = 185; opLSR1* = 186; opLSR2* = 187;
+    opMIN* = 188; opMINC* = 189; opMAX* = 190; opMAXC* = 191; opJNZ* = 192;
+    opEQB* = 193; opNEB* = 194; opINF* = 195; opJZ* = 196; opVLOAD8* = 197; opGLOAD8* = 198;
+    opLLOAD16* = 199; opVLOAD16* = 200; opGLOAD16* = 201;
+    opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64* = 206;
 
-	opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
-	opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-	opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+    opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
+    opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
 
-	opCODE* = 235;
+    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
+    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+
+    opCODE* = 235;
+
+    opALIGN16* = 236; opCLEANUP16* = 237;
+    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240;
 
 
-	_move      *=   0;
-	_move2     *=   1;
-	_in        *=   2;
-	_in2       *=   3;
-	_set       *=   4;
-	_set2      *=   5;
-	_incl      *=   6;
-	_excl      *=   7;
-	_div       *=   8;
-	_mod       *=   9;
-	_div2      *=  10;
-	_mod2      *=  11;
-	_arrcpy    *=  12;
-	_rot       *=  13;
-	_new       *=  14;
-	_dispose   *=  15;
-	_strcmp    *=  16;
-	_error     *=  17;
-	_is        *=  18;
-	_isrec     *=  19;
-	_guard     *=  20;
-	_guardrec  *=  21;
-	_length    *=  22;
-	_init      *=  23;
-	_dllentry  *=  24;
-	_strcpy    *=  25;
-	_exit      *=  26;
-	_strcpy2   *=  27;
-	_lengthw   *=  28;
-	_strcmp2   *=  29;
-	_strcmpw   *=  30;
-	_strcmpw2  *=  31; 
-		       
-	little_endian* = 0;
-	big_endian* = 1;
+    _move      *=   0;
+    _move2     *=   1;
+    _in        *=   2;
+    _in2       *=   3;
+    _set       *=   4;
+    _set2      *=   5;
+    _incl      *=   6;
+    _excl      *=   7;
+    _div       *=   8;
+    _mod       *=   9;
+    _div2      *=  10;
+    _mod2      *=  11;
+    _arrcpy    *=  12;
+    _rot       *=  13;
+    _new       *=  14;
+    _dispose   *=  15;
+    _strcmp    *=  16;
+    _error     *=  17;
+    _is        *=  18;
+    _isrec     *=  19;
+    _guard     *=  20;
+    _guardrec  *=  21;
+    _length    *=  22;
+    _init      *=  23;
+    _dllentry  *=  24;
+    _strcpy    *=  25;
+    _exit      *=  26;
+    _strcpy2   *=  27;
+    _lengthw   *=  28;
+    _strcmp2   *=  29;
+    _strcmpw   *=  30;
+    _strcmpw2  *=  31;
+
 
 TYPE
-	tpCommand* = POINTER TO RECORD (mList.tpItem)
-			opCode*:  INTEGER; (* Code operation. Defined in modConstante *)
-			param1*:  INTEGER; (* Param1 for opCode *)
-			param2*:  INTEGER  (* Param2 for opCode *)
-		END;
 
-	tpCommand3* = POINTER TO RECORD (tpCommand)
-			param3*:  INTEGER
-		END;
+    COMMAND* = POINTER TO RECORD (LISTS.ITEM)
 
-	tpCommandFloat* = POINTER TO RECORD (tpCommand)
-			valFloat*:   REAL
-		END;
+        opcode*:  INTEGER;
+        param1*:  INTEGER;
+        param2*:  INTEGER
 
-	tpCmdStack = POINTER TO RECORD
-			aData: ARRAY 1000 OF tpCommand;
-			top:  INTEGER
-		END;
+    END;
 
-	tpProcExport* = POINTER TO RECORD (mList.tpItem)
-			label*: INTEGER;
-			lexName*:  mScan.LEXSTR
-		END;
+    COMMAND3* = POINTER TO RECORD (COMMAND)
 
-	tpLibImport* = POINTER TO RECORD (mList.tpItem)
-			lexName*:   mScan.LEXSTR;
-			procs*:  mList.tpList
-		END;
+        param3*:  INTEGER
 
-	tpProcImport* = POINTER TO RECORD (mList.tpItem)
-			label*: INTEGER;
-			lib*:   tpLibImport;
-			lexName*:  mScan.LEXSTR;
-			count:  INTEGER
-		END;
+    END;
 
-	tpCodes* = POINTER TO RECORD
-			last:       tpCommand;
-			call_beg:    tpCmdStack;
-			call_end:    tpCmdStack;
-			commands*:  mList.tpList;
-			export*:    mList.tpList;
-			import*:    mList.tpList;
-			types*:     mChl.INTLIST;
-			data*:      mChl.BYTELIST;
-			dmin*:      INTEGER;
-			lcount*:    INTEGER;
-			bss*:       INTEGER;
-			rtl*:       ARRAY 32 OF INTEGER;
+    COMMANDF* = POINTER TO RECORD (COMMAND)
 
-			charoffs:   ARRAY 256 OF INTEGER;
-			wcharoffs:  ARRAY 65536 OF INTEGER;
+        float*:   REAL
 
-			fregs:      INTEGER;
-			wstr:       ARRAY 4*1024 OF WCHAR;
+    END;
 
-			errLabel*:  INTEGER
-		END;
+    CMDSTACK = POINTER TO RECORD
+
+        data: ARRAY 1000 OF COMMAND;
+        top:  INTEGER
+
+    END;
+
+    EXPORT_PROC* = POINTER TO RECORD (LISTS.ITEM)
+
+        label*: INTEGER;
+        name*:  SCAN.LEXSTR
+
+    END;
+
+    IMPORT_LIB* = POINTER TO RECORD (LISTS.ITEM)
+
+        name*:   SCAN.LEXSTR;
+        procs*:  LISTS.LIST
+
+    END;
+
+    IMPORT_PROC* = POINTER TO RECORD (LISTS.ITEM)
+
+        label*: INTEGER;
+        lib*:   IMPORT_LIB;
+        name*:  SCAN.LEXSTR;
+        count:  INTEGER
+
+    END;
+
+
+    CODES* = POINTER TO RECORD
+
+        last:       COMMAND;
+        begcall:    CMDSTACK;
+        endcall:    CMDSTACK;
+        commands*:  LISTS.LIST;
+        export*:    LISTS.LIST;
+        import*:    LISTS.LIST;
+        types*:     CHL.INTLIST;
+        data*:      CHL.BYTELIST;
+        dmin*:      INTEGER;
+        lcount*:    INTEGER;
+        bss*:       INTEGER;
+        rtl*:       ARRAY 32 OF INTEGER;
+
+        charoffs:   ARRAY 256 OF INTEGER;
+        wcharoffs:  ARRAY 65536 OF INTEGER;
+
+        fregs:      INTEGER;
+        wstr:       ARRAY 4*1024 OF WCHAR;
+
+        errlabel*:  INTEGER
+
+    END;
+
 
 VAR
-	codes*: tpCodes;
-	numRegsFloat: INTEGER; 
-	endianness: INTEGER;
-
-PROCEDURE Last_Set* (pCmd: tpCommand);
-	BEGIN
-		codes.last := pCmd
-	END Last_Set;
-
-PROCEDURE Last_Get* (): tpCommand;
-		RETURN codes.last
-	END Last_Get;
-
-PROCEDURE Byte_Put (pCodes: tpCodes; pByte: BYTE);
-	BEGIN
-		mChl.PushByte(pCodes.data, pByte)
-	END Byte_Put;
-
-PROCEDURE Str_Put* (pStr: ARRAY OF CHAR): INTEGER;
-	VAR
-		_i, _n, _res: INTEGER;
-	BEGIN
-		_res := mChl.Length(codes.data);
-
-		_i := 0;
-		_n := LENGTH(pStr);
-		WHILE _i < _n DO
-			Byte_Put(codes, ORD(pStr[_i]));
-			INC(_i)
-		END;
-
-		Byte_Put(codes, 0)
-
-		RETURN _res
-	END Str_Put;
-
-PROCEDURE Str_Put1* (pNum: INTEGER): INTEGER;
-	VAR
-		_res: INTEGER;
-	BEGIN
-		IF codes.charoffs[pNum] = -1 THEN
-			_res := mChl.Length(codes.data);
-			Byte_Put(codes, pNum);
-			Byte_Put(codes, 0);
-			codes.charoffs[pNum] := _res
-		ELSE
-			_res := codes.charoffs[pNum]
-		END
-
-		RETURN _res
-	END Str_Put1;
-
-PROCEDURE Str_PutW* (pStr: ARRAY OF CHAR): INTEGER;
-	VAR
-		_i, _n, _res: INTEGER;
-	BEGIN
-		_res := mChl.Length(codes.data);
-		IF ODD(_res) THEN
-			Byte_Put(codes, 0);
-			INC(_res)
-		END;
-		_n := mStr.Utf8To16(pStr, codes.wstr);
-		_i := 0;
-		WHILE _i < _n DO 
-			IF endianness = little_endian THEN
-				Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256);
-				Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256)
-			ELSIF endianness = big_endian THEN
-				Byte_Put(codes, ORD(codes.wstr[_i]) DIV 256);
-				Byte_Put(codes, ORD(codes.wstr[_i]) MOD 256)
-			END;
-			INC(_i)
-		END;
-		Byte_Put(codes, 0);
-		Byte_Put(codes, 0)
-		RETURN _res
-	END Str_PutW;
-
-PROCEDURE Str_PutW1* (pNum: INTEGER): INTEGER;
-	VAR
-		_res: INTEGER;
-	BEGIN
-		IF codes.wcharoffs[pNum] = -1 THEN
-			_res := mChl.Length(codes.data);
-
-			IF ODD(_res) THEN
-				Byte_Put(codes, 0);
-				INC(_res)
-			END;
-			
-			IF endianness = little_endian THEN
-				Byte_Put(codes, pNum MOD 256);
-				Byte_Put(codes, pNum DIV 256)
-			ELSIF endianness = big_endian THEN
-				Byte_Put(codes, pNum DIV 256);
-				Byte_Put(codes, pNum MOD 256)
-			END;
-			Byte_Put(codes, 0);
-			Byte_Put(codes, 0);
-
-			codes.wcharoffs[pNum] := _res
-		ELSE
-			_res := codes.wcharoffs[pNum]
-		END
-		RETURN _res
-	END Str_PutW1;
-
-PROCEDURE MinDataSize_Set* (pSize: INTEGER);
-	BEGIN
-		codes.dmin := mChl.Length(codes.data) + pSize
-	END MinDataSize_Set;
-
-PROCEDURE Push (pStack: tpCmdStack; pCmd: tpCommand);
-	BEGIN
-		INC(pStack.top);
-		pStack.aData[pStack.top] := pCmd
-	END Push;
-
-PROCEDURE Pop (pStack: tpCmdStack): tpCommand;
-	VAR
-		_res: tpCommand;
-	BEGIN
-		_res := pStack.aData[pStack.top];
-		DEC(pStack.top)
-		RETURN _res
-	END Pop;
-
-PROCEDURE BegEnd_Push* (VAR pBeg, pEnd: tpCommand);
-	BEGIN
-		Push(codes.call_beg, pBeg);
-		Push(codes.call_end, pEnd);
-		pBeg := codes.last;
-		pEnd := pBeg.next(tpCommand)
-	END BegEnd_Push;
-
-PROCEDURE BegEnd_Pop* (VAR pBeg, pEnd: tpCommand);
-	BEGIN
-		pBeg := Pop(codes.call_beg);
-		pEnd := Pop(codes.call_end)
-	END BegEnd_Pop;
-
-PROCEDURE Rec_Add* (pBase: INTEGER);
-	BEGIN
-		mChl.PushInt(codes.types, pBase)
-	END Rec_Add;
-
-PROCEDURE Insert (pCur, pNew: tpCommand);
-	BEGIN
-		mList.Insert(codes.commands, pCur, pNew);
-		codes.last := pNew
-	END Insert;
-
-PROCEDURE Cmd_Add* (pOpCode: INTEGER; pNum: INTEGER);
-	VAR
-		_cmd: tpCommand;
-	BEGIN
-		NEW(_cmd);
-		_cmd.opCode := pOpCode;
-		_cmd.param1 := 0;
-		_cmd.param2 := pNum;
-		Insert(codes.last, _cmd)
-	END Cmd_Add;
-
-PROCEDURE Cmd2_Add* (pOpCode: INTEGER; param1, param2: INTEGER);
-	VAR
-		_cmd: tpCommand;
-	BEGIN
-		NEW(_cmd);
-		_cmd.opCode := pOpCode;
-		_cmd.param1 := param1;
-		_cmd.param2 := param2;
-		Insert(codes.last, _cmd)
-	END Cmd2_Add;
-
-PROCEDURE Label_New* (): INTEGER;
-	BEGIN
-		INC(codes.lcount)
-		RETURN codes.lcount - 1
-	END Label_New;
-
-PROCEDURE Label_Set* (pLabel: INTEGER);
-	BEGIN
-		Cmd_Add(mConst.codeLABEL, pLabel)
-	END Label_Set;
-
-PROCEDURE LabelErr_Set*;
-	BEGIN
-		codes.errLabel := Label_New();
-		Label_Set(codes.errLabel)
-	END LabelErr_Set;
-
-PROCEDURE Cmd0_Add* (pOpCode: INTEGER);
-	BEGIN
-		Cmd_Add(pOpCode, 0)
-	END Cmd0_Add;
-
-PROCEDURE Delete (pCmd: tpCommand);
-	BEGIN
-		mList.Del(codes.commands, pCmd)
-	END Delete;
-
-PROCEDURE CmdJmp_Add* (pOpCode: INTEGER; pLabel: INTEGER);
-	VAR
-		_prev: tpCommand;
-		_not:  BOOLEAN;
-	BEGIN
-		_prev := codes.last;
-		_not := _prev.opCode = opNOT;
-		IF _not THEN
-			IF pOpCode = opJE THEN
-				pOpCode := opJNE
-			ELSIF pOpCode = opJNE THEN
-				pOpCode := opJE
-			ELSE
-				_not := FALSE
-			END
-		END;
-		Cmd2_Add(pOpCode, pLabel, pLabel);
-		IF _not THEN
-			Delete(_prev)
-		END
-	END CmdJmp_Add;
-
-PROCEDURE OnError* (pLine, pError: INTEGER);
-	BEGIN
-		Cmd_Add(opERRC, LSL(pLine, 4) + pError);
-		CmdJmp_Add(mConst.codeJMP, codes.errLabel)
-	END OnError;
-
-PROCEDURE Type_Guard* (pOp, pType: INTEGER; pLine, pError: INTEGER);
-	VAR
-		_label: INTEGER;
-	BEGIN
-		Cmd_Add(pOp, pType);
-		_label := Label_New();
-		CmdJmp_Add(opJE, _label);
-		OnError(pLine, pError);
-		Label_Set(_label)
-	END Type_Guard;
-
-PROCEDURE Type_Check* (pType: INTEGER);
-	BEGIN
-		Cmd_Add(opIS, pType)
-	END Type_Check;
-
-PROCEDURE TypeRec_Check* (pType: INTEGER);
-	BEGIN
-		Cmd_Add(opISREC, pType)
-	END TypeRec_Check;
-
-PROCEDURE New* (pSize, pTypeNum: INTEGER);
-	BEGIN
-		Cmd2_Add(opNEW, pTypeNum, pSize)
-	END New;
-
-PROCEDURE fcmp* (pOpCode: BYTE);
-	BEGIN
-		Cmd_Add(pOpCode, 0);
-		DEC(codes.fregs, 2);
-		ASSERT(codes.fregs >= 0)
-	END fcmp;
-
-PROCEDURE IsCmp (pOpCode: BYTE): BOOLEAN;
-	(*
-		opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
-		opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
-		opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
-
-		opEQS*   =  52; opNES*   =  53; opLTS*   =  54; opLES*   =  55; opGTS*   =  56; opGES*   =  57;
-		opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
-		opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-		opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
-
-		opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
-		opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
-
-		opEQP* = 143; opNEP* = 144;
-																					  *)
-
-		RETURN (opEQ <= pOpCode) & (pOpCode <= opGER) OR (opEQS <= pOpCode) & (pOpCode <= opGES) OR
-				(opEQS2 <= pOpCode) & (pOpCode <= opGES2) OR (opEQSW <= pOpCode) & (pOpCode <= opGESW) OR
-				(opEQSW2 <= pOpCode) & (pOpCode <= opGESW2) OR
-				(opEQF <= pOpCode) & (pOpCode <= opGEFI) OR (pOpCode = opEQP) OR (pOpCode = opNEP)
-	END IsCmp;
-
-PROCEDURE Cmp_Inv (pOpCode: BYTE): INTEGER;
-	BEGIN
-		CASE pOpCode OF
-
-		|opEQ:    pOpCode := opNE
-		|opNE:    pOpCode := opEQ
-		|opLT:    pOpCode := opGE
-		|opLE:    pOpCode := opGT
-		|opGT:    pOpCode := opLE
-		|opGE:    pOpCode := opLT
-
-		|opEQR:   pOpCode := opNER
-		|opNER:   pOpCode := opEQR
-		|opLTR:   pOpCode := opGER
-		|opLER:   pOpCode := opGTR
-		|opGTR:   pOpCode := opLER
-		|opGER:   pOpCode := opLTR
-
-		|opEQL:   pOpCode := opNEL
-		|opNEL:   pOpCode := opEQL
-		|opLTL:   pOpCode := opGEL
-		|opLEL:   pOpCode := opGTL
-		|opGTL:   pOpCode := opLEL
-		|opGEL:   pOpCode := opLTL
-
-		|opEQS:   pOpCode := opNES
-		|opNES:   pOpCode := opEQS
-		|opLTS:   pOpCode := opGES
-		|opLES:   pOpCode := opGTS
-		|opGTS:   pOpCode := opLES
-		|opGES:   pOpCode := opLTS
-
-		|opEQS2:  pOpCode := opNES2
-		|opNES2:  pOpCode := opEQS2
-		|opLTS2:  pOpCode := opGES2
-		|opLES2:  pOpCode := opGTS2
-		|opGTS2:  pOpCode := opLES2
-		|opGES2:  pOpCode := opLTS2
-
-		|opEQSW:  pOpCode := opNESW
-		|opNESW:  pOpCode := opEQSW
-		|opLTSW:  pOpCode := opGESW
-		|opLESW:  pOpCode := opGTSW
-		|opGTSW:  pOpCode := opLESW
-		|opGESW:  pOpCode := opLTSW
-
-		|opEQSW2: pOpCode := opNESW2
-		|opNESW2: pOpCode := opEQSW2
-		|opLTSW2: pOpCode := opGESW2
-		|opLESW2: pOpCode := opGTSW2
-		|opGTSW2: pOpCode := opLESW2
-		|opGESW2: pOpCode := opLTSW2
-
-		|opEQF:   pOpCode := opNEF
-		|opNEF:   pOpCode := opEQF
-		|opLTF:   pOpCode := opGEF
-		|opLEF:   pOpCode := opGTF
-		|opGTF:   pOpCode := opLEF
-		|opGEF:   pOpCode := opLTF
-
-		|opEQFI:  pOpCode := opNEFI
-		|opNEFI:  pOpCode := opEQFI
-		|opLTFI:  pOpCode := opGEFI
-		|opLEFI:  pOpCode := opGTFI
-		|opGTFI:  pOpCode := opLEFI
-		|opGEFI:  pOpCode := opLTFI
-
-		|opEQP:   pOpCode := opNEP
-		|opNEP:   pOpCode := opEQP
-
-		END
-
-		RETURN pOpCode
-	END Cmp_Inv;
-
-PROCEDURE Not*;
-	VAR
-		_prev: tpCommand;
-	BEGIN
-		_prev := codes.last;
-		IF _prev.opCode = opNOT THEN
-			codes.last := _prev.prev(tpCommand);
-			Delete(_prev)
-		ELSIF IsCmp(_prev.opCode) THEN
-			_prev.opCode := Cmp_Inv(_prev.opCode)
-		ELSE
-			Cmd0_Add(opNOT)
-		END
-	END Not;
-
-PROCEDURE Enter* (pLabel: INTEGER): tpCommand;
-	BEGIN
-		Cmd2_Add(opENTER, pLabel, 0)
-		RETURN codes.last
-	END Enter;
-
-PROCEDURE Leave* (pResult, pFloat: BOOLEAN; pSize: INTEGER): tpCommand;
-	BEGIN
-		IF pResult THEN
-			IF pFloat THEN
-				Cmd_Add(opLEAVEF, pSize)
-			ELSE
-				Cmd_Add(opLEAVER, pSize)
-			END
-		ELSE
-			Cmd_Add(opLEAVE, pSize)
-		END
-
-		RETURN codes.last
-	END Leave;
-
-PROCEDURE Call* (pProc: INTEGER);
-	BEGIN
-		CmdJmp_Add(opCALL, pProc)
-	END Call;
-
-PROCEDURE Imp_Call* (pProc: mList.tpItem);
-	BEGIN
-		CmdJmp_Add(opCALLI, pProc(tpProcImport).label)
-	END Imp_Call;
-
-PROCEDURE Proc_Call*;
-	BEGIN
-		Cmd0_Add(opCALLP)
-	END Proc_Call;
-
-PROCEDURE Proc_Assign* (pProc: INTEGER);
-	BEGIN
-		CmdJmp_Add(opSAVEP, pProc)
-	END Proc_Assign;
-
-PROCEDURE ProcImp_Assign* (pProc: mList.tpItem);
-	BEGIN
-		CmdJmp_Add(opSAVEIP, pProc(tpProcImport).label)
-	END ProcImp_Assign;
-
-PROCEDURE Proc_Push* (pProc: INTEGER);
-	BEGIN
-		CmdJmp_Add(opPUSHP, pProc)
-	END Proc_Push;
-
-PROCEDURE ProcImp_Push* (pProc: mList.tpItem);
-	BEGIN
-		CmdJmp_Add(opPUSHIP, pProc(tpProcImport).label)
-	END ProcImp_Push;
-
-PROCEDURE Proc_Cmp* (pProc: INTEGER; pEqu: BOOLEAN);
-	BEGIN
-		IF pEqu THEN
-			CmdJmp_Add(opEQP, pProc)
-		ELSE
-			CmdJmp_Add(opNEP, pProc)
-		END
-	END Proc_Cmp;
-
-PROCEDURE ProcImp_Cmp* (pProc: mList.tpItem; pEqu: BOOLEAN);
-	BEGIN
-		IF pEqu THEN
-			CmdJmp_Add(opEQIP, pProc(tpProcImport).label)
-		ELSE
-			CmdJmp_Add(opNEIP, pProc(tpProcImport).label)
-		END
-	END ProcImp_Cmp;
-
-PROCEDURE Sys_Get* (pSize: INTEGER);
-	BEGIN
-		Cmd_Add(opGET, pSize)
-	END Sys_Get;
-
-PROCEDURE Load* (pSize: INTEGER);
-	VAR
-		last: tpCommand;
-	BEGIN
-		last := codes.last;
-		CASE pSize OF
-		|1:
-			IF last.opCode = opLADR THEN
-				last.opCode := opLLOAD8
-			ELSIF last.opCode = opVADR THEN
-				last.opCode := opVLOAD8
-			ELSIF last.opCode = mConst.codeGADR THEN
-				last.opCode := opGLOAD8
-			ELSE
-				Cmd0_Add(opLOAD8)
-			END
-
-		|2:
-			IF last.opCode = opLADR THEN
-				last.opCode := opLLOAD16
-			ELSIF last.opCode = opVADR THEN
-				last.opCode := opVLOAD16
-			ELSIF last.opCode = mConst.codeGADR THEN
-				last.opCode := opGLOAD16
-			ELSE
-				Cmd0_Add(opLOAD16)
-			END
-
-		|4:
-			IF last.opCode = opLADR THEN
-				last.opCode := mConst.codeLLOAD32
-			ELSIF last.opCode = opVADR THEN
-				last.opCode := opVLOAD32
-			ELSIF last.opCode = mConst.codeGADR THEN
-				last.opCode := opGLOAD32
-			ELSE
-				Cmd0_Add(opLOAD32)
-			END
-
-		|8:
-			IF last.opCode = opLADR THEN
-				last.opCode := opLLOAD64
-			ELSIF last.opCode = opVADR THEN
-				last.opCode := opVLOAD64
-			ELSIF last.opCode = mConst.codeGADR THEN
-				last.opCode := opGLOAD64
-			ELSE
-				Cmd0_Add(opLOAD64)
-			END
-		END
-	END Load;
-
-PROCEDURE Sys_Put* (pSize: INTEGER);
-	BEGIN
-		CASE pSize OF
-		|1: Cmd0_Add(opSAVE8)
-		|2: Cmd0_Add(opSAVE16)
-		|4: Cmd0_Add(opSAVE32)
-		|8: Cmd0_Add(opSAVE64)
-		END
-	END Sys_Put;
-
-PROCEDURE Float_Save*;
-	BEGIN
-		Cmd0_Add(opSAVEF);
-		DEC(codes.fregs);
-		ASSERT(codes.fregs >= 0)
-	END Float_Save;
-
-PROCEDURE Float_Push*;
-	BEGIN
-		Cmd0_Add(opPUSHF);
-		DEC(codes.fregs);
-		ASSERT(codes.fregs >= 0)
-	END Float_Push;
-
-PROCEDURE Float_Load* (): BOOLEAN;
-	BEGIN
-		Cmd0_Add(opLOADF);
-		INC(codes.fregs)
-		RETURN codes.fregs < numRegsFloat
-	END Float_Load;
-
-PROCEDURE IsInf* (): BOOLEAN;
-	BEGIN
-		Cmd0_Add(opINF);
-		INC(codes.fregs)
-		RETURN codes.fregs < numRegsFloat
-	END IsInf;
-
-PROCEDURE fbinop* (pOpCode: BYTE);
-	BEGIN
-		Cmd0_Add(pOpCode);
-		DEC(codes.fregs);
-		ASSERT(codes.fregs > 0)
-	END fbinop;
-
-PROCEDURE Str_Save* (pOffset, pLen: INTEGER);
-	BEGIN
-		Cmd2_Add(opSAVES, pLen, pOffset)
-	END Str_Save;
-
-PROCEDURE Abs_Set* (pFloat: BOOLEAN);
-	BEGIN
-		IF pFloat THEN
-			Cmd0_Add(opFABS)
-		ELSE
-			Cmd0_Add(opABS)
-		END
-	END Abs_Set;
-
-PROCEDURE Floor_Set*;
-	BEGIN
-		Cmd0_Add(opFLOOR);
-		DEC(codes.fregs);
-		ASSERT(codes.fregs >= 0)
-	END Floor_Set;
-
-PROCEDURE IsFloat* (): BOOLEAN;
-	BEGIN
-		Cmd0_Add(opFLT);
-		INC(codes.fregs)
-		RETURN codes.fregs < numRegsFloat
-	END IsFloat;
-
-PROCEDURE Odd_Set*;
-	BEGIN
-		Cmd0_Add(opODD)
-	END Odd_Set;
-
-PROCEDURE Ord_Set*;
-	BEGIN
-		Cmd0_Add(opORD)
-	END Ord_Set;
-
-PROCEDURE ShiftMinMax_Set* (pOp: CHAR);
-	BEGIN
-		CASE pOp OF
-		|"A": Cmd0_Add(opASR)
-		|"L": Cmd0_Add(opLSL)
-		|"O": Cmd0_Add(opROR)
-		|"R": Cmd0_Add(opLSR)
-		|"m": Cmd0_Add(opMIN)
-		|"x": Cmd0_Add(opMAX)
-		END
-	END ShiftMinMax_Set;
-
-PROCEDURE ShiftMinMax1_Set* (pOp: CHAR; pNum: INTEGER);
-	BEGIN
-		CASE pOp OF
-		|"A": Cmd_Add(opASR1, pNum)
-		|"L": Cmd_Add(opLSL1, pNum)
-		|"O": Cmd_Add(opROR1, pNum)
-		|"R": Cmd_Add(opLSR1, pNum)
-		|"m": Cmd_Add(opMINC, pNum)
-		|"x": Cmd_Add(opMAXC, pNum)
-		END
-	END ShiftMinMax1_Set;
-
-PROCEDURE ShiftMinMax2_Set* (pOp: CHAR; pNum: INTEGER);
-	BEGIN
-		CASE pOp OF
-		|"A": Cmd_Add(opASR2, pNum)
-		|"L": Cmd_Add(opLSL2, pNum)
-		|"O": Cmd_Add(opROR2, pNum)
-		|"R": Cmd_Add(opLSR2, pNum)
-		|"m": Cmd_Add(opMINC, pNum)
-		|"x": Cmd_Add(opMAXC, pNum)
-		END
-	END ShiftMinMax2_Set;
-
-PROCEDURE Len* (pDim: INTEGER);
-	BEGIN
-		Cmd_Add(opLEN, pDim)
-	END Len;
-
-PROCEDURE Float* (bFloat: REAL);
-	VAR
-		_cmd: tpCommandFloat;
-	BEGIN
-		NEW(_cmd);
-		_cmd.opCode := opCONSTF;
-		_cmd.valFloat := bFloat;
-		Insert(codes.last, _cmd);
-		INC(codes.fregs);
-		ASSERT(codes.fregs <= numRegsFloat)
-	END Float;
-
-PROCEDURE Pre_Call* (pIsFloat: BOOLEAN): INTEGER;
-	VAR
-		res: INTEGER;
-	BEGIN
-		res := codes.fregs;
-		Cmd2_Add(opPRECALL, ORD(pIsFloat), res);
-		codes.fregs := 0
-		RETURN res
-	END Pre_Call;
-
-PROCEDURE IsResFloat* (pRegsFloat: INTEGER): BOOLEAN;
-	BEGIN
-		Cmd_Add(opRESF, pRegsFloat);
-		codes.fregs := pRegsFloat + 1
-		RETURN codes.fregs < numRegsFloat
-	END IsResFloat;
-
-PROCEDURE res* (pRegsFloat: INTEGER);
-	BEGIN
-		Cmd_Add(opRES, pRegsFloat);
-		codes.fregs := pRegsFloat
-	END res;
+
+    codes*: CODES;
+    endianness: INTEGER;
+    numRegsFloat: INTEGER;
+
+
+PROCEDURE setlast* (cmd: COMMAND);
+BEGIN
+    codes.last := cmd
+END setlast;
+
+
+PROCEDURE getlast* (): COMMAND;
+    RETURN codes.last
+END getlast;
+
+
+PROCEDURE PutByte (codes: CODES; b: BYTE);
+BEGIN
+    CHL.PushByte(codes.data, b)
+END PutByte;
+
+
+PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
+VAR
+    i, n, res: INTEGER;
+BEGIN
+    res := CHL.Length(codes.data);
+
+    i := 0;
+    n := LENGTH(s);
+    WHILE i < n DO
+        PutByte(codes, ORD(s[i]));
+        INC(i)
+    END;
+
+    PutByte(codes, 0)
+
+    RETURN res
+END putstr;
+
+
+PROCEDURE putstr1* (c: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF codes.charoffs[c] = -1 THEN
+        res := CHL.Length(codes.data);
+        PutByte(codes, c);
+        PutByte(codes, 0);
+        codes.charoffs[c] := res
+    ELSE
+        res := codes.charoffs[c]
+    END
+
+    RETURN res
+END putstr1;
+
+
+PROCEDURE putstrW* (s: ARRAY OF CHAR): INTEGER;
+VAR
+    i, n, res: INTEGER;
+
+BEGIN
+    res := CHL.Length(codes.data);
+
+    IF ODD(res) THEN
+        PutByte(codes, 0);
+        INC(res)
+    END;
+
+    n := STRINGS.Utf8To16(s, codes.wstr);
+
+    i := 0;
+    WHILE i < n DO
+        IF endianness = little_endian THEN
+            PutByte(codes, ORD(codes.wstr[i]) MOD 256);
+            PutByte(codes, ORD(codes.wstr[i]) DIV 256)
+        ELSIF endianness = big_endian THEN
+            PutByte(codes, ORD(codes.wstr[i]) DIV 256);
+            PutByte(codes, ORD(codes.wstr[i]) MOD 256)
+        END;
+        INC(i)
+    END;
+
+    PutByte(codes, 0);
+    PutByte(codes, 0)
+
+    RETURN res
+END putstrW;
+
+
+PROCEDURE putstrW1* (c: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF codes.wcharoffs[c] = -1 THEN
+        res := CHL.Length(codes.data);
+
+        IF ODD(res) THEN
+            PutByte(codes, 0);
+            INC(res)
+        END;
+
+        IF endianness = little_endian THEN
+            PutByte(codes, c MOD 256);
+            PutByte(codes, c DIV 256)
+        ELSIF endianness = big_endian THEN
+            PutByte(codes, c DIV 256);
+            PutByte(codes, c MOD 256)
+        END;
+
+        PutByte(codes, 0);
+        PutByte(codes, 0);
+
+        codes.wcharoffs[c] := res
+    ELSE
+        res := codes.wcharoffs[c]
+    END
+
+    RETURN res
+END putstrW1;
+
+
+PROCEDURE SetMinDataSize* (size: INTEGER);
+BEGIN
+    codes.dmin := CHL.Length(codes.data) + size
+END SetMinDataSize;
+
+
+PROCEDURE push (stk: CMDSTACK; cmd: COMMAND);
+BEGIN
+    INC(stk.top);
+    stk.data[stk.top] := cmd
+END push;
+
+
+PROCEDURE pop (stk: CMDSTACK): COMMAND;
+VAR
+    res: COMMAND;
+BEGIN
+    res := stk.data[stk.top];
+    DEC(stk.top)
+    RETURN res
+END pop;
+
+
+PROCEDURE pushBegEnd* (VAR beg, end: COMMAND);
+BEGIN
+    push(codes.begcall, beg);
+    push(codes.endcall, end);
+    beg := codes.last;
+    end := beg.next(COMMAND)
+END pushBegEnd;
+
+
+PROCEDURE popBegEnd* (VAR beg, end: COMMAND);
+BEGIN
+    beg := pop(codes.begcall);
+    end := pop(codes.endcall)
+END popBegEnd;
+
+
+PROCEDURE AddRec* (base: INTEGER);
+BEGIN
+    CHL.PushInt(codes.types, base)
+END AddRec;
+
+
+PROCEDURE insert (cur, nov: COMMAND);
+BEGIN
+    LISTS.insert(codes.commands, cur, nov);
+    codes.last := nov
+END insert;
+
+
+PROCEDURE AddCmd* (opcode: INTEGER; param: INTEGER);
+VAR
+    cmd: COMMAND;
+BEGIN
+    NEW(cmd);
+    cmd.opcode := opcode;
+    cmd.param1 := 0;
+    cmd.param2 := param;
+    insert(codes.last, cmd)
+END AddCmd;
+
+
+PROCEDURE AddCmd2* (opcode: INTEGER; param1, param2: INTEGER);
+VAR
+    cmd: COMMAND;
+BEGIN
+    NEW(cmd);
+    cmd.opcode := opcode;
+    cmd.param1 := param1;
+    cmd.param2 := param2;
+    insert(codes.last, cmd)
+END AddCmd2;
+
+
+PROCEDURE NewLabel* (): INTEGER;
+BEGIN
+    INC(codes.lcount)
+    RETURN codes.lcount - 1
+END NewLabel;
+
+
+PROCEDURE SetLabel* (label: INTEGER);
+BEGIN
+    AddCmd(opLABEL, label)
+END SetLabel;
+
+
+PROCEDURE SetErrLabel*;
+BEGIN
+    codes.errlabel := NewLabel();
+    SetLabel(codes.errlabel)
+END SetErrLabel;
+
+
+PROCEDURE AddCmd0* (opcode: INTEGER);
+BEGIN
+    AddCmd(opcode, 0)
+END AddCmd0;
+
+
+PROCEDURE delete (cmd: COMMAND);
+BEGIN
+    LISTS.delete(codes.commands, cmd)
+END delete;
+
+
+PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
+VAR
+    prev: COMMAND;
+    not:  BOOLEAN;
+
+BEGIN
+    prev := codes.last;
+    not := prev.opcode = opNOT;
+    IF not THEN
+        IF opcode = opJE THEN
+            opcode := opJNE
+        ELSIF opcode = opJNE THEN
+            opcode := opJE
+        ELSE
+            not := FALSE
+        END
+    END;
+
+    AddCmd2(opcode, label, label);
+
+    IF not THEN
+        delete(prev)
+    END
+
+END AddJmpCmd;
+
+
+PROCEDURE OnError* (line, error: INTEGER);
+BEGIN
+    AddCmd(opERRC, LSL(line, 4) + error);
+    AddJmpCmd(opJMP, codes.errlabel)
+END OnError;
+
+
+PROCEDURE TypeGuard* (op, t: INTEGER; line, error: INTEGER);
+VAR
+    label: INTEGER;
+BEGIN
+    AddCmd(op, t);
+    label := NewLabel();
+    AddJmpCmd(opJE, label);
+    OnError(line, error);
+    SetLabel(label)
+END TypeGuard;
+
+
+PROCEDURE TypeCheck* (t: INTEGER);
+BEGIN
+    AddCmd(opIS, t)
+END TypeCheck;
+
+
+PROCEDURE TypeCheckRec* (t: INTEGER);
+BEGIN
+    AddCmd(opISREC, t)
+END TypeCheckRec;
+
+
+PROCEDURE New* (size, typenum: INTEGER);
+BEGIN
+    AddCmd2(opNEW, typenum, size)
+END New;
+
+
+PROCEDURE fcmp* (opcode: INTEGER);
+BEGIN
+    AddCmd(opcode, 0);
+    DEC(codes.fregs, 2);
+    ASSERT(codes.fregs >= 0)
+END fcmp;
+
+
+PROCEDURE isCmp (opcode: INTEGER): BOOLEAN;
+(*
+    opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
+    opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
+    opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
+
+    opEQS*   =  52; opNES*   =  53; opLTS*   =  54; opLES*   =  55; opGTS*   =  56; opGES*   =  57;
+    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
+    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
+    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+
+    opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
+    opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
+
+    opEQP* = 143; opNEP* = 144;
+                                                                                  *)
+
+    RETURN (opEQ <= opcode) & (opcode <= opGER) OR (opEQS <= opcode) & (opcode <= opGES) OR
+           (opEQS2 <= opcode) & (opcode <= opGES2) OR (opEQSW <= opcode) & (opcode <= opGESW) OR
+           (opEQSW2 <= opcode) & (opcode <= opGESW2) OR
+           (opEQF <= opcode) & (opcode <= opGEFI) OR (opcode = opEQP) OR (opcode = opNEP)
+END isCmp;
+
+
+PROCEDURE InvCmp (opcode: INTEGER): INTEGER;
+BEGIN
+
+    CASE opcode OF
+
+    |opEQ:    opcode := opNE
+    |opNE:    opcode := opEQ
+    |opLT:    opcode := opGE
+    |opLE:    opcode := opGT
+    |opGT:    opcode := opLE
+    |opGE:    opcode := opLT
+
+    |opEQR:   opcode := opNER
+    |opNER:   opcode := opEQR
+    |opLTR:   opcode := opGER
+    |opLER:   opcode := opGTR
+    |opGTR:   opcode := opLER
+    |opGER:   opcode := opLTR
+
+    |opEQL:   opcode := opNEL
+    |opNEL:   opcode := opEQL
+    |opLTL:   opcode := opGEL
+    |opLEL:   opcode := opGTL
+    |opGTL:   opcode := opLEL
+    |opGEL:   opcode := opLTL
+
+    |opEQS:   opcode := opNES
+    |opNES:   opcode := opEQS
+    |opLTS:   opcode := opGES
+    |opLES:   opcode := opGTS
+    |opGTS:   opcode := opLES
+    |opGES:   opcode := opLTS
+
+    |opEQS2:  opcode := opNES2
+    |opNES2:  opcode := opEQS2
+    |opLTS2:  opcode := opGES2
+    |opLES2:  opcode := opGTS2
+    |opGTS2:  opcode := opLES2
+    |opGES2:  opcode := opLTS2
+
+    |opEQSW:  opcode := opNESW
+    |opNESW:  opcode := opEQSW
+    |opLTSW:  opcode := opGESW
+    |opLESW:  opcode := opGTSW
+    |opGTSW:  opcode := opLESW
+    |opGESW:  opcode := opLTSW
+
+    |opEQSW2: opcode := opNESW2
+    |opNESW2: opcode := opEQSW2
+    |opLTSW2: opcode := opGESW2
+    |opLESW2: opcode := opGTSW2
+    |opGTSW2: opcode := opLESW2
+    |opGESW2: opcode := opLTSW2
+
+    |opEQF:   opcode := opNEF
+    |opNEF:   opcode := opEQF
+    |opLTF:   opcode := opGEF
+    |opLEF:   opcode := opGTF
+    |opGTF:   opcode := opLEF
+    |opGEF:   opcode := opLTF
+
+    |opEQFI:  opcode := opNEFI
+    |opNEFI:  opcode := opEQFI
+    |opLTFI:  opcode := opGEFI
+    |opLEFI:  opcode := opGTFI
+    |opGTFI:  opcode := opLEFI
+    |opGEFI:  opcode := opLTFI
+
+    |opEQP:   opcode := opNEP
+    |opNEP:   opcode := opEQP
+
+    END
+
+    RETURN opcode
+END InvCmp;
+
+
+PROCEDURE not*;
+VAR
+    prev: COMMAND;
+BEGIN
+    prev := codes.last;
+    IF prev.opcode = opNOT THEN
+        codes.last := prev.prev(COMMAND);
+        delete(prev)
+    ELSIF isCmp(prev.opcode) THEN
+        prev.opcode := InvCmp(prev.opcode)
+    ELSE
+        AddCmd0(opNOT)
+    END
+END not;
+
+
+PROCEDURE Enter* (label, params: INTEGER): COMMAND;
+VAR
+    cmd: COMMAND3;
+
+BEGIN   
+    NEW(cmd);
+    cmd.opcode := opENTER;
+    cmd.param1 := label;
+    cmd.param3 := params;
+    insert(codes.last, cmd)
+
+    RETURN codes.last
+END Enter;
+
+
+PROCEDURE Leave* (result, float: BOOLEAN; paramsize: INTEGER): COMMAND;
+BEGIN
+    IF result THEN
+        IF float THEN
+            AddCmd(opLEAVEF, paramsize)
+        ELSE
+            AddCmd(opLEAVER, paramsize)
+        END
+    ELSE
+        AddCmd(opLEAVE, paramsize)
+    END
+
+    RETURN codes.last
+END Leave;
+
+
+PROCEDURE Call* (proc: INTEGER; call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+BEGIN
+    IF call64 THEN         
+        ASSERT(rparam <= 4);
+        ASSERT(ORD(fparams) <= 15);
+        AddJmpCmd(opCALL64, proc);
+        codes.last(COMMAND).param2 := LSL(rparam, 4) + ORD(fparams)
+    ELSE
+        AddJmpCmd(opCALL, proc)
+    END
+END Call;
+
+
+PROCEDURE CallImp* (proc: LISTS.ITEM; call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+BEGIN
+    IF call64 THEN
+        ASSERT(rparam <= 4);
+        ASSERT(ORD(fparams) <= 15);
+        AddJmpCmd(opCALLI64, proc(IMPORT_PROC).label);
+        codes.last(COMMAND).param2 := LSL(rparam, 4) + ORD(fparams)
+    ELSE
+        AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
+    END
+END CallImp;
+
+
+PROCEDURE CallP* (call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+BEGIN
+    IF call64 THEN
+        ASSERT(rparam <= 4);
+        ASSERT(ORD(fparams) <= 15);
+        AddCmd(opCALLP64, LSL(rparam, 4) + ORD(fparams))
+    ELSE
+        AddCmd0(opCALLP)
+    END
+END CallP;
+
+
+PROCEDURE AssignProc* (proc: INTEGER);
+BEGIN
+    AddJmpCmd(opSAVEP, proc)
+END AssignProc;
+
+
+PROCEDURE AssignImpProc* (proc: LISTS.ITEM);
+BEGIN
+    AddJmpCmd(opSAVEIP, proc(IMPORT_PROC).label)
+END AssignImpProc;
+
+
+PROCEDURE PushProc* (proc: INTEGER);
+BEGIN
+    AddJmpCmd(opPUSHP, proc)
+END PushProc;
+
+
+PROCEDURE PushImpProc* (proc: LISTS.ITEM);
+BEGIN
+    AddJmpCmd(opPUSHIP, proc(IMPORT_PROC).label)
+END PushImpProc;
+
+
+PROCEDURE ProcCmp* (proc: INTEGER; eq: BOOLEAN);
+BEGIN
+    IF eq THEN
+        AddJmpCmd(opEQP, proc)
+    ELSE
+        AddJmpCmd(opNEP, proc)
+    END
+END ProcCmp;
+
+
+PROCEDURE ProcImpCmp* (proc: LISTS.ITEM; eq: BOOLEAN);
+BEGIN
+    IF eq THEN
+        AddJmpCmd(opEQIP, proc(IMPORT_PROC).label)
+    ELSE
+        AddJmpCmd(opNEIP, proc(IMPORT_PROC).label)
+    END
+END ProcImpCmp;
+
+
+PROCEDURE SysGet* (size: INTEGER);
+BEGIN
+    AddCmd(opGET, size)
+END SysGet;
+
+
+PROCEDURE load* (size: INTEGER);
+VAR
+    last: COMMAND;
+
+BEGIN
+    last := codes.last;
+    CASE size OF
+    |1:
+        IF last.opcode = opLADR THEN
+            last.opcode := opLLOAD8
+        ELSIF last.opcode = opVADR THEN
+            last.opcode := opVLOAD8
+        ELSIF last.opcode = opGADR THEN
+            last.opcode := opGLOAD8
+        ELSE
+            AddCmd0(opLOAD8)
+        END
+
+    |2:
+        IF last.opcode = opLADR THEN
+            last.opcode := opLLOAD16
+        ELSIF last.opcode = opVADR THEN
+            last.opcode := opVLOAD16
+        ELSIF last.opcode = opGADR THEN
+            last.opcode := opGLOAD16
+        ELSE
+            AddCmd0(opLOAD16)
+        END
+
+    |4:
+        IF last.opcode = opLADR THEN
+            last.opcode := opLLOAD32
+        ELSIF last.opcode = opVADR THEN
+            last.opcode := opVLOAD32
+        ELSIF last.opcode = opGADR THEN
+            last.opcode := opGLOAD32
+        ELSE
+            AddCmd0(opLOAD32)
+        END
+
+    |8:
+        IF last.opcode = opLADR THEN
+            last.opcode := opLLOAD64
+        ELSIF last.opcode = opVADR THEN
+            last.opcode := opVLOAD64
+        ELSIF last.opcode = opGADR THEN
+            last.opcode := opGLOAD64
+        ELSE
+            AddCmd0(opLOAD64)
+        END
+    END
+END load;
+
+
+PROCEDURE SysPut* (size: INTEGER);
+BEGIN
+    CASE size OF
+    |1: AddCmd0(opSAVE8)
+    |2: AddCmd0(opSAVE16)
+    |4: AddCmd0(opSAVE32)
+    |8: AddCmd0(opSAVE64)
+    END
+END SysPut;
+
+
+PROCEDURE savef*;
+BEGIN
+    AddCmd0(opSAVEF);
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
+END savef;
+
+
+PROCEDURE pushf*;
+BEGIN
+    AddCmd0(opPUSHF);
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
+END pushf;
+
+
+PROCEDURE loadf* (): BOOLEAN;
+BEGIN
+    AddCmd0(opLOADF);
+    INC(codes.fregs)
+    RETURN codes.fregs < numRegsFloat
+END loadf;
+
+
+PROCEDURE inf* (): BOOLEAN;
+BEGIN
+    AddCmd0(opINF);
+    INC(codes.fregs)
+    RETURN codes.fregs < numRegsFloat
+END inf;
+
+
+PROCEDURE fbinop* (opcode: INTEGER);
+BEGIN
+    AddCmd0(opcode);
+    DEC(codes.fregs);
+    ASSERT(codes.fregs > 0)
+END fbinop;
+
+
+PROCEDURE saves* (offset, length: INTEGER);
+BEGIN
+    AddCmd2(opSAVES, length, offset)
+END saves;
+
+
+PROCEDURE abs* (real: BOOLEAN);
+BEGIN
+    IF real THEN
+        AddCmd0(opFABS)
+    ELSE
+        AddCmd0(opABS)
+    END
+END abs;
+
+
+PROCEDURE floor*;
+BEGIN
+    AddCmd0(opFLOOR);
+    DEC(codes.fregs);
+    ASSERT(codes.fregs >= 0)
+END floor;
+
+
+PROCEDURE flt* (): BOOLEAN;
+BEGIN
+    AddCmd0(opFLT);
+    INC(codes.fregs)
+    RETURN codes.fregs < numRegsFloat
+END flt;
+
+
+PROCEDURE odd*;
+BEGIN
+    AddCmd0(opODD)
+END odd;
+
+
+PROCEDURE ord*;
+BEGIN
+    AddCmd0(opORD)
+END ord;
+
+
+PROCEDURE shift_minmax* (op: CHAR);
+BEGIN
+    CASE op OF
+    |"A": AddCmd0(opASR)
+    |"L": AddCmd0(opLSL)
+    |"O": AddCmd0(opROR)
+    |"R": AddCmd0(opLSR)
+    |"m": AddCmd0(opMIN)
+    |"x": AddCmd0(opMAX)
+    END
+END shift_minmax;
+
+
+PROCEDURE shift_minmax1* (op: CHAR; x: INTEGER);
+BEGIN
+    CASE op OF
+    |"A": AddCmd(opASR1, x)
+    |"L": AddCmd(opLSL1, x)
+    |"O": AddCmd(opROR1, x)
+    |"R": AddCmd(opLSR1, x)
+    |"m": AddCmd(opMINC, x)
+    |"x": AddCmd(opMAXC, x)
+    END
+END shift_minmax1;
+
+
+PROCEDURE shift_minmax2* (op: CHAR; x: INTEGER);
+BEGIN
+    CASE op OF
+    |"A": AddCmd(opASR2, x)
+    |"L": AddCmd(opLSL2, x)
+    |"O": AddCmd(opROR2, x)
+    |"R": AddCmd(opLSR2, x)
+    |"m": AddCmd(opMINC, x)
+    |"x": AddCmd(opMAXC, x)
+    END
+END shift_minmax2;
+
+
+PROCEDURE len* (dim: INTEGER);
+BEGIN
+    AddCmd(opLEN, dim)
+END len;
+
+
+PROCEDURE Float* (r: REAL);
+VAR
+    cmd: COMMANDF;
+
+BEGIN
+    NEW(cmd);
+    cmd.opcode := opCONSTF;
+    cmd.float := r;
+    insert(codes.last, cmd);
+    INC(codes.fregs);
+    ASSERT(codes.fregs <= numRegsFloat)
+END Float;
+
+
+PROCEDURE precall* (flt: BOOLEAN): INTEGER;
+VAR
+    res: INTEGER;
+BEGIN
+    res := codes.fregs;
+    AddCmd2(opPRECALL, ORD(flt), res);
+    codes.fregs := 0
+    RETURN res
+END precall;
+
+
+PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
+BEGIN
+    AddCmd(opRESF, fregs);
+    codes.fregs := fregs + 1
+    RETURN codes.fregs < numRegsFloat
+END resf;
+
+
+PROCEDURE res* (fregs: INTEGER);
+BEGIN
+    AddCmd(opRES, fregs);
+    codes.fregs := fregs
+END res;
+
 
 PROCEDURE retf*;
-	BEGIN
-		DEC(codes.fregs);
-		ASSERT(codes.fregs = 0)
-	END retf;
+BEGIN
+    DEC(codes.fregs);
+    ASSERT(codes.fregs = 0)
+END retf;
 
-PROCEDURE Drop*;
-	BEGIN
-		Cmd0_Add(opDROP)
-	END Drop;
 
-PROCEDURE Case* (pA, pB, pL, pR: INTEGER);
-	VAR
-		_cmd: tpCommand3;
-	BEGIN
-		IF pA = pB THEN
-			NEW(_cmd);
-			_cmd.opCode := opCASELR;
-			_cmd.param1 := pA;
-			_cmd.param2 := pL;
-			_cmd.param3 := pR;
-			Insert(codes.last, _cmd)
-		ELSE
-			Cmd2_Add(opCASEL, pA, pL);
-			Cmd2_Add(opCASER, pB, pR)
-		END
-	END Case;
+PROCEDURE drop*;
+BEGIN
+    AddCmd0(opDROP)
+END drop;
 
-PROCEDURE Case_Set* (pA, pLabel: INTEGER);
-	BEGIN
-		Cmd2_Add(mConst.codeCASET, pLabel, pA)
-	END Case_Set;
 
-PROCEDURE ProcExport_Add* (pLabel: INTEGER; pName: mScan.LEXSTR);
-	VAR
-		exp: tpProcExport;
-	BEGIN
-		NEW(exp);
-		exp.label := pLabel;
-		exp.lexName  := pName;
-		mList.Add(codes.export, exp)
-	END ProcExport_Add;
+PROCEDURE case* (a, b, L, R: INTEGER);
+VAR
+    cmd: COMMAND3;
 
-PROCEDURE Imp_Add* (pDll, pProc: mScan.LEXSTR): tpProcImport;
-	VAR
-		_lib: tpLibImport;
-		_proc:   tpProcImport;
-	BEGIN
-		_lib := codes.import.first(tpLibImport);
-		WHILE (_lib # NIL) & (_lib.lexName # pDll) DO
-			_lib := _lib.next(tpLibImport)
-		END;
+BEGIN
+    IF a = b THEN
+        NEW(cmd);
+        cmd.opcode := opCASELR;
+        cmd.param1 := a;
+        cmd.param2 := L;
+        cmd.param3 := R;
+        insert(codes.last, cmd)
+    ELSE
+        AddCmd2(opCASEL, a, L);
+        AddCmd2(opCASER, b, R)
+    END
+END case;
 
-		IF _lib = NIL THEN
-			NEW(_lib);
-			_lib.lexName := pDll;
-			_lib.procs := mList.New(NIL);
-			mList.Add(codes.import, _lib)
-		END;
 
-		_proc := _lib.procs.first(tpProcImport);
-		WHILE (_proc # NIL) & (_proc.lexName # pProc) DO
-			_proc := _proc.next(tpProcImport)
-		END;
+PROCEDURE caset* (a, label: INTEGER);
+BEGIN
+    AddCmd2(opCASET, label, a)
+END caset;
 
-		IF _proc = NIL THEN
-			NEW(_proc);
-			_proc.lexName  := pProc;
-			_proc.label := Label_New();
-			_proc.lib   := _lib;
-			_proc.count := 1;
-			mList.Add(_lib.procs, _proc)
-		ELSE
-			INC(_proc.count)
-		END
 
-		RETURN _proc
-	END Imp_Add;
+PROCEDURE AddExp* (label: INTEGER; name: SCAN.LEXSTR);
+VAR
+    exp: EXPORT_PROC;
 
-PROCEDURE Import_Del* (pImport: mList.tpItem);
-	VAR
-		_lib: tpLibImport;
-	BEGIN
-		DEC(pImport(tpProcImport).count);
-		IF pImport(tpProcImport).count = 0 THEN
-			_lib := pImport(tpProcImport).lib;
-			mList.Del(_lib.procs, pImport);
-			IF _lib.procs.first = NIL THEN
-				mList.Del(codes.import, _lib)
-			END
-		END
-	END Import_Del;
+BEGIN
+    NEW(exp);
+    exp.label := label;
+    exp.name  := name;
+    LISTS.push(codes.export, exp)
+END AddExp;
 
-PROCEDURE Init* (pNumRegsFloat, pEndianness: INTEGER);
-	VAR
-		_cmd:    tpCommand;
-		_i:      INTEGER;
-	BEGIN
-		numRegsFloat := pNumRegsFloat;
-		endianness := pEndianness;
-		NEW(codes);
-		NEW(codes.call_beg);
-		codes.call_beg.top := -1;
-		NEW(codes.call_end);
-		codes.call_end.top := -1;
-		codes.commands := mList.New(NIL);
-		codes.export   := mList.New(NIL);
-		codes.import   := mList.New(NIL);
-		codes.types    := mChl.CreateIntList();
-		codes.data     := mChl.CreateByteList();
 
-		NEW(_cmd); _cmd.opCode := opNOP; mList.Add(codes.commands, _cmd);
-		codes.last := _cmd;
-		NEW(_cmd); _cmd.opCode := opNOP; mList.Add(codes.commands, _cmd);
+PROCEDURE AddImp* (dll, proc: SCAN.LEXSTR): IMPORT_PROC;
+VAR
+    lib: IMPORT_LIB;
+    p:   IMPORT_PROC;
 
-		Rec_Add(0);
+BEGIN
+    lib := codes.import.first(IMPORT_LIB);
+    WHILE (lib # NIL) & (lib.name # dll) DO
+        lib := lib.next(IMPORT_LIB)
+    END;
 
-		codes.lcount := 0;
+    IF lib = NIL THEN
+        NEW(lib);
+        lib.name := dll;
+        lib.procs := LISTS.create(NIL);
+        LISTS.push(codes.import, lib)
+    END;
 
-		codes.fregs := 0;
+    p := lib.procs.first(IMPORT_PROC);
+    WHILE (p # NIL) & (p.name # proc) DO
+        p := p.next(IMPORT_PROC)
+    END;
 
-		FOR _i := 0 TO LEN(codes.charoffs) - 1 DO
-			codes.charoffs[_i] := -1
-		END;
+    IF p = NIL THEN
+        NEW(p);
+        p.name  := proc;
+        p.label := NewLabel();
+        p.lib   := lib;
+        p.count := 1;
+        LISTS.push(lib.procs, p)
+    ELSE
+        INC(p.count)
+    END
 
-		FOR _i := 0 TO LEN(codes.wcharoffs) - 1 DO
-			codes.wcharoffs[_i] := -1
-		END
-	END Init;
+    RETURN p
+END AddImp;
+
+
+PROCEDURE DelImport* (imp: LISTS.ITEM);
+VAR
+    lib: IMPORT_LIB;
+
+BEGIN
+    DEC(imp(IMPORT_PROC).count);
+    IF imp(IMPORT_PROC).count = 0 THEN
+        lib := imp(IMPORT_PROC).lib;
+        LISTS.delete(lib.procs, imp);
+        IF lib.procs.first = NIL THEN
+            LISTS.delete(codes.import, lib)
+        END
+    END
+END DelImport;
+
+
+PROCEDURE init* (pNumRegsFloat, pEndianness: INTEGER);
+VAR
+    cmd:    COMMAND;
+    i:      INTEGER;
+
+BEGIN
+    numRegsFloat := pNumRegsFloat;
+    endianness := pEndianness;
+
+    NEW(codes);
+    NEW(codes.begcall);
+    codes.begcall.top := -1;
+    NEW(codes.endcall);
+    codes.endcall.top := -1;
+    codes.commands := LISTS.create(NIL);
+    codes.export   := LISTS.create(NIL);
+    codes.import   := LISTS.create(NIL);
+    codes.types    := CHL.CreateIntList();
+    codes.data     := CHL.CreateByteList();
+
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
+    codes.last := cmd;
+    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
+
+    AddRec(0);
+
+    codes.lcount := 0;
+
+    codes.fregs := 0;
+
+    FOR i := 0 TO LEN(codes.charoffs) - 1 DO
+        codes.charoffs[i] := -1
+    END;
+
+    FOR i := 0 TO LEN(codes.wcharoffs) - 1 DO
+        codes.wcharoffs[i] := -1
+    END
+
+END init;
+
 
 END CODE.

@@ -1,87 +1,107 @@
-﻿MODULE UTILS;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE UTILS;
 
 IMPORT HOST, UNIXTIME;
 
+
 CONST
-	slash* = HOST.slash;
-	bit_depth* = HOST.bit_depth;
-	maxint* = HOST.maxint;
-	minint* = HOST.minint;
+
+    slash* = HOST.slash;
+
+    bit_depth* = HOST.bit_depth;
+    maxint* = HOST.maxint;
+    minint* = HOST.minint;
+
 
 VAR
-	time*: INTEGER;
-	eol*:  ARRAY 3 OF CHAR;
+
+    time*: INTEGER;
+
+    eol*:  ARRAY 3 OF CHAR;
+
 
 PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-		RETURN HOST.FileRead(F, Buffer, bytes)
-	END FileRead;
+    RETURN HOST.FileRead(F, Buffer, bytes)
+END FileRead;
+
 
 PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-		RETURN HOST.FileWrite(F, Buffer, bytes)
-	END FileWrite;
+    RETURN HOST.FileWrite(F, Buffer, bytes)
+END FileWrite;
+
 
 PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
-		RETURN HOST.FileCreate(FName)
-	END FileCreate;
+    RETURN HOST.FileCreate(FName)
+END FileCreate;
+
 
 PROCEDURE FileClose* (F: INTEGER);
-	BEGIN
-		HOST.FileClose(F)
-	END FileClose;
+BEGIN
+    HOST.FileClose(F)
+END FileClose;
+
 
 PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
-		RETURN HOST.FileOpen(FName)
-	END FileOpen;
+    RETURN HOST.FileOpen(FName)
+END FileOpen;
+
 
 PROCEDURE GetArg* (i: INTEGER; VAR str: ARRAY OF CHAR);
-	BEGIN
-		HOST.GetArg(i, str)
-	END GetArg;
+BEGIN
+    HOST.GetArg(i, str)
+END GetArg;
+
 
 PROCEDURE Exit* (code: INTEGER);
-	BEGIN
-		HOST.ExitProcess(code)
-	END Exit;
+BEGIN
+    HOST.ExitProcess(code)
+END Exit;
+
 
 PROCEDURE GetTickCount* (): INTEGER;
-		RETURN HOST.GetTickCount()
-	END GetTickCount;
+    RETURN HOST.GetTickCount()
+END GetTickCount;
+
 
 PROCEDURE OutChar* (c: CHAR);
-	BEGIN
-		HOST.OutChar(c)
-	END OutChar;
+BEGIN
+    HOST.OutChar(c)
+END OutChar;
 
-PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER);
-	BEGIN
-		HOST.splitf(x, a, b)
-	END splitf;
+
+PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
+    RETURN HOST.splitf(x, a, b)
+END splitf;
+
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
-		RETURN HOST.isRelative(path)
-	END isRelative;
+    RETURN HOST.isRelative(path)
+END isRelative;
+
 
 PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
-	BEGIN
-		HOST.GetCurrentDirectory(path)
-	END GetCurrentDirectory;
+BEGIN
+    HOST.GetCurrentDirectory(path)
+END GetCurrentDirectory;
+
 
 PROCEDURE UnixTime* (): INTEGER;
-	VAR
-		year, month, day, hour, min, sec: INTEGER;
-
-	BEGIN
-		HOST.now(year, month, day, hour, min, sec)
-		RETURN UNIXTIME.Time_Get(year, month, day, hour, min, sec)
-	END UnixTime;
+VAR
+    year, month, day, hour, min, sec: INTEGER;
 
 BEGIN
-	time := GetTickCount();
-	COPY(HOST.eol, eol)
+    HOST.now(year, month, day, hour, min, sec)
+    RETURN UNIXTIME.time(year, month, day, hour, min, sec)
+END UnixTime;
+
+
+BEGIN
+    time := GetTickCount();
+    COPY(HOST.eol, eol)
 END UTILS.

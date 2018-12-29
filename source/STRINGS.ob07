@@ -7,7 +7,7 @@
 
 MODULE STRINGS;
 
-IMPORT MACHINE;
+IMPORT UTILS;
 
 
 PROCEDURE append* (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
@@ -58,13 +58,13 @@ VAR
     i, a: INTEGER;
     minus: BOOLEAN;
 
-BEGIN  
-    IF x = MACHINE.native.minInt THEN
-        IF MACHINE.native.bit_depth = 32 THEN
+BEGIN
+    IF x = UTILS.minint THEN
+        IF UTILS.bit_depth = 32 THEN
             COPY("-2147483648", str)
-        ELSIF MACHINE.native.bit_depth = 64 THEN
+        ELSIF UTILS.bit_depth = 64 THEN
             COPY("-9223372036854775808", str)
-        END 
+        END
 
     ELSE
 
@@ -87,7 +87,7 @@ BEGIN
 
         str[i] := 0X;
         reverse(str)
-    
+
     END
 END IntToStr;
 

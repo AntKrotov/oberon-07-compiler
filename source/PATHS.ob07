@@ -1,93 +1,109 @@
-﻿MODULE PATHS;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
 
-IMPORT mStr := STRINGS,
-	mUtil := UTILS,
-	mConst := modConstante;
+MODULE PATHS;
 
+IMPORT STRINGS, UTILS;
+
+
+CONST
+
+    slash = UTILS.slash; 
+    
+    PATHLEN = 2048;
+    
+    
 TYPE
-	tPath* = ARRAY mConst.pathLen OF CHAR;
 
-PROCEDURE Split* (pFileName: ARRAY OF CHAR; VAR pPath, pName, pExt: ARRAY OF CHAR);
-	VAR
-		_pos1, _pos2, _len: INTEGER;
-	BEGIN
-		_len := LENGTH(pFileName);
-		_pos1 := _len - 1;
-		_pos2 := _len - 1;
-		mStr.search(pFileName, _pos1, mConst.slash, FALSE);
-		mStr.search(pFileName, _pos2,   ".", FALSE);
+    PATH* = ARRAY PATHLEN OF CHAR;
 
-		pPath := pFileName;
-		pPath[_pos1 + 1] := 0X;
 
-		IF (_pos2 = -1) OR (_pos2 < _pos1) THEN
-			_pos2 := _len
-		END;
+PROCEDURE split* (fname: ARRAY OF CHAR; VAR path, name, ext: ARRAY OF CHAR);
+VAR
+    pos1, pos2, len: INTEGER;
 
-		INC(_pos1);
+BEGIN
+    len := LENGTH(fname);
+    pos1 := len - 1;
+    pos2 := len - 1;
+    STRINGS.search(fname, pos1, slash, FALSE);
+    STRINGS.search(fname, pos2,   ".", FALSE);
 
-		mStr.copy(pFileName, pName, _pos1, 0, _pos2 - _pos1);
-		pName[_pos2 - _pos1] := 0X;
-		mStr.copy(pFileName, pExt, _pos2, 0, _len - _pos2);
-		pExt[_len - _pos2] := 0X;
+    path := fname;
+    path[pos1 + 1] := 0X;
 
-	END Split;
+    IF (pos2 = -1) OR (pos2 < pos1) THEN
+        pos2 := len
+    END;
 
-PROCEDURE RelPath* (pAbsolute, pRelative: ARRAY OF CHAR; VAR pRes: ARRAY OF CHAR);
-	VAR
-		_i, _j: INTEGER;
-		_bError: BOOLEAN;
-	BEGIN
-		COPY(pAbsolute, pRes);
-		_i := LENGTH(pRes) - 1;
-		WHILE (_i >= 0) & (pRes[_i] # mConst.slash) DO
-			DEC(_i)
-		END;
+    INC(pos1);
 
-		INC(_i);
-		pRes[_i] := 0X;
+    STRINGS.copy(fname, name, pos1, 0, pos2 - pos1);
+    name[pos2 - pos1] := 0X;
+    STRINGS.copy(fname, ext, pos2, 0, len - pos2);
+    ext[len - pos2] := 0X;
 
-		_bError := FALSE;
-		_j := 0;
-		WHILE ~_bError & (pRelative[_j] # 0X) DO
-			IF (pRelative[_j] = ".") & (pRelative[_j + 1] = ".") & (pRelative[_j + 2] = mConst.slash) & (_i > 0) & (pRes[_i - 1] = mConst.slash) THEN
-				DEC(_i, 2);
-				WHILE (_i >= 0) & (pRes[_i] # mConst.slash) DO
-					DEC(_i)
-				END;
-				IF _i < 0 THEN
-					_bError := TRUE
-				ELSE
-					INC(_i);
-					INC(_j, 3)
-				END
-			ELSE
-				pRes[_i] := pRelative[_j];
-				INC(_i);
-				INC(_j)
-			END
-		END;
+END split;
 
-		IF _bError THEN
-			COPY(pRelative, pRes)
-		ELSE
-			pRes[_i] := 0X
-		END
-	END RelPath;   
 
-PROCEDURE IsRelative* (pPath: ARRAY OF CHAR): BOOLEAN;
-		RETURN mUtil.isRelative(pPath)
-	END IsRelative;  
+PROCEDURE RelPath* (absolute, relative: ARRAY OF CHAR; VAR res: ARRAY OF CHAR);
+VAR
+    i, j: INTEGER;
+    error: BOOLEAN;
 
-PROCEDURE CurrentDirectory_Get* (VAR pPath: ARRAY OF CHAR);
-	BEGIN
-		mUtil.GetCurrentDirectory(pPath)
-	END CurrentDirectory_Get;
+BEGIN
+    COPY(absolute, res);
+    i := LENGTH(res) - 1;
+    WHILE (i >= 0) & (res[i] # slash) DO
+        DEC(i)
+    END;
+
+    INC(i);
+    res[i] := 0X;
+
+    error := FALSE;
+    j := 0;
+    WHILE ~error & (relative[j] # 0X) DO
+        IF (relative[j] = ".") & (relative[j + 1] = ".") & (relative[j + 2] = slash) & (i > 0) & (res[i - 1] = slash) THEN
+            DEC(i, 2);
+            WHILE (i >= 0) & (res[i] # slash) DO
+                DEC(i)
+            END;
+            IF i < 0 THEN
+                error := TRUE
+            ELSE
+                INC(i);
+                INC(j, 3)
+            END
+        ELSE
+            res[i] := relative[j];
+            INC(i);
+            INC(j)
+        END
+    END;
+
+    IF error THEN
+        COPY(relative, res)
+    ELSE
+        res[i] := 0X
+    END
+
+END RelPath;   
+
+
+PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
+    RETURN UTILS.isRelative(path)
+END isRelative;  
+
+
+PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
+BEGIN
+    UTILS.GetCurrentDirectory(path)
+END GetCurrentDirectory;
+
 
 END PATHS.

@@ -1,94 +1,111 @@
-﻿MODULE WRITER;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
 
-IMPORT mFile := FILES,
-	mErr := ERRORS,
-	mMach := MACHINE;
+MODULE WRITER;
+
+IMPORT FILES, ERRORS, MACHINE;
+
 
 TYPE
-	tpFile* = mFile.tpFile;
+
+    FILE* = FILES.FILE;
+
 
 VAR
-	counter*: INTEGER;
 
-PROCEDURE Aligh_Get (pNum, pAlign: INTEGER): INTEGER;
-	BEGIN
-		IF pNum MOD pAlign # 0 THEN
-			pNum := pNum + pAlign - (pNum MOD pAlign)
-		END
+    counter*: INTEGER;
 
-		RETURN pNum
-	END Aligh_Get;
 
-PROCEDURE Byte_Write* (pFile: tpFile; pByte: BYTE);
-	BEGIN
-		IF mFile.WriteByte(pFile, pByte) THEN
-			INC(counter)
-		ELSE
-			mErr.Error1("writing file error")
-		END
-	END Byte_Write;
+PROCEDURE align (n, _align: INTEGER): INTEGER;
+BEGIN
+    IF n MOD _align # 0 THEN
+        n := n + _align - (n MOD _align)
+    END
 
-PROCEDURE Write* (pFile: tpFile; pChunk: ARRAY OF BYTE; pLenBytes: INTEGER);
-	VAR
-		_len: INTEGER;
-	BEGIN
-		_len := mFile.Write(pFile, pChunk, pLenBytes);
-		IF _len # pLenBytes THEN
-			mErr.Error1("writing file error")
-		END;
-		INC(counter, _len)
-	END Write;
+    RETURN n
+END align;
 
-PROCEDURE Write64LE* (pFile: tpFile; pLen: INTEGER);
-	VAR
-		_i: INTEGER;
-	BEGIN
-		FOR _i := 0 TO 7 DO
-			Byte_Write(pFile, mMach.Byte_Get(pLen, _i))
-		END
-	END Write64LE;
 
-PROCEDURE Write32LE* (pFile: tpFile; pLen: INTEGER);
-	VAR
-		_i: INTEGER;
-	BEGIN
-		FOR _i := 0 TO 3 DO
-			Byte_Write(pFile, mMach.Byte_Get(pLen, _i))
-		END
-	END Write32LE;
+PROCEDURE WriteByte* (file: FILE; n: BYTE);
+BEGIN
+    IF FILES.WriteByte(file, n) THEN
+        INC(counter)
+    ELSE
+        ERRORS.error1("writing file error")
+    END
+END WriteByte;
 
-PROCEDURE Write16LE* (pFile: tpFile; pLen: INTEGER);
-	BEGIN
-		Byte_Write(pFile, mMach.Byte_Get(pLen, 0));
-		Byte_Write(pFile, mMach.Byte_Get(pLen, 1))
-	END Write16LE;
 
-PROCEDURE Padding* (pFile: tpFile; FileAlignment: INTEGER);
-	VAR
-		_i: INTEGER;
-	BEGIN
-		_i := Aligh_Get(counter, FileAlignment) - counter;
-		WHILE _i > 0 DO
-			Byte_Write(pFile, 0);
-			DEC(_i)
-		END
-	END Padding;
+PROCEDURE Write* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER);
+VAR
+    n: INTEGER;
 
-PROCEDURE Create* (pFileName: ARRAY OF CHAR): tpFile;
-	BEGIN
-		counter := 0
-		RETURN mFile.Create(pFileName)
-	END Create;
+BEGIN
+    n := FILES.write(file, chunk, bytes);
+    IF n # bytes THEN
+        ERRORS.error1("writing file error")
+    END;
+    INC(counter, n)
+END Write;
 
-PROCEDURE Close* (VAR pFile: tpFile);
-	BEGIN
-		mFile.Close(pFile)
-	END Close;
+
+PROCEDURE Write64LE* (file: FILE; n: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO 7 DO
+        WriteByte(file, MACHINE.Byte(n, i))
+    END
+END Write64LE;
+
+
+PROCEDURE Write32LE* (file: FILE; n: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO 3 DO
+        WriteByte(file, MACHINE.Byte(n, i))
+    END
+END Write32LE;
+
+
+PROCEDURE Write16LE* (file: FILE; n: INTEGER);
+BEGIN
+    WriteByte(file, MACHINE.Byte(n, 0));
+    WriteByte(file, MACHINE.Byte(n, 1))
+END Write16LE;
+
+
+PROCEDURE Padding* (file: FILE; FileAlignment: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    i := align(counter, FileAlignment) - counter;
+    WHILE i > 0 DO
+        WriteByte(file, 0);
+        DEC(i)
+    END
+END Padding;
+
+
+PROCEDURE Create* (FileName: ARRAY OF CHAR): FILE;
+BEGIN
+    counter := 0
+    RETURN FILES.create(FileName)
+END Create;
+
+
+PROCEDURE Close* (VAR file: FILE);
+BEGIN
+    FILES.close(file)
+END Close;
+
 
 END WRITER.

@@ -1,47 +1,59 @@
-﻿MODULE COLLECTIONS;
-(*
-	BSD 2-Clause License
+﻿(*
+    BSD 2-Clause License
 
-	Copyright (c) 2018, Anton Krotov
-	All rights reserved.
-	*)
+    Copyright (c) 2018, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE COLLECTIONS;
+                 
 
 TYPE
-	tpItem* = POINTER TO RECORD
-		link: tpItem
-	END;
 
-	tpCollection* = POINTER TO RECORD
-		last: tpItem
-	END;
+    ITEM* = POINTER TO RECORD
 
-PROCEDURE Push* (pCollection: tpCollection; item: tpItem);
-	BEGIN
-		item.link := pCollection.last;
-		pCollection.last := item
-	END Push;
+        link: ITEM
 
-PROCEDURE Pop* (pCollection: tpCollection): tpItem;
-	VAR
-		_item: tpItem;
-	BEGIN
-		_item := pCollection.last;
-		IF _item # NIL THEN
-			pCollection.last := _item.link
-		END
+    END;
 
-		RETURN _item
-	END Pop;
+    COLLECTION* = POINTER TO RECORD
 
-PROCEDURE New* (): tpCollection;
-	VAR
-		_collect: tpCollection;
+        last: ITEM
 
-	BEGIN
-		NEW(_collect);
-		_collect.last := NIL
+    END;
 
-		RETURN _collect
-	END New;
+
+PROCEDURE push* (collection: COLLECTION; item: ITEM);
+BEGIN
+    item.link := collection.last;
+    collection.last := item
+END push;
+
+
+PROCEDURE pop* (collection: COLLECTION): ITEM;
+VAR
+    item: ITEM;
+
+BEGIN
+    item := collection.last;
+    IF item # NIL THEN
+        collection.last := item.link
+    END
+
+    RETURN item
+END pop;
+
+
+PROCEDURE create* (): COLLECTION;
+VAR
+    collection: COLLECTION;
+
+BEGIN
+    NEW(collection);
+    collection.last := NIL
+
+    RETURN collection
+END create;
+
 
 END COLLECTIONS.
