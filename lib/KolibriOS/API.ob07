@@ -216,6 +216,12 @@ BEGIN
 END exit;
 
 
+PROCEDURE exit_thread* (p1: INTEGER);
+BEGIN
+    K.sysfunc1(-1)
+END exit_thread;
+
+
 PROCEDURE OutChar (c: CHAR);
 BEGIN
     K.sysfunc3(63, 1, ORD(c))

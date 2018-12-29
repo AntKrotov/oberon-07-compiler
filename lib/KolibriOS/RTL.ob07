@@ -520,7 +520,7 @@ BEGIN
 
     API.DebugMsg(SYSTEM.ADR(s[0]), name);
 
-    API.exit(0)
+    API.exit_thread(0)
 END _error;
 
 
