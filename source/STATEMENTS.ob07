@@ -1645,6 +1645,7 @@ VAR
         params:   INTEGER;
         fparams:  SET;
         fregs:    INTEGER;
+        procType: PROG.TYPE_;
 
 
         PROCEDURE LoadVar (e: PARS.EXPR; parser: PARS.PARSER; pos: SCAN.POSITION);
@@ -1694,12 +1695,19 @@ VAR
             IF parser.sym = SCAN.lxLROUND THEN
                 e1 := e;
                 ActualParameters(parser, e);
-
                 PARS.check(e.type # NIL, parser, pos, 59);
+
+                procType := NIL;
                 IF e1.obj IN {ePROC, eIMP} THEN
-                    cconv := e1.ident.type.call;
+                    procType := e1.ident.type
+                ELSIF isExpr(e1) THEN   
+                    procType := e1.type
+                END;   
+                
+                IF procType # NIL THEN
+                    cconv := procType.call;
+                    params := procType.params.size;
                     call64 := cconv IN {PROG.call64, PROG.win64};
-                    params := e1.ident.type.params.size;
                     CODE.setlast(begcall);
                     fregs := CODE.precall(e.type.typ = PROG.tREAL);
                     IF call64 THEN
@@ -1708,45 +1716,21 @@ VAR
                         CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
                     END;
                     CODE.setlast(endcall.prev(CODE.COMMAND));
+                    fparams := procType.params.getfparams(procType, 3);
                     
-                    fparams := e1.ident.type.params.getfparams(e1.ident.type, 3);
+                    IF e1.obj IN {ePROC, eIMP} THEN
 
-                    IF e1.obj = eIMP THEN
-                        CODE.CallImp(e1.ident.import, call64, MIN(params, 4), fparams)
-                    ELSE
-                        CODE.Call(e1.ident.proc.label, call64, MIN(params, 4), fparams)
+                        IF e1.obj = eIMP THEN
+                            CODE.CallImp(e1.ident.import, call64, MIN(params, 4), fparams)
+                        ELSE
+                            CODE.Call(e1.ident.proc.label, call64, MIN(params, 4), fparams)
+                        END
+
+                    ELSIF isExpr(e1) THEN
+                        deref(pos, e1, FALSE, errPROC);
+                        CODE.CallP(call64, MIN(params, 4), fparams)
                     END;
-
-                    IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
-                        CODE.AddCmd(CODE.opCLEANUP16, params)
-                    ELSIF cconv = PROG.cdecl THEN
-                        CODE.AddCmd(CODE.opCLEANUP, params)
-                    END;
-
-                    IF e.type.typ = PROG.tREAL THEN
-                        PARS.check(CODE.resf(fregs), parser, pos, 41)
-                    ELSE
-                        CODE.res(fregs)
-                    END
-
-                ELSIF isExpr(e1) THEN
-                    cconv := e1.type.call;
-                    call64 := cconv IN {PROG.call64, PROG.win64};
-                    params := e1.type.params.size;
-                    CODE.setlast(begcall);
-                    fregs := CODE.precall(e.type.typ = PROG.tREAL);
-                    IF call64 THEN
-                        CODE.AddCmd(CODE.opALIGN16, ORD(ODD(MAX(params - 4, 0))) + MAX(4 - params, 0))
-                    (*ELSIF cconv = PROG.cdecl16 THEN
-                        CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
-                    END;
-                    CODE.setlast(endcall.prev(CODE.COMMAND));
-                    deref(pos, e1, FALSE, errPROC);
-                    
-                    fparams := e1.type.params.getfparams(e1.type, 3);
-
-                    CODE.CallP(call64, MIN(params, 4), fparams);
-
+                
                     IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
                         CODE.AddCmd(CODE.opCLEANUP16, params)
                     ELSIF cconv = PROG.cdecl THEN
@@ -1759,6 +1743,7 @@ VAR
                         CODE.res(fregs)
                     END
                 END
+
             END;
             CODE.popBegEnd(begcall, endcall)
 
@@ -2443,7 +2428,8 @@ VAR
     params:   INTEGER;
     fparams:  SET;
     cconv:    INTEGER;
-    call64:   BOOLEAN;
+    call64:   BOOLEAN; 
+    procType: PROG.TYPE_;
 
 BEGIN
     getpos(parser, pos);
@@ -2477,34 +2463,19 @@ BEGIN
         call := TRUE
     END;
 
-    cconv := -1;
-
     IF call THEN
+        procType := NIL;
+
         IF e.obj IN {ePROC, eIMP} THEN
-            cconv := e.ident.type.call;
-            call64 := cconv IN {PROG.call64, PROG.win64};
-            params := e.ident.type.params.size;
-            CODE.setlast(begcall);
-            ASSERT(CODE.precall(FALSE) = 0);
-            IF call64 THEN
-                CODE.AddCmd(CODE.opALIGN16, ORD(ODD(MAX(params - 4, 0))) + MAX(4 - params, 0))
-            (*ELSIF cconv = PROG.cdecl16 THEN
-                CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
-            END;
-            CODE.setlast(endcall.prev(CODE.COMMAND));
-            
-            fparams := e.ident.type.params.getfparams(e.ident.type, 3);
-
-            IF e.obj = eIMP THEN
-                CODE.CallImp(e.ident.import, call64, MIN(params, 4), fparams)
-            ELSE
-                CODE.Call(e.ident.proc.label, call64, MIN(params, 4), fparams)
-            END
-
+            procType := e.ident.type
         ELSIF isExpr(e) THEN
-            cconv := e.type.call;
+            procType := e.type
+        END;
+        
+        IF procType # NIL THEN
+            cconv := procType.call;
+            params := procType.params.size;
             call64 := cconv IN {PROG.call64, PROG.win64};
-            params := e.type.params.size;
             CODE.setlast(begcall);
             ASSERT(CODE.precall(FALSE) = 0);
             IF call64 THEN
@@ -2513,20 +2484,30 @@ BEGIN
                 CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
             END;
             CODE.setlast(endcall.prev(CODE.COMMAND));
-            deref(pos, e, TRUE, errPROC); 
-            fparams := e.type.params.getfparams(e.type, 3);
-            CODE.CallP(call64, MIN(params, 4), fparams)
+            fparams := procType.params.getfparams(procType, 3); 
+            
+            IF e.obj IN {ePROC, eIMP} THEN
+
+                IF e.obj = eIMP THEN
+                    CODE.CallImp(e.ident.import, call64, MIN(params, 4), fparams)
+                ELSE
+                    CODE.Call(e.ident.proc.label, call64, MIN(params, 4), fparams)
+                END
+
+            ELSIF isExpr(e) THEN
+                deref(pos, e, TRUE, errPROC);
+                CODE.CallP(call64, MIN(params, 4), fparams)
+            END;
+
+            IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
+                CODE.AddCmd(CODE.opCLEANUP16, params)
+            ELSIF cconv = PROG.cdecl THEN
+                CODE.AddCmd(CODE.opCLEANUP, params)
+            END
         END
     END;
 
-    CODE.popBegEnd(begcall, endcall);
-
-    IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
-        CODE.AddCmd(CODE.opCLEANUP16, params)
-    ELSIF cconv = PROG.cdecl THEN
-        CODE.AddCmd(CODE.opCLEANUP, params)
-    END
-
+    CODE.popBegEnd(begcall, endcall)
 END ElementaryStatement;
 
 
@@ -3261,7 +3242,7 @@ BEGIN
     END;
 
     PARS.destroy(parser);
-    
+
     IF PARS.program.bss > mConst.MAX_GLOBAL_SIZE THEN
         ERRORS.error1("size of global variables is too large")
     END;

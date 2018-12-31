@@ -2315,8 +2315,7 @@ BEGIN
         pic := FALSE
     END;
 
-    R := REG.Create(push, pop, mov, xchg);
-    R.regs := {REG.R0, REG.R1, REG.R2};
+    R := REG.Create(push, pop, mov, xchg, {eax, ecx, edx});
 
     prolog(code, pic, target, stack, dllinit, dllret);
     translate(code, pic, CHL.Length(code.types) * 4);

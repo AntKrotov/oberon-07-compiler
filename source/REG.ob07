@@ -10,9 +10,10 @@ MODULE REG;
 
 CONST
 
-    N = 5;
+    N = 16;
 
-    R0* = 0; R1* = 1; R2* = 2; R8* = 8; R9* = 9;
+    R0* = 0; R1* = 1; R2* = 2;
+    R8* = 8; R9* = 9; R10* = 10; R11* = 11;
 
 
 TYPE
@@ -270,14 +271,14 @@ BEGIN
 END PushAll;
 
 
-PROCEDURE Create* (push, pop: OP1; mov, xch: OP2): REGS;
+PROCEDURE Create* (push, pop: OP1; mov, xch: OP2; regs: SET): REGS;
 VAR
     R: REGS;
 
 BEGIN
     NEW(R);
 
-    R.regs := {R0, R1, R2, R8, R9};
+    R.regs := regs;
     R.pushed := 0;
     R.top := -1;
 
