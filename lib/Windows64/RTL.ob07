@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -35,6 +35,20 @@ VAR
         thread_detach,
         thread_attach: DLL_ENTRY
     END;
+
+
+PROCEDURE [stdcall] _unpk* (VAR n, r: INTEGER);
+BEGIN
+    n := LSR(LSL(r, 1), 53) - 1023;
+    r := ORD(BITS(r) + {52..61} - {62})
+END _unpk;
+
+
+PROCEDURE [stdcall] _pack* (n: INTEGER; VAR r: INTEGER);
+BEGIN
+    n := LSL(ORD(BITS((LSR(LSL(r, 1), 53) + n)) * {0..10}), 52);
+    r := ORD((BITS(r) - {52..61}) + BITS(n))
+END _pack;
 
 
 PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
@@ -172,7 +186,10 @@ END _excl;
 PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-
+              
+    049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
+    049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
+    
     048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
     048H, 08BH, 04DH, 018H,    (*  mov     rcx, qword [rbp + 24]  *)
     048H, 031H, 0D2H,          (*  xor     rdx, rdx               *)
@@ -185,6 +202,10 @@ BEGIN
     048H, 089H, 011H,          (*  mov     qword [rcx], rdx       *)
     048H, 089H, 0ECH,          (*  mov     rsp, rbp               *)
     05DH,                      (*  pop     rbp                    *)
+    
+    049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
+    049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
+
     0C2H, 018H, 000H           (*  ret     24                     *)
                )
     RETURN 0
@@ -197,7 +218,7 @@ VAR
 
 BEGIN
     div := divmod(x, y, mod);
-    IF (mod # 0) & ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) THEN
+    IF ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) & (mod # 0) THEN
         DEC(div)
     END
 
@@ -211,7 +232,7 @@ VAR
 
 BEGIN
     div := divmod(x, y, mod);
-    IF (mod # 0) & ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) THEN
+    IF ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) & (mod # 0) THEN
         INC(mod, y)
     END
 
@@ -613,7 +634,6 @@ END _exit;
 
 PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; import, code: INTEGER);
 BEGIN
-    SYSTEM.CODE(09BH, 0DBH, 0E3H); (* finit *)
     API.init(import, code);
 
     types := _types;
