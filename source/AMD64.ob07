@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -517,7 +517,7 @@ BEGIN
             ASSERT(xmm = -1);
             PushAll(0)
 
-        |CODE.opALIGN16: 
+        |CODE.opALIGN16:
             reg1 := REG.GetAnyReg(R);
             Write("mov "); Write(regs[reg1]); WriteLn(",rsp");
             WriteLn("and rsp,-16");
@@ -572,7 +572,7 @@ BEGIN
             END;
 
             n := param2;
-            IF n > 4 THEN  
+            IF n > 4 THEN
                 WriteLn("mov r10, rcx");
                 Write("mov rcx,"); WriteHexLn(n);
                 WriteLn("@@: push 0");
@@ -1980,36 +1980,17 @@ BEGIN
             Write("movsd "); xmmr(xmm); WriteLn(",qword[NUMBERS+32]")
 
         |CODE.opPACKC:
-            UnOp(reg1);
+            PushAll(1);
             pushc(param2);
-            WriteLn("fild qword[rsp]");
-            Write("fld qword["); Write(regs[reg1]); WriteLn("]");
-            WriteLn("fscale");
-            Write("fstp qword["); Write(regs[reg1]); WriteLn("]");
-            WriteLn("fistp qword[rsp]");
-            pop(reg1);
-            drop
+            CallRTL(pic, CODE._pack)
 
         |CODE.opPACK:
-            BinOp(reg1, reg2);
-            push(reg2);
-            WriteLn("fild qword[rsp]");
-            Write("fld qword[");  Write(regs[reg1]); WriteLn("]");
-            WriteLn("fscale");
-            Write("fstp qword["); Write(regs[reg1]); WriteLn("]");
-            WriteLn("fistp qword[rsp]");
-            pop(reg2);
-            drop;
-            drop
+            PushAll(2);
+            CallRTL(pic, CODE._pack)
 
         |CODE.opUNPK:
-            BinOp(reg1, reg2);
-            Write("fld qword[");  Write(regs[reg1]); WriteLn("]");
-            WriteLn("fxtract");
-            Write("fstp qword["); Write(regs[reg1]); WriteLn("]");
-            Write("fistp dword["); Write(regs[reg2]); WriteLn("]");
-            drop;
-            drop
+            PushAll(2);
+            CallRTL(pic, CODE._unpk)
 
         END;
 
@@ -2022,18 +2003,18 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target: INTEGER);
+PROCEDURE prolog (code: CODE.CODES; pic: BOOLEAN; target, stack_size: INTEGER);
 BEGIN
     IF target = mConst.Target_iConsole64 THEN
         WriteLn("format PE64 console");
-        WriteLn("stack 1024*1024*2");
+        Write("stack 1024*1024*"); WriteHexLn(stack_size);
         WriteLn("entry start");
         WriteLn("section '.text' code readable executable");
         WriteLn("start:");
 
     ELSIF target = mConst.Target_iGUI64 THEN
         WriteLn("format PE64 GUI 5.0");
-        WriteLn("stack 1024*1024*2");
+        Write("stack 1024*1024*"); WriteHexLn(stack_size);
         WriteLn("entry start");
         WriteLn("section '.text' code readable executable");
         WriteLn("start:");
@@ -2234,7 +2215,7 @@ BEGIN
     END;
 
     WriteLn("section '.bss' data readable writeable");
-    Write("GLOB: rb "); WriteHexLn(code.bss);
+    Write("GLOB: rb "); WriteHexLn(MAX(code.bss, 8));
 
     IF target = mConst.Target_iDLL64 THEN
         exp := code.export.first(CODE.EXPORT_PROC);
@@ -2315,7 +2296,7 @@ BEGIN
     NewNumber(ROR(7FFH, 12));  (* +Infinity *)
 
     pic := FALSE;
-    prolog(code, pic, target);
+    prolog(code, pic, target, stack);
     translate(code.commands, pic, CHL.Length(code.types) * 8);
     epilog(code, modname, pic, target);
     WR.Close(file)

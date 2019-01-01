@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -1700,10 +1700,10 @@ VAR
                 procType := NIL;
                 IF e1.obj IN {ePROC, eIMP} THEN
                     procType := e1.ident.type
-                ELSIF isExpr(e1) THEN   
+                ELSIF isExpr(e1) THEN
                     procType := e1.type
-                END;   
-                
+                END;
+
                 IF procType # NIL THEN
                     cconv := procType.call;
                     params := procType.params.size;
@@ -1717,7 +1717,7 @@ VAR
                     END;
                     CODE.setlast(endcall.prev(CODE.COMMAND));
                     fparams := procType.params.getfparams(procType, 3);
-                    
+
                     IF e1.obj IN {ePROC, eIMP} THEN
 
                         IF e1.obj = eIMP THEN
@@ -1730,7 +1730,7 @@ VAR
                         deref(pos, e1, FALSE, errPROC);
                         CODE.CallP(call64, MIN(params, 4), fparams)
                     END;
-                
+
                     IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
                         CODE.AddCmd(CODE.opCLEANUP16, params)
                     ELSIF cconv = PROG.cdecl THEN
@@ -2428,7 +2428,7 @@ VAR
     params:   INTEGER;
     fparams:  SET;
     cconv:    INTEGER;
-    call64:   BOOLEAN; 
+    call64:   BOOLEAN;
     procType: PROG.TYPE_;
 
 BEGIN
@@ -2471,7 +2471,7 @@ BEGIN
         ELSIF isExpr(e) THEN
             procType := e.type
         END;
-        
+
         IF procType # NIL THEN
             cconv := procType.call;
             params := procType.params.size;
@@ -2484,8 +2484,8 @@ BEGIN
                 CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
             END;
             CODE.setlast(endcall.prev(CODE.COMMAND));
-            fparams := procType.params.getfparams(procType, 3); 
-            
+            fparams := procType.params.getfparams(procType, 3);
+
             IF e.obj IN {ePROC, eIMP} THEN
 
                 IF e.obj = eIMP THEN
@@ -3190,6 +3190,8 @@ BEGIN
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
     getproc(rtl,  "_strcmpw",   CODE._strcmpw);
     getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
+    getproc(rtl,  "_pack",      CODE._pack);
+    getproc(rtl,  "_unpk",      CODE._unpk);
 
 END setrtl;
 

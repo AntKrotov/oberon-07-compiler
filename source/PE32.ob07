@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -698,7 +698,7 @@ BEGIN
         Size.Reloc := Size.Reloc + R.Size;
         R := R.next(RELOC)
     END;
-
+    
     IF reloc THEN
         SectionHeaders[relsec].Name                  :=  ".reloc";
         SectionHeaders[relsec].VirtualSize           :=  Size.Reloc;
@@ -737,6 +737,8 @@ BEGIN
 
     DEC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[0].SizeOfRawData);
     DEC(PEHeader.OptionalHeader.SizeOfInitializedData, SectionHeaders[2].SizeOfRawData);
+
+    PEHeader.OptionalHeader.SizeOfUninitializedData := align(SectionHeaders[2].VirtualSize, FileAlignment);
 
     FOR i := 0 TO ORD(PEHeader.FileHeader.NumberOfSections) - 1 DO
         INC(PEHeader.OptionalHeader.SizeOfImage, align(SectionHeaders[i].VirtualSize, SectionAlignment))
@@ -846,7 +848,7 @@ BEGIN
             R := R.next(RELOC)
         END;
 
-        WR.Padding(File, FileAlignment)
+        WR.Padding(File, FileAlignment) 
     END;
 
     WR.Close(File)

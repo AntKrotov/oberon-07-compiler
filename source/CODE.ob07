@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -118,6 +118,8 @@ CONST
     _strcmp2   *=  29;
     _strcmpw   *=  30;
     _strcmpw2  *=  31;
+    _pack      *=  32;
+    _unpk      *=  33;
 
 
 TYPE
@@ -186,7 +188,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 32 OF INTEGER;
+        rtl*:       ARRAY 34 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
@@ -627,7 +629,7 @@ PROCEDURE Enter* (label, params: INTEGER): COMMAND;
 VAR
     cmd: COMMAND3;
 
-BEGIN   
+BEGIN
     NEW(cmd);
     cmd.opcode := opENTER;
     cmd.param1 := label;
@@ -656,7 +658,7 @@ END Leave;
 
 PROCEDURE Call* (proc: INTEGER; call64: BOOLEAN; rparam: INTEGER; fparams: SET);
 BEGIN
-    IF call64 THEN         
+    IF call64 THEN
         ASSERT(rparam <= 4);
         ASSERT(ORD(fparams) <= 15);
         AddJmpCmd(opCALL64, proc);
