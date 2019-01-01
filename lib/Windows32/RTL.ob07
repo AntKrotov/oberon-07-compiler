@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019 Anton Krotov
     All rights reserved.
 *)
 
@@ -35,6 +35,14 @@ VAR
         thread_detach,
         thread_attach: DLL_ENTRY
     END;
+
+
+PROCEDURE [stdcall] _unpk* (VAR n, r: INTEGER);
+END _unpk;
+
+
+PROCEDURE [stdcall] _pack* (n: INTEGER; VAR r: INTEGER);
+END _pack;
 
 
 PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
