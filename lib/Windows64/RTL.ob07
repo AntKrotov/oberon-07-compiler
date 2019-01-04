@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -85,7 +85,7 @@ BEGIN
 END _move2;
 
 
-PROCEDURE [stdcall] _arrcpy* (base_size, len_src, src, len_dst, dst: INTEGER): BOOLEAN;
+PROCEDURE [stdcall] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
 
@@ -186,10 +186,10 @@ END _excl;
 PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-              
+
     049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
     049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
-    
+
     048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
     048H, 08BH, 04DH, 018H,    (*  mov     rcx, qword [rbp + 24]  *)
     048H, 031H, 0D2H,          (*  xor     rdx, rdx               *)
@@ -202,7 +202,7 @@ BEGIN
     048H, 089H, 011H,          (*  mov     qword [rcx], rdx       *)
     048H, 089H, 0ECH,          (*  mov     rsp, rbp               *)
     05DH,                      (*  pop     rbp                    *)
-    
+
     049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
     049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
 
