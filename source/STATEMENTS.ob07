@@ -942,7 +942,7 @@ BEGIN
             parser.expression(parser, e);
             PARS.check(isInt(e) OR isReal(e), parser, pos, 66);
             IF e.obj = eCONST THEN
-                ARITH.abs(e.value)
+                PARS.check(ARITH.abs(e.value), parser, pos, 39)
             ELSE
                 CODE.abs(isReal(e))
             END

@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS;
+IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS, UTILS;
 
 
 CONST
@@ -47,8 +47,8 @@ CONST
     callee_clean_up* = {default, stdcall, winapi, kosapi};
     caller_clean_up* = {cdecl, (*cdecl16,*) call64, win64};
     callconv32* = {default, stdcall, winapi, kosapi, cdecl};
-    callconv64* = {default, call64, win64, stdcall, cdecl}; 
-    
+    callconv64* = {default, call64, win64, stdcall, cdecl};
+
     STACK_FRAME = 2;
 
 
@@ -284,7 +284,7 @@ BEGIN
     IF varIdent.offset = -1 THEN
         IF varIdent.global THEN
             IF MACHINE.Align(program.bss, varIdent.type.align) THEN
-                IF MACHINE.native.maxInt - program.bss >= varIdent.type.size THEN
+                IF UTILS.maxint - program.bss >= varIdent.type.size THEN
                     varIdent.offset := program.bss;
                     INC(program.bss, varIdent.type.size)
                 END
@@ -294,7 +294,7 @@ BEGIN
             size := varIdent.type.size;
             IF MACHINE.Align(size, word) THEN
                 size := size DIV word;
-                IF MACHINE.native.maxInt - program.locsize >= size THEN
+                IF UTILS.maxint - program.locsize >= size THEN
                     INC(program.locsize, size);
                     varIdent.offset := program.locsize;
                 END
@@ -879,7 +879,7 @@ BEGIN
             res := TRUE
         END;
         item.offset := self.size;
-        res := res & (MACHINE.native.maxInt - self.size >= type.size);
+        res := res & (UTILS.maxint - self.size >= type.size);
         IF res THEN
             INC(self.size, type.size)
         END;

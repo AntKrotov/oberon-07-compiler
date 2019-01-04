@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -13,13 +13,12 @@ IMPORT UTILS;
 CONST
 
     min32* = -2147483647-1;
-    max32* = 2147483647;
+    max32* =  2147483647;
 
 
 VAR
 
-    target*,
-    native*:
+    target*:
 
       RECORD
 
@@ -42,14 +41,6 @@ BEGIN
     ASSERT((pBitDepth = 32) OR (pBitDepth = 64));
 
     _64to32 := (UTILS.bit_depth = 64) & (pBitDepth = 32);
-
-    native.bit_depth   := UTILS.bit_depth;
-    native.maxSet      := UTILS.bit_depth - 1;
-    native.maxHex      := UTILS.bit_depth DIV 4;
-    native.minInt      := UTILS.minint;
-    native.maxInt      := UTILS.maxint;
-    native.maxReal     := 1.9;
-    PACK(native.maxReal, 1023);
 
     target.bit_depth   := pBitDepth;
     target.maxSet      := pBitDepth - 1;

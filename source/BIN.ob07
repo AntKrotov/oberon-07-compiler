@@ -7,7 +7,7 @@
 
 MODULE BIN;
 
-IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH;
+IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH, UTILS;
 
 
 CONST
@@ -137,7 +137,7 @@ BEGIN
         x := LSL(x, 8) + CHL.GetByte(array, idx + i)
     END;
 
-    IF MACHINE.native.bit_depth = 64 THEN
+    IF UTILS.bit_depth = 64 THEN
         x := MACHINE.Int32To64(x)
     END
 
