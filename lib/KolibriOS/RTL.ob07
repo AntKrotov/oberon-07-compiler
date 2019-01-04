@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -95,7 +95,7 @@ BEGIN
 END _move2;
 
 
-PROCEDURE [stdcall] _arrcpy* (base_size, len_src, src, len_dst, dst: INTEGER): BOOLEAN;
+PROCEDURE [stdcall] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
 
