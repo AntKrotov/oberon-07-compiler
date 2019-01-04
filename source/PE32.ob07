@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -698,7 +698,7 @@ BEGIN
         Size.Reloc := Size.Reloc + R.Size;
         R := R.next(RELOC)
     END;
-    
+
     IF reloc THEN
         SectionHeaders[relsec].Name                  :=  ".reloc";
         SectionHeaders[relsec].VirtualSize           :=  Size.Reloc;
@@ -848,7 +848,7 @@ BEGIN
             R := R.next(RELOC)
         END;
 
-        WR.Padding(File, FileAlignment) 
+        WR.Padding(File, FileAlignment)
     END;
 
     WR.Close(File)

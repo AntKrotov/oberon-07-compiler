@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE AMD64;
 
-IMPORT CODE, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS, REG, C := CONSOLE, UTILS, mConst := CONSTANTS;
+IMPORT CODE, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS, REG, (*C := CONSOLE,*) UTILS, mConst := CONSTANTS;
 
 
 CONST
@@ -442,6 +442,10 @@ BEGIN
 
         CASE cmd.opcode OF
 
+        |CODE.opSWAP:
+            BinOp(reg1, reg2);
+            oprr("xchg", reg1, reg2)
+
         |CODE.opJMP:
             Write("jmp "); Write("L"); WriteHexLn(param1)
 
@@ -758,6 +762,15 @@ BEGIN
                     Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteHexLn(next.param2)
                 END;
                 cmd := next
+            ELSIF next.opcode = CODE.opSAVE THEN
+                UnOp(reg1);
+                Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteLn(regs[reg1]);
+                drop;
+                cmd := next
+            ELSIF next.opcode = CODE.opSAVEF THEN
+                Write("movsd qword[rbp+"); WriteHex(n); Write("],"); xmmr(xmm); WriteLn("");
+                DEC(xmm);
+                cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
                 Write("lea "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(n); WriteLn("]");
@@ -774,6 +787,11 @@ BEGIN
                 ELSE
                     Write("mov qword[GLOB+"); WriteHex(param2); Write("],"); WriteHexLn(next.param2)
                 END;
+                cmd := next
+            ELSIF next.opcode = CODE.opSAVE THEN
+                UnOp(reg1);
+                Write("mov qword[GLOB+"); WriteHex(param2); Write("],"); WriteLn(regs[reg1]);
+                drop;
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
@@ -1178,7 +1196,7 @@ BEGIN
         |CODE.opCOPY:
             PushAll(2);
             pushc(param2);
-            CallRTL(pic, CODE._move)
+            CallRTL(pic, CODE._move2)
 
         |CODE.opMOVE:
             PushAll(3);
@@ -1324,25 +1342,25 @@ BEGIN
             drop
 
         |CODE.opSAVE, CODE.opSAVE64:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             Write("mov qword["); Write(regs[reg1]); Write("],"); WriteLn(regs[reg2]);
             drop;
             drop
 
         |CODE.opSAVE8:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             Write("mov byte["); Write(regs[reg1]); Write("],"); WriteLn(regs8[reg2]);
             drop;
             drop
 
         |CODE.opSAVE16:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             Write("mov word["); Write(regs[reg1]); Write("],"); WriteLn(regs16[reg2]);
             drop;
             drop
 
         |CODE.opSAVE32:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             Write("mov dword["); Write(regs[reg1]); Write("],"); WriteLn(regs32[reg2]);
             drop;
             drop
@@ -1378,12 +1396,9 @@ BEGIN
             WriteLn("@@:")
 
         |CODE.opSBOOL:
-            UnOp(reg1);
-            drop;
-            test(reg1);
-            reg1 := REG.GetAnyReg(R);
-            setcc(setne, reg1);
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
+            test(reg2);
+            setcc(setne, reg2);
             Write("mov byte["); Write(regs[reg1]); Write("],"); WriteLn(regs8[reg2]);
             drop;
             drop
@@ -2093,7 +2108,7 @@ BEGIN
         WriteLn("push rdx");
         WriteLn("push rcx");
         CallRTL(pic, CODE._dllentry);
-        oprr("test", rax, rax);
+        test(rax);
         WriteLn("je DLLRET")
     END;
 
@@ -2108,7 +2123,7 @@ END prolog;
 
 PROCEDURE epilog (code: CODE.CODES; modname: ARRAY OF CHAR; pic: BOOLEAN; target: INTEGER);
 VAR
-    i: INTEGER;
+    i, n: INTEGER;
     number: Number;
     exp: CODE.EXPORT_PROC;
 
@@ -2215,6 +2230,12 @@ BEGIN
     END;
 
     WriteLn("section '.bss' data readable writeable");
+
+    n := code.dmin - CHL.Length(code.data);
+    IF n > 0 THEN
+        INC(code.bss, n)
+    END;
+
     Write("GLOB: rb "); WriteHexLn(MAX(code.bss, 8));
 
     IF target = mConst.Target_iDLL64 THEN

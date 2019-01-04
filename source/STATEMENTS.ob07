@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -365,7 +365,7 @@ BEGIN
 END CheckRange;
 
 
-PROCEDURE assign (e: PARS.EXPR; t: PROG.TYPE_; line: INTEGER): BOOLEAN;
+PROCEDURE assign (e: PARS.EXPR; VarType: PROG.TYPE_; line: INTEGER): BOOLEAN;
 VAR
     res:    BOOLEAN;
     label:  INTEGER;
@@ -381,18 +381,19 @@ VAR
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
         res := TRUE;
-        IF arrcomp(e.type, t) THEN
-            IF ~PROG.isOpenArray(t) THEN
-                CODE.AddCmd(CODE.opCONST, t.length);
-                CODE.AddCmd(CODE.opROT, 3)
+        IF arrcomp(e.type, VarType) THEN
+
+            IF ~PROG.isOpenArray(VarType) THEN
+                CODE.AddCmd(CODE.opCONST, VarType.length)
             END;
-            CODE.AddCmd(CODE.opCOPYA, t.base.size);
+            CODE.AddCmd(CODE.opCOPYA, VarType.base.size);
             label := CODE.NewLabel();
             CODE.AddJmpCmd(CODE.opJE, label);
             CODE.OnError(line, errCOPY);
             CODE.SetLabel(label)
-        ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
-            IF t.typ = PROG.tINTEGER THEN
+
+        ELSIF isInt(e) & (VarType.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
+            IF VarType.typ = PROG.tINTEGER THEN
                 IF e.obj = eCONST THEN
                     CODE.AddCmd(CODE.opSAVEC, ARITH.Int(e.value))
                 ELSE
@@ -406,71 +407,73 @@ BEGIN
                     END
                 ELSE
                     IF chkBYTE IN checking THEN
-                        CheckRange(256, line, errBYTE)
+                        CODE.AddCmd0(CODE.opSWAP);
+                        CheckRange(256, line, errBYTE);
+                        CODE.AddCmd0(CODE.opSWAP)
                     END;
                     CODE.AddCmd0(CODE.opSAVE8)
                 END
             END
-        ELSIF isSet(e) & (t.typ = PROG.tSET) THEN
+        ELSIF isSet(e) & (VarType.typ = PROG.tSET) THEN
             IF e.obj = eCONST THEN
                 CODE.AddCmd(CODE.opSAVEC, ARITH.Int(e.value))
             ELSE
                 CODE.AddCmd0(CODE.opSAVE)
             END
-        ELSIF isBoolean(e) & (t.typ = PROG.tBOOLEAN) THEN
+        ELSIF isBoolean(e) & (VarType.typ = PROG.tBOOLEAN) THEN
             IF e.obj = eCONST THEN
                 CODE.AddCmd(CODE.opSBOOLC, ARITH.Int(e.value))
             ELSE
                 CODE.AddCmd0(CODE.opSBOOL)
             END
-        ELSIF isReal(e) & (t.typ = PROG.tREAL) THEN
+        ELSIF isReal(e) & (VarType.typ = PROG.tREAL) THEN
             IF e.obj = eCONST THEN
                 CODE.Float(ARITH.Float(e.value))
             END;
             CODE.savef
-        ELSIF isChar(e) & (t.typ = PROG.tCHAR) THEN
+        ELSIF isChar(e) & (VarType.typ = PROG.tCHAR) THEN
             IF e.obj = eCONST THEN
                 CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
             ELSE
                 CODE.AddCmd0(CODE.opSAVE8)
             END
-        ELSIF (e.obj = eCONST) & isChar(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF (e.obj = eCONST) & isChar(e) & (VarType.typ = PROG.tWCHAR) THEN
             CODE.AddCmd(CODE.opSAVE16C, ARITH.Int(e.value))
-        ELSIF isStringW1(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF isStringW1(e) & (VarType.typ = PROG.tWCHAR) THEN
             CODE.AddCmd(CODE.opSAVE16C, StrToWChar(e.value.string(SCAN.IDENT).s))
-        ELSIF isCharW(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF isCharW(e) & (VarType.typ = PROG.tWCHAR) THEN
             IF e.obj = eCONST THEN
                 CODE.AddCmd(CODE.opSAVE16C, ARITH.Int(e.value))
             ELSE
                 CODE.AddCmd0(CODE.opSAVE16)
             END
-        ELSIF PROG.isBaseOf(t, e.type) THEN
-            IF t.typ = PROG.tPOINTER THEN
+        ELSIF PROG.isBaseOf(VarType, e.type) THEN
+            IF VarType.typ = PROG.tPOINTER THEN
                 CODE.AddCmd0(CODE.opSAVE)
             ELSE
-                CODE.AddCmd(CODE.opCOPY, t.size)
+                CODE.AddCmd(CODE.opCOPY, VarType.size)
             END
-        ELSIF (e.type.typ = PROG.tCARD32) & (t.typ = PROG.tCARD32) THEN
+        ELSIF (e.type.typ = PROG.tCARD32) & (VarType.typ = PROG.tCARD32) THEN
             CODE.AddCmd0(CODE.opSAVE32)
-        ELSIF (e.type.typ = PROG.tCARD16) & (t.typ = PROG.tCARD16) THEN
+        ELSIF (e.type.typ = PROG.tCARD16) & (VarType.typ = PROG.tCARD16) THEN
             CODE.AddCmd0(CODE.opSAVE16)
-        ELSIF ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type) THEN
+        ELSIF ~PROG.isOpenArray(VarType) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(VarType, e.type) THEN
             IF e.obj = ePROC THEN
                 CODE.AssignProc(e.ident.proc.label)
             ELSIF e.obj = eIMP THEN
                 CODE.AssignImpProc(e.ident.import)
             ELSE
-                IF t.typ = PROG.tPROCEDURE THEN
+                IF VarType.typ = PROG.tPROCEDURE THEN
                     CODE.AddCmd0(CODE.opSAVE)
                 ELSE
-                    CODE.AddCmd(CODE.opCOPY, t.size)
+                    CODE.AddCmd(CODE.opCOPY, VarType.size)
                 END
             END
-        ELSIF isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
+        ELSIF isNil(e) & (VarType.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
             CODE.AddCmd(CODE.opSAVEC, 0)
-        ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.tCHAR) & (t.length > strlen(e))) THEN
+        ELSIF isString(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base.typ = PROG.tCHAR) & (VarType.length > strlen(e))) THEN
             CODE.saves(String(e), strlen(e) + 1)
-        ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.tWCHAR) & (t.length > utf8strlen(e))) THEN
+        ELSIF isStringW(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base.typ = PROG.tWCHAR) & (VarType.length > utf8strlen(e))) THEN
             CODE.saves(StringW(e), (utf8strlen(e) + 1) * 2)
         ELSE
             res := FALSE
@@ -2442,8 +2445,14 @@ BEGIN
         line := parser.lex.pos.line;
         PARS.check(isVar(e), parser, pos, 93);
         PARS.check(~e.readOnly, parser, pos, 94);
+
+        CODE.setlast(begcall);
+
         NextPos(parser, pos);
         expression(parser, e1);
+
+        CODE.setlast(endcall.prev(CODE.COMMAND));
+
         PARS.check(assign(e1, e.type, line), parser, pos, 91);
         IF e1.obj = ePROC THEN
             PARS.check(e1.ident.global, parser, pos, 85)
@@ -2976,6 +2985,10 @@ BEGIN
     PARS.check1(ident # NIL, parser, 48);
     PARS.check1(ident.typ = PROG.idVAR, parser, 93);
     PARS.check1(ident.type.typ = PROG.tINTEGER, parser, 97);
+    PARS.ExpectSym(parser, SCAN.lxASSIGN);
+    NextPos(parser, pos);
+    expression(parser, e);
+    PARS.check(isInt(e), parser, pos, 76);
 
     offset := PROG.getOffset(PARS.program, ident);
 
@@ -2985,12 +2998,11 @@ BEGIN
         CODE.AddCmd(CODE.opLADR, -offset)
     END;
 
-    PARS.ExpectSym(parser, SCAN.lxASSIGN);
-    NextPos(parser, pos);
-    expression(parser, e);
-    PARS.check(isInt(e), parser, pos, 76);
-
-    ASSERT(assign(e, ident.type, 0));
+    IF e.obj = eCONST THEN
+        CODE.AddCmd(CODE.opSAVEC, ARITH.Int(e.value))
+    ELSE
+        CODE.AddCmd0(CODE.opSAVE)
+    END;
 
     CODE.SetLabel(L1);
 

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -100,9 +100,6 @@ END create;
 
 PROCEDURE SetParams* (program: PROGRAM; bss, stack: INTEGER; vmajor, vminor: WCHAR);
 BEGIN
-    IF bss = 0 THEN
-        bss := 4
-    END;
     program.bss    := bss;
     program.stack  := stack;
     program.vmajor := vmajor;
@@ -140,7 +137,7 @@ BEGIN
         x := LSL(x, 8) + CHL.GetByte(array, idx + i)
     END;
 
-    IF MACHINE.native.bit_depth = 64 THEN 
+    IF MACHINE.native.bit_depth = 64 THEN
         x := MACHINE.Int32To64(x)
     END
 

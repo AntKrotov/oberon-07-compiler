@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -537,6 +537,10 @@ BEGIN
 
         CASE cmd.opcode OF
 
+        |CODE.opSWAP:
+            BinOp(reg1, reg2);
+            xchg(reg1, reg2)
+
         |CODE.opJMP:
             jmp(param1)
 
@@ -711,6 +715,12 @@ BEGIN
                 OutByte2(0C7H, 45H + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], next.param2
                 OutIntByte(n);
                 OutInt(next.param2);
+                cmd := next
+            ELSIF next.opcode = CODE.opSAVE THEN
+                UnOp(reg1);
+                OutByte2(89H, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], reg1
+                OutIntByte(n);
+                drop;
                 cmd := next
             ELSE
                 reg1 := REG.GetAnyReg(R);
@@ -988,19 +998,19 @@ BEGIN
             drop
 
         |CODE.opSAVE, CODE.opSAVE32:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             OutByte2(89H, reg2 * 8 + reg1); // mov dword[reg1], reg2
             drop;
             drop
 
         |CODE.opSAVE8:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             OutByte2(88H, reg2 * 8 + reg1); // mov byte[reg1], reg2
             drop;
             drop
 
         |CODE.opSAVE16:
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
             OutByte3(66H, 89H, reg2 * 8 + reg1); // mov word[reg1], reg2
             drop;
             drop
@@ -1069,12 +1079,9 @@ BEGIN
             andrc(reg1, 1)
 
         |CODE.opSBOOL:
-            UnOp(reg1);
-            drop;
-            test(reg1);
-            reg1 := REG.GetAnyReg(R);
-            setcc(setne, reg1);
-            BinOp(reg1, reg2);
+            BinOp(reg2, reg1);
+            test(reg2);
+            setcc(setne, reg2);
             OutByte2(88H, reg2 * 8 + reg1); // mov byte[reg1], reg2
             drop;
             drop
@@ -1753,7 +1760,7 @@ BEGIN
         |CODE.opCOPY:
             PushAll(2);
             pushc(param2);
-            CallRTL(pic, CODE._move)
+            CallRTL(pic, CODE._move2)
 
         |CODE.opMOVE:
             PushAll(3);
@@ -2293,7 +2300,7 @@ BEGIN
         INC(code.bss, n)
     END;
 
-    BIN.SetParams(program, code.bss, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    BIN.SetParams(program, MAX(code.bss, 4), stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
 
 END epilog;
 

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019 Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -83,7 +83,7 @@ CONST
     opCODE* = 235;
 
     opALIGN16* = 236; opCLEANUP16* = 237;
-    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240;
+    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240; opSWAP* = 241;
 
 
     _move      *=   0;
@@ -800,6 +800,7 @@ END load;
 
 PROCEDURE SysPut* (size: INTEGER);
 BEGIN
+    AddCmd0(opSWAP);
     CASE size OF
     |1: AddCmd0(opSAVE8)
     |2: AddCmd0(opSAVE16)
