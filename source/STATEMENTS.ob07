@@ -1804,7 +1804,6 @@ VAR
                     IF e.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e.value)))
                     END;
-                    CODE.AddCmd0(CODE.opACC);
                     CODE.AddJmpCmd(CODE.opJZ, label);
                     CODE.drop
                 END
@@ -1927,8 +1926,7 @@ VAR
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e1.value)))
-                    END;
-                    CODE.AddCmd0(CODE.opACC)
+                    END
                 END
 
             END
@@ -2001,7 +1999,6 @@ VAR
                     IF e.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e.value)))
                     END;
-                    CODE.AddCmd0(CODE.opACC);
                     CODE.AddJmpCmd(CODE.opJNZ, label);
                     CODE.drop
                 END
@@ -2062,15 +2059,13 @@ VAR
             |SCAN.lxOR:
                 PARS.check(isBoolean(e) & isBoolean(e1), parser, pos, 37);
 
-
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
                     ARITH.opBoolean(e.value, e1.value, "|")
                 ELSE
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e1.value)))
-                    END;
-                    CODE.AddCmd0(CODE.opACC)
+                    END
                 END
 
             END

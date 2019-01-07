@@ -424,7 +424,7 @@ END SaveParam;
 
 PROCEDURE translate (commands: LISTS.LIST; pic: BOOLEAN; stroffs: INTEGER);
 VAR
-    cmd, next, next2: COMMAND;
+    cmd, next: COMMAND;
 
     param1, param2, param3, a, b, n, label, i: INTEGER;
 
@@ -565,7 +565,7 @@ BEGIN
 
             Write("L"); WriteHex(param1); WriteLn(":");
 
-            param3 := cmd(CODE.COMMAND3).param3;
+            param3 := cmd.param3;
 
             WriteLn("push rbp");
             WriteLn("mov rbp,rsp");
@@ -630,19 +630,13 @@ BEGIN
 
             pushc(param1);
             CallRTL(pic, CODE._move)
-
+            
         |CODE.opSADR:
-            next := cmd.next(COMMAND);
             IF pic THEN
                 ASSERT(FALSE)
             ELSE
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    Write("push _data+"); WriteHexLn(stroffs + param2);
-                    cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    Write("mov "); Write(regs[reg1]); Write(",_data+"); WriteHexLn(stroffs + param2)
-                END
+                reg1 := REG.GetAnyReg(R);
+                Write("mov "); Write(regs[reg1]); Write(",_data+"); WriteHexLn(stroffs + param2)
             END
 
         |CODE.opLOAD8:
@@ -658,21 +652,14 @@ BEGIN
             Write("mov "); Write(regs32[reg1]); Write(",dword["); Write(regs[reg1]); WriteLn("]");
             oprc("shl", reg1, 32);
             oprc("shr", reg1, 32)
-
+            
         |CODE.opLOAD64:
             UnOp(reg1);
             Write("mov "); Write(regs[reg1]); Write(",qword["); Write(regs[reg1]); WriteLn("]")
-
+            
         |CODE.opLLOAD64:
-            next := cmd.next(COMMAND);
-            n := param2 * 8;
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                Write("push qword[rbp+"); WriteHex(n); WriteLn("]");
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(n); WriteLn("]");
-            END
+            reg1 := REG.GetAnyReg(R);
+            Write("mov "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(param2 * 8); WriteLn("]")
 
         |CODE.opLLOAD8:
             reg1 := REG.GetAnyReg(R);
@@ -688,17 +675,11 @@ BEGIN
             Write("mov "); Write(regs32[reg1]); Write(",dword[rbp+"); WriteHex(param2 * 8); WriteLn("]")
 
         |CODE.opGLOAD64:
-            next := cmd.next(COMMAND);
             IF pic THEN
                 ASSERT(FALSE)
             ELSE
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    Write("push qword[GLOB+"); WriteHex(param2); WriteLn("]");
-                    cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    Write("mov "); Write(regs[reg1]); Write(",qword[GLOB+"); WriteHex(param2); WriteLn("]")
-                END
+                reg1 := REG.GetAnyReg(R);
+                Write("mov "); Write(regs[reg1]); Write(",qword[GLOB+"); WriteHex(param2); WriteLn("]")
             END
 
         |CODE.opGLOAD8:
@@ -715,8 +696,8 @@ BEGIN
                 ASSERT(FALSE)
             ELSE
                 Write("movzx "); Write(regs[reg1]); Write(",word[GLOB+"); WriteHex(param2); WriteLn("]")
-            END
-
+            END    
+            
         |CODE.opGLOAD32:
             reg1 := REG.GetAnyReg(R);
             IF pic THEN
@@ -748,26 +729,11 @@ BEGIN
             Write("mov "); Write(regs[reg2]); Write(",qword[rbp+"); WriteHex(param2 * 8); WriteLn("]");
             Write("mov "); Write(regs32[reg1]); Write(",dword["); Write(regs[reg2]); WriteLn("]");
             drop;
-
+            
         |CODE.opLADR:
             n := param2 * 8;
             next := cmd.next(COMMAND);
-            IF next.opcode = CODE.opSAVEC THEN
-                IF isLong(next.param2) THEN
-                    reg1 := REG.GetAnyReg(R);
-                    movrc(reg1, next.param2);
-                    Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteLn(regs[reg1]);
-                    drop
-                ELSE
-                    Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteHexLn(next.param2)
-                END;
-                cmd := next
-            ELSIF next.opcode = CODE.opSAVE THEN
-                UnOp(reg1);
-                Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteLn(regs[reg1]);
-                drop;
-                cmd := next
-            ELSIF next.opcode = CODE.opSAVEF THEN
+            IF next.opcode = CODE.opSAVEF THEN
                 Write("movsd qword[rbp+"); WriteHex(n); Write("],"); xmmr(xmm); WriteLn("");
                 DEC(xmm);
                 cmd := next
@@ -777,37 +743,12 @@ BEGIN
             END
 
         |CODE.opGADR:
-            next := cmd.next(COMMAND);
-            IF next.opcode = CODE.opSAVEC THEN
-                IF isLong(next.param2) THEN
-                    reg1 := REG.GetAnyReg(R);
-                    movrc(reg1, next.param2);
-                    Write("mov qword[GLOB+"); WriteHex(param2); Write("],"); WriteLn(regs[reg1]);
-                    drop
-                ELSE
-                    Write("mov qword[GLOB+"); WriteHex(param2); Write("],"); WriteHexLn(next.param2)
-                END;
-                cmd := next
-            ELSIF next.opcode = CODE.opSAVE THEN
-                UnOp(reg1);
-                Write("mov qword[GLOB+"); WriteHex(param2); Write("],"); WriteLn(regs[reg1]);
-                drop;
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(regs[reg1]); Write(",GLOB+"); WriteHexLn(param2)
-            END
+            reg1 := REG.GetAnyReg(R);
+            Write("mov "); Write(regs[reg1]); Write(",GLOB+"); WriteHexLn(param2)
 
         |CODE.opVADR:
-            n := param2 * 8;
-            next := cmd.next(COMMAND);
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                Write("push qword[rbp+"); WriteHex(n); WriteLn("]");
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                Write("mov "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(n); WriteLn("]")
-            END
+            reg1 := REG.GetAnyReg(R);
+            Write("mov "); Write(regs[reg1]); Write(",qword[rbp+"); WriteHex(param2 * 8); WriteLn("]")
 
         |CODE.opSAVE8C:
             UnOp(reg1);
@@ -940,14 +881,8 @@ BEGIN
             drop
 
         |CODE.opCONST:
-            next := cmd.next(COMMAND);
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                pushc(param2);
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                movrc(reg1, param2)
-            END
+            reg1 := REG.GetAnyReg(R);
+            movrc(reg1, param2)
 
         |CODE.opGT, CODE.opGE, CODE.opLT,
          CODE.opLE, CODE.opEQ, CODE.opNE:
@@ -1067,14 +1002,6 @@ BEGIN
                 PushAll(n)
             END
 
-        |CODE.opACC:
-            IF (R.top # 0) OR (R.stk[0] # rax) THEN
-                PushAll(0);
-                ASSERT(REG.GetReg(R, rax));
-                pop(rax);
-                DEC(R.pushed)
-            END
-
         |CODE.opJNZ:
             UnOp(reg1);
             test(reg1);
@@ -1085,15 +1012,17 @@ BEGIN
             test(reg1);
             jcc(je, param1)
 
-        |CODE.opJE, CODE.opJNE:
+        |CODE.opJE:
             UnOp(reg1);
-            drop;
             test(reg1);
-            IF cmd.opcode = CODE.opJE THEN
-                jcc(jne, param1)
-            ELSE
-                jcc(je, param1)
-            END
+            jcc(jne, param1);
+            drop;
+            
+        |CODE.opJNE:
+            UnOp(reg1);
+            test(reg1);
+            jcc(je, param1);
+            drop;
 
         |CODE.opIN:
             PushAll(2);
@@ -1114,17 +1043,13 @@ BEGIN
 
         |CODE.opNOT:
             UnOp(reg1);
-            drop;
             test(reg1);
-            reg1 := REG.GetAnyReg(R);
             setcc(sete, reg1);
             andrc(reg1, 1)
 
         |CODE.opORD:
             UnOp(reg1);
-            drop;
             test(reg1);
-            reg1 := REG.GetAnyReg(R);
             setcc(setne, reg1);
             andrc(reg1, 1)
 
@@ -1438,62 +1363,17 @@ BEGIN
             END;
             IF cmd.opcode = CODE.opSUBL THEN
                 neg(reg1)
-            END
+            END  
 
         |CODE.opADDL, CODE.opADDR:
-            next := cmd.next(COMMAND);
-            IF next.opcode = CODE.opLOAD64 THEN
-                next2 := next.next(COMMAND);
+            IF param2 # 0 THEN
                 UnOp(reg1);
-                n := param2;
-
-                IF (next2.opcode = CODE.opPARAM) & (next2.param2 = 1) THEN
-
-                    IF isLong(n) THEN
-                        oprc("add", reg1, n);
-                        Write("push qword["); Write(regs[reg1]); WriteLn("]")
-                    ELSE
-                        Write("push qword["); Write(regs[reg1]); Write("+"); WriteHex(n); WriteLn("]")
-                    END;
-
-                    drop;
-                    cmd := next2
+                IF param2 = 1 THEN
+                    opr("inc", reg1)
+                ELSIF param2 = -1 THEN
+                    opr("dec", reg1)
                 ELSE
-
-                    IF isLong(n) THEN
-                        Write("add "); Write(regs[reg1]); Write(",qword["); Write("NUMBERS+"); WriteHex(Numbers_Count * 8); WriteLn("]");
-                        NewNumber(n);
-                        Write("mov "); Write(regs[reg1]); Write(",qword["); Write(regs[reg1]); WriteLn("]")
-                    ELSE
-                        Write("mov "); Write(regs[reg1]); Write(",qword["); Write(regs[reg1]); Write("+"); WriteHex(n); WriteLn("]")
-                    END;
-
-                    cmd := next
-                END
-
-            ELSIF next.opcode = CODE.opLOAD8 THEN
-                UnOp(reg1);
-                n := param2;
-
-                IF isLong(n) THEN
-                    Write("add "); Write(regs[reg1]); Write(",qword["); Write("NUMBERS+"); WriteHex(Numbers_Count * 8); WriteLn("]");
-                    NewNumber(n);
-                    Write("movzx "); Write(regs[reg1]); Write(",byte["); Write(regs[reg1]); WriteLn("]")
-                ELSE
-                    Write("movzx "); Write(regs[reg1]); Write(",byte["); Write(regs[reg1]); Write("+"); WriteHex(n); WriteLn("]")
-                END;
-
-                cmd := next
-            ELSE
-                IF param2 # 0 THEN
-                    UnOp(reg1);
-                    IF param2 = 1 THEN
-                        opr("inc", reg1)
-                    ELSIF param2 = -1 THEN
-                        opr("dec", reg1)
-                    ELSE
-                        addrc(reg1, param2)
-                    END
+                    addrc(reg1, param2)
                 END
             END
 
@@ -1663,7 +1543,7 @@ BEGIN
         |CODE.opCASELR:
             cmprc(rax, param1);
             jcc(jl, param2);
-            jcc(jg, cmd(CODE.COMMAND3).param3)
+            jcc(jg, cmd.param3)
 
         |CODE.opASR, CODE.opROR, CODE.opLSL, CODE.opLSR:
             BinOp(reg1, reg2);
@@ -1874,7 +1754,7 @@ BEGIN
             DEC(xmm)
 
         |CODE.opCONSTF:
-            float := cmd(CODE.COMMANDF).float;
+            float := cmd.float;
             INC(xmm);
             Write("movsd "); xmmr(xmm); Write(",qword[NUMBERS+"); WriteHex(Numbers_Count * 8); WriteLn("]");
             NewNumber(UTILS.splitf(float, a, b))
@@ -2005,7 +1885,93 @@ BEGIN
 
         |CODE.opUNPK:
             PushAll(2);
-            CallRTL(pic, CODE._unpk)
+            CallRTL(pic, CODE._unpk) 
+            
+        |CODE.opSADR_PARAM:   
+            IF pic THEN
+                ASSERT(FALSE)
+            ELSE
+                Write("push _data+"); WriteHexLn(stroffs + param2)
+            END
+            
+        |CODE.opLOAD64_PARAM:
+            UnOp(reg1);
+            Write("push qword["); Write(regs[reg1]); WriteLn("]");
+            drop      
+            
+        |CODE.opLLOAD64_PARAM:
+            Write("push qword[rbp+"); WriteHex(param2 * 8); WriteLn("]") 
+            
+        |CODE.opVADR_PARAM:
+            Write("push qword[rbp+"); WriteHex(param2 * 8); WriteLn("]") 
+            
+        |CODE.opCONST_PARAM:
+            pushc(param2)     
+            
+        |CODE.opGLOAD32_PARAM:
+            reg1 := REG.GetAnyReg(R);
+            IF pic THEN
+                ASSERT(FALSE)
+            ELSE
+                oprr("xor", reg1, reg1);
+                Write("mov "); Write(regs32[reg1]); Write(",dword[GLOB+"); WriteHex(param2); WriteLn("]");
+                push(reg1);
+                drop
+            END    
+            
+        |CODE.opLOAD32_PARAM:
+            UnOp(reg1);
+            Write("mov "); Write(regs32[reg1]); Write(",dword["); Write(regs[reg1]); WriteLn("]");
+            oprc("shl", reg1, 32);
+            oprc("shr", reg1, 32);
+            push(reg1);
+            drop
+
+        |CODE.opLLOAD32_PARAM:
+            reg1 := REG.GetAnyReg(R);
+            oprr("xor", reg1, reg1);
+            Write("mov "); Write(regs32[reg1]); Write(",dword[rbp+"); WriteHex(param2 * 8); WriteLn("]");
+            push(reg1);
+            drop  
+            
+        |CODE.opGLOAD64_PARAM:
+            IF pic THEN
+                ASSERT(FALSE)
+            ELSE
+                Write("push qword[GLOB+"); WriteHex(param2); WriteLn("]")
+            END   
+            
+        |CODE.opLADR_SAVEC:
+            n := param1 * 8;
+            IF isLong(param2) THEN
+                reg1 := REG.GetAnyReg(R);
+                movrc(reg1, param2);
+                Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteLn(regs[reg1]);
+                drop
+            ELSE
+                Write("mov qword[rbp+"); WriteHex(n); Write("],"); WriteHexLn(param2)
+            END
+
+        |CODE.opGADR_SAVEC:
+            IF isLong(param2) THEN
+                reg1 := REG.GetAnyReg(R);
+                movrc(reg1, param2);
+                Write("mov qword[GLOB+"); WriteHex(param1); Write("],"); WriteLn(regs[reg1]);
+                drop
+            ELSE
+                Write("mov qword[GLOB+"); WriteHex(param1); Write("],"); WriteHexLn(param2)
+            END   
+            
+        |CODE.opLADR_SAVE:
+            UnOp(reg1);
+            Write("mov qword[rbp+"); WriteHex(param2 * 8); Write("],"); WriteLn(regs[reg1]);
+            drop  
+            
+        |CODE.opLADR_INC1:
+            Write("inc qword[rbp+"); WriteHex(param2 * 8); WriteLn("]")
+
+        |CODE.opLADR_DEC1:
+            Write("dec qword[rbp+"); WriteHex(param2 * 8); WriteLn("]")
 
         END;
 

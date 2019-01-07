@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, CON := CONSOLE;
 
 
 CONST
@@ -20,7 +20,7 @@ CONST
     opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
     opUMINUS* = 16;
     opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
-    opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opACC* = 27; opDROP* = 28;
+    opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opSWAP* = 27; opDROP* = 28;
     opNOT* = 29;
 
     opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
@@ -83,7 +83,17 @@ CONST
     opCODE* = 235;
 
     opALIGN16* = 236; opCLEANUP16* = 237;
-    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240; opSWAP* = 241;
+    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240;  
+    
+    
+    
+    opSADR_PARAM* = 1000; opLOAD64_PARAM* = 1001; opLLOAD64_PARAM* = 1002; opGLOAD64_PARAM* = 1003;
+    opVADR_PARAM* = 1004; opCONST_PARAM* = 1005; opGLOAD32_PARAM* = 1006; opLLOAD32_PARAM* = 1007;
+    opLOAD32_PARAM* = 1008;
+    
+    opLADR_SAVEC* = 1009; opGADR_SAVEC* = 1010; opLADR_SAVE* = 1011;
+
+    opLADR_INC1* = 1012; opLADR_DEC1* = 1013;
 
 
     _move      *=   0;
@@ -128,18 +138,8 @@ TYPE
 
         opcode*:  INTEGER;
         param1*:  INTEGER;
-        param2*:  INTEGER
-
-    END;
-
-    COMMAND3* = POINTER TO RECORD (COMMAND)
-
-        param3*:  INTEGER
-
-    END;
-
-    COMMANDF* = POINTER TO RECORD (COMMAND)
-
+        param2*:  INTEGER;
+        param3*:  INTEGER;
         float*:   REAL
 
     END;
@@ -206,6 +206,25 @@ VAR
     codes*: CODES;
     endianness: INTEGER;
     numRegsFloat: INTEGER;
+    
+    commands: C.COLLECTION;
+    
+    
+PROCEDURE NewCmd (): COMMAND;
+VAR
+    cmd:   COMMAND;
+    citem: C.ITEM;
+
+BEGIN
+    citem := C.pop(commands);
+    IF citem = NIL THEN
+        NEW(cmd)
+    ELSE
+        cmd := citem(COMMAND)
+    END
+
+    RETURN cmd
+END NewCmd;
 
 
 PROCEDURE setlast* (cmd: COMMAND);
@@ -374,9 +393,59 @@ END AddRec;
 
 
 PROCEDURE insert (cur, nov: COMMAND);
+VAR
+    old_opcode: INTEGER;
+
 BEGIN
-    LISTS.insert(codes.commands, cur, nov);
-    codes.last := nov
+    old_opcode := cur.opcode;
+
+    IF (nov.opcode = opPARAM) & (nov.param2 = 1) THEN
+
+        CASE old_opcode OF 
+        |opSADR:    cur.opcode := opSADR_PARAM
+        |opGLOAD64: cur.opcode := opGLOAD64_PARAM
+        |opLLOAD64: cur.opcode := opLLOAD64_PARAM
+        |opLOAD64:  cur.opcode := opLOAD64_PARAM
+        |opGLOAD32: cur.opcode := opGLOAD32_PARAM
+        |opLLOAD32: cur.opcode := opLLOAD32_PARAM
+        |opLOAD32:  cur.opcode := opLOAD32_PARAM
+        |opVADR:    cur.opcode := opVADR_PARAM
+        |opCONST:   cur.opcode := opCONST_PARAM
+        ELSE
+            old_opcode := -1
+        END
+        
+    ELSIF old_opcode = opLADR THEN
+
+        CASE nov.opcode OF
+        |opSAVEC:
+            cur.opcode := opLADR_SAVEC;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opSAVE: cur.opcode := opLADR_SAVE
+        |opINC1: cur.opcode := opLADR_INC1
+        |opDEC1: cur.opcode := opLADR_DEC1
+        ELSE
+            old_opcode := -1
+        END
+        
+    ELSIF (nov.opcode = opSAVEC) & (old_opcode = opGADR) THEN
+        cur.opcode := opGADR_SAVEC;
+        cur.param1 := cur.param2;
+        cur.param2 := nov.param2
+
+    ELSE
+        old_opcode := -1
+    END;
+
+    IF old_opcode = -1 THEN
+        LISTS.insert(codes.commands, cur, nov);
+        codes.last := nov
+    ELSE                  
+        C.push(commands, nov);
+        codes.last := cur
+    END
 END insert;
 
 
@@ -384,7 +453,7 @@ PROCEDURE AddCmd* (opcode: INTEGER; param: INTEGER);
 VAR
     cmd: COMMAND;
 BEGIN
-    NEW(cmd);
+    cmd := NewCmd();
     cmd.opcode := opcode;
     cmd.param1 := 0;
     cmd.param2 := param;
@@ -396,7 +465,7 @@ PROCEDURE AddCmd2* (opcode: INTEGER; param1, param2: INTEGER);
 VAR
     cmd: COMMAND;
 BEGIN
-    NEW(cmd);
+    cmd := NewCmd();
     cmd.opcode := opcode;
     cmd.param1 := param1;
     cmd.param2 := param2;
@@ -432,7 +501,8 @@ END AddCmd0;
 
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
-    LISTS.delete(codes.commands, cmd)
+    LISTS.delete(codes.commands, cmd);
+    C.push(commands, cmd)
 END delete;
 
 
@@ -508,107 +578,6 @@ BEGIN
 END fcmp;
 
 
-PROCEDURE isCmp (opcode: INTEGER): BOOLEAN;
-(*
-    opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
-    opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
-    opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
-
-    opEQS*   =  52; opNES*   =  53; opLTS*   =  54; opLES*   =  55; opGTS*   =  56; opGES*   =  57;
-    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
-    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
-
-    opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
-    opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
-
-    opEQP* = 143; opNEP* = 144;
-                                                                                  *)
-
-    RETURN (opEQ <= opcode) & (opcode <= opGER) OR (opEQS <= opcode) & (opcode <= opGES) OR
-           (opEQS2 <= opcode) & (opcode <= opGES2) OR (opEQSW <= opcode) & (opcode <= opGESW) OR
-           (opEQSW2 <= opcode) & (opcode <= opGESW2) OR
-           (opEQF <= opcode) & (opcode <= opGEFI) OR (opcode = opEQP) OR (opcode = opNEP)
-END isCmp;
-
-
-PROCEDURE InvCmp (opcode: INTEGER): INTEGER;
-BEGIN
-
-    CASE opcode OF
-
-    |opEQ:    opcode := opNE
-    |opNE:    opcode := opEQ
-    |opLT:    opcode := opGE
-    |opLE:    opcode := opGT
-    |opGT:    opcode := opLE
-    |opGE:    opcode := opLT
-
-    |opEQR:   opcode := opNER
-    |opNER:   opcode := opEQR
-    |opLTR:   opcode := opGER
-    |opLER:   opcode := opGTR
-    |opGTR:   opcode := opLER
-    |opGER:   opcode := opLTR
-
-    |opEQL:   opcode := opNEL
-    |opNEL:   opcode := opEQL
-    |opLTL:   opcode := opGEL
-    |opLEL:   opcode := opGTL
-    |opGTL:   opcode := opLEL
-    |opGEL:   opcode := opLTL
-
-    |opEQS:   opcode := opNES
-    |opNES:   opcode := opEQS
-    |opLTS:   opcode := opGES
-    |opLES:   opcode := opGTS
-    |opGTS:   opcode := opLES
-    |opGES:   opcode := opLTS
-
-    |opEQS2:  opcode := opNES2
-    |opNES2:  opcode := opEQS2
-    |opLTS2:  opcode := opGES2
-    |opLES2:  opcode := opGTS2
-    |opGTS2:  opcode := opLES2
-    |opGES2:  opcode := opLTS2
-
-    |opEQSW:  opcode := opNESW
-    |opNESW:  opcode := opEQSW
-    |opLTSW:  opcode := opGESW
-    |opLESW:  opcode := opGTSW
-    |opGTSW:  opcode := opLESW
-    |opGESW:  opcode := opLTSW
-
-    |opEQSW2: opcode := opNESW2
-    |opNESW2: opcode := opEQSW2
-    |opLTSW2: opcode := opGESW2
-    |opLESW2: opcode := opGTSW2
-    |opGTSW2: opcode := opLESW2
-    |opGESW2: opcode := opLTSW2
-
-    |opEQF:   opcode := opNEF
-    |opNEF:   opcode := opEQF
-    |opLTF:   opcode := opGEF
-    |opLEF:   opcode := opGTF
-    |opGTF:   opcode := opLEF
-    |opGEF:   opcode := opLTF
-
-    |opEQFI:  opcode := opNEFI
-    |opNEFI:  opcode := opEQFI
-    |opLTFI:  opcode := opGEFI
-    |opLEFI:  opcode := opGTFI
-    |opGTFI:  opcode := opLEFI
-    |opGEFI:  opcode := opLTFI
-
-    |opEQP:   opcode := opNEP
-    |opNEP:   opcode := opEQP
-
-    END
-
-    RETURN opcode
-END InvCmp;
-
-
 PROCEDURE not*;
 VAR
     prev: COMMAND;
@@ -617,8 +586,6 @@ BEGIN
     IF prev.opcode = opNOT THEN
         codes.last := prev.prev(COMMAND);
         delete(prev)
-    ELSIF isCmp(prev.opcode) THEN
-        prev.opcode := InvCmp(prev.opcode)
     ELSE
         AddCmd0(opNOT)
     END
@@ -627,10 +594,10 @@ END not;
 
 PROCEDURE Enter* (label, params: INTEGER): COMMAND;
 VAR
-    cmd: COMMAND3;
+    cmd: COMMAND;
 
 BEGIN
-    NEW(cmd);
+    cmd := NewCmd();
     cmd.opcode := opENTER;
     cmd.param1 := label;
     cmd.param3 := params;
@@ -941,10 +908,10 @@ END len;
 
 PROCEDURE Float* (r: REAL);
 VAR
-    cmd: COMMANDF;
+    cmd: COMMAND;
 
 BEGIN
-    NEW(cmd);
+    cmd := NewCmd();
     cmd.opcode := opCONSTF;
     cmd.float := r;
     insert(codes.last, cmd);
@@ -994,11 +961,11 @@ END drop;
 
 PROCEDURE case* (a, b, L, R: INTEGER);
 VAR
-    cmd: COMMAND3;
+    cmd: COMMAND;
 
 BEGIN
     IF a = b THEN
-        NEW(cmd);
+        cmd := NewCmd();
         cmd.opcode := opCASELR;
         cmd.param1 := a;
         cmd.param2 := L;
@@ -1088,7 +1055,8 @@ VAR
     cmd:    COMMAND;
     i:      INTEGER;
 
-BEGIN
+BEGIN            
+    commands := C.create();
     numRegsFloat := pNumRegsFloat;
     endianness := pEndianness;
 

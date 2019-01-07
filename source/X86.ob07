@@ -517,7 +517,7 @@ END NewLabel;
 
 PROCEDURE translate (code: CODE.CODES; pic: BOOLEAN; stroffs: INTEGER);
 VAR
-    cmd, next, next2: COMMAND;
+    cmd: COMMAND;
 
     reg1, reg2: INTEGER;
 
@@ -666,101 +666,44 @@ BEGIN
             END
 
         |CODE.opCONST:
-            next := cmd.next(COMMAND);
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                pushc(param2);
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                movrc(reg1, param2)
-            END
+            reg1 := REG.GetAnyReg(R);
+            movrc(reg1, param2)
 
         |CODE.opLABEL:
             SetLabel(param2) // L:
 
-        |CODE.opNOP:
-
+        |CODE.opNOP: 
+        
         |CODE.opGADR:
-
-            next := cmd.next(COMMAND);
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
-                Pic(reg1, BIN.PICBSS, param2);
-                IF next.opcode = CODE.opSAVEC THEN
-                    OutByte2(0C7H, reg1);  // mov dword[reg1], next.param2
-                    OutInt(next.param2);
-                    drop;
-                    cmd := next
-                END
-
-            ELSE
-
-                IF next.opcode = CODE.opSAVEC THEN
-                    OutByte2(0C7H, 05H);  // mov dword[_bss + param2], next.param2
-                    Reloc(BIN.RBSS, param2);
-                    OutInt(next.param2);
-                    cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0B8H + reg1);  // mov reg1, _bss + param2
-                    Reloc(BIN.RBSS, param2)
-                END
-
-            END
-
-        |CODE.opLADR:
-            n := param2 * 4;
-            next := cmd.next(COMMAND);
-            IF next.opcode = CODE.opSAVEC THEN
-                OutByte2(0C7H, 45H + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], next.param2
-                OutIntByte(n);
-                OutInt(next.param2);
-                cmd := next
-            ELSIF next.opcode = CODE.opSAVE THEN
-                UnOp(reg1);
-                OutByte2(89H, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], reg1
-                OutIntByte(n);
-                drop;
-                cmd := next
+                Pic(reg1, BIN.PICBSS, param2)
             ELSE
                 reg1 := REG.GetAnyReg(R);
-                OutByte2(8DH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // lea reg1, dword[ebp + n]
-                OutIntByte(n)
+                OutByte(0B8H + reg1);  // mov reg1, _bss + param2
+                Reloc(BIN.RBSS, param2)
             END
+            
+        |CODE.opLADR:
+            n := param2 * 4;
+            reg1 := REG.GetAnyReg(R);
+            OutByte2(8DH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // lea reg1, dword[ebp + n]
+            OutIntByte(n)
 
         |CODE.opVADR:
             n := param2 * 4;
-            next := cmd.next(COMMAND);
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
-                OutIntByte(n);
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
-                OutIntByte(n)
-            END
+            reg1 := REG.GetAnyReg(R);
+            OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
+            OutIntByte(n)
 
         |CODE.opSADR:
-            next := cmd.next(COMMAND);
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
                 Pic(reg1, BIN.PICDATA, stroffs + param2);
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    push(reg1);
-                    drop;
-                    cmd := next
-                END
             ELSE
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    OutByte(068H);  // push _data + stroffs + param2
-                    Reloc(BIN.RDATA, stroffs + param2);
-                    cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte(0B8H + reg1);  // mov reg1, _data + stroffs + param2
-                    Reloc(BIN.RDATA, stroffs + param2)
-                END
+                reg1 := REG.GetAnyReg(R);
+                OutByte(0B8H + reg1);  // mov reg1, _data + stroffs + param2
+                Reloc(BIN.RDATA, stroffs + param2)
             END
 
         |CODE.opSAVEC:
@@ -786,56 +729,24 @@ BEGIN
             OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
 
         |CODE.opGLOAD32:
-            next := cmd.next(COMMAND);
+            reg1 := REG.GetAnyReg(R);
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
                 Pic(reg1, BIN.PICBSS, param2);
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    OutByte2(0FFH, 30H + reg1);   // push dword[reg1]
-                    drop;
-                    cmd := next
-                ELSE
-                    OutByte2(8BH, reg1 * 9)       // mov reg1, dword[reg1]
-                END
-
+                OutByte2(8BH, reg1 * 9)       // mov reg1, dword[reg1]
             ELSE
-
-                IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                    OutByte2(0FFH, 035H);  // push dword[_bss + param2]
-                    Reloc(BIN.RBSS, param2);
-                    cmd := next
-                ELSE
-                    reg1 := REG.GetAnyReg(R);
-                    OutByte2(08BH, 05H + reg1 * 8);  // mov reg1, dword[_bss + param2]
-                    Reloc(BIN.RBSS, param2)
-                END
-
+                OutByte2(08BH, 05H + reg1 * 8);  // mov reg1, dword[_bss + param2]
+                Reloc(BIN.RBSS, param2)
             END
 
         |CODE.opLLOAD32:
-            next := cmd.next(COMMAND);
             n := param2 * 4;
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
-                OutIntByte(n);
-                cmd := next
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
-                OutIntByte(n)
-            END
+            reg1 := REG.GetAnyReg(R);
+            OutByte2(8BH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov reg1, dword[ebp + n]
+            OutIntByte(n)
 
         |CODE.opLOAD32:
-            next := cmd.next(COMMAND);
-            IF (next.opcode = CODE.opPARAM) & (next.param2 = 1) THEN
-                UnOp(reg1);
-                OutByte2(0FFH, 30H + reg1);  // push dword[reg1]
-                drop;
-                cmd := next
-            ELSE
-                UnOp(reg1);
-                OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
-            END
+            UnOp(reg1);
+            OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
 
         |CODE.opVLOAD8:
             n := param2 * 4;
@@ -901,39 +812,14 @@ BEGIN
             drop
 
         |CODE.opADDL, CODE.opADDR:
-            next := cmd.next(COMMAND);
-            IF next.opcode = CODE.opLOAD32 THEN
-                next2 := next.next(COMMAND);
+            IF param2 # 0 THEN
                 UnOp(reg1);
-                n := param2;
-
-                IF (next2.opcode = CODE.opPARAM) & (next2.param2 = 1) THEN
-                    OutByte2(0FFH, 70H + reg1 + 40H * ORD(~isByte(n))); // push dword[reg1 + n]
-                    OutIntByte(n);
-                    drop;
-                    cmd := next2
+                IF param2 = 1 THEN
+                    OutByte(40H + reg1) // inc reg1
+                ELSIF param2 = -1 THEN
+                    OutByte(48H + reg1) // dec reg1
                 ELSE
-                    OutByte2(8BH, 40H + reg1 * 9 + 40H * ORD(~isByte(n))); // mov reg1, dword[reg1 + n]
-                    OutIntByte(n);
-                    cmd := next
-                END
-
-            ELSIF next.opcode = CODE.opLOAD8 THEN
-                UnOp(reg1);
-                n := param2;
-                OutByte3(0FH, 0B6H, 40H + reg1 * 9 + 40H * ORD(~isByte(n))); // movzx reg1, byte[reg1 + n]
-                OutIntByte(n);
-                cmd := next
-            ELSE
-                IF param2 # 0 THEN
-                    UnOp(reg1);
-                    IF param2 = 1 THEN
-                        OutByte(40H + reg1) // inc reg1
-                    ELSIF param2 = -1 THEN
-                        OutByte(48H + reg1) // dec reg1
-                    ELSE
-                        addrc(reg1, param2)
-                    END
+                    addrc(reg1, param2)
                 END
             END
 
@@ -1064,17 +950,13 @@ BEGIN
 
         |CODE.opNOT:
             UnOp(reg1);
-            drop;
             test(reg1);
-            reg1 := REG.GetAnyReg(R);
             setcc(sete, reg1);
             andrc(reg1, 1)
 
         |CODE.opORD:
             UnOp(reg1);
-            drop;
             test(reg1);
-            reg1 := REG.GetAnyReg(R);
             setcc(setne, reg1);
             andrc(reg1, 1)
 
@@ -1214,27 +1096,9 @@ BEGIN
             END;
             andrc(reg1, 1)
 
-        |CODE.opACC:
-            IF (R.top # 0) OR (R.stk[0] # eax) THEN
-                PushAll(0);
-                ASSERT(REG.GetReg(R, eax));
-                pop(eax);
-                DEC(R.pushed)
-            END
-
         |CODE.opDROP:
             UnOp(reg1);
             drop
-
-        |CODE.opJE, CODE.opJNE:
-            UnOp(reg1);
-            drop;
-            test(reg1);
-            IF cmd.opcode = CODE.opJE THEN
-                jcc(jne, param1)
-            ELSE
-                jcc(je, param1)
-            END
 
         |CODE.opJNZ:
             UnOp(reg1);
@@ -1245,6 +1109,18 @@ BEGIN
             UnOp(reg1);
             test(reg1);
             jcc(je, param1)
+            
+        |CODE.opJE:
+            UnOp(reg1);
+            test(reg1);
+            jcc(jne, param1);
+            drop;
+
+        |CODE.opJNE:
+            UnOp(reg1);
+            test(reg1);
+            jcc(je, param1);
+            drop;
 
         |CODE.opSWITCH:
             UnOp(reg1);
@@ -1273,7 +1149,7 @@ BEGIN
         |CODE.opCASELR:
             cmprc(eax, param1);
             jcc(jl, param2);
-            jcc(jg, cmd(CODE.COMMAND3).param3)
+            jcc(jg, cmd.param3)
 
         |CODE.opCODE:
             OutByte(Byte(param2))
@@ -1982,7 +1858,7 @@ BEGIN
             drop
 
         |CODE.opCONSTF:
-            float := cmd(CODE.COMMANDF).float;
+            float := cmd.float;
             IF float = 0.0 THEN
                 OutByte2(0D9H, 0EEH)      // fldz
             ELSIF float = 1.0 THEN
@@ -2132,7 +2008,84 @@ BEGIN
             pushc(7FF00000H);
             pushc(0);
             OutByte3(0DDH, 004H, 024H);  // fld qword[esp]
-            OutByte3(083H, 0C4H, 008H)   // add esp, 8
+            OutByte3(083H, 0C4H, 008H)   // add esp, 8   
+            
+            
+        |CODE.opSADR_PARAM:
+            IF pic THEN
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICDATA, stroffs + param2);
+                push(reg1);
+                drop
+            ELSE
+                OutByte(068H);  // push _data + stroffs + param2
+                Reloc(BIN.RDATA, stroffs + param2)
+            END  
+            
+        |CODE.opVADR_PARAM:
+            n := param2 * 4;
+            OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
+            OutIntByte(n)
+            
+        |CODE.opCONST_PARAM:
+            pushc(param2)  
+            
+        |CODE.opGLOAD32_PARAM:
+            IF pic THEN
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICBSS, param2);
+                OutByte2(0FFH, 30H + reg1);   // push dword[reg1]
+                drop
+            ELSE
+                OutByte2(0FFH, 035H);  // push dword[_bss + param2]
+                Reloc(BIN.RBSS, param2)
+            END    
+            
+        |CODE.opLLOAD32_PARAM:
+            n := param2 * 4;
+            OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
+            OutIntByte(n)
+
+        |CODE.opLOAD32_PARAM:
+            UnOp(reg1);
+            OutByte2(0FFH, 30H + reg1);  // push dword[reg1]
+            drop      
+            
+        |CODE.opGADR_SAVEC:
+            IF pic THEN
+                reg1 := REG.GetAnyReg(R);
+                Pic(reg1, BIN.PICBSS, param1);
+                OutByte2(0C7H, reg1);  // mov dword[reg1], param2
+                OutInt(param2);
+                drop
+            ELSE
+                OutByte2(0C7H, 05H);  // mov dword[_bss + param2], param2
+                Reloc(BIN.RBSS, param1);
+                OutInt(param2)
+            END
+
+        |CODE.opLADR_SAVEC:
+            n := param1 * 4;
+            OutByte2(0C7H, 45H + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], param2
+            OutIntByte(n);
+            OutInt(param2)  
+            
+        |CODE.opLADR_SAVE:
+            n := param2 * 4;
+            UnOp(reg1);
+            OutByte2(89H, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], reg1
+            OutIntByte(n);
+            drop       
+            
+        |CODE.opLADR_INC1:
+            n := param2 * 4;
+            OutByte2(0FFH, 45H + 40H * ORD(~isByte(n)));  // inc dword[ebp + n]
+            OutIntByte(n)
+
+        |CODE.opLADR_DEC1:
+            n := param2 * 4;
+            OutByte2(0FFH, 4DH + 40H * ORD(~isByte(n)));  // dec dword[ebp + n]
+            OutIntByte(n)
 
         END;
 
