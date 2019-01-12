@@ -537,10 +537,6 @@ BEGIN
 
         CASE cmd.opcode OF
 
-        |CODE.opSWAP:
-            BinOp(reg1, reg2);
-            xchg(reg1, reg2)
-
         |CODE.opJMP:
             jmp(param1)
 
@@ -672,8 +668,8 @@ BEGIN
         |CODE.opLABEL:
             SetLabel(param2) // L:
 
-        |CODE.opNOP: 
-        
+        |CODE.opNOP:
+
         |CODE.opGADR:
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
@@ -683,7 +679,7 @@ BEGIN
                 OutByte(0B8H + reg1);  // mov reg1, _bss + param2
                 Reloc(BIN.RBSS, param2)
             END
-            
+
         |CODE.opLADR:
             n := param2 * 4;
             reg1 := REG.GetAnyReg(R);
@@ -1109,7 +1105,7 @@ BEGIN
             UnOp(reg1);
             test(reg1);
             jcc(je, param1)
-            
+
         |CODE.opJE:
             UnOp(reg1);
             test(reg1);
@@ -1197,6 +1193,11 @@ BEGIN
 
             pushc(param1);
             CallRTL(pic, CODE._move)
+
+        |CODE.opCHKBYTE:
+            BinOp(reg1, reg2);
+            cmprc(reg1, 256);
+            jcc(jb, param1)
 
         |CODE.opCHKIDX:
             UnOp(reg1);
@@ -2008,9 +2009,9 @@ BEGIN
             pushc(7FF00000H);
             pushc(0);
             OutByte3(0DDH, 004H, 024H);  // fld qword[esp]
-            OutByte3(083H, 0C4H, 008H)   // add esp, 8   
-            
-            
+            OutByte3(083H, 0C4H, 008H)   // add esp, 8
+
+
         |CODE.opSADR_PARAM:
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
@@ -2020,16 +2021,16 @@ BEGIN
             ELSE
                 OutByte(068H);  // push _data + stroffs + param2
                 Reloc(BIN.RDATA, stroffs + param2)
-            END  
-            
+            END
+
         |CODE.opVADR_PARAM:
             n := param2 * 4;
             OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
             OutIntByte(n)
-            
+
         |CODE.opCONST_PARAM:
-            pushc(param2)  
-            
+            pushc(param2)
+
         |CODE.opGLOAD32_PARAM:
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
@@ -2039,8 +2040,8 @@ BEGIN
             ELSE
                 OutByte2(0FFH, 035H);  // push dword[_bss + param2]
                 Reloc(BIN.RBSS, param2)
-            END    
-            
+            END
+
         |CODE.opLLOAD32_PARAM:
             n := param2 * 4;
             OutByte2(0FFH, 75H + 40H * ORD(~isByte(n)));  // push dword[ebp + n]
@@ -2049,8 +2050,8 @@ BEGIN
         |CODE.opLOAD32_PARAM:
             UnOp(reg1);
             OutByte2(0FFH, 30H + reg1);  // push dword[reg1]
-            drop      
-            
+            drop
+
         |CODE.opGADR_SAVEC:
             IF pic THEN
                 reg1 := REG.GetAnyReg(R);
@@ -2068,15 +2069,15 @@ BEGIN
             n := param1 * 4;
             OutByte2(0C7H, 45H + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], param2
             OutIntByte(n);
-            OutInt(param2)  
-            
+            OutInt(param2)
+
         |CODE.opLADR_SAVE:
             n := param2 * 4;
             UnOp(reg1);
             OutByte2(89H, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // mov dword[ebp + n], reg1
             OutIntByte(n);
-            drop       
-            
+            drop
+
         |CODE.opLADR_INC1:
             n := param2 * 4;
             OutByte2(0FFH, 45H + 40H * ORD(~isByte(n)));  // inc dword[ebp + n]
@@ -2086,6 +2087,42 @@ BEGIN
             n := param2 * 4;
             OutByte2(0FFH, 4DH + 40H * ORD(~isByte(n)));  // dec dword[ebp + n]
             OutIntByte(n)
+
+        |CODE.opLADR_INCC:
+            n := param1 * 4;
+            OutByte2(81H + 2 * ORD(isByte(param2)), 45H + 40H * ORD(~isByte(n))); // add dword[ebp + n], param2
+            OutIntByte(n);
+            OutIntByte(param2)
+
+        |CODE.opLADR_DECC:
+            n := param1 * 4;
+            OutByte2(81H + 2 * ORD(isByte(param2)), 6DH + 40H * ORD(~isByte(n))); // sub dword[ebp + n], param2
+            OutIntByte(n);
+            OutIntByte(param2)
+            
+        |CODE.opLADR_INC1B:
+            n := param2 * 4;
+            OutByte2(0FEH, 45H + 40H * ORD(~isByte(n)));  // inc byte[ebp + n]
+            OutIntByte(n)
+
+        |CODE.opLADR_DEC1B:
+            n := param2 * 4;
+            OutByte2(0FEH, 4DH + 40H * ORD(~isByte(n)));  // dec byte[ebp + n]
+            OutIntByte(n)
+
+        |CODE.opLADR_INCCB:
+            n := param1 * 4;
+            OutByte2(80H, 45H + 40H * ORD(~isByte(n))); // add byte[ebp + n], param2
+            OutIntByte(n);
+            OutByte(param2 MOD 256)
+
+        |CODE.opLADR_DECCB:
+            n := param1 * 4; 
+            OutByte2(80H, 6DH + 40H * ORD(~isByte(n))); // sub byte[ebp + n], param2
+            OutIntByte(n);
+            OutByte(param2 MOD 256)
+
+        |CODE.opLOOP, CODE.opENDLOOP:
 
         END;
 
@@ -2275,7 +2312,7 @@ BEGIN
         pic := FALSE
     END;
 
-    R := REG.Create(push, pop, mov, xchg, {eax, ecx, edx});
+    R := REG.Create(push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
     prolog(code, pic, target, stack, dllinit, dllret);
     translate(code, pic, CHL.Length(code.types) * 4);

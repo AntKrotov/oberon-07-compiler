@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -10,11 +10,11 @@ MODULE CONSTANTS;
 CONST
 
     vMajor* = 0;
-    vMinor* = 94;
+    vMinor* = 95;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
-    
+
     MAX_GLOBAL_SIZE* = 1600000000;
 
     Target_iConsole*   =  1;

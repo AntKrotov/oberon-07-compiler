@@ -7,7 +7,7 @@
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS, UTILS;
+IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS, CODE, UTILS;
 
 
 CONST
@@ -81,7 +81,7 @@ TYPE
     END;
 
     PROC* = POINTER TO RECORD (LISTS.ITEM)
-
+               
         label*:      INTEGER;
         used*:       BOOLEAN;
         processed*:  BOOLEAN;
@@ -114,7 +114,7 @@ TYPE
         scope*:      RECORD
 
             open*:   PROCEDURE (unit: UNIT; proc: PROC): BOOLEAN;
-            close*:  PROCEDURE (unit: UNIT)
+            close*:  PROCEDURE (unit: UNIT; variables: LISTS.LIST)
 
         END;
 
@@ -499,10 +499,11 @@ BEGIN
 END openScope;
 
 
-PROCEDURE closeScope (unit: UNIT);
+PROCEDURE closeScope (unit: UNIT; variables: LISTS.LIST);
 VAR
     item: IDENT;
     del:  IDENT;
+    lvar: CODE.LOCALVAR;
 
 BEGIN
     item := unit.idents.last(IDENT);
@@ -512,6 +513,17 @@ BEGIN
         item := item.prev(IDENT);
         IF (del.typ = idVAR) & (del.offset = -1) THEN
             ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
+        END;
+        IF (variables # NIL) & (del.typ IN {idVAR, idPARAM}) & (del.offset # -1) THEN
+            IF del.type.typ IN BASICTYPES - {tREAL} + {tPOINTER, tPROCEDURE} THEN
+                lvar := CODE.NewVar();
+                lvar.offset := del.offset;
+                lvar.size   := del.type.size;
+                IF del.typ = idVAR THEN
+                    lvar.offset := -lvar.offset
+                END;
+                LISTS.push(variables, lvar)
+            END
         END;
         LISTS.delete(unit.idents, del);
         C.push(idents, del)
@@ -1160,8 +1172,6 @@ PROCEDURE DelUnused* (program: PROGRAM; DelImport: DELIMPORT);
 VAR
     proc:   PROC;
     flag:   BOOLEAN;
-    beg,
-    end:    LISTS.ITEM;
 
 
     PROCEDURE process (proc: PROC);
@@ -1202,10 +1212,7 @@ BEGIN
     WHILE proc # NIL DO
         IF ~proc.used THEN
             IF proc.import = NIL THEN
-                beg := proc.enter.prev;
-                end := proc.leave.next;
-                beg.next := end;
-                end.prev := beg
+                CODE.delete2(proc.enter, proc.leave)
             ELSE
                 DelImport(proc.import)
             END

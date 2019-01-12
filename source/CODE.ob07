@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, CON := CONSOLE;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS;
 
 
 CONST
@@ -20,7 +20,7 @@ CONST
     opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
     opUMINUS* = 16;
     opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
-    opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opSWAP* = 27; opDROP* = 28;
+    opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opCHKBYTE* = 27; opDROP* = 28;
     opNOT* = 29;
 
     opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
@@ -83,17 +83,17 @@ CONST
     opCODE* = 235;
 
     opALIGN16* = 236; opCLEANUP16* = 237;
-    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240;  
-    
-    
-    
+    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240; opLOOP* = 241; opENDLOOP* = 242;
+
+
     opSADR_PARAM* = 1000; opLOAD64_PARAM* = 1001; opLLOAD64_PARAM* = 1002; opGLOAD64_PARAM* = 1003;
     opVADR_PARAM* = 1004; opCONST_PARAM* = 1005; opGLOAD32_PARAM* = 1006; opLLOAD32_PARAM* = 1007;
     opLOAD32_PARAM* = 1008;
-    
+
     opLADR_SAVEC* = 1009; opGADR_SAVEC* = 1010; opLADR_SAVE* = 1011;
 
-    opLADR_INC1* = 1012; opLADR_DEC1* = 1013;
+    opLADR_INC1* = 1012; opLADR_DEC1* = 1013; opLADR_INCC* = 1014; opLADR_DECC* = 1015;
+    opLADR_INC1B* = 1016; opLADR_DEC1B* = 1017; opLADR_INCCB* = 1018; opLADR_DECCB* = 1019;
 
 
     _move      *=   0;
@@ -134,13 +134,21 @@ CONST
 
 TYPE
 
+    LOCALVAR* = POINTER TO RECORD (LISTS.ITEM)
+
+        offset*, size*, count*: INTEGER
+
+    END;
+
     COMMAND* = POINTER TO RECORD (LISTS.ITEM)
 
-        opcode*:  INTEGER;
-        param1*:  INTEGER;
-        param2*:  INTEGER;
-        param3*:  INTEGER;
-        float*:   REAL
+        opcode*:    INTEGER;
+        param1*:    INTEGER;
+        param2*:    INTEGER;
+        param3*:    INTEGER;
+        float*:     REAL;
+        variables*: LISTS.LIST;
+        allocReg*:  BOOLEAN
 
     END;
 
@@ -206,10 +214,10 @@ VAR
     codes*: CODES;
     endianness: INTEGER;
     numRegsFloat: INTEGER;
-    
-    commands: C.COLLECTION;
-    
-    
+
+    commands, variables: C.COLLECTION;
+
+
 PROCEDURE NewCmd (): COMMAND;
 VAR
     cmd:   COMMAND;
@@ -221,10 +229,31 @@ BEGIN
         NEW(cmd)
     ELSE
         cmd := citem(COMMAND)
-    END
+    END;
+
+    cmd.allocReg := FALSE
 
     RETURN cmd
 END NewCmd;
+
+
+PROCEDURE NewVar* (): LOCALVAR;
+VAR
+    lvar:  LOCALVAR;
+    citem: C.ITEM;
+
+BEGIN
+    citem := C.pop(variables);
+    IF citem = NIL THEN
+        NEW(lvar)
+    ELSE
+        lvar := citem(LOCALVAR)
+    END;
+
+    lvar.count := 0
+
+    RETURN lvar
+END NewVar;
 
 
 PROCEDURE setlast* (cmd: COMMAND);
@@ -401,7 +430,7 @@ BEGIN
 
     IF (nov.opcode = opPARAM) & (nov.param2 = 1) THEN
 
-        CASE old_opcode OF 
+        CASE old_opcode OF
         |opSADR:    cur.opcode := opSADR_PARAM
         |opGLOAD64: cur.opcode := opGLOAD64_PARAM
         |opLLOAD64: cur.opcode := opLLOAD64_PARAM
@@ -414,7 +443,7 @@ BEGIN
         ELSE
             old_opcode := -1
         END
-        
+
     ELSIF old_opcode = opLADR THEN
 
         CASE nov.opcode OF
@@ -423,13 +452,36 @@ BEGIN
             cur.param1 := cur.param2;
             cur.param2 := nov.param2
 
-        |opSAVE: cur.opcode := opLADR_SAVE
-        |opINC1: cur.opcode := opLADR_INC1
-        |opDEC1: cur.opcode := opLADR_DEC1
+        |opSAVE:  cur.opcode := opLADR_SAVE
+        |opINC1:  cur.opcode := opLADR_INC1
+        |opDEC1:  cur.opcode := opLADR_DEC1
+        |opINC1B: cur.opcode := opLADR_INC1B
+        |opDEC1B: cur.opcode := opLADR_DEC1B
+
+        |opINCC:
+            cur.opcode := opLADR_INCC;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opDECC:
+            cur.opcode := opLADR_DECC;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opINCCB:
+            cur.opcode := opLADR_INCCB;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opDECCB:
+            cur.opcode := opLADR_DECCB;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
         ELSE
             old_opcode := -1
         END
-        
+
     ELSIF (nov.opcode = opSAVEC) & (old_opcode = opGADR) THEN
         cur.opcode := opGADR_SAVEC;
         cur.param1 := cur.param2;
@@ -442,7 +494,7 @@ BEGIN
     IF old_opcode = -1 THEN
         LISTS.insert(codes.commands, cur, nov);
         codes.last := nov
-    ELSE                  
+    ELSE
         C.push(commands, nov);
         codes.last := cur
     END
@@ -499,11 +551,47 @@ BEGIN
 END AddCmd0;
 
 
+PROCEDURE deleteVarList (list: LISTS.LIST);
+VAR
+    last: LISTS.ITEM;
+
+BEGIN
+    WHILE list.last # NIL DO
+        last := LISTS.pop(list);
+        C.push(variables, last)
+    END
+END deleteVarList;
+
+
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
+    IF cmd.variables # NIL THEN
+        deleteVarList(cmd.variables)
+    END;
     LISTS.delete(codes.commands, cmd);
     C.push(commands, cmd)
 END delete;
+
+
+PROCEDURE delete2* (first, last: LISTS.ITEM);
+VAR
+    cur, next: LISTS.ITEM;
+
+BEGIN
+    cur := first;
+
+    IF first # last THEN
+        REPEAT
+            next := cur.next;
+            LISTS.delete(codes.commands, cur);
+            C.push(commands, cur);
+            cur := next
+        UNTIL cur = last
+    END;
+
+    LISTS.delete(codes.commands, cur);
+    C.push(commands, cur)
+END delete2;
 
 
 PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
@@ -601,6 +689,7 @@ BEGIN
     cmd.opcode := opENTER;
     cmd.param1 := label;
     cmd.param3 := params;
+    cmd.allocReg := TRUE;
     insert(codes.last, cmd)
 
     RETURN codes.last
@@ -706,7 +795,7 @@ END ProcImpCmp;
 
 
 PROCEDURE SysGet* (size: INTEGER);
-BEGIN
+BEGIN       
     AddCmd(opGET, size)
 END SysGet;
 
@@ -767,7 +856,6 @@ END load;
 
 PROCEDURE SysPut* (size: INTEGER);
 BEGIN
-    AddCmd0(opSWAP);
     CASE size OF
     |1: AddCmd0(opSAVE8)
     |2: AddCmd0(opSAVE16)
@@ -1055,8 +1143,9 @@ VAR
     cmd:    COMMAND;
     i:      INTEGER;
 
-BEGIN            
+BEGIN
     commands := C.create();
+    variables := C.create();
     numRegsFloat := pNumRegsFloat;
     endianness := pEndianness;
 

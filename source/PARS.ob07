@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -505,7 +505,7 @@ BEGIN
         call := sysflag(parser);
         IF program.target.bit_depth = 64 THEN
             check1(call IN PROG.callconv64, parser, 117)
-        ELSIF program.target.bit_depth = 32 THEN                                     
+        ELSIF program.target.bit_depth = 32 THEN
             check1(call IN PROG.callconv32, parser, 63)
         END;
         Next(parser);
@@ -820,6 +820,7 @@ VAR
         import:     CODE.IMPORT_PROC;
         endmod, b:  BOOLEAN;
         fparams:    SET;
+        variables:  LISTS.LIST;
 
     BEGIN
         endmod := FALSE;
@@ -882,7 +883,7 @@ VAR
             IF call IN {PROG.call64, PROG.win64} THEN
                 fparams := proc.type.params.getfparams(proc.type, 3);
                 enter := CODE.Enter(label, LSL(MIN(proc.type.params.size, 4), 4) + ORD(fparams))
-            ELSE                                                                                
+            ELSE
                 enter := CODE.Enter(label, 0)
             END;
             proc.proc.enter := enter;
@@ -929,7 +930,17 @@ VAR
             END
         END;
 
-        unit.scope.close(unit)
+        IF import = NIL THEN
+            variables := LISTS.create(NIL);
+        ELSE
+            variables := NIL
+        END;
+
+        unit.scope.close(unit, variables);
+
+        IF import = NIL THEN
+            enter.variables := variables
+        END
 
         RETURN endmod
     END ProcDeclaration;

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -15,11 +15,14 @@ CONST
     R0* = 0; R1* = 1; R2* = 2;
     R8* = 8; R9* = 9; R10* = 10; R11* = 11;
 
+    NVR = 32;
+
 
 TYPE
 
-    OP1 = PROCEDURE (reg: INTEGER);
-    OP2 = PROCEDURE (reg1, reg2: INTEGER);
+    OP1 = PROCEDURE (arg: INTEGER);
+    OP2 = PROCEDURE (arg1, arg2: INTEGER);
+    OP3 = PROCEDURE (arg1, arg2, arg3: INTEGER);
 
     REGS* = POINTER TO RECORD
 
@@ -28,8 +31,13 @@ TYPE
         top*:    INTEGER;
         pushed*: INTEGER;
 
-        push, pop: OP1;
-        mov,  xch: OP2
+        vregs*:  SET;
+        offs:    ARRAY NVR OF INTEGER;
+        size:    ARRAY NVR OF INTEGER;
+
+        push, pop:  OP1;
+        mov,  xch:  OP2;
+        load, save: OP3
 
     END;
 
@@ -271,9 +279,132 @@ BEGIN
 END PushAll;
 
 
-PROCEDURE Create* (push, pop: OP1; mov, xch: OP2; regs: SET): REGS;
+PROCEDURE Lock* (R: REGS; reg, offs, size: INTEGER);
+BEGIN
+    ASSERT(reg IN R.vregs);
+    ASSERT(offs # 0);
+    R.offs[reg] := offs;
+    IF size = 0 THEN
+        size := 8
+    END;
+    R.size[reg] := size
+END Lock;
+
+
+PROCEDURE Release* (R: REGS; reg: INTEGER);
+BEGIN
+    ASSERT(reg IN R.vregs);
+    R.offs[reg] := 0
+END Release;
+
+
+PROCEDURE Load* (R: REGS; reg: INTEGER);
+VAR
+    offs: INTEGER;
+
+BEGIN
+    ASSERT(reg IN R.vregs);
+    offs := R.offs[reg];
+    IF offs # 0 THEN
+        R.load(reg, offs, R.size[reg])
+    END
+END Load;
+
+
+PROCEDURE Save* (R: REGS; reg: INTEGER);
+VAR
+    offs: INTEGER;
+
+BEGIN
+    ASSERT(reg IN R.vregs);
+    offs := R.offs[reg];
+    IF offs # 0 THEN
+        R.save(reg, offs, R.size[reg])
+    END
+END Save;
+
+
+PROCEDURE Store* (R: REGS);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO NVR - 1 DO
+        IF i IN R.vregs THEN
+            Save(R, i)
+        END
+    END
+END Store;
+
+
+PROCEDURE Restore* (R: REGS);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO NVR - 1 DO
+        IF i IN R.vregs THEN
+            Load(R, i)
+        END
+    END
+END Restore;
+
+
+PROCEDURE Reset* (R: REGS);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO NVR - 1 DO
+        IF i IN R.vregs THEN
+            R.offs[i] := 0
+        END
+    END
+END Reset;
+
+
+PROCEDURE GetVarReg* (R: REGS; offs: INTEGER): INTEGER;
+VAR
+    i, res: INTEGER;
+
+BEGIN
+    res := -1;
+    i := 0;
+    WHILE i < NVR DO
+        IF (i IN R.vregs) & (R.offs[i] = offs) THEN
+            res := i;
+            i := NVR
+        END;
+        INC(i)
+    END
+
+    RETURN res
+END GetVarReg;
+
+
+PROCEDURE GetAnyVarReg* (R: REGS): INTEGER;
+VAR
+    i, res: INTEGER;
+
+BEGIN
+    res := -1;
+    i := 0;
+    WHILE i < NVR DO
+        IF (i IN R.vregs) & (R.offs[i] = 0) THEN
+            res := i;
+            i := NVR
+        END;
+        INC(i)
+    END
+
+    RETURN res
+END GetAnyVarReg;
+
+
+PROCEDURE Create* (push, pop: OP1; mov, xch: OP2; load, save: OP3; regs, vregs: SET): REGS;
 VAR
     R: REGS;
+    i: INTEGER;
 
 BEGIN
     NEW(R);
@@ -286,6 +417,15 @@ BEGIN
     R.pop  := pop;
     R.mov  := mov;
     R.xch  := xch;
+    R.load := load;
+    R.save := save;
+
+    R.vregs := vregs;
+
+    FOR i := 0 TO NVR - 1 DO
+        R.offs[i] := 0;
+        R.size[i] := 0
+    END
 
     RETURN R
 END Create;

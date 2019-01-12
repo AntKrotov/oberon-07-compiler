@@ -407,9 +407,10 @@ BEGIN
                     END
                 ELSE
                     IF chkBYTE IN checking THEN
-                        CODE.AddCmd0(CODE.opSWAP);
-                        CheckRange(256, line, errBYTE);
-                        CODE.AddCmd0(CODE.opSWAP)
+                        label := CODE.NewLabel();
+                        CODE.AddCmd2(CODE.opCHKBYTE, label, 0);
+                        CODE.OnError(line, errBYTE);
+                        CODE.SetLabel(label)
                     END;
                     CODE.AddCmd0(CODE.opSAVE8)
                 END
@@ -657,6 +658,8 @@ VAR
     code:  ARITH.VALUE;
     e1:    PARS.EXPR;
     wchar: BOOLEAN;
+    cmd1,
+    cmd2:  CODE.COMMAND;
 
 
     PROCEDURE varparam (parser: PARS.PARSER; pos: SCAN.POSITION; isfunc: isXXX; readOnly: BOOLEAN; VAR e: PARS.EXPR);
@@ -691,6 +694,12 @@ BEGIN
 
     getpos(parser, pos);
     proc := e.stproc;
+
+    IF e.obj IN {eSYSPROC, eSYSFUNC} THEN
+        IF parser.unit.scopeLvl > 0 THEN
+            parser.unit.scopes[parser.unit.scopeLvl].enter(CODE.COMMAND).allocReg := FALSE
+        END
+    END;
 
     IF e.obj IN {eSTPROC, eSYSPROC} THEN
 
@@ -824,9 +833,9 @@ BEGIN
                 CODE.AddCmd(CODE.opCOPYS2, e1.type.base.size)
             ELSE
                 CODE.AddCmd(CODE.opCOPYS, e1.type.base.size)
-            END
-
-        |PROG.sysGET, PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16, PROG.sysPUT32:
+            END 
+            
+        |PROG.sysGET:
             parser.expression(parser, e);
             PARS.check(isInt(e), parser, pos, 66);
             IF e.obj = eCONST THEN
@@ -839,9 +848,23 @@ BEGIN
                 PARS.check(isVar(e2), parser, pos, 93);
                 PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
                 CODE.SysGet(e2.type.size)
-            ELSIF proc = PROG.sysPUT THEN
-                parser.expression(parser, e2);
-                PARS.check(isExpr(e2), parser, pos, 66);
+            END
+
+        |PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16, PROG.sysPUT32:
+            CODE.pushBegEnd(begcall, endcall);
+            parser.expression(parser, e);
+            PARS.check(isInt(e), parser, pos, 66);
+            IF e.obj = eCONST THEN
+                LoadConst(e)
+            END;
+            PARS.checklex(parser, SCAN.lxCOMMA);
+            NextPos(parser, pos); 
+            CODE.setlast(begcall);
+            parser.expression(parser, e2);
+            CODE.setlast(endcall.prev(CODE.COMMAND));
+            PARS.check(isExpr(e2), parser, pos, 66);
+
+            IF proc = PROG.sysPUT THEN
                 PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     IF e2.type.typ = PROG.tREAL THEN
@@ -861,9 +884,7 @@ BEGIN
                     END
                 END
 
-            ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
-                parser.expression(parser, e2);
-                PARS.check(isExpr(e2), parser, pos, 66);
+            ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN 
                 PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
@@ -876,7 +897,8 @@ BEGIN
                     CODE.SysPut(4)
                 END
 
-            END
+            END;
+            CODE.popBegEnd(begcall, endcall)
 
         |PROG.sysMOVE:
             FOR i := 1 TO 2 DO
@@ -1019,9 +1041,12 @@ BEGIN
             END
 
         |PROG.stLEN:
+            cmd1 := CODE.getlast();
             varparam(parser, pos, isArr, FALSE, e);
             IF e.type.length > 0 THEN
-                CODE.drop;
+                cmd2 := CODE.getlast();
+                CODE.delete2(cmd1.next, cmd2);
+                CODE.setlast(cmd1);
                 ASSERT(ARITH.setInt(e.value, e.type.length));
                 e.obj := eCONST
             ELSE
@@ -2526,6 +2551,7 @@ BEGIN
     L := CODE.NewLabel();
 
     IF ~if THEN
+        CODE.AddCmd0(CODE.opLOOP);
         CODE.SetLabel(L)
     END;
 
@@ -2568,6 +2594,11 @@ BEGIN
     END;
 
     PARS.checklex(parser, SCAN.lxEND);
+
+    IF ~if THEN
+        CODE.AddCmd0(CODE.opENDLOOP)
+    END;
+
     PARS.Next(parser)
 END IfStatement;
 
@@ -2579,6 +2610,8 @@ VAR
     label: INTEGER;
 
 BEGIN
+    CODE.AddCmd0(CODE.opLOOP);
+
     label := CODE.NewLabel();
     CODE.SetLabel(label);
 
@@ -2595,7 +2628,9 @@ BEGIN
         END
     ELSE
         CODE.AddJmpCmd(CODE.opJNE, label)
-    END
+    END;
+
+    CODE.AddCmd0(CODE.opENDLOOP)
 END RepeatStatement;
 
 
@@ -2972,6 +3007,8 @@ VAR
     L1, L2:  INTEGER;
 
 BEGIN
+    CODE.AddCmd0(CODE.opLOOP);
+
     L1 := CODE.NewLabel();
     L2 := CODE.NewLabel();
 
@@ -3067,6 +3104,8 @@ BEGIN
     PARS.Next(parser);
 
     CODE.SetLabel(L2);
+
+    CODE.AddCmd0(CODE.opENDLOOP)
 
 END ForStatement;
 
