@@ -20,7 +20,7 @@ CONST
 
     sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
 
-    je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
+    je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; jnb = 83H;
 
 
     CODECHUNK = 8;
@@ -244,6 +244,13 @@ BEGIN
     OutByte2(81H + 2 * ORD(isByte(n)), 0E0H + reg);  // and reg, n
     OutIntByte(n)
 END andrc;
+
+
+PROCEDURE orrc (reg, n: INTEGER);
+BEGIN
+    OutByte2(81H + 2 * ORD(isByte(n)), 0C8H + reg);  // or reg, n
+    OutIntByte(n)
+END orrc;
 
 
 PROCEDURE addrc (reg, n: INTEGER);
@@ -1256,13 +1263,13 @@ BEGIN
 
         |CODE.opINC:
             BinOp(reg1, reg2);
-            OutByte2(01H, reg2 * 8 + reg1); // add dword[reg1], reg2
+            OutByte2(01H, reg1 * 8 + reg2); // add dword[reg2], reg1
             drop;
             drop
 
         |CODE.opDEC:
             BinOp(reg1, reg2);
-            OutByte2(29H, reg2 * 8 + reg1); // sub dword[reg1], reg2
+            OutByte2(29H, reg1 * 8 + reg2); // sub dword[reg2], reg1
             drop;
             drop
 
@@ -1288,13 +1295,11 @@ BEGIN
 
         |CODE.opINCB, CODE.opDECB:
             BinOp(reg1, reg2);
-
             IF cmd.opcode = CODE.opINCB THEN
-                OutByte2(00H, reg2 * 8 + reg1) // add byte[reg1], reg2
+                OutByte2(00H, reg1 * 8 + reg2) // add byte[reg2], reg1
             ELSE
-                OutByte2(28H, reg2 * 8 + reg1) // sub byte[reg1], reg2
+                OutByte2(28H, reg1 * 8 + reg2) // sub byte[reg2], reg1
             END;
-
             drop;
             drop
 
@@ -1313,10 +1318,9 @@ BEGIN
             drop
 
         |CODE.opDIVSC:
-            n := param2;
             UnOp(reg1);
-            OutByte2(81H + 2 * ORD(isByte(n)), 0F0H + reg1);  // or reg1, n
-            OutIntByte(n)
+            OutByte2(81H + 2 * ORD(isByte(param2)), 0F0H + reg1);  // xor reg1, n
+            OutIntByte(param2)
 
         |CODE.opADDS:
             BinOp(reg1, reg2);
@@ -1330,10 +1334,8 @@ BEGIN
             drop
 
         |CODE.opADDSL, CODE.opADDSR:
-            n := param2;
             UnOp(reg1);
-            OutByte2(81H + 2 * ORD(isByte(n)), 0C8H + reg1);  // or reg1, n
-            OutIntByte(n)
+            orrc(reg1, param2)
 
         |CODE.opSUBSL:
             UnOp(reg1);
@@ -1450,32 +1452,51 @@ BEGIN
             UnOp(reg1);
             cmprc(reg1, param2);
             OutByte2(07EH, 005H);    // jle @f
-            movrc(reg1, param2);  // mov reg1, param2
+            movrc(reg1, param2);     // mov reg1, param2
                                      // @@:
 
         |CODE.opMAXC:
             UnOp(reg1);
             cmprc(reg1, param2);
             OutByte2(07DH, 005H);    // jge @f
-            movrc(reg1, param2);  // mov reg1, param2
+            movrc(reg1, param2);     // mov reg1, param2
                                      // @@:
 
         |CODE.opIN:
-            PushAll(2);
-            CallRTL(pic, CODE._in);
-            ASSERT(REG.GetReg(R, eax))
+            label := NewLabel();
+            BinOp(reg1, reg2);
+            cmprc(reg1, 32);
+            OutByte2(72H, 4); // jb L
+            OutByte2(31H, 0C0H + reg1 * 9); // xor reg1, reg1
+            jmp(label);
+            //L:
+            OutByte3(0FH, 0A3H, 0C0H + reg2 + 8 * reg1); // bt reg2, reg1
+            setcc(setc, reg1);
+            andrc(reg1, 1);
+            SetLabel(label);
+            drop
 
         |CODE.opINR:
-            PushAll(1);
-            pushc(param2);
-            CallRTL(pic, CODE._in);
-            ASSERT(REG.GetReg(R, eax))
+            label := NewLabel();
+            UnOp(reg1);
+            reg2 := REG.GetAnyReg(R);
+            cmprc(reg1, 32);
+            OutByte2(72H, 4); // jb L
+            OutByte2(31H, 0C0H + reg1 * 9); // xor reg1, reg1
+            jmp(label);
+            //L:
+            movrc(reg2, param2);
+            OutByte3(0FH, 0A3H, 0C0H + reg2 + 8 * reg1); // bt reg2, reg1
+            setcc(setc, reg1);
+            andrc(reg1, 1);
+            SetLabel(label);
+            drop
 
         |CODE.opINL:
-            PushAll(1);
-            pushc(param2);
-            CallRTL(pic, CODE._in2);
-            ASSERT(REG.GetReg(R, eax))
+            UnOp(reg1);
+            OutByte3(0FH, 0BAH, 0E0H + reg1); OutByte(param2); // bt reg1, param2
+            setcc(setc, reg1);
+            andrc(reg1, 1)
 
         |CODE.opRSET:
             PushAll(2);
@@ -1501,23 +1522,30 @@ BEGIN
             CallRTL(pic, CODE._set);
             ASSERT(REG.GetReg(R, eax))
 
-        |CODE.opINCL:
-            PushAll(2);
-            CallRTL(pic, CODE._incl)
-
-        |CODE.opEXCL:
-            PushAll(2);
-            CallRTL(pic, CODE._excl)
+        |CODE.opINCL, CODE.opEXCL:
+            BinOp(reg1, reg2);
+            cmprc(reg1, 32);
+            OutByte2(73H, 03H); // jnb L
+            OutByte(0FH);
+            IF cmd.opcode = CODE.opINCL THEN
+                OutByte(0ABH) // bts dword[reg2], reg1
+            ELSE
+                OutByte(0B3H) // btr dword[reg2], reg1
+            END;
+            OutByte(reg2 + 8 * reg1);
+            //L:
+            drop;
+            drop
 
         |CODE.opINCLC:
-            PushAll(1);
-            pushc(param2);
-            CallRTL(pic, CODE._incl)
+            UnOp(reg1);
+            OutByte3(0FH, 0BAH, 28H + reg1); OutByte(param2); //bts dword[reg1],param2
+            drop
 
         |CODE.opEXCLC:
-            PushAll(1);
-            pushc(param2);
-            CallRTL(pic, CODE._excl)
+            UnOp(reg1);
+            OutByte3(0FH, 0BAH, 30H + reg1); OutByte(param2); //btr dword[reg1],param2
+            drop
 
         |CODE.opDIV:
             PushAll(2);
@@ -1925,7 +1953,6 @@ BEGIN
             OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
             OutByte3(083H, 0C4H, 004H)                                          // add esp,4
 
-
         |CODE.opEQF, CODE.opEQFI:
             ASSERT(REG.GetReg(R, eax));
             OutByte2(0DAH, 0E9H);       // fucompp
@@ -1936,7 +1963,6 @@ BEGIN
             setcc(sete, al)
                                         // L:
 
-
         |CODE.opNEF, CODE.opNEFI:
             ASSERT(REG.GetReg(R, eax));
             OutByte2(0DAH, 0E9H);       // fucompp
@@ -1946,7 +1972,6 @@ BEGIN
             OutByte2(07AH, 003H);       // jp L
             setcc(setne, al)
                                         // L:
-
 
         |CODE.opLTF, CODE.opGTFI:
             ASSERT(REG.GetReg(R, eax));
@@ -1962,7 +1987,6 @@ BEGIN
             andrc(eax, 1)
                                         // L:
 
-
         |CODE.opGTF, CODE.opLTFI:
             ASSERT(REG.GetReg(R, eax));
             OutByte2(0DAH, 0E9H);       // fucompp
@@ -1977,7 +2001,6 @@ BEGIN
             andrc(eax, 1)
                                         // L:
 
-
         |CODE.opLEF, CODE.opGEFI:
             ASSERT(REG.GetReg(R, eax));
             OutByte2(0DAH, 0E9H);       // fucompp
@@ -1987,7 +2010,6 @@ BEGIN
             OutByte2(07AH, 003H);       // jp L
             setcc(setnc, al)
                                         // L:
-
 
         |CODE.opGEF, CODE.opLEFI:
             ASSERT(REG.GetReg(R, eax));
@@ -2004,13 +2026,24 @@ BEGIN
             andrc(eax, 1)
                                         // L:
 
-
         |CODE.opINF:
             pushc(7FF00000H);
             pushc(0);
             OutByte3(0DDH, 004H, 024H);  // fld qword[esp]
             OutByte3(083H, 0C4H, 008H)   // add esp, 8
 
+        |CODE.opLADR_UNPK:
+            n := param2 * 4;
+            reg1 := REG.GetAnyReg(R);
+            OutByte2(8DH, 45H + reg1 * 8 + 40H * ORD(~isByte(n)));  // lea reg1, dword[ebp + n]
+            OutIntByte(n);
+            BinOp(reg1, reg2);
+            OutByte2(0DDH, reg1);         // fld qword[reg1]
+            OutByte2(0D9H, 0F4H);         // fxtract
+            OutByte2(0DDH, 018H + reg1);  // fstp qword[reg1]
+            OutByte2(0DBH, 018H + reg2);  // fistp dword[reg2]
+            drop;
+            drop
 
         |CODE.opSADR_PARAM:
             IF pic THEN
@@ -2099,7 +2132,7 @@ BEGIN
             OutByte2(81H + 2 * ORD(isByte(param2)), 6DH + 40H * ORD(~isByte(n))); // sub dword[ebp + n], param2
             OutIntByte(n);
             OutIntByte(param2)
-            
+
         |CODE.opLADR_INC1B:
             n := param2 * 4;
             OutByte2(0FEH, 45H + 40H * ORD(~isByte(n)));  // inc byte[ebp + n]
@@ -2117,10 +2150,67 @@ BEGIN
             OutByte(param2 MOD 256)
 
         |CODE.opLADR_DECCB:
-            n := param1 * 4; 
+            n := param1 * 4;
             OutByte2(80H, 6DH + 40H * ORD(~isByte(n))); // sub byte[ebp + n], param2
             OutIntByte(n);
             OutByte(param2 MOD 256)
+
+        |CODE.opLADR_INC:
+            n := param2 * 4;
+            UnOp(reg1);
+            OutByte2(01H, 45H + 40H * ORD(~isByte(n)) + reg1 * 8); // add dword[ebp + n], reg1
+            OutIntByte(n);
+            drop
+
+        |CODE.opLADR_DEC:
+            n := param2 * 4;
+            UnOp(reg1);
+            OutByte2(29H, 45H + 40H * ORD(~isByte(n)) + reg1 * 8); // sub dword[ebp + n], reg1
+            OutIntByte(n);
+            drop
+
+        |CODE.opLADR_INCB:
+            n := param2 * 4;
+            UnOp(reg1);
+            OutByte2(00H, 45H + 40H * ORD(~isByte(n)) + reg1 * 8); // add byte[ebp + n], reg1
+            OutIntByte(n);
+            drop
+
+        |CODE.opLADR_DECB:
+            n := param2 * 4;
+            UnOp(reg1);
+            OutByte2(28H, 45H + 40H * ORD(~isByte(n)) + reg1 * 8); // sub byte[ebp + n], reg1
+            OutIntByte(n);
+            drop
+
+        |CODE.opLADR_INCL, CODE.opLADR_EXCL:
+            n := param2 * 4;
+            UnOp(reg1);
+            cmprc(reg1, 32);
+            label := NewLabel();
+            jcc(jnb, label);
+            reg2 := REG.GetVarReg(R, param2);
+            OutByte2(0FH, 0ABH + 8 * ORD(cmd.opcode = CODE.opLADR_EXCL));
+            IF reg2 # -1 THEN
+                OutByte(0C0H + reg2 + 8 * reg1) // bts(r) reg2, reg1
+            ELSE
+                OutByte(45H + 40H * ORD(~isByte(n)) + reg1 * 8); // bts(r) dword[ebp + n], reg1
+                OutIntByte(n)
+            END;
+            SetLabel(label);
+            drop
+
+        |CODE.opLADR_INCLC, CODE.opLADR_EXCLC:
+            n := param1 * 4;
+            reg1 := REG.GetVarReg(R, param1);
+            OutByte2(0FH, 0BAH);
+            IF reg1 # -1 THEN
+                OutByte(0E8H + reg1 + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC))  // bts(r) reg1, param2
+            ELSE
+                OutByte(6DH + 40H * ORD(~isByte(n)) + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC)); // bts(r) dword[ebp + n], param2
+                OutIntByte(n)
+            END;
+            OutByte(param2)
 
         |CODE.opLOOP, CODE.opENDLOOP:
 

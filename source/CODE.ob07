@@ -94,16 +94,19 @@ CONST
 
     opLADR_INC1* = 1012; opLADR_DEC1* = 1013; opLADR_INCC* = 1014; opLADR_DECC* = 1015;
     opLADR_INC1B* = 1016; opLADR_DEC1B* = 1017; opLADR_INCCB* = 1018; opLADR_DECCB* = 1019;
+    opLADR_INC* = 1020; opLADR_DEC* = 1021; opLADR_INCB* = 1022; opLADR_DECB* = 1023;
+    opLADR_INCL* = 1024; opLADR_EXCL* = 1025; opLADR_INCLC* = 1026; opLADR_EXCLC* = 1027;
+    opLADR_UNPK* = 1028;
 
 
     _move      *=   0;
     _move2     *=   1;
-    _in        *=   2;
-    _in2       *=   3;
+    _strcmpw   *=   2;
+    _strcmpw2  *=   3;
     _set       *=   4;
     _set2      *=   5;
-    _incl      *=   6;
-    _excl      *=   7;
+    _lengthw   *=   6;
+    _strcmp2   *=   7;
     _div       *=   8;
     _mod       *=   9;
     _div2      *=  10;
@@ -124,12 +127,6 @@ CONST
     _strcpy    *=  25;
     _exit      *=  26;
     _strcpy2   *=  27;
-    _lengthw   *=  28;
-    _strcmp2   *=  29;
-    _strcmpw   *=  30;
-    _strcmpw2  *=  31;
-    _pack      *=  32;
-    _unpk      *=  33;
 
 
 TYPE
@@ -196,7 +193,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 34 OF INTEGER;
+        rtl*:       ARRAY 28 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
@@ -455,8 +452,15 @@ BEGIN
         |opSAVE:  cur.opcode := opLADR_SAVE
         |opINC1:  cur.opcode := opLADR_INC1
         |opDEC1:  cur.opcode := opLADR_DEC1
+        |opINC:   cur.opcode := opLADR_INC
+        |opDEC:   cur.opcode := opLADR_DEC
         |opINC1B: cur.opcode := opLADR_INC1B
         |opDEC1B: cur.opcode := opLADR_DEC1B
+        |opINCB:  cur.opcode := opLADR_INCB
+        |opDECB:  cur.opcode := opLADR_DECB
+        |opINCL:  cur.opcode := opLADR_INCL
+        |opEXCL:  cur.opcode := opLADR_EXCL 
+        |opUNPK:  cur.opcode := opLADR_UNPK
 
         |opINCC:
             cur.opcode := opLADR_INCC;
@@ -475,6 +479,16 @@ BEGIN
 
         |opDECCB:
             cur.opcode := opLADR_DECCB;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opINCLC:
+            cur.opcode := opLADR_INCLC;
+            cur.param1 := cur.param2;
+            cur.param2 := nov.param2
+
+        |opEXCLC:
+            cur.opcode := opLADR_EXCLC;
             cur.param1 := cur.param2;
             cur.param2 := nov.param2
 
@@ -795,7 +809,7 @@ END ProcImpCmp;
 
 
 PROCEDURE SysGet* (size: INTEGER);
-BEGIN       
+BEGIN
     AddCmd(opGET, size)
 END SysGet;
 

@@ -719,11 +719,14 @@ BEGIN
             END
 
         |PROG.stINC, PROG.stDEC:
+            CODE.pushBegEnd(begcall, endcall);
             varparam(parser, pos, isInt, TRUE, e);
             IF e.type.typ = PROG.tINTEGER THEN
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
+                    CODE.setlast(begcall);
                     parser.expression(parser, e2);
+                    CODE.setlast(endcall.prev(CODE.COMMAND));
                     PARS.check(isInt(e2), parser, pos, 66);
                     IF e2.obj = eCONST THEN
                         CODE.AddCmd(CODE.opINCC + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
@@ -736,7 +739,9 @@ BEGIN
             ELSE  (* e.type.typ = PROG.tBYTE *)
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
+                    CODE.setlast(begcall);
                     parser.expression(parser, e2);
+                    CODE.setlast(endcall.prev(CODE.COMMAND));
                     PARS.check(isInt(e2), parser, pos, 66);
                     IF e2.obj = eCONST THEN
                         CODE.AddCmd(CODE.opINCCB + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
@@ -746,21 +751,25 @@ BEGIN
                 ELSE
                     CODE.AddCmd0(CODE.opINC1B + ORD(proc = PROG.stDEC))
                 END
-            END
+            END;
+            CODE.popBegEnd(begcall, endcall)
 
         |PROG.stINCL, PROG.stEXCL:
+            CODE.pushBegEnd(begcall, endcall);
             varparam(parser, pos, isSet, TRUE, e);
             PARS.checklex(parser, SCAN.lxCOMMA);
             NextPos(parser, pos);
+            CODE.setlast(begcall);
             parser.expression(parser, e2);
+            CODE.setlast(endcall.prev(CODE.COMMAND));
             PARS.check(isInt(e2), parser, pos, 66);
-
             IF e2.obj = eCONST THEN
                 PARS.check(ARITH.range(e2.value, 0, MACHINE.target.maxSet), parser, pos, 56);
                 CODE.AddCmd(CODE.opINCLC + ORD(proc = PROG.stEXCL), ARITH.Int(e2.value))
             ELSE
                 CODE.AddCmd0(CODE.opINCL + ORD(proc = PROG.stEXCL))
-            END
+            END;
+            CODE.popBegEnd(begcall, endcall)
 
         |PROG.stNEW:
             varparam(parser, pos, isPtr, TRUE, e);
@@ -833,8 +842,8 @@ BEGIN
                 CODE.AddCmd(CODE.opCOPYS2, e1.type.base.size)
             ELSE
                 CODE.AddCmd(CODE.opCOPYS, e1.type.base.size)
-            END 
-            
+            END
+
         |PROG.sysGET:
             parser.expression(parser, e);
             PARS.check(isInt(e), parser, pos, 66);
@@ -858,7 +867,7 @@ BEGIN
                 LoadConst(e)
             END;
             PARS.checklex(parser, SCAN.lxCOMMA);
-            NextPos(parser, pos); 
+            NextPos(parser, pos);
             CODE.setlast(begcall);
             parser.expression(parser, e2);
             CODE.setlast(endcall.prev(CODE.COMMAND));
@@ -884,7 +893,7 @@ BEGIN
                     END
                 END
 
-            ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN 
+            ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
                 PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
@@ -3206,12 +3215,8 @@ BEGIN
 
     getproc(rtl,  "_move",      CODE._move);
     getproc(rtl,  "_move2",     CODE._move2);
-    getproc(rtl,  "_in",        CODE._in);
-    getproc(rtl,  "_in2",       CODE._in2);
     getproc(rtl,  "_set",       CODE._set);
     getproc(rtl,  "_set2",      CODE._set2);
-    getproc(rtl,  "_incl",      CODE._incl);
-    getproc(rtl,  "_excl",      CODE._excl);
     getproc(rtl,  "_div",       CODE._div);
     getproc(rtl,  "_mod",       CODE._mod);
     getproc(rtl,  "_div2",      CODE._div2);
@@ -3236,8 +3241,6 @@ BEGIN
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
     getproc(rtl,  "_strcmpw",   CODE._strcmpw);
     getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
-    getproc(rtl,  "_pack",      CODE._pack);
-    getproc(rtl,  "_unpk",      CODE._unpk);
 
 END setrtl;
 
