@@ -37,14 +37,6 @@ VAR
     END;
 
 
-PROCEDURE [stdcall] _unpk* (VAR n, r: INTEGER);
-END _unpk;
-
-
-PROCEDURE [stdcall] _pack* (n: INTEGER; VAR r: INTEGER);
-END _pack;
-
-
 PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
 BEGIN
     SYSTEM.CODE(
@@ -141,16 +133,6 @@ BEGIN
 END _rot;
 
 
-PROCEDURE [stdcall] _in* (s, i: INTEGER): BOOLEAN;
-    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
-END _in;
-
-
-PROCEDURE [stdcall] _in2* (i, s: INTEGER): BOOLEAN;
-    RETURN (LSR(i, 5) = 0) & ODD(LSR(s, i))
-END _in2;
-
-
 PROCEDURE [stdcall] _set2* (a, b: INTEGER): INTEGER;
 VAR
     res: INTEGER;
@@ -175,22 +157,6 @@ END _set2;
 PROCEDURE [stdcall] _set* (b, a: INTEGER): INTEGER;
     RETURN _set2(a, b)
 END _set;
-
-
-PROCEDURE [stdcall] _incl* (n: INTEGER; VAR s: SET);
-BEGIN
-    IF LSR(n, 5) = 0 THEN
-        s := s + BITS(LSL(1, n))
-    END
-END _incl;
-
-
-PROCEDURE [stdcall] _excl* (n: INTEGER; VAR s: SET);
-BEGIN
-    IF LSR(n, 5) = 0 THEN
-        s := s - BITS(LSL(1, n))
-    END
-END _excl;
 
 
 PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
