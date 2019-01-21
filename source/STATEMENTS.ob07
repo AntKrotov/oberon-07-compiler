@@ -870,20 +870,22 @@ BEGIN
             NextPos(parser, pos);
             CODE.setlast(begcall);
             parser.expression(parser, e2);
-            CODE.setlast(endcall.prev(CODE.COMMAND));
             PARS.check(isExpr(e2), parser, pos, 66);
 
             IF proc = PROG.sysPUT THEN
                 PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
                 IF e2.obj = eCONST THEN
-                    IF e2.type.typ = PROG.tREAL THEN
+                    IF e2.type.typ = PROG.tREAL THEN 
+                        CODE.setlast(endcall.prev(CODE.COMMAND));
                         CODE.Float(ARITH.Float(e2.value));
                         CODE.savef
                     ELSE
                         LoadConst(e2);
+                        CODE.setlast(endcall.prev(CODE.COMMAND));
                         CODE.SysPut(e2.type.size)
                     END
-                ELSE
+                ELSE     
+                    CODE.setlast(endcall.prev(CODE.COMMAND));
                     IF e2.type.typ = PROG.tREAL THEN
                         CODE.savef
                     ELSIF e2.type.typ = PROG.tBYTE THEN
@@ -897,7 +899,8 @@ BEGIN
                 PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
-                END;
+                END;  
+                CODE.setlast(endcall.prev(CODE.COMMAND));
                 IF proc = PROG.sysPUT8 THEN
                     CODE.SysPut(1)
                 ELSIF proc = PROG.sysPUT16 THEN
