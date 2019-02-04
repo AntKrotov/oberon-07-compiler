@@ -8,7 +8,7 @@
 MODULE AMD64;
 
 IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS,
-       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32;
+       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, X86;
 
 
 CONST
@@ -56,7 +56,7 @@ VAR
 
 PROCEDURE OutByte (b: BYTE);
 BEGIN
-    BIN.PutCode(prog, b)
+    X86.OutByte(b)
 END OutByte;
 
 
@@ -125,9 +125,8 @@ END NewLabel;
 
 PROCEDURE lea (reg, offset, section: INTEGER);
 BEGIN
-    OutByte3(48H + 4 * (reg DIV 8), 8DH, 05H + 8 * (reg MOD 8)); //lea reg, [rip + offset]
-    BIN.PutReloc(prog, section);
-    BIN.PutCode32LE(prog, offset)
+    OutByte3(48H + 4 * (reg DIV 8), 8DH, 05H + 8 * (reg MOD 8)); //lea reg, [rip + offset] 
+    X86.Reloc(section, offset)
 END lea;
 
 
@@ -222,14 +221,6 @@ BEGIN
 END incr;
 
 
-PROCEDURE call (label: INTEGER);  // call label
-BEGIN
-    OutByte(0E8H);
-    BIN.PutReloc(prog, BIN.PICCODE);
-    BIN.PutCode32LE(prog, label)
-END call;
-
-
 PROCEDURE drop;
 BEGIN
     REG.Drop(R)
@@ -274,31 +265,10 @@ BEGIN
         label := -label;
         callimp(label)
     ELSE
-        call(label)
+        X86.call(label)
     END;
     REG.Restore(R)
 END CallRTL;
-
-
-PROCEDURE log2 (x: INTEGER): INTEGER;
-VAR
-    n: INTEGER;
-
-BEGIN
-    ASSERT(x > 0);
-
-    n := 0;
-    WHILE ~ODD(x) DO
-        x := x DIV 2;
-        INC(n)
-    END;
-
-    IF x # 1 THEN
-        n := -1
-    END
-
-    RETURN n
-END log2;
 
 
 PROCEDURE UnOp (VAR reg: INTEGER);
@@ -610,19 +580,15 @@ BEGIN
 END opxx;
 
 
-PROCEDURE jcc (cc, label: INTEGER);
-BEGIN
-    OutByte2(0FH, cc);
-    BIN.PutReloc(prog, BIN.PICCODE);
-    BIN.PutCode32LE(prog, label)
+PROCEDURE jcc (cc, label: INTEGER); // jcc label
+BEGIN   
+    X86.jcc(cc, label)
 END jcc;
 
 
 PROCEDURE jmp (label: INTEGER); // jmp label
-BEGIN
-    OutByte(0E9H);
-    BIN.PutReloc(prog, BIN.PICCODE);
-    BIN.PutCode32LE(prog, label)
+BEGIN    
+    X86.jmp(label)
 END jmp;
 
 
@@ -862,7 +828,7 @@ BEGIN
 
         |CODE.opCALL:
             REG.Store(R);
-            call(param1);
+            X86.call(param1);
             REG.Restore(R)
 
         |CODE.opCALLP:
@@ -887,7 +853,7 @@ BEGIN
             FOR i := 0 TO n - 1 DO
                 PassParam(i, i IN BITS(param2))
             END;
-            call(param1);
+            X86.call(param1);
             REG.Restore(R)
 
         |CODE.opCALLP64:
@@ -917,7 +883,7 @@ BEGIN
             REG.Restore(R)
 
         |CODE.opLABEL:
-            BIN.SetLabel(prog, param2, CHL.Length(prog.code))
+            X86.SetLabel(param2)
 
         |CODE.opERR:
             CallRTL(CODE._error)
@@ -980,8 +946,8 @@ BEGIN
 
         |CODE.opENTER:
             ASSERT(R.top = -1);
-
-            BIN.SetLabel(prog, param1, CHL.Length(prog.code));
+            
+            X86.SetLabel(param1);
 
             param3 := cmd.param3;
 
@@ -1447,12 +1413,12 @@ BEGIN
             jcc(jb, L);
             xor(reg1, reg1);
             jmp(label);
-            BIN.SetLabel(prog, L, CHL.Length(prog.code));
+            X86.SetLabel(L);
             OutByte3(48H + ORD(reg2 >= 8) + 4 * ORD(reg1 >= 8), 0FH, 0A3H);
             OutByte(0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); // bt reg2, reg1
             setcc(setc, reg1);
             andrc(reg1, 1);
-            BIN.SetLabel(prog, label, CHL.Length(prog.code));
+            X86.SetLabel(label);
             drop
 
         |CODE.opINR:
@@ -1464,13 +1430,13 @@ BEGIN
             jcc(jb, L);
             xor(reg1, reg1);
             jmp(label);
-            BIN.SetLabel(prog, L, CHL.Length(prog.code));
+            X86.SetLabel(L);
             movrc(reg2, param2);
             OutByte3(48H + ORD(reg2 >= 8) + 4 * ORD(reg1 >= 8), 0FH, 0A3H);
             OutByte(0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); // bt reg2, reg1
             setcc(setc, reg1);
             andrc(reg1, 1);
-            BIN.SetLabel(prog, label, CHL.Length(prog.code));
+            X86.SetLabel(label);
             drop
 
         |CODE.opINL:
@@ -1728,7 +1694,7 @@ BEGIN
             label := NewLabel();
             jcc(jle, label);
             movrc(reg1, param2);
-            BIN.SetLabel(prog, label, CHL.Length(prog.code));
+            X86.SetLabel(label)
 
         |CODE.opMAXC:
             UnOp(reg1);
@@ -1736,7 +1702,7 @@ BEGIN
             label := NewLabel();
             jcc(jge, label);
             movrc(reg1, param2);
-            BIN.SetLabel(prog, label, CHL.Length(prog.code));
+            X86.SetLabel(label)
 
         |CODE.opSBOOL:
             BinOp(reg2, reg1);
@@ -1806,9 +1772,9 @@ BEGIN
         |CODE.opDIVR:
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := X86.log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := X86.log2(-a)
             ELSE
                 n := -1
             END;
@@ -1854,9 +1820,9 @@ BEGIN
         |CODE.opMODR:
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := X86.log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := X86.log2(-a)
             ELSE
                 n := -1
             END;
@@ -1874,7 +1840,7 @@ BEGIN
                         label := NewLabel();
                         jcc(je, label);
                         addrc(reg1, a);
-                        BIN.SetLabel(prog, label, CHL.Length(prog.code))
+                        X86.SetLabel(label)
                     END
 
                 ELSE
@@ -1901,9 +1867,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := X86.log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := X86.log2(-a)
             ELSE
                 n := -1
             END;
@@ -2665,10 +2631,8 @@ BEGIN
     Numbers_Offs := ModName_Offs + LENGTH(modname) + 1;
     ASSERT(MACHINE.Align(Numbers_Offs, 16));
 
-    //WriteLn("format PE64 GUI 5.0");
     IF target = mConst.Target_iDLL64 THEN
-        dllret := CODE.NewLabel();
-        BIN.NewLabel(prog);
+        dllret := NewLabel();
         push(r8);
         push(rdx);
         push(rcx);
@@ -2691,7 +2655,7 @@ VAR
     i, n: INTEGER;
     number: Number;
     exp: CODE.EXPORT_PROC;
-                      
+
 
     PROCEDURE import (imp: LISTS.LIST);
     VAR
@@ -2716,12 +2680,14 @@ VAR
 
 BEGIN
     IF target = mConst.Target_iDLL64 THEN
-        BIN.SetLabel(prog, dllret, CHL.Length(prog.code));
+        X86.SetLabel(dllret);
         OutByte(0C3H) // ret
     ELSE
         pushc(0);
         CallRTL(CODE._exit)
     END;
+    
+    X86.fixup;
 
     i := 0;
     WHILE i < CHL.Length(code.types) DO
@@ -2813,6 +2779,9 @@ BEGIN
 
     prog := BIN.create(code.lcount);
     BIN.SetParams(prog, code.bss, stack, WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    
+    X86.SetProgram(prog);
+
     prolog(code, modname, target, stack);
     translate(code.commands, CHL.Length(code.types) * 8);
     epilog(code, modname, target);

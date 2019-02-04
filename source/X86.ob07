@@ -97,7 +97,7 @@ PROCEDURE Word (n: INTEGER): INTEGER;
 END Word;
 
 
-PROCEDURE OutByte (n: BYTE);
+PROCEDURE OutByte* (n: BYTE);
 VAR
     c: TCODE;
     last: ANYCODE;
@@ -283,7 +283,7 @@ BEGIN
 END drop;
 
 
-PROCEDURE log2 (x: INTEGER): INTEGER;
+PROCEDURE log2* (x: INTEGER): INTEGER;
 VAR
     n: INTEGER;
 
@@ -304,7 +304,7 @@ BEGIN
 END log2;
 
 
-PROCEDURE Reloc (op, value: INTEGER);
+PROCEDURE Reloc* (op, value: INTEGER);
 VAR
     reloc: RELOC;
 
@@ -316,20 +316,20 @@ BEGIN
 END Reloc;
 
 
-PROCEDURE jcc (opcode, label: INTEGER);
+PROCEDURE jcc* (cc, label: INTEGER);
 VAR
     j: JCC;
 
 BEGIN
     NEW(j);
     j.label := label;
-    j.jmp   := opcode;
+    j.jmp   := cc;
     j.short := FALSE;
     LISTS.push(CodeList, j)
 END jcc;
 
 
-PROCEDURE jmp (label: INTEGER);
+PROCEDURE jmp* (label: INTEGER);
 VAR
     j: JMP;
 
@@ -341,7 +341,7 @@ BEGIN
 END jmp;
 
 
-PROCEDURE call (label: INTEGER);
+PROCEDURE call* (label: INTEGER);
 VAR
     c: CALL;
 
@@ -388,7 +388,7 @@ BEGIN
 END CallRTL;
 
 
-PROCEDURE SetLabel (label: INTEGER);
+PROCEDURE SetLabel* (label: INTEGER);
 VAR
     L: LABEL;
 
@@ -399,7 +399,7 @@ BEGIN
 END SetLabel;
 
 
-PROCEDURE fixup;
+PROCEDURE fixup*;
 VAR
     code:      ANYCODE;
     count, i:  INTEGER;
@@ -2419,7 +2419,14 @@ BEGIN
         MSCOFF.write(program, outname, ver)
     END
 
-END CodeGen;
+END CodeGen; 
+
+
+PROCEDURE SetProgram* (prog: BIN.PROGRAM);
+BEGIN
+    program := prog;
+    CodeList := LISTS.create(NIL)
+END SetProgram;
 
 
 END X86.
