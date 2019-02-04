@@ -97,14 +97,12 @@ PROCEDURE Word (n: INTEGER): INTEGER;
 END Word;
 
 
-PROCEDURE OutByte (n: INTEGER);
+PROCEDURE OutByte (n: BYTE);
 VAR
     c: TCODE;
     last: ANYCODE;
 
 BEGIN
-    ASSERT((0 <= n) & (n <= 255));
-
     last := CodeList.last(ANYCODE);
 
     IF (last IS TCODE) & (last(TCODE).length < CODECHUNK) THEN
@@ -130,14 +128,14 @@ BEGIN
 END OutInt;
 
 
-PROCEDURE OutByte2 (a, b: INTEGER);
+PROCEDURE OutByte2 (a, b: BYTE);
 BEGIN
     OutByte(a);
     OutByte(b)
 END OutByte2;
 
 
-PROCEDURE OutByte3 (a, b, c: INTEGER);
+PROCEDURE OutByte3 (a, b, c: BYTE);
 BEGIN
     OutByte(a);
     OutByte(b);
@@ -2414,7 +2412,7 @@ BEGIN
         IF pic THEN
             reloc := FALSE
         END;
-        PE32.write(program, outname, base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, pic, reloc)
+        PE32.write(program, outname, base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, pic, reloc, FALSE)
     ELSIF target = mConst.Target_iKolibri THEN
         KOS.write(program, outname)
     ELSIF target = mConst.Target_iObject THEN

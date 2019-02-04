@@ -160,6 +160,7 @@ VAR
     checking:   SET;
 
     bits64: BOOLEAN;
+    bit32only: ARRAY 15 OF CHAR;
 
 BEGIN
     StackSize := 2;
@@ -177,16 +178,18 @@ BEGIN
         C.String("Akron Oberon-07/16 Compiler v"); C.Int(mConst.vMajor); C.String("."); C.Int2(mConst.vMinor);
             C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)"); C.Ln;
         C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
-        IF UTILS.bit_depth = 64 THEN
+        IF UTILS.bit_depth = 64 THEN 
+            bit32only := " (32-bit only)";
             C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj'); C.Ln;
         ELSIF UTILS.bit_depth = 32 THEN
+            bit32only := "";
             C.StringLn('target = console | gui | dll | kos | obj'); C.Ln;
         END;
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
         C.StringLn("  -base <address>        set base address of image in kilobytes"); C.Ln;
-        C.StringLn("  -pic                   generate position-independent code"); C.Ln;
-        C.StringLn("  -reloc                 make relocation table"); C.Ln;
+        C.String(  "  -pic                   generate position-independent code"); C.StringLn(bit32only); C.Ln;
+        C.String(  "  -reloc                 make relocation table"); C.StringLn(bit32only); C.Ln;
         C.StringLn('  -ver <major.minor>     set version of program ("obj" only)'); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;

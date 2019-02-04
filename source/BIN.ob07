@@ -167,6 +167,17 @@ BEGIN
 END PutData32LE;
 
 
+PROCEDURE PutData64LE* (program: PROGRAM; x: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO 7 DO
+        CHL.PushByte(program.data, MACHINE.Byte(x, i))
+    END
+END PutData64LE;
+
+
 PROCEDURE PutDataStr* (program: PROGRAM; s: ARRAY OF CHAR);
 VAR
     i: INTEGER;

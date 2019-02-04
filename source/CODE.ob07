@@ -420,21 +420,31 @@ END AddRec;
 
 PROCEDURE insert (cur, nov: COMMAND);
 VAR
-    old_opcode: INTEGER;
+    old_opcode, param2: INTEGER;
+    
+
+    PROCEDURE set (cur: COMMAND; opcode, param2: INTEGER);
+    BEGIN  
+        cur.opcode := opcode;
+        cur.param1 := cur.param2;
+        cur.param2 := param2
+    END set;
+
 
 BEGIN
     old_opcode := cur.opcode;
+    param2 := nov.param2;
 
-    IF (nov.opcode = opPARAM) & (nov.param2 = 1) THEN
+    IF (nov.opcode = opPARAM) & (param2 = 1) THEN
 
         CASE old_opcode OF
-        |opSADR:    cur.opcode := opSADR_PARAM
         |opGLOAD64: cur.opcode := opGLOAD64_PARAM
         |opLLOAD64: cur.opcode := opLLOAD64_PARAM
         |opLOAD64:  cur.opcode := opLOAD64_PARAM
         |opGLOAD32: cur.opcode := opGLOAD32_PARAM
         |opLLOAD32: cur.opcode := opLLOAD32_PARAM
         |opLOAD32:  cur.opcode := opLOAD32_PARAM
+        |opSADR:    cur.opcode := opSADR_PARAM
         |opVADR:    cur.opcode := opVADR_PARAM
         |opCONST:   cur.opcode := opCONST_PARAM
         ELSE
@@ -444,11 +454,7 @@ BEGIN
     ELSIF old_opcode = opLADR THEN
 
         CASE nov.opcode OF
-        |opSAVEC:
-            cur.opcode := opLADR_SAVEC;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
+        |opSAVEC: set(cur, opLADR_SAVEC, param2)
         |opSAVE:  cur.opcode := opLADR_SAVE
         |opINC1:  cur.opcode := opLADR_INC1
         |opDEC1:  cur.opcode := opLADR_DEC1
@@ -459,47 +465,23 @@ BEGIN
         |opINCB:  cur.opcode := opLADR_INCB
         |opDECB:  cur.opcode := opLADR_DECB
         |opINCL:  cur.opcode := opLADR_INCL
-        |opEXCL:  cur.opcode := opLADR_EXCL 
+        |opEXCL:  cur.opcode := opLADR_EXCL
         |opUNPK:  cur.opcode := opLADR_UNPK
-
-        |opINCC:
-            cur.opcode := opLADR_INCC;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
-        |opDECC:
-            cur.opcode := opLADR_DECC;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
-        |opINCCB:
-            cur.opcode := opLADR_INCCB;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
-        |opDECCB:
-            cur.opcode := opLADR_DECCB;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
-        |opINCLC:
-            cur.opcode := opLADR_INCLC;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
-        |opEXCLC:
-            cur.opcode := opLADR_EXCLC;
-            cur.param1 := cur.param2;
-            cur.param2 := nov.param2
-
+        |opINCC:  set(cur, opLADR_INCC, param2)
+        |opDECC:  set(cur, opLADR_DECC, param2)
+        |opINCCB: set(cur, opLADR_INCCB, param2)
+        |opDECCB: set(cur, opLADR_DECCB, param2)
+        |opINCLC: set(cur, opLADR_INCLC, param2)
+        |opEXCLC: set(cur, opLADR_EXCLC, param2)
         ELSE
             old_opcode := -1
         END
 
     ELSIF (nov.opcode = opSAVEC) & (old_opcode = opGADR) THEN
-        cur.opcode := opGADR_SAVEC;
-        cur.param1 := cur.param2;
-        cur.param2 := nov.param2
+        set(cur, opGADR_SAVEC, param2)
+
+    ELSIF (nov.opcode = opMULC) & (old_opcode = opMULC) THEN
+        cur.param2 := param2 * cur.param2
 
     ELSE
         old_opcode := -1

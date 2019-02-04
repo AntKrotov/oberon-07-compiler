@@ -875,7 +875,7 @@ BEGIN
             IF proc = PROG.sysPUT THEN
                 PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
                 IF e2.obj = eCONST THEN
-                    IF e2.type.typ = PROG.tREAL THEN 
+                    IF e2.type.typ = PROG.tREAL THEN
                         CODE.setlast(endcall.prev(CODE.COMMAND));
                         CODE.Float(ARITH.Float(e2.value));
                         CODE.savef
@@ -884,7 +884,7 @@ BEGIN
                         CODE.setlast(endcall.prev(CODE.COMMAND));
                         CODE.SysPut(e2.type.size)
                     END
-                ELSE     
+                ELSE
                     CODE.setlast(endcall.prev(CODE.COMMAND));
                     IF e2.type.typ = PROG.tREAL THEN
                         CODE.savef
@@ -899,7 +899,7 @@ BEGIN
                 PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
-                END;  
+                END;
                 CODE.setlast(endcall.prev(CODE.COMMAND));
                 IF proc = PROG.sysPUT8 THEN
                     CODE.SysPut(1)
@@ -3266,7 +3266,7 @@ BEGIN
     checking := chk;
 
     IF amd64 THEN
-        CODE.init(6, CODE.little_endian)
+        CODE.init(5, CODE.little_endian)
     ELSE
         CODE.init(8, CODE.little_endian)
     END;
@@ -3307,7 +3307,7 @@ BEGIN
 
     CODE.codes.bss := PARS.program.bss;
     IF amd64 THEN
-        AMD64.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
+        AMD64.CodeGen(CODE.codes, outname, target, stack, base, version)
     ELSE
         X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
     END
