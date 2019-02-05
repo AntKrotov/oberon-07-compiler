@@ -30,6 +30,11 @@ CONST
     sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
 
     shl = CODE.opLSL2; shr = CODE.opLSR2; sar = CODE.opASR2; ror = CODE.opROR2;
+    
+    sCODE = BIN.PICCODE;
+    sDATA = BIN.PICDATA;
+    sBSS  = BIN.PICBSS;
+    sIMP  = BIN.PICIMP;
 
 
 TYPE
@@ -125,7 +130,7 @@ END NewLabel;
 
 PROCEDURE lea (reg, offset, section: INTEGER);
 BEGIN
-    OutByte3(48H + 4 * (reg DIV 8), 8DH, 05H + 8 * (reg MOD 8)); //lea reg, [rip + offset] 
+    OutByte3(48H + 4 * (reg DIV 8), 8DH, 05H + 8 * (reg MOD 8)); //lea reg, [rip + offset]
     X86.Reloc(section, offset)
 END lea;
 
@@ -233,7 +238,7 @@ VAR
 
 BEGIN
     reg := REG.GetAnyReg(R);
-    lea(reg, label, BIN.PICIMP);
+    lea(reg, label, sIMP);
     IF reg >= 8 THEN // call qword[reg]
         OutByte(41H)
     END;
@@ -248,7 +253,7 @@ VAR
 
 BEGIN
     reg := REG.GetAnyReg(R);
-    lea(reg, offs, BIN.PICDATA);
+    lea(reg, offs, sDATA);
     push(reg);
     drop
 END pushDA;
@@ -581,13 +586,13 @@ END opxx;
 
 
 PROCEDURE jcc (cc, label: INTEGER); // jcc label
-BEGIN   
+BEGIN
     X86.jcc(cc, label)
 END jcc;
 
 
 PROCEDURE jmp (label: INTEGER); // jmp label
-BEGIN    
+BEGIN
     X86.jmp(label)
 END jmp;
 
@@ -946,7 +951,7 @@ BEGIN
 
         |CODE.opENTER:
             ASSERT(R.top = -1);
-            
+
             X86.SetLabel(param1);
 
             param3 := cmd.param3;
@@ -1017,7 +1022,7 @@ BEGIN
 
         |CODE.opSADR:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, stroffs + param2, BIN.PICDATA)
+            lea(reg1, stroffs + param2, sDATA)
 
         |CODE.opLOAD8:
             UnOp(reg1);
@@ -1069,23 +1074,23 @@ BEGIN
 
         |CODE.opGLOAD64:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICBSS);
+            lea(reg1, param2, sBSS);
             movrm(reg1, reg1, 0)
 
         |CODE.opGLOAD8:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICBSS);
+            lea(reg1, param2, sBSS);
             movzx(reg1, reg1, 0, FALSE)
 
         |CODE.opGLOAD16:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICBSS);
+            lea(reg1, param2, sBSS);
             movzx(reg1, reg1, 0, TRUE)
 
         |CODE.opGLOAD32:
             reg1 := REG.GetAnyReg(R);
             xor(reg1, reg1);
-            lea(reg1, param2, BIN.PICBSS);
+            lea(reg1, param2, sBSS);
             movrm32(reg1, reg1, 0)
 
         |CODE.opVLOAD64:
@@ -1126,7 +1131,7 @@ BEGIN
 
         |CODE.opGADR:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICBSS)
+            lea(reg1, param2, sBSS)
 
         |CODE.opVADR:
             reg1 := REG.GetAnyReg(R);
@@ -1369,7 +1374,7 @@ BEGIN
 
         |CODE.opPUSHIP:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICIMP);
+            lea(reg1, param2, sIMP);
             movrm(reg1, reg1, 0)
 
         |CODE.opPARAM:
@@ -1613,14 +1618,14 @@ BEGIN
         |CODE.opSAVEP:
             UnOp(reg1);
             reg2 := REG.GetAnyReg(R);
-            lea(reg2, param2, BIN.PICCODE);
+            lea(reg2, param2, sCODE);
             movmr(reg1, 0, reg2);
             drop;
             drop
 
         |CODE.opPUSHP:
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, BIN.PICCODE)
+            lea(reg1, param2, sCODE)
 
         |CODE.opINC, CODE.opDEC:
             BinOp(reg1, reg2);
@@ -2055,10 +2060,10 @@ BEGIN
 
             CASE cmd.opcode OF
             |CODE.opEQP, CODE.opNEP:
-                lea(reg2, param1, BIN.PICCODE)
+                lea(reg2, param1, sCODE)
 
             |CODE.opEQIP, CODE.opNEIP:
-                lea(reg2, param1, BIN.PICIMP);
+                lea(reg2, param1, sIMP);
                 movrm(reg2, reg2, 0)
             END;
 
@@ -2102,7 +2107,7 @@ BEGIN
         |CODE.opSAVEIP:
             UnOp(reg1);
             reg2 := REG.GetAnyReg(R);
-            lea(reg2, param2, BIN.PICIMP);
+            lea(reg2, param2, sIMP);
             movrm(reg2, reg2, 0);
             push(reg2);
             drop;
@@ -2138,7 +2143,7 @@ BEGIN
             float := cmd.float;
             INC(xmm);
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, Numbers_Offs + Numbers_Count * 8, BIN.PICDATA);
+            lea(reg1, Numbers_Offs + Numbers_Count * 8, sDATA);
             movsdrm(xmm, reg1, 0);
             drop;
             NewNumber(UTILS.splitf(float, a, b))
@@ -2179,7 +2184,7 @@ BEGIN
             ASSERT(xmm < 5);
             INC(xmm);
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, Numbers_Offs, BIN.PICDATA);
+            lea(reg1, Numbers_Offs, sDATA);
             movsdrm(xmm, reg1, 0);
             OutByte3(66H, 0FH, 57H); // xorpd xmm - 1, xmm
             OutByte(0C0H + (xmm - 1) * 8 + xmm);
@@ -2190,7 +2195,7 @@ BEGIN
             ASSERT(xmm < 5);
             INC(xmm);
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, Numbers_Offs + 16, BIN.PICDATA);
+            lea(reg1, Numbers_Offs + 16, sDATA);
             movsdrm(xmm, reg1, 0);
             OutByte3(66H, 0FH, 54H); // andpd xmm - 1, xmm
             OutByte(0C0H + (xmm - 1) * 8 + xmm);
@@ -2275,7 +2280,7 @@ BEGIN
         |CODE.opINF:
             INC(xmm);
             reg1 := REG.GetAnyReg(R);
-            lea(reg1, Numbers_Offs + 32, BIN.PICDATA);
+            lea(reg1, Numbers_Offs + 32, sDATA);
             movsdrm(xmm, reg1, 0);
             drop
 
@@ -2298,7 +2303,7 @@ BEGIN
             movrm(reg2, reg2, 0);
 
             push(reg1);
-            lea(reg1, Numbers_Offs + 40, BIN.PICDATA); // {0..51, 63}
+            lea(reg1, Numbers_Offs + 40, sDATA); // {0..51, 63}
             movrm(reg1, reg1, 0);
             and(reg2, reg1);
             pop(reg1);
@@ -2343,7 +2348,7 @@ BEGIN
             movrm(reg1, reg2, 0);
 
             push(reg2);
-            lea(reg2, Numbers_Offs + 48, BIN.PICDATA); // {52..61}
+            lea(reg2, Numbers_Offs + 48, sDATA); // {52..61}
             movrm(reg2, reg2, 0);
             or(reg1, reg2);
             pop(reg2);
@@ -2375,7 +2380,7 @@ BEGIN
 
         |CODE.opGLOAD64_PARAM:
             reg2 := REG.GetAnyReg(R);
-            lea(reg2, param2, BIN.PICBSS);
+            lea(reg2, param2, sBSS);
             movrm(reg2, reg2, 0);
             push(reg2);
             drop
@@ -2386,7 +2391,7 @@ BEGIN
         |CODE.opGLOAD32_PARAM:
             reg1 := REG.GetAnyReg(R);
             xor(reg1, reg1);
-            lea(reg1, param2, BIN.PICBSS);
+            lea(reg1, param2, sBSS);
             movrm32(reg1, reg1, 0);
             push(reg1);
             drop
@@ -2434,13 +2439,13 @@ BEGIN
                 reg1 := REG.GetAnyReg(R);
                 movrc(reg1, param2);
                 reg2 := REG.GetAnyReg(R);
-                lea(reg2, param1, BIN.PICBSS);
+                lea(reg2, param1, sBSS);
                 movmr(reg2, 0, reg1);
                 drop;
                 drop
             ELSE
                 reg2 := REG.GetAnyReg(R);
-                lea(reg2, param1, BIN.PICBSS);
+                lea(reg2, param1, sBSS);
                 OutByte3(48H + reg2 DIV 8, 0C7H, reg2 MOD 8); // mov qword[reg2], param2
                 OutInt(param2);
                 drop
@@ -2686,7 +2691,7 @@ BEGIN
         pushc(0);
         CallRTL(CODE._exit)
     END;
-    
+
     X86.fixup;
 
     i := 0;
@@ -2779,7 +2784,7 @@ BEGIN
 
     prog := BIN.create(code.lcount);
     BIN.SetParams(prog, code.bss, stack, WCHR(ver DIV 65536), WCHR(ver MOD 65536));
-    
+
     X86.SetProgram(prog);
 
     prolog(code, modname, target, stack);

@@ -2187,27 +2187,17 @@ BEGIN
             cmprc(reg1, 32);
             label := NewLabel();
             jcc(jnb, label);
-            reg2 := REG.GetVarReg(R, param2);
             OutByte2(0FH, 0ABH + 8 * ORD(cmd.opcode = CODE.opLADR_EXCL));
-            IF reg2 # -1 THEN
-                OutByte(0C0H + reg2 + 8 * reg1) // bts(r) reg2, reg1
-            ELSE
-                OutByte(45H + 40H * ORD(~isByte(n)) + reg1 * 8); // bts(r) dword[ebp + n], reg1
-                OutIntByte(n)
-            END;
+            OutByte(45H + 40H * ORD(~isByte(n)) + reg1 * 8); // bts(r) dword[ebp + n], reg1
+            OutIntByte(n);
             SetLabel(label);
             drop
 
         |CODE.opLADR_INCLC, CODE.opLADR_EXCLC:
             n := param1 * 4;
-            reg1 := REG.GetVarReg(R, param1);
             OutByte2(0FH, 0BAH);
-            IF reg1 # -1 THEN
-                OutByte(0E8H + reg1 + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC))  // bts(r) reg1, param2
-            ELSE
-                OutByte(6DH + 40H * ORD(~isByte(n)) + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC)); // bts(r) dword[ebp + n], param2
-                OutIntByte(n)
-            END;
+            OutByte(6DH + 40H * ORD(~isByte(n)) + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC)); // bts(r) dword[ebp + n], param2
+            OutIntByte(n);
             OutByte(param2)
 
         |CODE.opLOOP, CODE.opENDLOOP:
@@ -2419,7 +2409,7 @@ BEGIN
         MSCOFF.write(program, outname, ver)
     END
 
-END CodeGen; 
+END CodeGen;
 
 
 PROCEDURE SetProgram* (prog: BIN.PROGRAM);
