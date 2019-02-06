@@ -1894,7 +1894,7 @@ BEGIN
                 OutByte2(0D9H, 0E8H);     // fld1
                 OutByte2(0D9H, 0E0H)      // fchs
             ELSE
-                a := UTILS.splitf(float, a, b);
+                n := UTILS.splitf(float, a, b);
                 pushc(b);
                 pushc(a);
                 OutByte3(0DDH, 004H, 024H); // fld qword[esp]

@@ -3266,7 +3266,7 @@ BEGIN
     checking := chk;
 
     IF amd64 THEN
-        CODE.init(5, CODE.little_endian)
+        CODE.init(6, CODE.little_endian)
     ELSE
         CODE.init(8, CODE.little_endian)
     END;

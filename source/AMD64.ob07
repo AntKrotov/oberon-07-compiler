@@ -30,7 +30,7 @@ CONST
     sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
 
     shl = CODE.opLSL2; shr = CODE.opLSR2; sar = CODE.opASR2; ror = CODE.opROR2;
-    
+
     sCODE = BIN.PICCODE;
     sDATA = BIN.PICDATA;
     sBSS  = BIN.PICBSS;
@@ -738,13 +738,28 @@ BEGIN
          CODE.opLLOAD32_PARAM,
          CODE.opLADR_SAVE,
          CODE.opLADR_INC1,
-         CODE.opLADR_DEC1:
+         CODE.opLADR_DEC1,
+         CODE.opLADR_INC,
+         CODE.opLADR_DEC,
+         CODE.opLADR_INC1B,
+         CODE.opLADR_DEC1B,
+         CODE.opLADR_INCB,
+         CODE.opLADR_DECB,
+         CODE.opLADR_INCL,
+         CODE.opLADR_EXCL,
+         CODE.opLADR_UNPK:
             lvar := getVar(variables, cur.param2);
             IF (lvar # NIL) & (lvar.count # -1) THEN
                 INC(lvar.count, loop)
             END
 
-        |CODE.opLADR_SAVEC:
+        |CODE.opLADR_SAVEC,
+         CODE.opLADR_INCC,
+         CODE.opLADR_DECC,
+         CODE.opLADR_INCCB,
+         CODE.opLADR_DECCB,
+         CODE.opLADR_INCLC,
+         CODE.opLADR_EXCLC:
             lvar := getVar(variables, cur.param1);
             IF (lvar # NIL) & (lvar.count # -1) THEN
                 INC(lvar.count, loop)
@@ -2181,26 +2196,18 @@ BEGIN
             DEC(xmm)
 
         |CODE.opUMINF:
-            ASSERT(xmm < 5);
-            INC(xmm);
             reg1 := REG.GetAnyReg(R);
             lea(reg1, Numbers_Offs, sDATA);
-            movsdrm(xmm, reg1, 0);
-            OutByte3(66H, 0FH, 57H); // xorpd xmm - 1, xmm
-            OutByte(0C0H + (xmm - 1) * 8 + xmm);
-            drop;
-            DEC(xmm)
+            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); // xorpd xmm, xmmword[reg1]
+            OutByte2(57H, reg1 MOD 8 + (xmm MOD 8) * 8);
+            drop
 
         |CODE.opFABS:
-            ASSERT(xmm < 5);
-            INC(xmm);
             reg1 := REG.GetAnyReg(R);
             lea(reg1, Numbers_Offs + 16, sDATA);
-            movsdrm(xmm, reg1, 0);
-            OutByte3(66H, 0FH, 54H); // andpd xmm - 1, xmm
-            OutByte(0C0H + (xmm - 1) * 8 + xmm);
-            drop;
-            DEC(xmm)
+            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); // andpd xmm, xmmword[reg1]
+            OutByte2(54H, reg1 MOD 8 + (xmm MOD 8) * 8);
+            drop
 
         |CODE.opFLT:
             UnOp(reg1);
