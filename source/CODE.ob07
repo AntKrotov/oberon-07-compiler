@@ -31,7 +31,7 @@ CONST
 
     opJNE* = 50; opJE* = 51;
 
-    opEQS* = 52; opNES* = 53; opLTS* = 54; opLES* = 55; opGTS* = 56; opGES* = 57;
+    opEQS* = 52; opNES* = opEQS + 1; opLTS* = opEQS + 2; opLES* = opEQS + 3; opGTS* = opEQS + 4; opGES* = opEQS + 5 (* 58 *);
 
     opSAVE32* = 58; opLLOAD8* = 59;
 
@@ -76,9 +76,9 @@ CONST
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
     opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
 
-    opEQS2*  = 217; opNES2*  = 218; opLTS2*  = 219; opLES2*  = 220; opGTS2*  = 221; opGES2*  = 222;
-    opEQSW*  = 223; opNESW*  = 224; opLTSW*  = 225; opLESW*  = 226; opGTSW*  = 227; opGESW*  = 228;
-    opEQSW2* = 229; opNESW2* = 230; opLTSW2* = 231; opLESW2* = 232; opGTSW2* = 233; opGESW2* = 234;
+    opEQS2*  = 217; opNES2* = opEQS2 + 1; opLTS2* = opEQS2 + 2; opLES2* = opEQS2 + 3; opGTS2* = opEQS2 + 4; opGES2* = opEQS2 + 5 (* 222 *);
+    opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
+    opEQSW2*  = 229; opNESW2* = opEQSW2 + 1; opLTSW2* = opEQSW2 + 2; opLESW2* = opEQSW2 + 3; opGTSW2* = opEQSW2 + 4; opGESW2* = opEQSW2 + 5 (* 234 *);
 
     opCODE* = 235;
 
@@ -421,10 +421,10 @@ END AddRec;
 PROCEDURE insert (cur, nov: COMMAND);
 VAR
     old_opcode, param2: INTEGER;
-    
+
 
     PROCEDURE set (cur: COMMAND; opcode, param2: INTEGER);
-    BEGIN  
+    BEGIN
         cur.opcode := opcode;
         cur.param1 := cur.param2;
         cur.param2 := param2
