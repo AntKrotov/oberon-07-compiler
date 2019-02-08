@@ -22,7 +22,7 @@ CONST
 
 TYPE
 
-    DLL_ENTRY* = PROCEDURE [stdcall] (hinstDLL, fdwReason, lpvReserved: INTEGER);
+    DLL_ENTRY* = PROCEDURE (hinstDLL, fdwReason, lpvReserved: INTEGER);
 
 
 VAR
