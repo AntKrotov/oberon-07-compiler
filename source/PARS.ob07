@@ -542,7 +542,7 @@ VAR
     typeSize:   ARITH.VALUE;
     ident:      PROG.IDENT;
     unit:       PROG.UNIT;
-    pos:        SCAN.POSITION;
+    pos, pos2:  SCAN.POSITION;
     fieldType:  PROG.TYPE_;
     baseIdent:  SCAN.IDENT;
     a, b:       INTEGER;
@@ -568,6 +568,10 @@ BEGIN
         Next(parser)
 
     ELSIF (parser.sym = SCAN.lxARRAY) OR ((parser.sym = SCAN.lxCOMMA) & (comma IN flags)) THEN
+
+        IF parser.sym = SCAN.lxARRAY THEN
+            getpos(parser, pos2)
+        END;
         NextPos(parser, pos);
 
         ConstExpression(parser, arrLen);
@@ -591,19 +595,21 @@ BEGIN
 
         a := t.length;
         b := t.base.size;
-        check1(ARITH.mulInt(a, b), parser, 104);
-        check1(ARITH.setInt(typeSize, a), parser, 104);
+        check(ARITH.mulInt(a, b), parser, pos2, 104);
+        check(ARITH.setInt(typeSize, a), parser, pos2, 104);
         t.size := a;
 
         t.closed := TRUE
 
-    ELSIF parser.sym = SCAN.lxRECORD THEN
+    ELSIF parser.sym = SCAN.lxRECORD THEN 
+        getpos(parser, pos2);
         Next(parser);
 
         t := program.enterType(program, PROG.tRECORD, 0, 0, unit);
         t.align := 1;
 
-        IF parser.sym = SCAN.lxLSQUARE THEN
+        IF parser.sym = SCAN.lxLSQUARE THEN 
+            check1(parser.unit.sysimport, parser, 54);
             Next(parser);
             RecFlag := sysflag(parser);
             IF RecFlag = PROG.noalign THEN
@@ -650,7 +656,7 @@ BEGIN
             Next(parser);
 
             type(parser, fieldType, {closed});
-            check1(t.fields.set(t, fieldType), parser, 104);
+            check(t.fields.set(t, fieldType), parser, pos2, 104);
 
             IF (fieldType.align > t.align) & ~t.noalign THEN
                 t.align := fieldType.align
@@ -668,8 +674,8 @@ BEGIN
         CODE.AddRec(t.base.num);
 
         IF ~t.noalign THEN
-            check1(MACHINE.Align(t.size, t.align), parser, 104);
-            check1(ARITH.setInt(typeSize, t.size), parser, 104)
+            check(MACHINE.Align(t.size, t.align), parser, pos2, 104);
+            check(ARITH.setInt(typeSize, t.size), parser, pos2, 104)
         END;
 
         checklex(parser, SCAN.lxEND);
@@ -898,8 +904,6 @@ VAR
                 NextPos(parser, pos);
                 parser.expression(parser, e);
                 check(parser.chkreturn(parser, e, t.base, pos), parser, pos, 87)
-            ELSE
-                check1(parser.sym # SCAN.lxRETURN, parser, 70)
             END;
 
             proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL),

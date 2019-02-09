@@ -852,12 +852,10 @@ BEGIN
             END;
             PARS.checklex(parser, SCAN.lxCOMMA);
             NextPos(parser, pos);
-            IF proc = PROG.sysGET THEN
-                parser.designator(parser, e2);
-                PARS.check(isVar(e2), parser, pos, 93);
-                PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
-                CODE.SysGet(e2.type.size)
-            END
+            parser.designator(parser, e2);
+            PARS.check(isVar(e2), parser, pos, 93);
+            PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
+            CODE.SysGet(e2.type.size)
 
         |PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16, PROG.sysPUT32:
             CODE.pushBegEnd(begcall, endcall);
@@ -1121,7 +1119,7 @@ BEGIN
             parser.designator(parser, e);
             IF isVar(e) THEN
                n := PROG.Dim(e.type);
-                WHILE n > 0 DO
+               WHILE n > 0 DO
                     CODE.drop;
                     DEC(n)
                END
