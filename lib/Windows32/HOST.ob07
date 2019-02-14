@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -13,6 +13,7 @@ IMPORT SYSTEM;
 CONST
 
     slash* = "\";
+    OS* = "WIN32";
 
     bit_depth* = 32;
     maxint* = 7FFFFFFFH;
@@ -289,7 +290,12 @@ BEGIN
     hour  := ORD(T.Hour);
     min   := ORD(T.Min);
     sec   := ORD(T.Sec)
-END now;
+END now; 
+
+
+PROCEDURE UnixTime* (): INTEGER;
+    RETURN 0
+END UnixTime;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
