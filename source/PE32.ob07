@@ -356,7 +356,7 @@ BEGIN
 END fixup;
 
 
-PROCEDURE InitArray (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF CHAR);
+PROCEDURE InitArray* (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF CHAR);
 VAR
     i, k: INTEGER;
 

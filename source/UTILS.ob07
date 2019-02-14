@@ -13,6 +13,7 @@ IMPORT HOST, UNIXTIME;
 CONST
 
     slash* = HOST.slash;
+    OS* = HOST.OS;
 
     bit_depth* = HOST.bit_depth;
     maxint* = HOST.maxint;
@@ -24,7 +25,7 @@ VAR
     time*: INTEGER;
 
     eol*:  ARRAY 3 OF CHAR;
-    
+
     maxreal*: REAL;
 
 
@@ -96,10 +97,17 @@ END GetCurrentDirectory;
 PROCEDURE UnixTime* (): INTEGER;
 VAR
     year, month, day, hour, min, sec: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    HOST.now(year, month, day, hour, min, sec)
-    RETURN UNIXTIME.time(year, month, day, hour, min, sec)
+    IF OS = "LINUX32" THEN
+        res := HOST.UnixTime()
+    ELSE
+        HOST.now(year, month, day, hour, min, sec);
+        res := UNIXTIME.time(year, month, day, hour, min, sec)
+    END  
+
+    RETURN res
 END UnixTime;
 
 

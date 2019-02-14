@@ -1,0 +1,301 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE ELF;
+
+IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS, PE32;
+
+
+CONST
+
+    EI_NIDENT = 16;
+    ET_EXEC = 2;
+    ET_DYN = 3;
+
+    EM_386 = 3;
+
+    ELFCLASS32 = 1;
+    ELFCLASS64 = 2;
+
+    ELFDATA2LSB = 1;
+    ELFDATA2MSB = 2;
+
+    PF_X = 1;
+    PF_W = 2;
+    PF_R = 4;
+
+
+TYPE
+
+    Elf32_Ehdr = RECORD
+
+        e_ident: ARRAY EI_NIDENT OF BYTE;
+
+        e_type,
+        e_machine: WCHAR;
+
+        e_version,
+        e_entry,
+        e_phoff,
+        e_shoff,
+        e_flags: INTEGER;
+
+        e_ehsize,
+        e_phentsize,
+        e_phnum,
+        e_shentsize,
+        e_shnum,
+        e_shstrndx: WCHAR
+
+    END;
+
+
+    Elf32_Phdr = RECORD
+
+        p_type,
+        p_offset,
+        p_vaddr,
+        p_paddr,
+        p_filesz,
+        p_memsz,
+        p_flags,
+        p_align: INTEGER
+
+    END;
+
+    FILE = WR.FILE;
+
+
+PROCEDURE align (n, _align: INTEGER): INTEGER;
+BEGIN
+    IF n MOD _align # 0 THEN
+        n := n + _align - (n MOD _align)
+    END
+
+    RETURN n
+END align;
+
+
+PROCEDURE Write16 (file: FILE; w: WCHAR);
+BEGIN
+    WR.Write16LE(file, ORD(w))
+END Write16;
+
+
+PROCEDURE WritePH (file: FILE; ph: Elf32_Phdr);
+BEGIN
+    WR.Write32LE(file, ph.p_type);
+    WR.Write32LE(file, ph.p_offset);
+    WR.Write32LE(file, ph.p_vaddr);
+    WR.Write32LE(file, ph.p_paddr);
+    WR.Write32LE(file, ph.p_filesz);
+    WR.Write32LE(file, ph.p_memsz);
+    WR.Write32LE(file, ph.p_flags);
+    WR.Write32LE(file, ph.p_align)
+END WritePH;
+
+
+PROCEDURE fixup (program: BIN.PROGRAM; text, data, bss: INTEGER);
+VAR
+    reloc: BIN.RELOC;
+    L, delta: INTEGER;
+
+BEGIN
+    reloc := program.rel_list.first(BIN.RELOC);
+    WHILE reloc # NIL DO
+
+        L := BIN.get32le(program.code, reloc.offset);
+        delta := 3 - reloc.offset - text;
+
+        CASE reloc.opcode OF
+        |BIN.PICDATA: BIN.put32le(program.code, reloc.offset, L + data + delta)
+        |BIN.PICCODE: BIN.put32le(program.code, reloc.offset, BIN.GetLabel(program, L) + text + delta)
+        |BIN.PICBSS:  BIN.put32le(program.code, reloc.offset, L + bss + delta)
+        END;
+
+        reloc := reloc.next(BIN.RELOC)
+    END;
+END fixup;
+
+
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
+CONST
+    interp  =  0;
+    dyn     =  1;
+    header  =  2;
+    text    =  3;
+    data    =  4;
+    bss     =  5;
+
+VAR
+    ehdr: Elf32_Ehdr;
+    phdr: ARRAY 16 OF Elf32_Phdr;
+
+    i, LoadAdr, offset: INTEGER;
+
+    SizeOf: RECORD header, code, data, bss: INTEGER END;
+
+    File: FILE;
+
+    str: ARRAY 40 OF CHAR; lstr: INTEGER;
+    Dyn: ARRAY 201 OF BYTE;
+
+BEGIN
+    str := "/lib/ld-linux.so.2";
+    lstr := LENGTH(str);
+
+    LoadAdr := 08048000H;
+
+    SizeOf.code := CHL.Length(program.code);
+    SizeOf.data := CHL.Length(program.data);
+    SizeOf.bss  := program.bss;
+
+    ehdr.e_ident[0] := 7FH;
+    ehdr.e_ident[1] := ORD("E");
+    ehdr.e_ident[2] := ORD("L");
+    ehdr.e_ident[3] := ORD("F");
+    ehdr.e_ident[4] := ELFCLASS32;
+    ehdr.e_ident[5] := ELFDATA2LSB;
+    ehdr.e_ident[6] := 1;
+    ehdr.e_ident[7] := 3;
+    FOR i := 8 TO EI_NIDENT - 1 DO
+        ehdr.e_ident[i] := 0
+    END;
+
+    ehdr.e_type := WCHR(ET_EXEC);
+    ehdr.e_machine := WCHR(EM_386);
+    ehdr.e_version := 1;
+    ehdr.e_phoff := 34H;
+    ehdr.e_shoff := 0;
+    ehdr.e_flags := 0;
+    ehdr.e_ehsize := WCHR(34H);
+    ehdr.e_phentsize := WCHR(20H);
+    ehdr.e_phnum := WCHR(6);//!!!
+    ehdr.e_shentsize := WCHR(28H);
+    ehdr.e_shnum := WCHR(0);
+    ehdr.e_shstrndx := WCHR(0);
+
+    SizeOf.header := 34H + 20H * ORD(ehdr.e_phnum);
+
+    phdr[interp].p_type := 3;
+    phdr[interp].p_offset := SizeOf.header;
+    phdr[interp].p_vaddr := LoadAdr + phdr[interp].p_offset;
+    phdr[interp].p_paddr := LoadAdr + phdr[interp].p_offset;
+    phdr[interp].p_filesz := lstr + 1;
+    phdr[interp].p_memsz := lstr + 1;
+    phdr[interp].p_flags := PF_R;
+    phdr[interp].p_align := 1;
+
+    phdr[dyn].p_type := 2;
+    phdr[dyn].p_offset := phdr[interp].p_offset + phdr[interp].p_filesz;
+    phdr[dyn].p_vaddr := LoadAdr + phdr[dyn].p_offset;
+    phdr[dyn].p_paddr := LoadAdr + phdr[dyn].p_offset;
+    phdr[dyn].p_filesz := 50H;//!!!
+    phdr[dyn].p_memsz := 50H;//!!!
+    phdr[dyn].p_flags := PF_R;
+    phdr[dyn].p_align := 1;
+         
+    offset := 0;
+
+    phdr[header].p_type := 1;
+    phdr[header].p_offset := offset;
+    phdr[header].p_vaddr := LoadAdr;
+    phdr[header].p_paddr := LoadAdr;
+    phdr[header].p_filesz := 1D0H;//!!!
+    phdr[header].p_memsz := 1D0H;//!!!
+    phdr[header].p_flags := PF_R + PF_W;
+    phdr[header].p_align := 1000H;
+
+    offset := offset + phdr[header].p_filesz;
+
+    phdr[text].p_type := 1;
+    phdr[text].p_offset := offset;
+    phdr[text].p_vaddr := LoadAdr + offset + 1000H;
+    phdr[text].p_paddr := LoadAdr + offset + 1000H;
+    phdr[text].p_filesz := SizeOf.code;
+    phdr[text].p_memsz := SizeOf.code;
+    phdr[text].p_flags := PF_X + PF_R;
+    phdr[text].p_align := 1000H;
+
+    ehdr.e_entry := phdr[text].p_vaddr;
+
+    offset := offset + phdr[text].p_filesz;
+
+    phdr[data].p_type := 1;
+    phdr[data].p_offset := offset;
+    phdr[data].p_vaddr := LoadAdr + offset + 2000H;
+    phdr[data].p_paddr := LoadAdr + offset + 2000H;
+    phdr[data].p_filesz := SizeOf.data;
+    phdr[data].p_memsz := SizeOf.data;
+    phdr[data].p_flags := PF_R + PF_W;
+    phdr[data].p_align := 1000H;
+
+    offset := offset + phdr[data].p_filesz;
+
+    phdr[bss].p_type := 1;
+    phdr[bss].p_offset := offset;
+    phdr[bss].p_vaddr := LoadAdr + offset + 3000H;
+    phdr[bss].p_paddr := LoadAdr + offset + 3000H;
+    phdr[bss].p_filesz := 0;
+    phdr[bss].p_memsz := SizeOf.bss;
+    phdr[bss].p_flags := PF_R + PF_W;
+    phdr[bss].p_align := 1000H;
+
+    fixup(program, phdr[text].p_vaddr, phdr[data].p_vaddr, phdr[bss].p_vaddr);
+
+    File := WR.Create(FileName);
+
+    FOR i := 0 TO EI_NIDENT - 1 DO
+        WR.WriteByte(File, ehdr.e_ident[i])
+    END;
+
+    Write16(File, ehdr.e_type);
+    Write16(File, ehdr.e_machine);
+
+    WR.Write32LE(File, ehdr.e_version);
+    WR.Write32LE(File, ehdr.e_entry);
+    WR.Write32LE(File, ehdr.e_phoff);
+    WR.Write32LE(File, ehdr.e_shoff);
+    WR.Write32LE(File, ehdr.e_flags);
+
+    Write16(File, ehdr.e_ehsize);
+    Write16(File, ehdr.e_phentsize);
+    Write16(File, ehdr.e_phnum);
+    Write16(File, ehdr.e_shentsize);
+    Write16(File, ehdr.e_shnum);
+    Write16(File, ehdr.e_shstrndx);
+
+    WritePH(File, phdr[interp]);
+    WritePH(File, phdr[dyn]);
+    WritePH(File, phdr[header]);
+    WritePH(File, phdr[text]);
+    WritePH(File, phdr[data]);
+    WritePH(File, phdr[bss]);
+
+    FOR i := 0 TO lstr DO
+        WR.WriteByte(File, ORD(str[i]))
+    END;
+
+    i := 0;
+    PE32.InitArray(Dyn, i, "010000000E00000005000000AF8104080A000000190000000600000057810408");
+    PE32.InitArray(Dyn, i, "0B00000010000000110000008781040812000000100000001300000008000000");
+    PE32.InitArray(Dyn, i, "0400000097810408000000000000000000000000000000000000000000000000");
+    PE32.InitArray(Dyn, i, "0100000000000000000000001200000008000000000000000000000012000000");
+    PE32.InitArray(Dyn, i, "C881040801010000CC8104080102000001000000030000000000000001000000");
+    PE32.InitArray(Dyn, i, "020000000000000000646C6F70656E00646C73796D006C6962646C2E736F2E32");
+    PE32.InitArray(Dyn, i, "000000000000000000");
+
+    WR.Write(File, Dyn, LEN(Dyn));
+
+    CHL.WriteToFile(File, program.code);
+    CHL.WriteToFile(File, program.data);
+
+    WR.Close(File)
+END write;
+
+
+END ELF.

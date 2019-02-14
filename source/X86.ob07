@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS;
 
 
 CONST
@@ -568,7 +568,7 @@ PROCEDURE NewLabel (): INTEGER;
 BEGIN
     BIN.NewLabel(program)
     RETURN CODE.NewLabel()
-END NewLabel; 
+END NewLabel;
 
 
 PROCEDURE GetRegA;
@@ -2206,11 +2206,13 @@ BEGIN
     IF target = mConst.Target_iKolibri THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.IMPTAB, 0);
-        push(reg1);     // push IMPORT
+        push(reg1);    // push IMPORT
         drop
     ELSIF target = mConst.Target_iObject THEN
         OutByte(68H);  // push IMPORT
         Reloc(BIN.IMPTAB, 0)
+    ELSIF target = mConst.Target_iELF32 THEN
+        OutByte(54H)   // push esp
     ELSE
         pushc(0)
     END;
@@ -2218,7 +2220,7 @@ BEGIN
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICDATA, 0);
-        push(reg1);     // push _data
+        push(reg1);    // push _data
         drop
     ELSE
         OutByte(68H);  // push _data
@@ -2233,7 +2235,7 @@ BEGIN
     IF pic THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.PICDATA, tcount * 4 + dcount);
-        push(reg1);     // push _data + tcount * 4 + dcount
+        push(reg1);    // push _data + tcount * 4 + dcount
         drop
     ELSE
         OutByte(68H);  // push _data
@@ -2276,7 +2278,7 @@ VAR
 
 BEGIN
 
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibri} THEN
+    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibri, mConst.Target_iELF32} THEN
         pushc(0);
         CallRTL(pic, CODE._exit);
     ELSIF target = mConst.Target_iDLL THEN
@@ -2348,6 +2350,10 @@ BEGIN
         pic := FALSE
     END;
 
+    IF target = mConst.Target_iELF32 THEN
+        pic := TRUE
+    END;
+
     R := REG.Create(push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
     prolog(code, pic, target, stack, dllinit, dllret);
@@ -2365,6 +2371,8 @@ BEGIN
         KOS.write(program, outname)
     ELSIF target = mConst.Target_iObject THEN
         MSCOFF.write(program, outname, ver)
+    ELSIF target = mConst.Target_iELF32 THEN
+        ELF.write(program, outname)
     END
 
 END CodeGen;
