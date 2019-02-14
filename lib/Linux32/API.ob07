@@ -1,0 +1,123 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE API;
+
+IMPORT SYSTEM;
+
+VAR
+
+    eol*:  ARRAY 3 OF CHAR;
+    base*, esp*, libc*: INTEGER;
+
+    dlopen* : PROCEDURE [cdecl] (filename, flag: INTEGER): INTEGER;
+    dlsym*  : PROCEDURE [cdecl] (handle, symbol: INTEGER): INTEGER;
+    malloc* : PROCEDURE [cdecl] (size: INTEGER): INTEGER;
+    free*   : PROCEDURE [cdecl] (ptr: INTEGER);
+
+
+PROCEDURE [stdcall] sysfunc4* (arg1, arg2, arg3, arg4: INTEGER): INTEGER;
+BEGIN
+    SYSTEM.CODE(
+    053H,               (*  push    ebx                    *)
+    08BH, 045H, 008H,   (*  mov     eax, dword [ebp +  8]  *)
+    08BH, 05DH, 00CH,   (*  mov     ebx, dword [ebp + 12]  *)
+    08BH, 04DH, 010H,   (*  mov     ecx, dword [ebp + 16]  *)
+    08BH, 055H, 014H,   (*  mov     edx, dword [ebp + 20]  *)
+    0CDH, 080H,         (*  int     80h                    *)
+    05BH,               (*  pop     ebx                    *)
+    0C9H,               (*  leave                          *)
+    0C2H, 010H, 000H    (*  ret     16                     *)
+    )
+    RETURN 0
+END sysfunc4;
+
+
+PROCEDURE putc* (c: CHAR);
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := sysfunc4(4, 1, SYSTEM.ADR(c), 1)
+END putc;
+
+
+PROCEDURE puts (pStr: INTEGER);
+VAR
+    c: CHAR;
+
+BEGIN
+    REPEAT
+        SYSTEM.GET(pStr, c);
+        INC(pStr);
+        IF c # 0X THEN
+            putc(c)
+        END
+    UNTIL c = 0X
+END puts;
+
+
+PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
+BEGIN
+    puts(lpCaption); putc(0AX);
+    puts(lpText); putc(0AX)
+END DebugMsg;
+
+
+PROCEDURE _NEW* (size: INTEGER): INTEGER;
+VAR
+    res, ptr, dwords: INTEGER;
+
+BEGIN
+    res := malloc(size);
+    IF res # 0 THEN
+        ptr := res;
+        dwords := size DIV 4;
+        WHILE dwords > 0 DO
+            SYSTEM.PUT(ptr, 0);
+            INC(ptr, 4);
+            DEC(dwords)
+        END
+    END
+
+    RETURN res
+END _NEW;
+
+
+PROCEDURE _DISPOSE* (p: INTEGER): INTEGER;
+BEGIN
+    free(p)
+    RETURN 0
+END _DISPOSE;
+
+
+PROCEDURE init* (_esp, code: INTEGER);
+BEGIN
+    SYSTEM.GET(code - 1000H - 8, dlopen);
+    SYSTEM.GET(code - 1000H - 4, dlsym);
+    eol := 0AX;
+    base := 08048000H;
+    esp := _esp;
+    libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
+    SYSTEM.PUT(SYSTEM.ADR(malloc), dlsym(libc, SYSTEM.SADR("malloc")));
+    SYSTEM.PUT(SYSTEM.ADR(free), dlsym(libc, SYSTEM.SADR("free")))
+END init;
+
+
+PROCEDURE exit* (code: INTEGER);
+BEGIN
+    code := sysfunc4(1, code, 0, 0)
+END exit;
+
+
+PROCEDURE exit_thread* (code: INTEGER);
+BEGIN
+    exit(code)
+END exit_thread;
+
+
+END API.

@@ -1,0 +1,219 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE HOST;
+
+IMPORT SYSTEM, API;
+
+
+CONST
+
+    slash* = "/";
+    OS* = "LINUX32";
+
+    bit_depth* = 32;
+    maxint* = 7FFFFFFFH;
+    minint* = 80000000H;
+
+    MAX_PARAM = 1024;
+
+
+VAR
+
+    Params: ARRAY MAX_PARAM, 2 OF INTEGER;
+    argc: INTEGER;
+
+    eol*: ARRAY 3 OF CHAR;
+
+
+PROCEDURE ExitProcess* (code: INTEGER);
+BEGIN
+    API.exit(code)
+END ExitProcess;
+
+
+PROCEDURE GetChar (adr: INTEGER): CHAR;
+VAR
+    res: CHAR;
+
+BEGIN
+    SYSTEM.GET(adr, res)
+    RETURN res
+END GetChar;
+
+
+PROCEDURE strlen (pch: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := pch;
+    WHILE GetChar(pch) # 0X DO
+        INC(pch)
+    END
+
+    RETURN pch - res
+END strlen;
+
+
+PROCEDURE ParamParse;
+VAR
+    count, argv: INTEGER;
+
+BEGIN
+    SYSTEM.GET(API.esp + 4, argc);
+    SYSTEM.GET(API.esp + 8, argv);
+
+    count := 0;
+    WHILE count < argc DO
+        Params[count, 0] := argv;
+        argv := argv + strlen(argv) + 1;
+        Params[count, 1] := argv - 2;
+        INC(count)
+    END
+END ParamParse;
+
+
+PROCEDURE GetArg* (n: INTEGER; VAR s: ARRAY OF CHAR);
+VAR
+    i, j, len: INTEGER;
+    c: CHAR;
+
+BEGIN
+    j := 0;
+    IF n < argc THEN
+        len := LEN(s) - 1;
+        i := Params[n, 0];
+        WHILE (j < len) & (i <= Params[n, 1]) DO
+            c := GetChar(i);
+            IF c # 22X THEN
+                s[j] := c;
+                INC(j)
+            END;
+            INC(i)
+        END
+    END;
+    s[j] := 0X
+END GetArg;
+
+
+PROCEDURE GetCurrentDirectory* (VAR path: ARRAY OF CHAR);
+VAR
+    n: INTEGER;
+
+BEGIN
+    GetArg(0, path);
+    n := LENGTH(path) - 1;
+    WHILE path[n] # slash DO
+        DEC(n)
+    END;
+    path[n + 1] := 0X
+END GetCurrentDirectory;
+
+
+PROCEDURE ReadFile (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+    RETURN API.sysfunc4(3, F, SYSTEM.ADR(Buffer[0]), bytes)
+END ReadFile;
+
+
+PROCEDURE WriteFile (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+    RETURN API.sysfunc4(4, F, SYSTEM.ADR(Buffer[0]), bytes)
+END WriteFile;
+
+
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := ReadFile(F, Buffer, bytes);
+    IF res <= 0 THEN
+        res := -1
+    END
+
+    RETURN res
+END FileRead;
+
+
+PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := WriteFile(F, Buffer, bytes);
+    IF res <= 0 THEN
+        res := -1
+    END
+
+    RETURN res
+END FileWrite;
+
+
+PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN API.sysfunc4(8, SYSTEM.ADR(FName[0]), 7, 0)
+END FileCreate;
+
+
+PROCEDURE FileClose* (F: INTEGER);
+BEGIN
+    F := API.sysfunc4(6, F, 0, 0)
+END FileClose;
+
+
+PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
+    RETURN API.sysfunc4(5, SYSTEM.ADR(FName[0]), 2, 7)
+END FileOpen;
+
+
+PROCEDURE OutChar* (c: CHAR);
+BEGIN
+    API.putc(c)
+END OutChar;
+
+
+PROCEDURE GetTickCount* (): INTEGER;
+VAR
+    tp: ARRAY 2 OF INTEGER;
+    res: INTEGER;
+
+BEGIN
+    IF API.sysfunc4(265, 0, SYSTEM.ADR(tp), 0) = 0 THEN
+        res := tp[0] * 100 + tp[1] DIV 10000000
+    ELSE
+        res := 0
+    END
+
+    RETURN res
+END GetTickCount;
+
+
+PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
+    RETURN path[0] # slash
+END isRelative;
+
+
+PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
+END now;
+
+
+PROCEDURE UnixTime* (): INTEGER;
+    RETURN API.sysfunc4(13, 0, 0, 0)
+END UnixTime;
+
+
+PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x),     a);
+    SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
+    RETURN a
+END splitf;
+
+
+BEGIN
+    eol := 0AX;
+    ParamParse
+END HOST.
