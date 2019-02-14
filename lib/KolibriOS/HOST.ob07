@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -13,6 +13,7 @@ IMPORT SYSTEM, K := KOSAPI, API;
 CONST
 
     slash* = "/";
+    OS* = "KOS";
 
     bit_depth* = 32;
     maxint* = 7FFFFFFFH;
@@ -444,7 +445,12 @@ BEGIN
     time  := time DIV 16;
 
     year := year + 2000
-END now;
+END now;    
+
+
+PROCEDURE UnixTime* (): INTEGER;
+    RETURN 0
+END UnixTime;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
