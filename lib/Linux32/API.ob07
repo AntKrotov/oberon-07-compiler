@@ -9,15 +9,21 @@ MODULE API;
 
 IMPORT SYSTEM;
 
+
+CONST
+
+    SIZE_OF_DWORD = 4;
+    
+
 VAR
 
-    eol*:  ARRAY 3 OF CHAR;
-    base*, esp*, libc*: INTEGER;
+    eol*:  ARRAY 2 OF CHAR;
+    base*, libc*, MainParam*: INTEGER;
 
-    dlopen* : PROCEDURE [cdecl] (filename, flag: INTEGER): INTEGER;
-    dlsym*  : PROCEDURE [cdecl] (handle, symbol: INTEGER): INTEGER;
-    malloc* : PROCEDURE [cdecl] (size: INTEGER): INTEGER;
-    free*   : PROCEDURE [cdecl] (ptr: INTEGER);
+    dlopen* : PROCEDURE [ccall] (filename, flag: INTEGER): INTEGER;
+    dlsym*  : PROCEDURE [ccall] (handle, symbol: INTEGER): INTEGER;
+    malloc  : PROCEDURE [ccall] (size: INTEGER): INTEGER;
+    free    : PROCEDURE [ccall] (ptr: INTEGER);
 
 
 PROCEDURE [stdcall] sysfunc4* (arg1, arg2, arg3, arg4: INTEGER): INTEGER;
@@ -76,10 +82,10 @@ BEGIN
     res := malloc(size);
     IF res # 0 THEN
         ptr := res;
-        dwords := size DIV 4;
+        dwords := size DIV SIZE_OF_DWORD;
         WHILE dwords > 0 DO
             SYSTEM.PUT(ptr, 0);
-            INC(ptr, 4);
+            INC(ptr, SIZE_OF_DWORD);
             DEC(dwords)
         END
     END
@@ -95,13 +101,13 @@ BEGIN
 END _DISPOSE;
 
 
-PROCEDURE init* (_esp, code: INTEGER);
+PROCEDURE init* (esp, code: INTEGER);
 BEGIN
-    SYSTEM.GET(code - 1000H - 8, dlopen);
-    SYSTEM.GET(code - 1000H - 4, dlsym);
+    SYSTEM.GET(code - 1000H - SIZE_OF_DWORD * 2, dlopen);
+    SYSTEM.GET(code - 1000H - SIZE_OF_DWORD,     dlsym);
     eol := 0AX;
     base := 08048000H;
-    esp := _esp;
+    MainParam := esp + SIZE_OF_DWORD;
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
     SYSTEM.PUT(SYSTEM.ADR(malloc), dlsym(libc, SYSTEM.SADR("malloc")));
     SYSTEM.PUT(SYSTEM.ADR(free), dlsym(libc, SYSTEM.SADR("free")))

@@ -19,15 +19,14 @@ CONST
     maxint* = 7FFFFFFFH;
     minint* = 80000000H;
 
-    MAX_PARAM = 1024;
+    SIZE_OF_DWORD = 4;
 
 
 VAR
 
-    Params: ARRAY MAX_PARAM, 2 OF INTEGER;
     argc: INTEGER;
 
-    eol*: ARRAY 3 OF CHAR;
+    eol*: ARRAY 2 OF CHAR;
 
 
 PROCEDURE ExitProcess* (code: INTEGER);
@@ -36,68 +35,24 @@ BEGIN
 END ExitProcess;
 
 
-PROCEDURE GetChar (adr: INTEGER): CHAR;
-VAR
-    res: CHAR;
-
-BEGIN
-    SYSTEM.GET(adr, res)
-    RETURN res
-END GetChar;
-
-
-PROCEDURE strlen (pch: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    res := pch;
-    WHILE GetChar(pch) # 0X DO
-        INC(pch)
-    END
-
-    RETURN pch - res
-END strlen;
-
-
-PROCEDURE ParamParse;
-VAR
-    count, argv: INTEGER;
-
-BEGIN
-    SYSTEM.GET(API.esp + 4, argc);
-    SYSTEM.GET(API.esp + 8, argv);
-
-    count := 0;
-    WHILE count < argc DO
-        Params[count, 0] := argv;
-        argv := argv + strlen(argv) + 1;
-        Params[count, 1] := argv - 2;
-        INC(count)
-    END
-END ParamParse;
-
-
 PROCEDURE GetArg* (n: INTEGER; VAR s: ARRAY OF CHAR);
 VAR
-    i, j, len: INTEGER;
+    i, len, ptr: INTEGER;
     c: CHAR;
 
 BEGIN
-    j := 0;
-    IF n < argc THEN
-        len := LEN(s) - 1;
-        i := Params[n, 0];
-        WHILE (j < len) & (i <= Params[n, 1]) DO
-            c := GetChar(i);
-            IF c # 22X THEN
-                s[j] := c;
-                INC(j)
-            END;
-            INC(i)
-        END
+    i := 0;
+    len := LEN(s) - 1;
+    IF (n < argc) & (len > 0) THEN        
+        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_OF_DWORD, ptr);
+        REPEAT
+            SYSTEM.GET(ptr, c);
+            s[i] := c;
+            INC(i);
+            INC(ptr)
+        UNTIL (c = 0X) OR (i = len)
     END;
-    s[j] := 0X
+    s[i] := 0X
 END GetArg;
 
 
@@ -215,5 +170,5 @@ END splitf;
 
 BEGIN
     eol := 0AX;
-    ParamParse
+    SYSTEM.GET(API.MainParam, argc)
 END HOST.
