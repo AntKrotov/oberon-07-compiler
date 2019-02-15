@@ -81,7 +81,7 @@ TYPE
     END;
 
     PROC* = POINTER TO RECORD (LISTS.ITEM)
-               
+
         label*:      INTEGER;
         used*:       BOOLEAN;
         processed*:  BOOLEAN;
@@ -241,7 +241,8 @@ TYPE
 
             bit_depth*:  INTEGER;
             word*:       INTEGER;
-            adr*:        INTEGER
+            adr*:        INTEGER;
+            sys*:        INTEGER
 
         END;
 
@@ -1223,7 +1224,7 @@ BEGIN
 END DelUnused;
 
 
-PROCEDURE create* (bit_depth: INTEGER): PROGRAM;
+PROCEDURE create* (bit_depth, sys: INTEGER): PROGRAM;
 VAR
     program: PROGRAM;
     units:   UNITS;
@@ -1239,6 +1240,7 @@ BEGIN
     program.target.bit_depth := bit_depth;
     program.target.word      := bit_depth DIV 8;
     program.target.adr       := bit_depth DIV 8;
+    program.target.sys       := sys;
 
     program.recCount := -1;
     program.bss := 0;

@@ -493,13 +493,15 @@ END sysflag;
 PROCEDURE procflag (parser: PARSER; VAR import: CODE.IMPORT_PROC; isProc: BOOLEAN): INTEGER;
 VAR
     call: INTEGER;
-    dll, proc: SCAN.LEXSTR;
+    dll, proc: SCAN.LEXSTR; 
+    pos:  SCAN.POSITION;
 
 BEGIN
 
     import := NIL;
 
-    IF parser.sym = SCAN.lxLSQUARE THEN
+    IF parser.sym = SCAN.lxLSQUARE THEN  
+        getpos(parser, pos);
         check1(parser.unit.sysimport, parser, 54);
         Next(parser);
         call := sysflag(parser);
@@ -525,6 +527,10 @@ BEGIN
         Next(parser)
     ELSE
         call := PROG.default
+    END;
+    
+    IF import # NIL THEN
+        check(program.target.sys # mConst.Target_iELF32, parser, pos, 70)
     END
 
     RETURN call
@@ -601,14 +607,14 @@ BEGIN
 
         t.closed := TRUE
 
-    ELSIF parser.sym = SCAN.lxRECORD THEN 
+    ELSIF parser.sym = SCAN.lxRECORD THEN
         getpos(parser, pos2);
         Next(parser);
 
         t := program.enterType(program, PROG.tRECORD, 0, 0, unit);
         t.align := 1;
 
-        IF parser.sym = SCAN.lxLSQUARE THEN 
+        IF parser.sym = SCAN.lxLSQUARE THEN
             check1(parser.unit.sysimport, parser, 54);
             Next(parser);
             RecFlag := sysflag(parser);
@@ -1120,9 +1126,9 @@ BEGIN
 END create;
 
 
-PROCEDURE init* (bit_depth: INTEGER);
+PROCEDURE init* (bit_depth, sys: INTEGER);
 BEGIN
-    program := PROG.create(bit_depth);
+    program := PROG.create(bit_depth, sys);
     parsers := C.create()
 END init;
 

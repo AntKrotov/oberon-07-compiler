@@ -162,7 +162,6 @@ VAR
     checking:   SET;
 
     bits64: BOOLEAN;
-    //bit32only: ARRAY 15 OF CHAR;
 
 BEGIN
     StackSize := 2;
@@ -231,9 +230,9 @@ BEGIN
         IF UTILS.bit_depth = 32 THEN
             ERRORS.error1("bad parameter <target>")
         END;
-        PARS.init(64)
+        PARS.init(64, target)
     ELSE
-        PARS.init(32)
+        PARS.init(32, target)
     END;
 
     PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};

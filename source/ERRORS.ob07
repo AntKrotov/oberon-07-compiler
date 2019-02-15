@@ -86,7 +86,7 @@ BEGIN
     | 67: str := "'OF' expected"
     | 68: str := "type expected"
     | 69: str := "result type of procedure is not a basic type"
-
+    | 70: str := "import not supported"
     | 71: str := "']' expected"
     | 72: str := "expression is not BOOLEAN"
     | 73: str := "not a record"
