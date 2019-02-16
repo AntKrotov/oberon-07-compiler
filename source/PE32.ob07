@@ -356,39 +356,6 @@ BEGIN
 END fixup;
 
 
-PROCEDURE InitArray* (VAR array: ARRAY OF BYTE; VAR idx: INTEGER; hex: ARRAY OF CHAR);
-VAR
-    i, k: INTEGER;
-
-
-    PROCEDURE hexdgt (dgt: CHAR): INTEGER;
-    VAR
-        res: INTEGER;
-
-    BEGIN
-        IF dgt < "A" THEN
-            res := ORD(dgt) - ORD("0")
-        ELSE
-            res := ORD(dgt) - ORD("A") + 10
-        END
-
-        RETURN res
-    END hexdgt;
-
-
-BEGIN
-    k := LENGTH(hex);
-    ASSERT(~ODD(k));
-    k := k DIV 2;
-
-    FOR i := 0 TO k - 1 DO
-        array[i + idx] := hexdgt(hex[2 * i]) * 16 + hexdgt(hex[2 * i + 1])
-    END;
-
-    idx := idx + k
-END InitArray;
-
-
 PROCEDURE WriteWord (file: FILE; w: WORD);
 BEGIN
     WR.Write16LE(file, ORD(w))
@@ -747,10 +714,10 @@ BEGIN
     END;
 
     n := 0;
-    InitArray(msdos, n, "4D5A80000100000004001000FFFF000040010000000000004000000000000000");
-    InitArray(msdos, n, "0000000000000000000000000000000000000000000000000000000080000000");
-    InitArray(msdos, n, "0E1FBA0E00B409CD21B8014CCD21546869732070726F6772616D2063616E6E6F");
-    InitArray(msdos, n, "742062652072756E20696E20444F53206D6F64652E0D0A240000000000000000");
+    BIN.InitArray(msdos, n, "4D5A80000100000004001000FFFF000040010000000000004000000000000000");
+    BIN.InitArray(msdos, n, "0000000000000000000000000000000000000000000000000000000080000000");
+    BIN.InitArray(msdos, n, "0E1FBA0E00B409CD21B8014CCD21546869732070726F6772616D2063616E6E6F");
+    BIN.InitArray(msdos, n, "742062652072756E20696E20444F53206D6F64652E0D0A240000000000000000");
 
     File := WR.Create(FileName);
 
