@@ -13,34 +13,38 @@ IMPORT SYSTEM;
 CONST
 
     SIZE_OF_DWORD = 4;
-    
+
+
+TYPE
+
+    TP* = ARRAY 2 OF INTEGER;
+
 
 VAR
 
     eol*:  ARRAY 2 OF CHAR;
-    base*, libc*, MainParam*: INTEGER;
+    base*, MainParam*: INTEGER;
 
-    dlopen* : PROCEDURE [ccall] (filename, flag: INTEGER): INTEGER;
-    dlsym*  : PROCEDURE [ccall] (handle, symbol: INTEGER): INTEGER;
-    malloc  : PROCEDURE [ccall] (size: INTEGER): INTEGER;
-    free    : PROCEDURE [ccall] (ptr: INTEGER);
+    libc*, librt*: INTEGER;
 
+    dlopen*        : PROCEDURE [ccall] (filename, flag: INTEGER): INTEGER;
+    dlsym*         : PROCEDURE [ccall] (handle, symbol: INTEGER): INTEGER;
 
-PROCEDURE [stdcall] sysfunc4* (arg1, arg2, arg3, arg4: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-    053H,               (*  push    ebx                    *)
-    08BH, 045H, 008H,   (*  mov     eax, dword [ebp +  8]  *)
-    08BH, 05DH, 00CH,   (*  mov     ebx, dword [ebp + 12]  *)
-    08BH, 04DH, 010H,   (*  mov     ecx, dword [ebp + 16]  *)
-    08BH, 055H, 014H,   (*  mov     edx, dword [ebp + 20]  *)
-    0CDH, 080H,         (*  int     80h                    *)
-    05BH,               (*  pop     ebx                    *)
-    0C9H,               (*  leave                          *)
-    0C2H, 010H, 000H    (*  ret     16                     *)
-    )
-    RETURN 0
-END sysfunc4;
+    stdout*,
+    stdin*,
+    stderr*        : INTEGER;
+
+    malloc*        : PROCEDURE [ccall] (size: INTEGER): INTEGER;
+    free*          : PROCEDURE [ccall] (ptr: INTEGER);
+    _exit*         : PROCEDURE [ccall] (code: INTEGER);
+    puts*          : PROCEDURE [ccall] (pStr: INTEGER);
+    fwrite*,
+    fread*         : PROCEDURE [ccall] (buffer, bytes, blocks, file: INTEGER): INTEGER;
+    fopen*         : PROCEDURE [ccall] (fname, fmode: INTEGER): INTEGER;
+    fclose*        : PROCEDURE [ccall] (file: INTEGER): INTEGER;
+
+    clock_gettime* : PROCEDURE [ccall] (clock_id: INTEGER; VAR tp: TP): INTEGER;
+    time*          : PROCEDURE [ccall] (ptr: INTEGER): INTEGER;
 
 
 PROCEDURE putc* (c: CHAR);
@@ -48,29 +52,14 @@ VAR
     res: INTEGER;
 
 BEGIN
-    res := sysfunc4(4, 1, SYSTEM.ADR(c), 1)
+    res := fwrite(SYSTEM.ADR(c), 1, 1, stdout)
 END putc;
-
-
-PROCEDURE puts (pStr: INTEGER);
-VAR
-    c: CHAR;
-
-BEGIN
-    REPEAT
-        SYSTEM.GET(pStr, c);
-        INC(pStr);
-        IF c # 0X THEN
-            putc(c)
-        END
-    UNTIL c = 0X
-END puts;
 
 
 PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
 BEGIN
-    puts(lpCaption); putc(0AX);
-    puts(lpText); putc(0AX)
+    puts(lpCaption);
+    puts(lpText)
 END DebugMsg;
 
 
@@ -101,28 +90,55 @@ BEGIN
 END _DISPOSE;
 
 
+PROCEDURE GetProcAdr (lib: INTEGER; name: ARRAY OF CHAR; VarAdr: INTEGER);
+VAR
+    sym: INTEGER;
+BEGIN
+    sym := dlsym(lib, SYSTEM.ADR(name[0]));
+    ASSERT(sym # 0);
+    SYSTEM.PUT(VarAdr, sym)
+END GetProcAdr;
+
+
 PROCEDURE init* (esp, code: INTEGER);
 BEGIN
     SYSTEM.GET(code - 1000H - SIZE_OF_DWORD * 2, dlopen);
     SYSTEM.GET(code - 1000H - SIZE_OF_DWORD,     dlsym);
     eol := 0AX;
     base := 08048000H;
-    MainParam := esp + SIZE_OF_DWORD;
+    MainParam := esp + SIZE_OF_DWORD;    
+
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
-    SYSTEM.PUT(SYSTEM.ADR(malloc), dlsym(libc, SYSTEM.SADR("malloc")));
-    SYSTEM.PUT(SYSTEM.ADR(free), dlsym(libc, SYSTEM.SADR("free")))
+    GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));
+    GetProcAdr(libc, "free", SYSTEM.ADR(free));
+    GetProcAdr(libc, "exit", SYSTEM.ADR(_exit));
+    GetProcAdr(libc, "stdout", SYSTEM.ADR(stdout));
+    GetProcAdr(libc, "stdin", SYSTEM.ADR(stdin));
+    GetProcAdr(libc, "stderr", SYSTEM.ADR(stderr));
+    SYSTEM.GET(stdout - 4, stdout);
+    SYSTEM.GET(stdin - 4, stdin);
+    SYSTEM.GET(stderr - 4, stderr);
+    GetProcAdr(libc, "puts", SYSTEM.ADR(puts));
+    GetProcAdr(libc, "fwrite", SYSTEM.ADR(fwrite));
+    GetProcAdr(libc, "fread", SYSTEM.ADR(fread));
+    GetProcAdr(libc, "fopen", SYSTEM.ADR(fopen));
+    GetProcAdr(libc, "fclose", SYSTEM.ADR(fclose));
+    GetProcAdr(libc, "time", SYSTEM.ADR(time));
+
+    librt := dlopen(SYSTEM.SADR("librt.so.1"), 1);
+    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime));
 END init;
 
 
 PROCEDURE exit* (code: INTEGER);
 BEGIN
-    code := sysfunc4(1, code, 0, 0)
+    _exit(code)
 END exit;
 
 
 PROCEDURE exit_thread* (code: INTEGER);
 BEGIN
-    exit(code)
+    _exit(code)
 END exit_thread;
 
 

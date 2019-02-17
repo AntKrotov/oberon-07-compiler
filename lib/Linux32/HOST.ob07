@@ -71,12 +71,12 @@ END GetCurrentDirectory;
 
 
 PROCEDURE ReadFile (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-    RETURN API.sysfunc4(3, F, SYSTEM.ADR(Buffer[0]), bytes)
+    RETURN API.fread(SYSTEM.ADR(Buffer[0]), 1, bytes, F)
 END ReadFile;
 
 
 PROCEDURE WriteFile (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-    RETURN API.sysfunc4(4, F, SYSTEM.ADR(Buffer[0]), bytes)
+    RETURN API.fwrite(SYSTEM.ADR(Buffer[0]), 1, bytes, F)
 END WriteFile;
 
 
@@ -109,18 +109,18 @@ END FileWrite;
 
 
 PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
-    RETURN API.sysfunc4(8, SYSTEM.ADR(FName[0]), 7, 0)
+    RETURN API.fopen(SYSTEM.ADR(FName[0]), SYSTEM.SADR("wb"))
 END FileCreate;
 
 
-PROCEDURE FileClose* (F: INTEGER);
+PROCEDURE FileClose* (File: INTEGER);
 BEGIN
-    F := API.sysfunc4(6, F, 0, 0)
+    File := API.fclose(File)
 END FileClose;
 
 
 PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
-    RETURN API.sysfunc4(5, SYSTEM.ADR(FName[0]), 2, 7)
+    RETURN API.fopen(SYSTEM.ADR(FName[0]), SYSTEM.SADR("rb"))
 END FileOpen;
 
 
@@ -132,11 +132,11 @@ END OutChar;
 
 PROCEDURE GetTickCount* (): INTEGER;
 VAR
-    tp: ARRAY 2 OF INTEGER;
+    tp:  API.TP;
     res: INTEGER;
 
 BEGIN
-    IF API.sysfunc4(265, 0, SYSTEM.ADR(tp), 0) = 0 THEN
+    IF API.clock_gettime(0, tp) = 0 THEN
         res := tp[0] * 100 + tp[1] DIV 10000000
     ELSE
         res := 0
@@ -156,7 +156,7 @@ END now;
 
 
 PROCEDURE UnixTime* (): INTEGER;
-    RETURN API.sysfunc4(13, 0, 0, 0)
+    RETURN API.time(0)
 END UnixTime;
 
 

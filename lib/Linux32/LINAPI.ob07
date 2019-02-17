@@ -7,17 +7,40 @@
 
 MODULE LINAPI;
 
-IMPORT API, SYSTEM;
+IMPORT SYSTEM, API;
 
 
 CONST
 
     SIZE_OF_DWORD = 4;
-    
-    
+
+
+TYPE
+
+    TP* = API.TP;
+
+
 VAR
 
-    argc*, envc*, libc*: INTEGER;
+    argc*, envc*: INTEGER;
+
+    libc*, librt*: INTEGER;
+
+    stdout*,
+    stdin*,
+    stderr*        : INTEGER;
+
+    malloc*        : PROCEDURE [ccall] (size: INTEGER): INTEGER;
+    free*          : PROCEDURE [ccall] (ptr: INTEGER);
+    exit*          : PROCEDURE [ccall] (code: INTEGER);
+    puts*          : PROCEDURE [ccall] (pStr: INTEGER);
+    fwrite*,
+    fread*         : PROCEDURE [ccall] (buffer, bytes, blocks, file: INTEGER): INTEGER;
+    fopen*         : PROCEDURE [ccall] (fname, fmode: INTEGER): INTEGER;
+    fclose*        : PROCEDURE [ccall] (file: INTEGER): INTEGER;
+    time*          : PROCEDURE [ccall] (ptr: INTEGER): INTEGER;
+
+    clock_gettime* : PROCEDURE [ccall] (clock_id: INTEGER; VAR tp: TP): INTEGER;
 
 
 PROCEDURE dlopen* (filename: ARRAY OF CHAR): INTEGER;
@@ -35,10 +58,10 @@ VAR
     i, len, ptr: INTEGER;
     c: CHAR;
 
-BEGIN    
+BEGIN
     i := 0;
     len := LEN(s) - 1;
-    IF (0 <= n) & (n <= argc + envc) & (n # argc) & (len > 0) THEN        
+    IF (0 <= n) & (n <= argc + envc) & (n # argc) & (len > 0) THEN
         SYSTEM.GET(API.MainParam + (n + 1) * SIZE_OF_DWORD, ptr);
         REPEAT
             SYSTEM.GET(ptr, c);
@@ -64,15 +87,36 @@ END GetEnv;
 PROCEDURE init;
 VAR
     ptr: INTEGER;
-    
-BEGIN   
-    libc := API.libc; 
+
+BEGIN
+
     envc := -1;
     SYSTEM.GET(API.MainParam, argc);
     REPEAT
         SYSTEM.GET(API.MainParam + (envc + argc + 3) * SIZE_OF_DWORD, ptr);
         INC(envc)
-    UNTIL ptr = 0    
+    UNTIL ptr = 0;
+
+    libc := API.libc;
+
+    stdout := API.stdout;
+    stdin  := API.stdin;
+    stderr := API.stderr;
+
+    malloc := API.malloc;
+    free   := API.free;
+    exit   := API._exit;
+    puts   := API.puts;
+    fwrite := API.fwrite;
+    fread  := API.fread;
+    fopen  := API.fopen;
+    fclose := API.fclose;
+    time   := API.time;
+
+    librt := API.librt;
+
+    clock_gettime := API.clock_gettime;
+
 END init;
 
 
