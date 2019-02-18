@@ -30,17 +30,17 @@ VAR
     stdin*,
     stderr*        : INTEGER;
 
-    malloc*        : PROCEDURE [ccall] (size: INTEGER): INTEGER;
-    free*          : PROCEDURE [ccall] (ptr: INTEGER);
-    exit*          : PROCEDURE [ccall] (code: INTEGER);
-    puts*          : PROCEDURE [ccall] (pStr: INTEGER);
+    malloc*        : PROCEDURE [ccall16] (size: INTEGER): INTEGER;
+    free*          : PROCEDURE [ccall16] (ptr: INTEGER);
+    exit*          : PROCEDURE [ccall16] (code: INTEGER);
+    puts*          : PROCEDURE [ccall16] (pStr: INTEGER);
     fwrite*,
-    fread*         : PROCEDURE [ccall] (buffer, bytes, blocks, file: INTEGER): INTEGER;
-    fopen*         : PROCEDURE [ccall] (fname, fmode: INTEGER): INTEGER;
-    fclose*        : PROCEDURE [ccall] (file: INTEGER): INTEGER;
-    time*          : PROCEDURE [ccall] (ptr: INTEGER): INTEGER;
+    fread*         : PROCEDURE [ccall16] (buffer, bytes, blocks, file: INTEGER): INTEGER;
+    fopen*         : PROCEDURE [ccall16] (fname, fmode: INTEGER): INTEGER;
+    fclose*        : PROCEDURE [ccall16] (file: INTEGER): INTEGER;
+    time*          : PROCEDURE [ccall16] (ptr: INTEGER): INTEGER;
 
-    clock_gettime* : PROCEDURE [ccall] (clock_id: INTEGER; VAR tp: TP): INTEGER;
+    clock_gettime* : PROCEDURE [ccall16] (clock_id: INTEGER; VAR tp: TP): INTEGER;
 
 
 PROCEDURE dlopen* (filename: ARRAY OF CHAR): INTEGER;

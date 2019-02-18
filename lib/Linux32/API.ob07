@@ -27,24 +27,24 @@ VAR
 
     libc*, librt*: INTEGER;
 
-    dlopen*        : PROCEDURE [ccall] (filename, flag: INTEGER): INTEGER;
-    dlsym*         : PROCEDURE [ccall] (handle, symbol: INTEGER): INTEGER;
+    dlopen*        : PROCEDURE [ccall16] (filename, flag: INTEGER): INTEGER;
+    dlsym*         : PROCEDURE [ccall16] (handle, symbol: INTEGER): INTEGER;
 
     stdout*,
     stdin*,
     stderr*        : INTEGER;
 
-    malloc*        : PROCEDURE [ccall] (size: INTEGER): INTEGER;
-    free*          : PROCEDURE [ccall] (ptr: INTEGER);
-    _exit*         : PROCEDURE [ccall] (code: INTEGER);
-    puts*          : PROCEDURE [ccall] (pStr: INTEGER);
+    malloc*        : PROCEDURE [ccall16] (size: INTEGER): INTEGER;
+    free*          : PROCEDURE [ccall16] (ptr: INTEGER);
+    _exit*         : PROCEDURE [ccall16] (code: INTEGER);
+    puts*          : PROCEDURE [ccall16] (pStr: INTEGER);
     fwrite*,
-    fread*         : PROCEDURE [ccall] (buffer, bytes, blocks, file: INTEGER): INTEGER;
-    fopen*         : PROCEDURE [ccall] (fname, fmode: INTEGER): INTEGER;
-    fclose*        : PROCEDURE [ccall] (file: INTEGER): INTEGER;
+    fread*         : PROCEDURE [ccall16] (buffer, bytes, blocks, file: INTEGER): INTEGER;
+    fopen*         : PROCEDURE [ccall16] (fname, fmode: INTEGER): INTEGER;
+    fclose*        : PROCEDURE [ccall16] (file: INTEGER): INTEGER;
 
-    clock_gettime* : PROCEDURE [ccall] (clock_id: INTEGER; VAR tp: TP): INTEGER;
-    time*          : PROCEDURE [ccall] (ptr: INTEGER): INTEGER;
+    clock_gettime* : PROCEDURE [ccall16] (clock_id: INTEGER; VAR tp: TP): INTEGER;
+    time*          : PROCEDURE [ccall16] (ptr: INTEGER): INTEGER;
 
 
 PROCEDURE putc* (c: CHAR);
@@ -106,7 +106,7 @@ BEGIN
     SYSTEM.GET(code - 1000H - SIZE_OF_DWORD,     dlsym);
     eol := 0AX;
     base := 08048000H;
-    MainParam := esp + SIZE_OF_DWORD;    
+    MainParam := esp + SIZE_OF_DWORD;
 
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
     GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));
