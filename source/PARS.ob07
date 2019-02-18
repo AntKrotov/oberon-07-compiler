@@ -471,9 +471,9 @@ BEGIN
     ELSIF parser.lex.s = "winapi" THEN
         res := PROG.winapi
     ELSIF (parser.lex.s = "ccall") OR (parser.lex.s = "cdecl") THEN
-        res := PROG.cdecl
-(*    ELSIF (parser.lex.s = "ccall16") OR (parser.lex.s = "cdecl16") THEN
-        res := PROG.cdecl16*)
+        res := PROG.ccall
+    ELSIF parser.lex.s = "ccall16" THEN
+        res := PROG.ccall16
     ELSIF parser.lex.s = "kosapi" THEN
         res := PROG.kosapi
     ELSIF parser.lex.s = "call64" THEN
@@ -493,14 +493,14 @@ END sysflag;
 PROCEDURE procflag (parser: PARSER; VAR import: CODE.IMPORT_PROC; isProc: BOOLEAN): INTEGER;
 VAR
     call: INTEGER;
-    dll, proc: SCAN.LEXSTR; 
+    dll, proc: SCAN.LEXSTR;
     pos:  SCAN.POSITION;
 
 BEGIN
 
     import := NIL;
 
-    IF parser.sym = SCAN.lxLSQUARE THEN  
+    IF parser.sym = SCAN.lxLSQUARE THEN
         getpos(parser, pos);
         check1(parser.unit.sysimport, parser, 54);
         Next(parser);
@@ -528,7 +528,7 @@ BEGIN
     ELSE
         call := PROG.default
     END;
-    
+
     IF import # NIL THEN
         check(program.target.sys # mConst.Target_iELF32, parser, pos, 70)
     END

@@ -1748,10 +1748,8 @@ VAR
                     call64 := cconv IN {PROG.call64, PROG.win64};
                     CODE.setlast(begcall);
                     fregs := CODE.precall(e.type.typ = PROG.tREAL);
-                    IF call64 THEN
-                        CODE.AddCmd(CODE.opALIGN16, ORD(ODD(MAX(params - 4, 0))) + MAX(4 - params, 0))
-                    (*ELSIF cconv = PROG.cdecl16 THEN
-                        CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
+                    IF call64 OR (cconv = PROG.ccall16) THEN
+                        CODE.AddCmd(CODE.opALIGN16, params)
                     END;
                     CODE.setlast(endcall.prev(CODE.COMMAND));
                     fparams := procType.params.getfparams(procType, 3);
@@ -1769,9 +1767,9 @@ VAR
                         CODE.CallP(call64, MIN(params, 4), fparams)
                     END;
 
-                    IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
+                    IF cconv IN {PROG.call64, PROG.win64, PROG.ccall16} THEN
                         CODE.AddCmd(CODE.opCLEANUP16, params)
-                    ELSIF cconv = PROG.cdecl THEN
+                    ELSIF cconv = PROG.ccall THEN
                         CODE.AddCmd(CODE.opCLEANUP, params)
                     END;
 
@@ -2517,10 +2515,8 @@ BEGIN
             call64 := cconv IN {PROG.call64, PROG.win64};
             CODE.setlast(begcall);
             ASSERT(CODE.precall(FALSE) = 0);
-            IF call64 THEN
-                CODE.AddCmd(CODE.opALIGN16, ORD(ODD(MAX(params - 4, 0))) + MAX(4 - params, 0))
-            (*ELSIF cconv = PROG.cdecl16 THEN
-                CODE.AddCmd2(CODE.opALIGN16, params, 0)*)
+            IF call64 OR (cconv = PROG.ccall16) THEN
+                CODE.AddCmd(CODE.opALIGN16, params)
             END;
             CODE.setlast(endcall.prev(CODE.COMMAND));
             fparams := procType.params.getfparams(procType, 3);
@@ -2538,9 +2534,9 @@ BEGIN
                 CODE.CallP(call64, MIN(params, 4), fparams)
             END;
 
-            IF cconv IN {PROG.call64, PROG.win64(*, PROG.cdecl16*)} THEN
+            IF cconv IN {PROG.call64, PROG.win64, PROG.ccall16} THEN
                 CODE.AddCmd(CODE.opCLEANUP16, params)
-            ELSIF cconv = PROG.cdecl THEN
+            ELSIF cconv = PROG.ccall THEN
                 CODE.AddCmd(CODE.opCLEANUP, params)
             END
         END

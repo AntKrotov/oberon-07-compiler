@@ -40,14 +40,14 @@ CONST
     sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
     sysWSADR*  = 39;  sysPUT32*  = 40;
 
-    default* = 0;  stdcall* =  1; winapi* =  2; kosapi* =  3;
-    cdecl*   = 10; (*cdecl16* = 11;*) call64* = 12; win64*  = 13;
+    default* =  1; stdcall* =  2; winapi* =  3; kosapi* =  4;
+    ccall*   = 10; ccall16* = 11; call64* = 12; win64*  = 13;
     noalign* = 20;
 
     callee_clean_up* = {default, stdcall, winapi, kosapi};
-    caller_clean_up* = {cdecl, (*cdecl16,*) call64, win64};
-    callconv32* = {default, stdcall, winapi, kosapi, cdecl};
-    callconv64* = {default, call64, win64, stdcall, cdecl};
+    caller_clean_up* = {ccall, ccall16, call64, win64};
+    callconv32* = {default, stdcall, winapi, kosapi, ccall, ccall16};
+    callconv64* = {default, call64, win64, stdcall};
 
     STACK_FRAME = 2;
 

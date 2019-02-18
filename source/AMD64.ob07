@@ -943,15 +943,11 @@ BEGIN
             PushAll(0)
 
         |CODE.opALIGN16:
-            reg1 := REG.GetAnyReg(R);
-            mov(reg1, rsp);
+            ASSERT(rax IN R.regs);
+            mov(rax, rsp);
             andrc(rsp, -16);
-            push(reg1);
-            push(reg1);
-            IF param2 > 0 THEN
-                subrc(rsp, param2 * 8)
-            END;
-            drop
+            push(rax);
+            subrc(rsp, (ORD(ODD(MAX(param2 - 4, 0))) + MAX(4 - param2, 0) + 1) * 8)
 
         |CODE.opRESF:
             ASSERT(xmm = -1);
@@ -2059,7 +2055,7 @@ BEGIN
             drop
 
         |CODE.opCLEANUP16:
-            n := MAX(param2 + ORD(ODD(param2)), 4) * 8;
+            n := MAX(param2 + ORD(ODD(param2)), 4) * 8 + 8;
             addrc(rsp, n);
             pop(rsp)
 

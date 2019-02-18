@@ -10,7 +10,7 @@ MODULE CONSTANTS;
 CONST
 
     vMajor* = 0;
-    vMinor* = 96;
+    vMinor* = 97;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
