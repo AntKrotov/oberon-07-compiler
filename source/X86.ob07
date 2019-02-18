@@ -284,7 +284,7 @@ END addrc;
 
 PROCEDURE subrc (reg, n: INTEGER);
 BEGIN
-    OutByte2(81H + short(n), 0E8H + reg);  // add reg, n
+    OutByte2(81H + short(n), 0E8H + reg);  // sub reg, n
     OutIntByte(n)
 END subrc;
 
