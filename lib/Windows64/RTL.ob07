@@ -592,7 +592,7 @@ BEGIN
 END _exit;
 
 
-PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; param, code: INTEGER);
+PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
 BEGIN
     API.init(param, code);
 
