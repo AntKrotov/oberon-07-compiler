@@ -1,0 +1,167 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE API;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    SIZE_OF_QWORD = 8;
+
+
+TYPE
+
+    TP* = ARRAY 2 OF INTEGER;
+
+
+VAR
+
+    eol*:  ARRAY 3 OF CHAR;
+    base*: INTEGER;
+    MainParam*:  INTEGER;
+
+    libc*, librt*: INTEGER;
+    
+    stdout*,
+    stdin*,
+    stderr* : INTEGER;
+
+    dlopen*,
+    dlsym*,
+    malloc*,
+    free*,
+    puts*,
+    _exit*,
+    fwrite*,
+    fread*,
+    fopen*,
+    fclose*,
+    clock_gettime*,
+    time*: INTEGER;
+
+
+PROCEDURE [stdcall] SysVCall* (rax, rdi, rsi, rdx, rcx, r8, r9: INTEGER): INTEGER;
+BEGIN
+    SYSTEM.CODE(
+    048H, 08BH, 045H, 010H,  // mov rax, qword[rbp + 16]
+    048H, 08BH, 07DH, 018H,  // mov rdi, qword[rbp + 24]
+    048H, 08BH, 075H, 020H,  // mov rsi, qword[rbp + 32]
+    048H, 08BH, 055H, 028H,  // mov rdx, qword[rbp + 40]
+    048H, 08BH, 04DH, 030H,  // mov rcx, qword[rbp + 48]
+    04CH, 08BH, 045H, 038H,  // mov r8,  qword[rbp + 56]
+    04CH, 08BH, 04DH, 040H,  // mov r9,  qword[rbp + 64]
+    048H, 081H, 0ECH, 080H, 000H, 000H, 000H, // sub rsp, 128
+    048H, 083H, 0E4H, 0F0H,  // and rsp, -16
+    0FFH, 0D0H,              // call rax
+    0C9H,                    // leave
+    0C2H, 038H, 000H         // ret 56
+    )
+    RETURN 0
+END SysVCall;
+
+
+PROCEDURE putc* (c: CHAR);
+VAR
+    res: INTEGER;
+
+BEGIN    
+    res := SysVCall(fwrite, SYSTEM.ADR(c), 1, 1, stdout, 0,0)
+END putc;
+
+
+PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := SysVCall(puts, lpCaption, 0,0,0,0,0);
+    res := SysVCall(puts, lpText, 0,0,0,0,0);
+END DebugMsg;
+
+
+PROCEDURE _NEW* (size: INTEGER): INTEGER;
+VAR
+    res, ptr, qwords: INTEGER;
+
+BEGIN
+    res := SysVCall(malloc, size, 0,0,0,0,0);
+    IF res # 0 THEN
+        ptr := res;
+        qwords := size DIV SIZE_OF_QWORD;
+        WHILE qwords > 0 DO
+            SYSTEM.PUT(ptr, 0);
+            INC(ptr, SIZE_OF_QWORD);
+            DEC(qwords)
+        END
+    END
+
+    RETURN res
+END _NEW;
+
+
+PROCEDURE _DISPOSE* (p: INTEGER): INTEGER;
+BEGIN
+    p := SysVCall(free, p, 0,0,0,0,0)
+    RETURN 0
+END _DISPOSE;
+
+
+PROCEDURE GetProcAdr (lib: INTEGER; name: ARRAY OF CHAR; VarAdr: INTEGER);
+VAR
+    sym: INTEGER;
+BEGIN
+    sym := SysVCall(dlsym, lib, SYSTEM.ADR(name[0]), 0,0,0,0);
+    ASSERT(sym # 0);
+    SYSTEM.PUT(VarAdr, sym)
+END GetProcAdr;
+
+
+PROCEDURE init* (rsp, code: INTEGER);
+BEGIN
+    MainParam := rsp;
+    base := 400000H;
+    SYSTEM.GET(base + 305H - 16, dlopen);
+    SYSTEM.GET(base + 305H -  8, dlsym);
+    libc := SysVCall(dlopen, SYSTEM.SADR("libc.so.6"), 1, 0,0,0,0);
+    ASSERT(libc # 0);
+    GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));
+    GetProcAdr(libc, "free", SYSTEM.ADR(free)); 
+    GetProcAdr(libc, "exit", SYSTEM.ADR(_exit));
+    GetProcAdr(libc, "stdout", SYSTEM.ADR(stdout));
+    GetProcAdr(libc, "stdin", SYSTEM.ADR(stdin));
+    GetProcAdr(libc, "stderr", SYSTEM.ADR(stderr));
+    SYSTEM.GET(stdout - 8, stdout);
+    SYSTEM.GET(stdin  - 8, stdin);
+    SYSTEM.GET(stderr - 8, stderr);
+    GetProcAdr(libc, "puts", SYSTEM.ADR(puts)); 
+    GetProcAdr(libc, "fwrite", SYSTEM.ADR(fwrite));
+    GetProcAdr(libc, "fread", SYSTEM.ADR(fread));
+    GetProcAdr(libc, "fopen", SYSTEM.ADR(fopen));
+    GetProcAdr(libc, "fclose", SYSTEM.ADR(fclose));
+    GetProcAdr(libc, "time", SYSTEM.ADR(time));
+    librt := SysVCall(dlopen, SYSTEM.SADR("librt.so.1"), 1, 0,0,0,0);
+    ASSERT(librt # 0);
+    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime));
+    eol := 0AX
+END init;
+
+
+PROCEDURE exit* (code: INTEGER);
+BEGIN      
+    code := SysVCall(_exit, code, 0,0,0,0,0)
+END exit;
+
+
+PROCEDURE exit_thread* (code: INTEGER);
+BEGIN
+    exit(code)
+END exit_thread;
+
+
+END API.
