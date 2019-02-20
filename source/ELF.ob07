@@ -17,6 +17,7 @@ CONST
     ET_DYN = 3;
 
     EM_386 = 3;
+    EM_8664 = 3EH;
 
     ELFCLASS32 = 1;
     ELFCLASS64 = 2;
@@ -99,7 +100,20 @@ BEGIN
 END WritePH;
 
 
-PROCEDURE fixup (program: BIN.PROGRAM; text, data, bss: INTEGER);
+PROCEDURE WritePH64 (file: FILE; ph: Elf32_Phdr);
+BEGIN
+    WR.Write32LE(file, ph.p_type);
+    WR.Write32LE(file, ph.p_flags);
+    WR.Write64LE(file, ph.p_offset);
+    WR.Write64LE(file, ph.p_vaddr);
+    WR.Write64LE(file, ph.p_paddr);
+    WR.Write64LE(file, ph.p_filesz);
+    WR.Write64LE(file, ph.p_memsz);
+    WR.Write64LE(file, ph.p_align)
+END WritePH64;
+
+
+PROCEDURE fixup (program: BIN.PROGRAM; text, data, bss: INTEGER; amd64: BOOLEAN);
 VAR
     reloc: BIN.RELOC;
     L, delta: INTEGER;
@@ -109,7 +123,7 @@ BEGIN
     WHILE reloc # NIL DO
 
         L := BIN.get32le(program.code, reloc.offset);
-        delta := 3 - reloc.offset - text;
+        delta := 3 - reloc.offset - text - 7 * ORD(amd64);
 
         CASE reloc.opcode OF
         |BIN.PICDATA: BIN.put32le(program.code, reloc.offset, L + data + delta)
@@ -122,7 +136,7 @@ BEGIN
 END fixup;
 
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; amd64: BOOLEAN);
 CONST
     interp  =  0;
     dyn     =  1;
@@ -135,20 +149,28 @@ VAR
     ehdr: Elf32_Ehdr;
     phdr: ARRAY 16 OF Elf32_Phdr;
 
-    i, LoadAdr, offset: INTEGER;
+    i, LoadAdr, offset, pad, VA: INTEGER;
 
     SizeOf: RECORD header, code, data, bss: INTEGER END;
 
     File: FILE;
 
     str: ARRAY 40 OF CHAR; lstr: INTEGER;
-    Dyn: ARRAY 201 OF BYTE;
+    Dyn: ARRAY 350 OF BYTE;
 
 BEGIN
-    str := "/lib/ld-linux.so.2";
+    IF amd64 THEN
+        str := "/lib64/ld-linux-x86-64.so.2"
+    ELSE
+        str := "/lib/ld-linux.so.2"
+    END;
     lstr := LENGTH(str);
 
-    LoadAdr := 08048000H;
+    IF amd64 THEN
+        LoadAdr := 400000H
+    ELSE
+        LoadAdr := 08048000H
+    END;
 
     SizeOf.code := CHL.Length(program.code);
     SizeOf.data := CHL.Length(program.data);
@@ -158,7 +180,11 @@ BEGIN
     ehdr.e_ident[1] := ORD("E");
     ehdr.e_ident[2] := ORD("L");
     ehdr.e_ident[3] := ORD("F");
-    ehdr.e_ident[4] := ELFCLASS32;
+    IF amd64 THEN
+        ehdr.e_ident[4] := ELFCLASS64
+    ELSE
+        ehdr.e_ident[4] := ELFCLASS32
+    END;
     ehdr.e_ident[5] := ELFDATA2LSB;
     ehdr.e_ident[6] := 1;
     ehdr.e_ident[7] := 3;
@@ -167,19 +193,28 @@ BEGIN
     END;
 
     ehdr.e_type := WCHR(ET_EXEC);
-    ehdr.e_machine := WCHR(EM_386);
     ehdr.e_version := 1;
-    ehdr.e_phoff := 34H;
     ehdr.e_shoff := 0;
     ehdr.e_flags := 0;
-    ehdr.e_ehsize := WCHR(34H);
-    ehdr.e_phentsize := WCHR(20H);
-    ehdr.e_phnum := WCHR(6);//!!!
-    ehdr.e_shentsize := WCHR(28H);
     ehdr.e_shnum := WCHR(0);
     ehdr.e_shstrndx := WCHR(0);
+    ehdr.e_phnum := WCHR(6);
 
-    SizeOf.header := 34H + 20H * ORD(ehdr.e_phnum);
+    IF amd64 THEN
+        ehdr.e_machine := WCHR(EM_8664);
+        ehdr.e_phoff := 40H;
+        ehdr.e_ehsize := WCHR(40H);
+        ehdr.e_phentsize := WCHR(38H);
+        ehdr.e_shentsize := WCHR(40H)
+    ELSE
+        ehdr.e_machine := WCHR(EM_386);
+        ehdr.e_phoff := 34H;
+        ehdr.e_ehsize := WCHR(34H);
+        ehdr.e_phentsize := WCHR(20H);
+        ehdr.e_shentsize := WCHR(28H)
+    END;
+
+    SizeOf.header := ORD(ehdr.e_ehsize) + ORD(ehdr.e_phentsize) * ORD(ehdr.e_phnum);
 
     phdr[interp].p_type := 3;
     phdr[interp].p_offset := SizeOf.header;
@@ -194,8 +229,13 @@ BEGIN
     phdr[dyn].p_offset := phdr[interp].p_offset + phdr[interp].p_filesz;
     phdr[dyn].p_vaddr := LoadAdr + phdr[dyn].p_offset;
     phdr[dyn].p_paddr := LoadAdr + phdr[dyn].p_offset;
-    phdr[dyn].p_filesz := 50H;//!!!
-    phdr[dyn].p_memsz := 50H;//!!!
+    IF amd64 THEN
+        phdr[dyn].p_filesz := 0A0H;
+        phdr[dyn].p_memsz  := 0A0H
+    ELSE
+        phdr[dyn].p_filesz := 50H;
+        phdr[dyn].p_memsz  := 50H
+    END;
     phdr[dyn].p_flags := PF_R;
     phdr[dyn].p_align := 1;
 
@@ -205,47 +245,56 @@ BEGIN
     phdr[header].p_offset := offset;
     phdr[header].p_vaddr := LoadAdr;
     phdr[header].p_paddr := LoadAdr;
-    phdr[header].p_filesz := 1D0H;//!!!
-    phdr[header].p_memsz := 1D0H;//!!!
+    IF amd64 THEN
+        phdr[header].p_filesz := 305H;
+        phdr[header].p_memsz  := 305H
+    ELSE
+        phdr[header].p_filesz := 1D0H;
+        phdr[header].p_memsz  := 1D0H
+    END;
     phdr[header].p_flags := PF_R + PF_W;
     phdr[header].p_align := 1000H;
-
+    
     offset := offset + phdr[header].p_filesz;
+    VA := LoadAdr + offset + 1000H;           
 
     phdr[text].p_type := 1;
     phdr[text].p_offset := offset;
-    phdr[text].p_vaddr := LoadAdr + offset + 1000H;
-    phdr[text].p_paddr := LoadAdr + offset + 1000H;
+    phdr[text].p_vaddr := VA;
+    phdr[text].p_paddr := VA;
     phdr[text].p_filesz := SizeOf.code;
     phdr[text].p_memsz := SizeOf.code;
     phdr[text].p_flags := PF_X + PF_R;
     phdr[text].p_align := 1000H;
 
     ehdr.e_entry := phdr[text].p_vaddr;
-
+    
     offset := offset + phdr[text].p_filesz;
+    VA := LoadAdr + offset + 2000H;
+    pad := (16 - VA MOD 16) MOD 16;
 
     phdr[data].p_type := 1;
     phdr[data].p_offset := offset;
-    phdr[data].p_vaddr := LoadAdr + offset + 2000H;
-    phdr[data].p_paddr := LoadAdr + offset + 2000H;
-    phdr[data].p_filesz := SizeOf.data;
-    phdr[data].p_memsz := SizeOf.data;
+    phdr[data].p_vaddr := VA;
+    phdr[data].p_paddr := VA;
+    phdr[data].p_filesz := SizeOf.data + pad;
+    phdr[data].p_memsz := SizeOf.data + pad;
     phdr[data].p_flags := PF_R + PF_W;
     phdr[data].p_align := 1000H;
-
+                    
     offset := offset + phdr[data].p_filesz;
+    VA := LoadAdr + offset + 3000H;
 
     phdr[bss].p_type := 1;
     phdr[bss].p_offset := offset;
-    phdr[bss].p_vaddr := LoadAdr + offset + 3000H;
-    phdr[bss].p_paddr := LoadAdr + offset + 3000H;
+    phdr[bss].p_vaddr := VA;
+    phdr[bss].p_paddr := VA;
     phdr[bss].p_filesz := 0;
-    phdr[bss].p_memsz := SizeOf.bss;
+    phdr[bss].p_memsz := SizeOf.bss + 16;
     phdr[bss].p_flags := PF_R + PF_W;
     phdr[bss].p_align := 1000H;
 
-    fixup(program, phdr[text].p_vaddr, phdr[data].p_vaddr, phdr[bss].p_vaddr);
+    fixup(program, phdr[text].p_vaddr, phdr[data].p_vaddr + pad, align(phdr[bss].p_vaddr, 16), amd64);
 
     File := WR.Create(FileName);
 
@@ -257,9 +306,15 @@ BEGIN
     Write16(File, ehdr.e_machine);
 
     WR.Write32LE(File, ehdr.e_version);
-    WR.Write32LE(File, ehdr.e_entry);
-    WR.Write32LE(File, ehdr.e_phoff);
-    WR.Write32LE(File, ehdr.e_shoff);
+    IF amd64 THEN
+        WR.Write64LE(File, ehdr.e_entry);
+        WR.Write64LE(File, ehdr.e_phoff);
+        WR.Write64LE(File, ehdr.e_shoff)
+    ELSE
+        WR.Write32LE(File, ehdr.e_entry);
+        WR.Write32LE(File, ehdr.e_phoff);
+        WR.Write32LE(File, ehdr.e_shoff)
+    END;
     WR.Write32LE(File, ehdr.e_flags);
 
     Write16(File, ehdr.e_ehsize);
@@ -269,31 +324,57 @@ BEGIN
     Write16(File, ehdr.e_shnum);
     Write16(File, ehdr.e_shstrndx);
 
-    WritePH(File, phdr[interp]);
-    WritePH(File, phdr[dyn]);
-    WritePH(File, phdr[header]);
-    WritePH(File, phdr[text]);
-    WritePH(File, phdr[data]);
-    WritePH(File, phdr[bss]);
+    IF amd64 THEN
+        WritePH64(File, phdr[interp]);
+        WritePH64(File, phdr[dyn]);
+        WritePH64(File, phdr[header]);
+        WritePH64(File, phdr[text]);
+        WritePH64(File, phdr[data]);
+        WritePH64(File, phdr[bss])
+    ELSE
+        WritePH(File, phdr[interp]);
+        WritePH(File, phdr[dyn]);
+        WritePH(File, phdr[header]);
+        WritePH(File, phdr[text]);
+        WritePH(File, phdr[data]);
+        WritePH(File, phdr[bss])
+    END;
 
     FOR i := 0 TO lstr DO
         WR.WriteByte(File, ORD(str[i]))
     END;
 
     i := 0;
-    BIN.InitArray(Dyn, i, "010000000E00000005000000AF8104080A000000190000000600000057810408");
-    BIN.InitArray(Dyn, i, "0B00000010000000110000008781040812000000100000001300000008000000");
-    BIN.InitArray(Dyn, i, "0400000097810408000000000000000000000000000000000000000000000000");
-    BIN.InitArray(Dyn, i, "0100000000000000000000001200000008000000000000000000000012000000");
-    BIN.InitArray(Dyn, i, "C881040801010000CC8104080102000001000000030000000000000001000000");
-    BIN.InitArray(Dyn, i, "020000000000000000646C6F70656E00646C73796D006C6962646C2E736F2E32");
-    BIN.InitArray(Dyn, i, "000000000000000000");
+    IF amd64 THEN
+        BIN.InitArray(Dyn, i, "01000000000000000E000000000000000500000000000000DC02400000000000");
+        BIN.InitArray(Dyn, i, "0A00000000000000190000000000000006000000000000004C02400000000000");
+        BIN.InitArray(Dyn, i, "0B00000000000000180000000000000007000000000000009402400000000000");
+        BIN.InitArray(Dyn, i, "0800000000000000300000000000000009000000000000001800000000000000");
+        BIN.InitArray(Dyn, i, "0400000000000000C40240000000000000000000000000000000000000000000");
+        BIN.InitArray(Dyn, i, "0000000000000000000000000000000000000000000000000100000012000000");
+        BIN.InitArray(Dyn, i, "0000000000000000000000000000000008000000120000000000000000000000");
+        BIN.InitArray(Dyn, i, "0000000000000000F50240000000000001000000010000000000000000000000");
+        BIN.InitArray(Dyn, i, "FD02400000000000010000000200000000000000000000000100000003000000");
+        BIN.InitArray(Dyn, i, "0000000001000000020000000000000000646C6F70656E00646C73796D006C69");
+        BIN.InitArray(Dyn, i, "62646C2E736F2E320000000000000000000000000000000000")
+    ELSE
+        BIN.InitArray(Dyn, i, "010000000E00000005000000AF8104080A000000190000000600000057810408");
+        BIN.InitArray(Dyn, i, "0B00000010000000110000008781040812000000100000001300000008000000");
+        BIN.InitArray(Dyn, i, "0400000097810408000000000000000000000000000000000000000000000000");
+        BIN.InitArray(Dyn, i, "0100000000000000000000001200000008000000000000000000000012000000");
+        BIN.InitArray(Dyn, i, "C881040801010000CC8104080102000001000000030000000000000001000000");
+        BIN.InitArray(Dyn, i, "020000000000000000646C6F70656E00646C73796D006C6962646C2E736F2E32");
+        BIN.InitArray(Dyn, i, "000000000000000000")
+    END;
 
-    WR.Write(File, Dyn, LEN(Dyn));
+    WR.Write(File, Dyn, i);
 
     CHL.WriteToFile(File, program.code);
+    WHILE pad > 0 DO
+        WR.WriteByte(File, 0);
+        DEC(pad)
+    END;
     CHL.WriteToFile(File, program.data);
-
     WR.Close(File)
 END write;
 

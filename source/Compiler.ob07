@@ -33,6 +33,8 @@ BEGIN
         res := mConst.Target_iDLL64
     ELSIF s = mConst.Target_sELF32 THEN
         res := mConst.Target_iELF32
+    ELSIF s = mConst.Target_sELF64 THEN
+        res := mConst.Target_iELF64
     ELSE
         res := 0
     END
@@ -180,7 +182,7 @@ BEGIN
             C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)"); C.Ln;
         C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
         IF UTILS.bit_depth = 64 THEN
-            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe'); C.Ln;
+            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfexe64'); C.Ln;
         ELSIF UTILS.bit_depth = 32 THEN
             C.StringLn('target = console | gui | dll | kos | obj | elfexe'); C.Ln;
         END;
@@ -224,7 +226,7 @@ BEGIN
         ERRORS.error1("bad parameter <target>")
     END;
 
-    bits64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64};
+    bits64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
 
     IF bits64 THEN
         IF UTILS.bit_depth = 32 THEN
@@ -254,6 +256,9 @@ BEGIN
 
     ELSIF target = mConst.Target_iELF32 THEN
         STRINGS.append(lib_path, "Linux32")
+        
+    ELSIF target = mConst.Target_iELF64 THEN
+        STRINGS.append(lib_path, "Linux64")
 
     ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
         STRINGS.append(lib_path, "Windows64")

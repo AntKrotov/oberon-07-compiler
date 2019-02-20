@@ -3249,7 +3249,7 @@ VAR
     amd64: BOOLEAN;
 
 BEGIN
-    amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64};
+    amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
     ext := mConst.FILE_EXT;
     CaseLabels := C.create();
     CaseVar := C.create();

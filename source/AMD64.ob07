@@ -8,7 +8,7 @@
 MODULE AMD64;
 
 IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS,
-       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, X86;
+       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86;
 
 
 CONST
@@ -2577,9 +2577,10 @@ BEGIN
         test(rax);
         jcc(je, dllret)
     END;
-
-    pushc(0);
-    pushc(0);
+    
+    push(rsp);
+    lea(rax, 0, sCODE);
+    push(rax);
     pushDA(0); //TYPES
     pushc(CHL.Length(code.types));
     pushDA(ModName_Offs); //MODNAME
@@ -2724,7 +2725,11 @@ BEGIN
     epilog(code, modname, target);
 
     BIN.fixup(prog);
-    PE32.write(prog, outname, base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE, FALSE, TRUE)
+    IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
+        PE32.write(prog, outname, base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE, FALSE, TRUE)
+    ELSIF target = mConst.Target_iELF64 THEN
+        ELF.write(prog, outname, TRUE)
+    END
 END CodeGen;
 
 

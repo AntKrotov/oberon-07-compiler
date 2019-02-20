@@ -100,12 +100,12 @@ VAR
     res: INTEGER;
 
 BEGIN
-    IF OS = "LINUX32" THEN
+    IF (OS = "LINUX32") OR (OS = "LINUX64") THEN
         res := HOST.UnixTime()
     ELSE
         HOST.now(year, month, day, hour, min, sec);
         res := UNIXTIME.time(year, month, day, hour, min, sec)
-    END  
+    END
 
     RETURN res
 END UnixTime;

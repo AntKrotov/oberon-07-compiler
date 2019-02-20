@@ -2397,7 +2397,7 @@ BEGIN
     ELSIF target = mConst.Target_iObject THEN
         MSCOFF.write(program, outname, ver)
     ELSIF target = mConst.Target_iELF32 THEN
-        ELF.write(program, outname)
+        ELF.write(program, outname, FALSE)
     END
 
 END CodeGen;
