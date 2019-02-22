@@ -83,41 +83,41 @@ VAR
     eol*: ARRAY 3 OF CHAR;
 
 
-PROCEDURE [win64, "kernel32.dll", "GetTickCount"]
+PROCEDURE [windows-, "kernel32.dll", "GetTickCount"]
     _GetTickCount (): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "GetStdHandle"]
+PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
     _GetStdHandle (nStdHandle: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "GetCommandLineA"]
+PROCEDURE [windows-, "kernel32.dll", "GetCommandLineA"]
     _GetCommandLine (): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "ReadFile"]
+PROCEDURE [windows-, "kernel32.dll", "ReadFile"]
     _ReadFile (hFile, Buffer, nNumberOfBytesToRW: INTEGER; VAR NumberOfBytesRW: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "WriteFile"]
+PROCEDURE [windows-, "kernel32.dll", "WriteFile"]
     _WriteFile (hFile, Buffer, nNumberOfBytesToRW: INTEGER; VAR NumberOfBytesRW: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "CloseHandle"]
+PROCEDURE [windows-, "kernel32.dll", "CloseHandle"]
     _CloseHandle (hObject: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "CreateFileA"]
+PROCEDURE [windows-, "kernel32.dll", "CreateFileA"]
     _CreateFile (
         lpFileName, dwDesiredAccess, dwShareMode: INTEGER;
         lpSecurityAttributes: PSecurityAttributes;
         dwCreationDisposition, dwFlagsAndAttributes,
         hTemplateFile: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "OpenFile"]
+PROCEDURE [windows-, "kernel32.dll", "OpenFile"]
     _OpenFile (lpFileName: INTEGER; lpReOpenBuff: OFSTRUCT; uStyle: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "GetCurrentDirectoryA"]
+PROCEDURE [windows-, "kernel32.dll", "GetCurrentDirectoryA"]
     _GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "GetSystemTime"]
+PROCEDURE [windows-, "kernel32.dll", "GetSystemTime"]
     _GetSystemTime (T: TSystemTime);
 
-PROCEDURE [win64, "kernel32.dll", "ExitProcess"]
+PROCEDURE [windows-, "kernel32.dll", "ExitProcess"]
     _ExitProcess (code: INTEGER);
 
 
@@ -302,7 +302,7 @@ BEGIN
     hour  := ORD(T.Hour);
     min   := ORD(T.Min);
     sec   := ORD(T.Sec)
-END now;  
+END now;
 
 
 PROCEDURE UnixTime* (): INTEGER;

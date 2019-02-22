@@ -15,12 +15,12 @@ VAR
     base*: INTEGER;
 
 
-PROCEDURE [win64, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
-PROCEDURE [win64, "kernel32.dll", "ExitThread"]   ExitThread (code: INTEGER);
-PROCEDURE [win64, "kernel32.dll", "GlobalAlloc"]  Alloc (uFlags, dwBytes: INTEGER): INTEGER;
-PROCEDURE [win64, "kernel32.dll", "GlobalFree"]   Free (hMem: INTEGER): INTEGER;
+PROCEDURE [windows-, "kernel32.dll", "ExitProcess"]  ExitProcess (code: INTEGER);
+PROCEDURE [windows-, "kernel32.dll", "ExitThread"]   ExitThread (code: INTEGER);
+PROCEDURE [windows-, "kernel32.dll", "GlobalAlloc"]  Alloc (uFlags, dwBytes: INTEGER): INTEGER;
+PROCEDURE [windows-, "kernel32.dll", "GlobalFree"]   Free (hMem: INTEGER): INTEGER;
 
-PROCEDURE [win64, "user32.dll", "MessageBoxA"]    MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
+PROCEDURE [windows-, "user32.dll", "MessageBoxA"]    MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
 
 
 PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
@@ -47,7 +47,7 @@ END init;
 
 
 PROCEDURE exit* (code: INTEGER);
-BEGIN       
+BEGIN
     ExitProcess(code)
 END exit;
 
