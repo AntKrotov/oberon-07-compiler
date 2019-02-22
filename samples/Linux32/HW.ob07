@@ -5,7 +5,7 @@ IMPORT SYSTEM, LINAPI;
 
 VAR
 
-    puts: PROCEDURE [ccall] (pStr: INTEGER);
+    puts: PROCEDURE [linux] (pStr: INTEGER);
 
 
 PROCEDURE OutStringLn (s: ARRAY OF CHAR);
