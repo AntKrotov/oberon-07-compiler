@@ -1543,6 +1543,74 @@ BEGIN
 END designator;
 
 
+PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG.TYPE_; isfloat: BOOLEAN; VAR fregs: INTEGER; parser: PARS.PARSER; pos: SCAN.POSITION; CallStat: BOOLEAN);
+VAR
+    cconv:    INTEGER;
+    params:   INTEGER;
+    callconv: INTEGER;
+    fparams:  INTEGER;
+    int, flt: INTEGER;
+    stk_par:  INTEGER;
+
+BEGIN
+    cconv := procType.call;
+    params := procType.params.size;
+
+    IF cconv IN {PROG._win64, PROG.win64} THEN
+        callconv := CODE.call_win64;
+        fparams := LSL(ORD(procType.params.getfparams(procType, 3, int, flt)), 5) + MIN(params, 4)
+    ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
+        callconv := CODE.call_sysv;
+        fparams := LSL(ORD(procType.params.getfparams(procType, 25, int, flt)), 5) + params;
+        stk_par := MAX(0, int - 6) + MAX(0, flt - 8)
+    ELSE
+        callconv := CODE.call_stack;
+        fparams := 0
+    END;
+    CODE.setlast(begcall);
+    fregs := CODE.precall(isfloat);
+
+    IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
+        CODE.AddCmd(CODE.opALIGN16, params)
+    ELSIF cconv IN {PROG._win64, PROG.win64} THEN
+        CODE.AddCmd(CODE.opWIN64ALIGN16, params)
+    ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
+        CODE.AddCmd(CODE.opSYSVALIGN16, params + stk_par)
+    END;
+    CODE.setlast(endcall.prev(CODE.COMMAND));
+
+    IF e.obj = eIMP THEN
+        CODE.CallImp(e.ident.import, callconv, fparams)
+    ELSIF e.obj = ePROC THEN
+        CODE.Call(e.ident.proc.label, callconv, fparams)
+    ELSIF isExpr(e) THEN
+        deref(pos, e, CallStat, errPROC);
+        CODE.CallP(callconv, fparams)
+    END;
+
+    IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
+        CODE.AddCmd(CODE.opCLEANUP, params);
+        CODE.AddCmd0(CODE.opPOPSP)
+    ELSIF cconv IN {PROG._win64, PROG.win64} THEN
+        CODE.AddCmd(CODE.opCLEANUP, MAX(params + params MOD 2, 4) + 1);
+        CODE.AddCmd0(CODE.opPOPSP)
+    ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
+        CODE.AddCmd(CODE.opCLEANUP, params + stk_par);
+        CODE.AddCmd0(CODE.opPOPSP)
+    ELSIF cconv IN {PROG._ccall, PROG.ccall} THEN
+        CODE.AddCmd(CODE.opCLEANUP, params)
+    END;
+    
+    IF ~CallStat THEN
+        IF isfloat THEN
+            PARS.check(CODE.resf(fregs), parser, pos, 41)
+        ELSE
+            CODE.res(fregs)
+        END
+    END
+END ProcCall;  
+
+
 PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 VAR
     pos, pos0, pos1: SCAN.POSITION;
@@ -1678,15 +1746,8 @@ VAR
         sym:      INTEGER;
         pos:      SCAN.POSITION;
         e1:       PARS.EXPR;
-        cconv:    INTEGER;
-        win64:    BOOLEAN;
-        sysv:     BOOLEAN;
-        params:   INTEGER;
-        callconv: INTEGER;
-        fparams:  INTEGER;
+        isfloat:  BOOLEAN;
         fregs:    INTEGER;
-        int, flt: INTEGER;
-        procType: PROG.TYPE_;
 
 
         PROCEDURE LoadVar (e: PARS.EXPR; parser: PARS.PARSER; pos: SCAN.POSITION);
@@ -1737,78 +1798,12 @@ VAR
                 e1 := e;
                 ActualParameters(parser, e);
                 PARS.check(e.type # NIL, parser, pos, 59);
-
-                procType := NIL;
+                isfloat := e.type.typ = PROG.tREAL;
                 IF e1.obj IN {ePROC, eIMP} THEN
-                    procType := e1.ident.type
+                    ProcCall(e1, e1.ident.type, isfloat, fregs, parser, pos, FALSE)
                 ELSIF isExpr(e1) THEN
-                    procType := e1.type
-                END;
-
-                IF procType # NIL THEN
-                    cconv := procType.call;
-                    params := procType.params.size;
-                    win64 := cconv IN {PROG._win64, PROG.win64};
-                    sysv  := cconv IN {PROG._systemv, PROG.systemv};
-                    IF win64 THEN
-                        callconv := CODE.call_win64
-                    ELSIF sysv THEN
-                        callconv := CODE.call_sysv
-                    ELSE
-                        callconv := CODE.call_stack
-                    END;
-                    CODE.setlast(begcall);
-
-                    IF win64 THEN
-                        fparams := LSL(ORD(procType.params.getfparams(procType, 3, int, flt)), 5) + MIN(params, 4)
-                    ELSIF sysv THEN
-                        fparams := LSL(ORD(procType.params.getfparams(procType, 25, int, flt)), 5) + params;
-                        int := MAX(0, int - 6);
-                        flt := MAX(0, flt - 8)
-                    ELSE
-                        fparams := 0
-                    END;
-
-                    fregs := CODE.precall(e.type.typ = PROG.tREAL);
-                    IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
-                        CODE.AddCmd(CODE.opALIGN16, params)
-                    ELSIF cconv IN {PROG._win64, PROG.win64} THEN
-                        CODE.AddCmd(CODE.opWIN64ALIGN16, params)
-                    ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
-                        CODE.AddCmd(CODE.opSYSVALIGN16, params + int + flt)
-                    END;
-                    CODE.setlast(endcall.prev(CODE.COMMAND));
-
-                    IF e1.obj IN {ePROC, eIMP} THEN
-
-                        IF e1.obj = eIMP THEN
-                            CODE.CallImp(e1.ident.import, callconv, fparams)
-                        ELSE
-                            CODE.Call(e1.ident.proc.label, callconv, fparams)
-                        END
-
-                    ELSIF isExpr(e1) THEN
-                        deref(pos, e1, FALSE, errPROC);
-                        CODE.CallP(callconv, fparams)
-                    END;
-
-                    IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
-                        CODE.AddCmd(CODE.opCLEANUP16, params)
-                    ELSIF cconv IN {PROG._win64, PROG.win64} THEN
-                        CODE.AddCmd(CODE.opCLEANUP16, MAX(params + params MOD 2, 4) + 1)
-                    ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
-                        CODE.AddCmd(CODE.opCLEANUP16, params + int + flt)
-                    ELSIF cconv IN {PROG._ccall, PROG.ccall} THEN
-                        CODE.AddCmd(CODE.opCLEANUP, params)
-                    END;
-
-                    IF e.type.typ = PROG.tREAL THEN
-                        PARS.check(CODE.resf(fregs), parser, pos, 41)
-                    ELSE
-                        CODE.res(fregs)
-                    END
+                    ProcCall(e1, e1.type, isfloat, fregs, parser, pos, FALSE)
                 END
-
             END;
             CODE.popBegEnd(begcall, endcall)
 
@@ -2485,14 +2480,7 @@ VAR
     pos:      SCAN.POSITION;
     line:     INTEGER;
     call:     BOOLEAN;
-    params:   INTEGER;
-    fparams:  INTEGER;
-    cconv:    INTEGER;
-    callconv: INTEGER;
-    win64:    BOOLEAN;
-    sysv:     BOOLEAN;
-    int, flt: INTEGER;
-    procType: PROG.TYPE_;
+    fregs:    INTEGER;
 
 BEGIN
     getpos(parser, pos);
@@ -2533,70 +2521,10 @@ BEGIN
     END;
 
     IF call THEN
-        procType := NIL;
-
         IF e.obj IN {ePROC, eIMP} THEN
-            procType := e.ident.type
+            ProcCall(e, e.ident.type, FALSE, fregs, parser, pos, TRUE)
         ELSIF isExpr(e) THEN
-            procType := e.type
-        END;
-
-        IF procType # NIL THEN
-            cconv := procType.call;
-            params := procType.params.size;
-            win64 := cconv IN {PROG._win64, PROG.win64};
-            sysv  := cconv IN {PROG._systemv, PROG.systemv};
-            IF win64 THEN
-                callconv := CODE.call_win64
-            ELSIF sysv THEN
-                callconv := CODE.call_sysv
-            ELSE
-                callconv := CODE.call_stack
-            END;
-            CODE.setlast(begcall);
-            ASSERT(CODE.precall(FALSE) = 0);
-
-            IF win64 THEN
-                fparams := LSL(ORD(procType.params.getfparams(procType, 3, int, flt)), 5) + MIN(params, 4)
-            ELSIF sysv THEN
-                fparams := LSL(ORD(procType.params.getfparams(procType, 25, int, flt)), 5) + params;
-                int := MAX(0, int - 6);
-                flt := MAX(0, flt - 8)
-            ELSE
-                fparams := 0
-            END;
-
-            IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
-                CODE.AddCmd(CODE.opALIGN16, params)
-            ELSIF cconv IN {PROG._win64, PROG.win64} THEN
-                CODE.AddCmd(CODE.opWIN64ALIGN16, params)
-            ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
-                CODE.AddCmd(CODE.opSYSVALIGN16, params + int + flt)
-            END;
-            CODE.setlast(endcall.prev(CODE.COMMAND));
-
-            IF e.obj IN {ePROC, eIMP} THEN
-
-                IF e.obj = eIMP THEN
-                    CODE.CallImp(e.ident.import, callconv, fparams)
-                ELSE
-                    CODE.Call(e.ident.proc.label, callconv, fparams)
-                END
-
-            ELSIF isExpr(e) THEN
-                deref(pos, e, TRUE, errPROC);
-                CODE.CallP(callconv, fparams)
-            END;
-
-            IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
-                CODE.AddCmd(CODE.opCLEANUP16, params)
-            ELSIF cconv IN {PROG._win64, PROG.win64} THEN
-                CODE.AddCmd(CODE.opCLEANUP16, MAX(params + params MOD 2, 4) + 1)
-            ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
-                CODE.AddCmd(CODE.opCLEANUP16, params + int + flt)
-            ELSIF cconv IN {PROG._ccall, PROG.ccall} THEN
-                CODE.AddCmd(CODE.opCLEANUP, params)
-            END
+            ProcCall(e, e.type, FALSE, fregs, parser, pos, TRUE)
         END
     END;
 

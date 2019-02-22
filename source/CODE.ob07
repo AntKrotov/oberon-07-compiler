@@ -46,8 +46,8 @@ CONST
 
     opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
 
-    opEQF*  = 80; opNEF*  = 81; opLTF*  = 82; opLEF*  = 83; opGTF*  = 84; opGEF*  = 85;
-    opEQFI* = 86; opNEFI* = 87; opLTFI* = 88; opLEFI* = 89; opGTFI* = 90; opGEFI* = 91;
+    opEQF*  = 80; opNEF*  = opEQF + 1; opLTF*  = opEQF + 2; opLEF*  = opEQF + 3; opGTF*  = opEQF + 4; opGEF*  = opEQF + 5;
+    opEQFI* = opEQF + 6; opNEFI* = opEQF + 7; opLTFI* = opEQF + 8; opLEFI* = opEQF + 9; opGTFI* = opEQF + 10; opGEFI* = opEQF + 11; (* 91 *)
 
     opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
     opERRC* = 98; opSWITCH* = 99;
@@ -86,7 +86,7 @@ CONST
 
     opCODE* = 235;
 
-    opALIGN16* = 236; opCLEANUP16* = 237;
+    opALIGN16* = 236; opPOPSP* = 237;
     opWIN64CALL* = 238; opWIN64CALLI* = 239; opWIN64CALLP* = 240; opLOOP* = 241; opENDLOOP* = 242;
     opSYSVCALL* = 243; opSYSVCALLI* = 244; opSYSVCALLP* = 245; opSYSVALIGN16* = 246; opWIN64ALIGN16* = 247;
 

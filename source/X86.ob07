@@ -740,13 +740,9 @@ BEGIN
             n := param2 * 4;
             IF n # 0 THEN
                 addrc(esp, n)
-            END
-
-        |CODE.opCLEANUP16:
-            n := param2 * 4;
-            IF n # 0 THEN
-                addrc(esp, n)
-            END;
+            END 
+            
+        |CODE.opPOPSP:
             pop(esp)
 
         |CODE.opCONST:
