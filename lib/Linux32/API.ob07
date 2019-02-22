@@ -27,24 +27,24 @@ VAR
 
     libc*, librt*: INTEGER;
 
-    dlopen*        : PROCEDURE [ccall16] (filename, flag: INTEGER): INTEGER;
-    dlsym*         : PROCEDURE [ccall16] (handle, symbol: INTEGER): INTEGER;
+    dlopen*        : PROCEDURE [linux] (filename, flag: INTEGER): INTEGER;
+    dlsym*         : PROCEDURE [linux] (handle, symbol: INTEGER): INTEGER;
 
     stdout*,
     stdin*,
     stderr*        : INTEGER;
 
-    malloc*        : PROCEDURE [ccall16] (size: INTEGER): INTEGER;
-    free*          : PROCEDURE [ccall16] (ptr: INTEGER);
-    _exit*         : PROCEDURE [ccall16] (code: INTEGER);
-    puts*          : PROCEDURE [ccall16] (pStr: INTEGER);
+    malloc*        : PROCEDURE [linux] (size: INTEGER): INTEGER;
+    free*          : PROCEDURE [linux] (ptr: INTEGER);
+    _exit*         : PROCEDURE [linux] (code: INTEGER);
+    puts*          : PROCEDURE [linux] (pStr: INTEGER);
     fwrite*,
-    fread*         : PROCEDURE [ccall16] (buffer, bytes, blocks, file: INTEGER): INTEGER;
-    fopen*         : PROCEDURE [ccall16] (fname, fmode: INTEGER): INTEGER;
-    fclose*        : PROCEDURE [ccall16] (file: INTEGER): INTEGER;
+    fread*         : PROCEDURE [linux] (buffer, bytes, blocks, file: INTEGER): INTEGER;
+    fopen*         : PROCEDURE [linux] (fname, fmode: INTEGER): INTEGER;
+    fclose*        : PROCEDURE [linux] (file: INTEGER): INTEGER;
 
-    clock_gettime* : PROCEDURE [ccall16] (clock_id: INTEGER; VAR tp: TP): INTEGER;
-    time*          : PROCEDURE [ccall16] (ptr: INTEGER): INTEGER;
+    clock_gettime* : PROCEDURE [linux] (clock_id: INTEGER; VAR tp: TP): INTEGER;
+    time*          : PROCEDURE [linux] (ptr: INTEGER): INTEGER;
 
 
 PROCEDURE putc* (c: CHAR);
