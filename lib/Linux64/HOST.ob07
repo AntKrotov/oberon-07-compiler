@@ -71,12 +71,12 @@ END GetCurrentDirectory;
 
 
 PROCEDURE ReadFile (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-    RETURN API.SysVCall(API.fread, SYSTEM.ADR(Buffer[0]), 1, bytes, F, 0,0)
+    RETURN API.fread(SYSTEM.ADR(Buffer[0]), 1, bytes, F)
 END ReadFile;
 
 
 PROCEDURE WriteFile (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
-    RETURN API.SysVCall(API.fwrite, SYSTEM.ADR(Buffer[0]), 1, bytes, F, 0,0)
+    RETURN API.fwrite(SYSTEM.ADR(Buffer[0]), 1, bytes, F)
 END WriteFile;
 
 
@@ -109,18 +109,18 @@ END FileWrite;
 
 
 PROCEDURE FileCreate* (FName: ARRAY OF CHAR): INTEGER;
-    RETURN API.SysVCall(API.fopen, SYSTEM.ADR(FName[0]), SYSTEM.SADR("wb"), 0,0,0,0)
+    RETURN API.fopen(SYSTEM.ADR(FName[0]), SYSTEM.SADR("wb"))
 END FileCreate;
 
 
 PROCEDURE FileClose* (File: INTEGER);
 BEGIN
-    File := API.SysVCall(API.fclose, File, 0,0,0,0,0)
+    File := API.fclose(File)
 END FileClose;
 
 
 PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
-    RETURN API.SysVCall(API.fopen, SYSTEM.ADR(FName[0]), SYSTEM.SADR("rb"), 0,0,0,0)
+    RETURN API.fopen(SYSTEM.ADR(FName[0]), SYSTEM.SADR("rb"))
 END FileOpen;
 
 
@@ -136,7 +136,7 @@ VAR
     res: INTEGER;
 
 BEGIN
-    IF API.SysVCall(API.clock_gettime, 0, SYSTEM.ADR(tp), 0,0,0,0) = 0 THEN
+    IF API.clock_gettime(0, tp) = 0 THEN
         res := tp[0] * 100 + tp[1] DIV 10000000
     ELSE
         res := 0
@@ -156,7 +156,7 @@ END now;
 
 
 PROCEDURE UnixTime* (): INTEGER;
-    RETURN API.SysVCall(API.time, 0, 0,0,0,0,0)
+    RETURN API.time(0)
 END UnixTime;
 
 

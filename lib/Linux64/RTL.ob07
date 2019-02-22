@@ -37,7 +37,7 @@ VAR
     END;
 
 
-PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
+PROCEDURE [stdcall64] _move* (bytes, source, dest: INTEGER);
 VAR
     qwords: INTEGER;
     qword:  INTEGER;
@@ -65,13 +65,13 @@ BEGIN
 END _move;
 
 
-PROCEDURE [stdcall] _move2* (bytes, dest, source: INTEGER);
+PROCEDURE [stdcall64] _move2* (bytes, dest, source: INTEGER);
 BEGIN
     _move(bytes, source, dest)
 END _move2;
 
 
-PROCEDURE [stdcall] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
 
@@ -87,19 +87,19 @@ BEGIN
 END _arrcpy;
 
 
-PROCEDURE [stdcall] _strcpy* (chr_size, len_dst, dst, len_src, src: INTEGER);
+PROCEDURE [stdcall64] _strcpy* (chr_size, len_dst, dst, len_src, src: INTEGER);
 BEGIN
     _move(MIN(len_dst, len_src) * chr_size, src, dst)
 END _strcpy;
 
 
-PROCEDURE [stdcall] _strcpy2* (chr_size, len_src, src, len_dst, dst: INTEGER);
+PROCEDURE [stdcall64] _strcpy2* (chr_size, len_src, src, len_dst, dst: INTEGER);
 BEGIN
     _move(MIN(len_dst, len_src) * chr_size, src, dst)
 END _strcpy2;
 
 
-PROCEDURE [stdcall] _rot* (VAR A: ARRAY OF INTEGER);
+PROCEDURE [stdcall64] _rot* (VAR A: ARRAY OF INTEGER);
 VAR
     i, n, k: INTEGER;
 
@@ -117,7 +117,7 @@ BEGIN
 END _rot;
 
 
-PROCEDURE [stdcall] _set2* (a, b: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _set2* (a, b: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
@@ -138,12 +138,12 @@ BEGIN
 END _set2;
 
 
-PROCEDURE [stdcall] _set* (b, a: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
     RETURN _set2(a, b)
 END _set;
 
 
-PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
+PROCEDURE [stdcall64] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
 
@@ -200,27 +200,27 @@ BEGIN
 END mod_;
 
 
-PROCEDURE [stdcall] _div* (b, a: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _div* (b, a: INTEGER): INTEGER;
     RETURN div_(a, b)
 END _div;
 
 
-PROCEDURE [stdcall] _div2* (a, b: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _div2* (a, b: INTEGER): INTEGER;
     RETURN div_(a, b)
 END _div2;
 
 
-PROCEDURE [stdcall] _mod* (b, a: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _mod* (b, a: INTEGER): INTEGER;
     RETURN mod_(a, b)
 END _mod;
 
 
-PROCEDURE [stdcall] _mod2* (a, b: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _mod2* (a, b: INTEGER): INTEGER;
     RETURN mod_(a, b)
 END _mod2;
 
 
-PROCEDURE [stdcall] _new* (t, size: INTEGER; VAR ptr: INTEGER);
+PROCEDURE [stdcall64] _new* (t, size: INTEGER; VAR ptr: INTEGER);
 BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
@@ -230,7 +230,7 @@ BEGIN
 END _new;
 
 
-PROCEDURE [stdcall] _dispose* (VAR ptr: INTEGER);
+PROCEDURE [stdcall64] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
         ptr := API._DISPOSE(ptr - SIZE_OF_QWORD)
@@ -282,7 +282,7 @@ BEGIN
 END strncmpw;
 
 
-PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _length* (len, str: INTEGER): INTEGER;
 VAR
     c:   CHAR;
     res: INTEGER;
@@ -303,7 +303,7 @@ BEGIN
 END _length;
 
 
-PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _lengthw* (len, str: INTEGER): INTEGER;
 VAR
     c:   WCHAR;
     res: INTEGER;
@@ -324,7 +324,7 @@ BEGIN
 END _lengthw;
 
 
-PROCEDURE [stdcall] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
     res:  INTEGER;
     bRes: BOOLEAN;
@@ -349,12 +349,12 @@ BEGIN
 END _strcmp;
 
 
-PROCEDURE [stdcall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _strcmp2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
     RETURN _strcmp(op, len2, str2, len1, str1)
 END _strcmp2;
 
 
-PROCEDURE [stdcall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
     res:  INTEGER;
     bRes: BOOLEAN;
@@ -379,7 +379,7 @@ BEGIN
 END _strcmpw;
 
 
-PROCEDURE [stdcall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
     RETURN _strcmpw(op, len2, str2, len1, str1)
 END _strcmpw2;
 
@@ -449,7 +449,7 @@ BEGIN
 END append;
 
 
-PROCEDURE [stdcall] _error* (module, err: INTEGER);
+PROCEDURE [stdcall64] _error* (module, err: INTEGER);
 VAR
     s, temp: ARRAY 1024 OF CHAR;
 
@@ -481,7 +481,7 @@ BEGIN
 END _error;
 
 
-PROCEDURE [stdcall] _isrec* (t0, t1, r: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _isrec* (t0, t1, r: INTEGER): BOOLEAN;
 BEGIN
     (* r IS t0 *)
 
@@ -493,7 +493,7 @@ BEGIN
 END _isrec;
 
 
-PROCEDURE [stdcall] _is* (t0, p: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _is* (t0, p: INTEGER): BOOLEAN;
 VAR
     t1: INTEGER;
 
@@ -514,7 +514,7 @@ BEGIN
 END _is;
 
 
-PROCEDURE [stdcall] _guardrec* (t0, t1: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _guardrec* (t0, t1: INTEGER): BOOLEAN;
 BEGIN
     (* r:t1 IS t0 *)
 
@@ -526,7 +526,7 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE [stdcall] _guard* (t0, p: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _guard* (t0, p: INTEGER): BOOLEAN;
 VAR
     t1:  INTEGER;
 
@@ -547,7 +547,7 @@ BEGIN
 END _guard;
 
 
-PROCEDURE [stdcall] _dllentry* (hinstDLL, fdwReason, lpvReserved: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _dllentry* (hinstDLL, fdwReason, lpvReserved: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
@@ -586,13 +586,13 @@ BEGIN
 END SetDll;
 
 
-PROCEDURE [stdcall] _exit* (code: INTEGER);
+PROCEDURE [stdcall64] _exit* (code: INTEGER);
 BEGIN
     API.exit(code)
 END _exit;
 
 
-PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
+PROCEDURE [stdcall64] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
 BEGIN
     API.init(param, code);
 
