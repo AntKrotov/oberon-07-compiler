@@ -40,14 +40,21 @@ CONST
     sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
     sysWSADR*  = 39;  sysPUT32*  = 40;
 
-    default* =  1; stdcall* =  2; winapi* =  3; kosapi* =  4;
-    ccall*   = 10; ccall16* = 11; call64* = 12; win64*  = 13;
+    default*   =  2;
+    stdcall*   =  4;  _stdcall*   = stdcall + 1;
+    ccall*     =  6;  _ccall*     = ccall + 1;
+    ccall16*   =  8;  _ccall16*   = ccall16 + 1;
+    win64*     = 10;  _win64*     = win64 + 1;
+    stdcall64* = 12;  _stdcall64* = stdcall64 + 1;
+    default64* = 14;
+    systemv*   = 16;  _systemv*   = systemv + 1;
+
     noalign* = 20;
 
-    callee_clean_up* = {default, stdcall, winapi, kosapi};
-    caller_clean_up* = {ccall, ccall16, call64, win64};
-    callconv32* = {default, stdcall, winapi, kosapi, ccall, ccall16};
-    callconv64* = {default, call64, win64, stdcall};
+    callee_clean_up* = {default, stdcall, _stdcall, default64, stdcall64, _stdcall64};
+    caller_clean_up* = {ccall, ccall16, win64, systemv, _ccall, _ccall16, _win64, _systemv};
+    callconv32* = {default, stdcall, ccall, ccall16, _stdcall, _ccall, _ccall16};
+    callconv64* = {default64, win64, stdcall64, systemv, _win64, _stdcall64, _systemv};
 
     STACK_FRAME = 2;
 
@@ -149,7 +156,7 @@ TYPE
         add*:        PROCEDURE (proc: TYPE_; name: SCAN.IDENT; vPar: BOOLEAN): BOOLEAN;
         get*:        PROCEDURE (proc: TYPE_; name: SCAN.IDENT): PARAM;
         set*:        PROCEDURE (proc: TYPE_; type: TYPE_);
-        getfparams*: PROCEDURE (proc: TYPE_; maxparam: INTEGER): SET
+        getfparams*: PROCEDURE (proc: TYPE_; maxparam: INTEGER; VAR int, flt: INTEGER): SET
 
     END;
 
@@ -965,20 +972,25 @@ BEGIN
 END OpenBase;
 
 
-PROCEDURE getFloatParamsPos (self: TYPE_; maxoffs: INTEGER): SET;
+PROCEDURE getFloatParamsPos (self: TYPE_; maxoffs: INTEGER; VAR int, flt: INTEGER): SET;
 VAR
     res: SET;
     param: PARAM;
 
 BEGIN
     res := {};
+    int := 0;
+    flt := 0;
     param := self.params.first(PARAM);
     WHILE (param # NIL) & (param.offset <= maxoffs + STACK_FRAME) DO
         IF ~param.vPar & (param.type.typ = tREAL) THEN
-            INCL(res, param.offset - STACK_FRAME)
+            INCL(res, param.offset - STACK_FRAME);
+            INC(flt)
         END;
         param := param.next(PARAM)
-    END
+    END;
+    
+    int := self.params.size - flt
 
     RETURN res
 END getFloatParamsPos;
@@ -1060,7 +1072,11 @@ BEGIN
     t.params  := params;
     t.unit    := unit;
     t.num     := 0;
-    t.call    := default;
+    IF program.target.bit_depth = 32 THEN
+        t.call := default
+    ELSIF program.target.bit_depth = 64 THEN
+        t.call := default64
+    END;
     t.import  := FALSE;
     t.noalign := FALSE;
 

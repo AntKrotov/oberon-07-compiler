@@ -15,6 +15,10 @@ CONST
     little_endian* = 0;
     big_endian* = 1;
 
+    call_stack* = 0;
+    call_win64* = 1;
+    call_sysv*  = 2;
+
     opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
     opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
     opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
@@ -83,7 +87,8 @@ CONST
     opCODE* = 235;
 
     opALIGN16* = 236; opCLEANUP16* = 237;
-    opCALL64* = 238; opCALLI64* = 239; opCALLP64* = 240; opLOOP* = 241; opENDLOOP* = 242;
+    opWIN64CALL* = 238; opWIN64CALLI* = 239; opWIN64CALLP* = 240; opLOOP* = 241; opENDLOOP* = 242;
+    opSYSVCALL* = 243; opSYSVCALLI* = 244; opSYSVCALLP* = 245; opSYSVALIGN16* = 246; opWIN64ALIGN16* = 247;
 
 
     opSADR_PARAM* = 1000; opLOAD64_PARAM* = 1001; opLLOAD64_PARAM* = 1002; opGLOAD64_PARAM* = 1003;
@@ -708,40 +713,34 @@ BEGIN
 END Leave;
 
 
-PROCEDURE Call* (proc: INTEGER; call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+PROCEDURE Call* (proc, callconv, fparams: INTEGER);
 BEGIN
-    IF call64 THEN
-        ASSERT(rparam <= 4);
-        ASSERT(ORD(fparams) <= 15);
-        AddJmpCmd(opCALL64, proc);
-        codes.last(COMMAND).param2 := LSL(rparam, 4) + ORD(fparams)
-    ELSE
-        AddJmpCmd(opCALL, proc)
-    END
+    CASE callconv OF
+    |call_stack: AddJmpCmd(opCALL, proc)
+    |call_win64: AddJmpCmd(opWIN64CALL, proc)
+    |call_sysv:  AddJmpCmd(opSYSVCALL, proc)
+    END;
+    codes.last(COMMAND).param2 := fparams
 END Call;
 
 
-PROCEDURE CallImp* (proc: LISTS.ITEM; call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+PROCEDURE CallImp* (proc: LISTS.ITEM; callconv, fparams: INTEGER);
 BEGIN
-    IF call64 THEN
-        ASSERT(rparam <= 4);
-        ASSERT(ORD(fparams) <= 15);
-        AddJmpCmd(opCALLI64, proc(IMPORT_PROC).label);
-        codes.last(COMMAND).param2 := LSL(rparam, 4) + ORD(fparams)
-    ELSE
-        AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
-    END
+    CASE callconv OF
+    |call_stack: AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
+    |call_win64: AddJmpCmd(opWIN64CALLI, proc(IMPORT_PROC).label)
+    |call_sysv:  AddJmpCmd(opSYSVCALLI, proc(IMPORT_PROC).label)
+    END;
+    codes.last(COMMAND).param2 := fparams
 END CallImp;
 
 
-PROCEDURE CallP* (call64: BOOLEAN; rparam: INTEGER; fparams: SET);
+PROCEDURE CallP* (callconv, fparams: INTEGER);
 BEGIN
-    IF call64 THEN
-        ASSERT(rparam <= 4);
-        ASSERT(ORD(fparams) <= 15);
-        AddCmd(opCALLP64, LSL(rparam, 4) + ORD(fparams))
-    ELSE
-        AddCmd0(opCALLP)
+    CASE callconv OF
+    |call_stack: AddCmd0(opCALLP)
+    |call_win64: AddCmd(opWIN64CALLP, fparams)
+    |call_sysv:  AddCmd(opSYSVCALLP, fparams)
     END
 END CallP;
 

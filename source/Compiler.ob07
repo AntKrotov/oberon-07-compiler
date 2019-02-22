@@ -198,6 +198,7 @@ BEGIN
     END;
 
     PATHS.split(inname, path, modname, ext);
+
     IF ext # mConst.FILE_EXT THEN
         ERRORS.error3('inputfile name extension must be "', mConst.FILE_EXT, '"')
     END;
@@ -256,7 +257,7 @@ BEGIN
 
     ELSIF target = mConst.Target_iELF32 THEN
         STRINGS.append(lib_path, "Linux32")
-        
+
     ELSIF target = mConst.Target_iELF64 THEN
         STRINGS.append(lib_path, "Linux64")
 

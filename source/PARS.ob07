@@ -450,7 +450,7 @@ BEGIN
             ident := QIdent(parser, FALSE);
             check1(ident.typ = PROG.idTYPE, parser, 68);
             check1((ident.type.typ # PROG.tRECORD) & (ident.type.typ # PROG.tARRAY), parser, 69);
-            check1( ~((type.call IN {PROG.winapi, PROG.kosapi}) & (ident.type.typ = PROG.tREAL)), parser, 113);
+            check1( ~(ODD(type.call) & (ident.type.typ = PROG.tREAL)), parser, 113);
             type.base := ident.type;
             Next(parser)
         ELSE
@@ -468,18 +468,32 @@ VAR
 BEGIN
     IF parser.lex.s = "stdcall" THEN
         res := PROG.stdcall
-    ELSIF parser.lex.s = "winapi" THEN
-        res := PROG.winapi
-    ELSIF (parser.lex.s = "ccall") OR (parser.lex.s = "cdecl") THEN
+    ELSIF parser.lex.s = "stdcall64" THEN
+        res := PROG.stdcall64
+    ELSIF parser.lex.s = "ccall" THEN
         res := PROG.ccall
     ELSIF parser.lex.s = "ccall16" THEN
         res := PROG.ccall16
-    ELSIF parser.lex.s = "kosapi" THEN
-        res := PROG.kosapi
-    ELSIF parser.lex.s = "call64" THEN
-        res := PROG.call64
     ELSIF parser.lex.s = "win64" THEN
         res := PROG.win64
+    ELSIF parser.lex.s = "systemv" THEN
+        res := PROG.systemv
+    ELSIF parser.lex.s = "windows" THEN
+        IF program.target.sys IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
+            res := PROG.stdcall
+        ELSIF program.target.sys IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
+            res := PROG.win64
+        ELSE
+            check1(FALSE, parser, 118)
+        END
+    ELSIF parser.lex.s = "linux" THEN
+        IF program.target.sys = mConst.Target_iELF32 THEN
+            res := PROG.ccall16
+        ELSIF program.target.sys = mConst.Target_iELF64 THEN
+            res := PROG.systemv
+        ELSE
+            check1(FALSE, parser, 119)
+        END
     ELSIF parser.lex.s = "noalign" THEN
         res := PROG.noalign
     ELSE
@@ -511,6 +525,10 @@ BEGIN
             check1(call IN PROG.callconv32, parser, 63)
         END;
         Next(parser);
+        IF parser.sym = SCAN.lxMINUS THEN
+            Next(parser);
+            INC(call)
+        END;
         IF ~isProc THEN
             checklex(parser, SCAN.lxRSQUARE)
         END;
@@ -526,11 +544,15 @@ BEGIN
         checklex(parser, SCAN.lxRSQUARE);
         Next(parser)
     ELSE
-        call := PROG.default
+        IF program.target.bit_depth = 32 THEN
+            call := PROG.default
+        ELSIF program.target.bit_depth = 64 THEN
+            call := PROG.default64
+        END
     END;
 
     IF import # NIL THEN
-        check(program.target.sys # mConst.Target_iELF32, parser, pos, 70)
+        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64}), parser, pos, 70)
     END
 
     RETURN call
@@ -833,6 +855,7 @@ VAR
         endmod, b:  BOOLEAN;
         fparams:    SET;
         variables:  LISTS.LIST;
+        int, flt:   INTEGER;
 
     BEGIN
         endmod := FALSE;
@@ -892,9 +915,12 @@ VAR
             b := DeclarationSequence(parser);
 
             program.locsize := 0;
-            IF call IN {PROG.call64, PROG.win64} THEN
-                fparams := proc.type.params.getfparams(proc.type, 3);
-                enter := CODE.Enter(label, LSL(MIN(proc.type.params.size, 4), 4) + ORD(fparams))
+            IF call IN {PROG._win64, PROG.win64} THEN
+                fparams := proc.type.params.getfparams(proc.type, 3, int, flt);
+                enter := CODE.Enter(label, LSL(ORD(fparams), 5) + MIN(proc.type.params.size, 4))
+            ELSIF call IN {PROG._systemv, PROG.systemv} THEN
+                fparams := proc.type.params.getfparams(proc.type, 25, int, flt);
+                enter := CODE.Enter(label, -(LSL(ORD(fparams), 5) + proc.type.params.size))
             ELSE
                 enter := CODE.Enter(label, 0)
             END;
@@ -913,7 +939,7 @@ VAR
             END;
 
             proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL),
-                t.params.size * ORD(t.call IN PROG.callee_clean_up));
+                t.params.size * ORD((t.call IN PROG.callee_clean_up) OR (t.call IN {PROG.systemv, PROG._systemv})));
             enter.param2 := program.locsize;
             checklex(parser, SCAN.lxEND)
         END;

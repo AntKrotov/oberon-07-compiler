@@ -24,6 +24,8 @@ CONST
 
     rsp = 4;
     rbp = 5;
+    rsi = 6;
+    rdi = 7;
 
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
 
@@ -57,6 +59,9 @@ VAR
     prog: BIN.PROGRAM;
 
     dllret: INTEGER;
+
+    Win64RegPar: ARRAY 4 OF INTEGER;
+    SystemVRegPar: ARRAY 6 OF INTEGER;
 
 
 PROCEDURE OutByte (b: BYTE);
@@ -637,76 +642,6 @@ BEGIN
 END shiftrc;
 
 
-PROCEDURE PassParam (i: INTEGER; isFloat: BOOLEAN);
-BEGIN
-    CASE i OF
-    |0:
-        IF isFloat THEN
-            movsdrm(0, rsp, 0)
-        ELSE
-            movrm(rcx, rsp, 0)
-        END
-
-    |1:
-        IF isFloat THEN
-            movsdrm(1, rsp, 8)
-        ELSE
-            movrm(rdx, rsp, 8)
-        END
-
-    |2:
-        IF isFloat THEN
-            movsdrm(2, rsp, 16)
-        ELSE
-            movrm(r8, rsp, 16)
-        END
-
-    |3:
-        IF isFloat THEN
-            movsdrm(3, rsp, 24)
-        ELSE
-            movrm(r9, rsp, 24)
-        END
-
-    END
-END PassParam;
-
-
-PROCEDURE SaveParam (i: INTEGER; isFloat: BOOLEAN);
-BEGIN
-    CASE i OF
-    |0:
-        IF isFloat THEN
-            movsdmr(rsp, 16, 0)
-        ELSE
-            movmr(rsp, 16, rcx)
-        END
-
-    |1:
-        IF isFloat THEN
-            movsdmr(rsp, 24, 1)
-        ELSE
-            movmr(rsp, 24, rdx)
-        END
-
-    |2:
-        IF isFloat THEN
-            movsdmr(rsp, 32, 2)
-        ELSE
-            movmr(rsp, 32, r8)
-        END
-
-    |3:
-        IF isFloat THEN
-            movsdmr(rsp, 40, 3)
-        ELSE
-            movmr(rsp, 40, r9)
-        END
-
-    END
-END SaveParam;
-
-
 PROCEDURE getVar (variables: LISTS.LIST; offset: INTEGER): CODE.LOCALVAR;
 VAR
     cur: CODE.LOCALVAR;
@@ -794,7 +729,8 @@ BEGIN
             leave := TRUE
 
         |CODE.opCALL, CODE.opCALLP, CODE.opCALLI,
-         CODE.opCALL64, CODE.opCALLP64, CODE.opCALLI64:
+         CODE.opWIN64CALL, CODE.opWIN64CALLP, CODE.opWIN64CALLI,
+         CODE.opSYSVCALL, CODE.opSYSVCALLP, CODE.opSYSVCALLI:
             leaf := FALSE
 
         ELSE
@@ -838,11 +774,82 @@ BEGIN
 END GetRegA;
 
 
+PROCEDURE Win64Passing (params: INTEGER);
+VAR
+    n, i: INTEGER;
+
+BEGIN
+    n := ORD(BITS(params) * {0..4});
+    params := LSR(params, 5);
+    FOR i := 0 TO n - 1 DO
+        IF i IN BITS(params) THEN
+            movsdrm(i, rsp, i * 8)
+        ELSE
+            movrm(Win64RegPar[i], rsp, i * 8)
+        END
+    END
+END Win64Passing;
+
+
+PROCEDURE SysVPassing (params: INTEGER);
+VAR
+    n, i, s, p, ofs: INTEGER;
+    i_count, f_count: INTEGER;
+    reg: BOOLEAN;
+
+BEGIN
+    ASSERT(r10 IN R.regs);
+    n := ORD(BITS(params) * {0..4});
+    params := LSR(params, 5);
+    s := 0;
+
+    i_count := 0;
+    f_count := 0;
+    FOR i := 0 TO n - 1 DO
+        IF i IN BITS(params) THEN
+            INC(f_count)
+        ELSE
+            INC(i_count)
+        END
+    END;
+
+    s := MAX(0, f_count - 8) + MAX(0, i_count - 6);
+    p := 0;
+
+    subrc(rsp, s * 8);
+
+    i_count := 0;
+    f_count := 0;
+    FOR i := 0 TO n - 1 DO
+        ofs := (i + s) * 8;
+        IF i IN BITS(params) THEN
+            reg := f_count <= 7;
+            IF reg THEN
+                movsdrm(f_count, rsp, ofs);
+                INC(f_count)
+            END
+        ELSE
+            reg := i_count <= 5;
+            IF reg THEN
+                movrm(SystemVRegPar[i_count], rsp, ofs);
+                INC(i_count)
+            END
+        END;
+
+        IF ~reg THEN
+            movrm(r10, rsp, ofs);
+            movmr(rsp, p, r10);
+            INC(p, 8)
+        END
+    END
+END SysVPassing;
+
+
 PROCEDURE translate (commands: LISTS.LIST; stroffs: INTEGER);
 VAR
     cmd, next: COMMAND;
 
-    param1, param2, param3, a, b, n, label, L, i, cc: INTEGER;
+    param1, param2, param3, a, b, c, n, label, L, i, cc: INTEGER;
 
     reg1, reg2, xmm: INTEGER;
 
@@ -884,16 +891,13 @@ BEGIN
             callimp(param1);
             REG.Restore(R)
 
-        |CODE.opCALL64:
+        |CODE.opWIN64CALL:
             REG.Store(R);
-            n := ASR(param2, 4);
-            FOR i := 0 TO n - 1 DO
-                PassParam(i, i IN BITS(param2))
-            END;
+            Win64Passing(param2);
             X86.call(param1);
             REG.Restore(R)
 
-        |CODE.opCALLP64:
+        |CODE.opWIN64CALLP:
             UnOp(reg1);
             IF reg1 # rax THEN
                 GetRegA;
@@ -902,20 +906,40 @@ BEGIN
             END;
             drop;
             REG.Store(R);
-            n := ASR(param2, 4);
-            FOR i := 0 TO n - 1 DO
-                PassParam(i, i IN BITS(param2))
-            END;
+            Win64Passing(param2);
             OutByte2(0FFH, 0D0H); // call rax
             REG.Restore(R);
             ASSERT(R.top = -1)
 
-        |CODE.opCALLI64:
+        |CODE.opWIN64CALLI:
             REG.Store(R);
-            n := ASR(param2, 4);
-            FOR i := 0 TO n - 1 DO
-                PassParam(i, i IN BITS(param2))
+            Win64Passing(param2);
+            callimp(param1);
+            REG.Restore(R)
+
+        |CODE.opSYSVCALL:
+            REG.Store(R);
+            SysVPassing(param2);
+            X86.call(param1);
+            REG.Restore(R)
+
+        |CODE.opSYSVCALLP:
+            UnOp(reg1);
+            IF reg1 # rax THEN
+                GetRegA;
+                ASSERT(REG.Exchange(R, reg1, rax));
+                drop
             END;
+            drop;
+            REG.Store(R);
+            SysVPassing(param2);
+            OutByte2(0FFH, 0D0H); // call rax
+            REG.Restore(R);
+            ASSERT(R.top = -1)
+
+        |CODE.opSYSVCALLI:
+            REG.Store(R);
+            SysVPassing(param2);
             callimp(param1);
             REG.Restore(R)
 
@@ -942,12 +966,21 @@ BEGIN
             ASSERT(xmm = -1);
             PushAll(0)
 
-        |CODE.opALIGN16:
+        |CODE.opWIN64ALIGN16:
             ASSERT(rax IN R.regs);
             mov(rax, rsp);
             andrc(rsp, -16);
             push(rax);
-            subrc(rsp, (ORD(ODD(MAX(param2 - 4, 0))) + MAX(4 - param2, 0) + 1) * 8)
+            subrc(rsp, (MAX(param2 - 4, 0) MOD 2 + MAX(4 - param2, 0) + 1) * 8)
+
+        |CODE.opSYSVALIGN16:
+            ASSERT(rax IN R.regs);
+            mov(rax, rsp);
+            andrc(rsp, -16);
+            push(rax);
+            IF ~ODD(param2) THEN
+                push(rax)
+            END
 
         |CODE.opRESF:
             ASSERT(xmm = -1);
@@ -984,12 +1017,58 @@ BEGIN
 
             param3 := cmd.param3;
 
-            push(rbp);
-            mov(rbp, rsp);
+            IF param3 > 0 THEN
+                push(rbp);
+                mov(rbp, rsp);
 
-            n := ASR(param3, 4);
-            FOR i := 0 TO n - 1 DO
-                SaveParam(i, i IN BITS(param3))
+                n := param3 MOD 32;
+                param3 := param3 DIV 32;
+
+                FOR i := 0 TO n - 1 DO
+                    IF i IN BITS(param3) THEN
+                        movsdmr(rbp, i * 8 + 16, i)
+                    ELSE
+                        movmr(rbp, i * 8 + 16, Win64RegPar[i])
+                    END
+                END
+            ELSIF param3 < 0 THEN
+                param3 := -param3;
+                n := param3 MOD 32;
+                param3 := param3 DIV 32;
+                pop(r10);
+                subrc(rsp, n * 8);
+                push(r10);
+                push(rbp);
+                mov(rbp, rsp);
+
+                a := 0;
+                b := 0; 
+                c := 0;
+
+                FOR i := 0 TO n - 1 DO
+                    IF i IN BITS(param3) THEN
+                        IF b <= 7 THEN
+                            movsdmr(rbp, i * 8 + 16, b);
+                            INC(b)
+                        ELSE
+                            movrm(r10, rbp, 16 + n * 8 + c * 8);
+                            movmr(rbp, i * 8 + 16, r10);
+                            INC(c)
+                        END
+                    ELSE    
+                        IF a <= 5 THEN
+                            movmr(rbp, i * 8 + 16, SystemVRegPar[a]);
+                            INC(a)
+                        ELSE  
+                            movrm(r10, rbp, 16 + n * 8 + c * 8);
+                            movmr(rbp, i * 8 + 16, r10);
+                            INC(c)
+                        END
+                    END
+                END 
+            ELSE
+                push(rbp);
+                mov(rbp, rsp)
             END;
 
             n := param2;
@@ -2055,8 +2134,10 @@ BEGIN
             drop
 
         |CODE.opCLEANUP16:
-            n := MAX(param2 + ORD(ODD(param2)), 4) * 8 + 8;
-            addrc(rsp, n);
+            n := param2 * 8;
+            IF n # 0 THEN
+                addrc(rsp, n)
+            END;
             pop(rsp)
 
         |CODE.opCLEANUP:
@@ -2577,7 +2658,7 @@ BEGIN
         test(rax);
         jcc(je, dllret)
     END;
-    
+
     push(rsp);
     lea(rax, 0, sCODE);
     push(rax);
@@ -2694,6 +2775,18 @@ VAR
     n: INTEGER;
 
 BEGIN
+    Win64RegPar[0] := rcx;
+    Win64RegPar[1] := rdx;
+    Win64RegPar[2] := r8;
+    Win64RegPar[3] := r9;
+
+    SystemVRegPar[0] := rdi;
+    SystemVRegPar[1] := rsi;
+    SystemVRegPar[2] := rdx;
+    SystemVRegPar[3] := rcx;
+    SystemVRegPar[4] := r8;
+    SystemVRegPar[5] := r9;
+
     PATHS.split(outname, path, modname, ext);
     S.append(modname, ext);
 

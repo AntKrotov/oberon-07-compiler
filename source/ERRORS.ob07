@@ -79,7 +79,7 @@ BEGIN
     | 60: str := "identifier does not match procedure name"
     | 61: str := "illegally marked identifier"
     | 62: str := "expression should be constant"
-    | 63: str := "'stdcall', 'ccall', 'ccall16', 'winapi' or 'kosapi' expected"
+    | 63: str := "'stdcall', 'ccall', 'ccall16', 'windows' or 'linux' expected"
     | 64: str := "'(' expected"
     | 65: str := "',' expected"
     | 66: str := "incompatible parameter"
@@ -129,11 +129,13 @@ BEGIN
     |110: str := "'noalign' expected"
     |111: str := "record [noalign] cannot have a base type"
     |112: str := "record [noalign] cannot be a base type"
-    |113: str := "result type of procedure ([winapi], [kosapi]) should not be REAL"
+    |113: str := "result type of procedure should not be REAL"
     |114: str := "identifiers 'lib_init' and 'version' are reserved"
     |115: str := "recursive constant definition"
     |116: str := "procedure too deep nested"
-    |117: str := "'stdcall', 'win64' or 'call64' expected"
+    |117: str := "'stdcall64', 'win64', 'systemv', 'windows' or 'linux' expected"
+    |118: str := "this flag for Windows only"
+    |119: str := "this flag for Linux only"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);
