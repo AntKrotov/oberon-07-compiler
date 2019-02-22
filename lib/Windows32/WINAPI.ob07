@@ -120,123 +120,123 @@ TYPE
     END;
 
 
-PROCEDURE [winapi, "kernel32.dll", "SetConsoleCursorPosition"]
+PROCEDURE [windows-, "kernel32.dll", "SetConsoleCursorPosition"]
     SetConsoleCursorPosition* (hConsoleOutput, dwCursorPosition: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetConsoleScreenBufferInfo"]
+PROCEDURE [windows-, "kernel32.dll", "GetConsoleScreenBufferInfo"]
     GetConsoleScreenBufferInfo* (hConsoleOutput: INTEGER; ConsoleScreenBufferInfo: TConsoleScreenBufferInfo): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "FillConsoleOutputCharacterA"]
+PROCEDURE [windows-, "kernel32.dll", "FillConsoleOutputCharacterA"]
     FillConsoleOutputCharacter* (hConsoleOutput, cCaracter, nLength, dwWriteCoord, lpNumberOfCharsWritten: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "FillConsoleOutputAttribute"]
+PROCEDURE [windows-, "kernel32.dll", "FillConsoleOutputAttribute"]
     FillConsoleOutputAttribute* (hConsoleOutput, wAttribute, nLength, dwWriteCoord, lpNumberOfAttrsWritten: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "SetConsoleTextAttribute"]
+PROCEDURE [windows-, "kernel32.dll", "SetConsoleTextAttribute"]
     SetConsoleTextAttribute* (hConsoleOutput, wAttributes: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetStdHandle"]
+PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
     GetStdHandle* (nStdHandle: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetLocalTime"]
+PROCEDURE [windows-, "kernel32.dll", "GetLocalTime"]
     GetLocalTime* (T: TSystemTime);
 
-PROCEDURE [winapi, "kernel32.dll", "RemoveDirectoryA"]
+PROCEDURE [windows-, "kernel32.dll", "RemoveDirectoryA"]
     RemoveDirectory* (lpPathName: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetFileAttributesA"]
+PROCEDURE [windows-, "kernel32.dll", "GetFileAttributesA"]
     GetFileAttributes* (lpPathName: INTEGER): SET;
 
-PROCEDURE [winapi, "kernel32.dll", "CreateDirectoryA"]
+PROCEDURE [windows-, "kernel32.dll", "CreateDirectoryA"]
     CreateDirectory* (lpPathName: INTEGER; lpSecurityAttributes: PSecurityAttributes): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "FindFirstFileA"]
+PROCEDURE [windows-, "kernel32.dll", "FindFirstFileA"]
     FindFirstFile* (lpFileName: INTEGER; lpFindFileData: TWin32FindData): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "DeleteFileA"]
+PROCEDURE [windows-, "kernel32.dll", "DeleteFileA"]
     DeleteFile* (lpFileName: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "FindClose"]
+PROCEDURE [windows-, "kernel32.dll", "FindClose"]
     FindClose* (hFindFile: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "CloseHandle"]
+PROCEDURE [windows-, "kernel32.dll", "CloseHandle"]
     CloseHandle* (hObject: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "CreateFileA"]
+PROCEDURE [windows-, "kernel32.dll", "CreateFileA"]
     CreateFile* (
         lpFileName, dwDesiredAccess, dwShareMode: INTEGER;
         lpSecurityAttributes: PSecurityAttributes;
         dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "OpenFile"]
+PROCEDURE [windows-, "kernel32.dll", "OpenFile"]
     OpenFile* (lpFileName: INTEGER; lpReOpenBuff: OFSTRUCT; uStyle: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "SetFilePointer"]
+PROCEDURE [windows-, "kernel32.dll", "SetFilePointer"]
     SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "ReadFile"]
+PROCEDURE [windows-, "kernel32.dll", "ReadFile"]
     ReadFile* (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "WriteFile"]
+PROCEDURE [windows-, "kernel32.dll", "WriteFile"]
     WriteFile* (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "ReadConsoleA"]
+PROCEDURE [windows-, "kernel32.dll", "ReadConsoleA"]
     ReadConsole* (hConsoleInput, lpBuffer, nNumberOfCharsToRead, lpNumberOfCharsRead, lpReserved: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetCommandLineA"]
+PROCEDURE [windows-, "kernel32.dll", "GetCommandLineA"]
     GetCommandLine* (): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GlobalAlloc"]
+PROCEDURE [windows-, "kernel32.dll", "GlobalAlloc"]
     GlobalAlloc* (uFlags, dwBytes: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GlobalFree"]
+PROCEDURE [windows-, "kernel32.dll", "GlobalFree"]
     GlobalFree* (hMem: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "WriteConsoleW"]
+PROCEDURE [windows-, "kernel32.dll", "WriteConsoleW"]
     WriteConsoleW* (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "ExitProcess"]
+PROCEDURE [windows-, "kernel32.dll", "ExitProcess"]
     ExitProcess* (code: INTEGER);
 
-PROCEDURE [winapi, "kernel32.dll", "WriteConsoleA"]
+PROCEDURE [windows-, "kernel32.dll", "WriteConsoleA"]
     WriteConsole* (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetTickCount"]
+PROCEDURE [windows-, "kernel32.dll", "GetTickCount"]
     GetTickCount* (): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "Sleep"]
+PROCEDURE [windows-, "kernel32.dll", "Sleep"]
     Sleep* (dwMilliseconds: INTEGER);
 
-PROCEDURE [winapi, "kernel32.dll", "FreeLibrary"]
+PROCEDURE [windows-, "kernel32.dll", "FreeLibrary"]
     FreeLibrary* (hLibModule: INTEGER): INTEGER;
 
-PROCEDURE [cdecl, "msvcrt.dll", "rand"]
+PROCEDURE [ccall, "msvcrt.dll", "rand"]
     rand* (): INTEGER;
 
-PROCEDURE [cdecl, "msvcrt.dll", "srand"]
+PROCEDURE [ccall, "msvcrt.dll", "srand"]
     srand* (seed: INTEGER);
 
-PROCEDURE [winapi, "user32.dll", "MessageBoxA"]
+PROCEDURE [windows-, "user32.dll", "MessageBoxA"]
     MessageBoxA* (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "user32.dll", "MessageBoxW"]
+PROCEDURE [windows-, "user32.dll", "MessageBoxW"]
     MessageBox* (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "user32.dll", "CreateWindowExA"]
+PROCEDURE [windows-, "user32.dll", "CreateWindowExA"]
     CreateWindowEx* (
         dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y,
         nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "GetProcAddress"]
+PROCEDURE [windows-, "kernel32.dll", "GetProcAddress"]
     GetProcAddress* (hModule, name: INTEGER): INTEGER;
 
-PROCEDURE [winapi, "kernel32.dll", "LoadLibraryA"]
-    LoadLibraryA* (name: INTEGER): INTEGER;       
-    
-PROCEDURE [winapi, "kernel32.dll", "AllocConsole"]
+PROCEDURE [windows-, "kernel32.dll", "LoadLibraryA"]
+    LoadLibraryA* (name: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "AllocConsole"]
     AllocConsole* (): BOOLEAN;
-    
-PROCEDURE [winapi, "kernel32.dll", "FreeConsole"]
+
+PROCEDURE [windows-, "kernel32.dll", "FreeConsole"]
     FreeConsole* (): BOOLEAN;
 
 
