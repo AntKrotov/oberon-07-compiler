@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -27,7 +27,7 @@ VAR
     END;
 
 
-PROCEDURE [kosapi] sysfunc1* (arg1: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc1* (arg1: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     08BH, 045H, 008H,   (*  mov     eax, dword [ebp + 8]   *)
@@ -39,7 +39,7 @@ BEGIN
 END sysfunc1;
 
 
-PROCEDURE [kosapi] sysfunc2* (arg1, arg2: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc2* (arg1, arg2: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -54,7 +54,7 @@ BEGIN
 END sysfunc2;
 
 
-PROCEDURE [kosapi] sysfunc3* (arg1, arg2, arg3: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc3* (arg1, arg2, arg3: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -70,7 +70,7 @@ BEGIN
 END sysfunc3;
 
 
-PROCEDURE [kosapi] sysfunc4* (arg1, arg2, arg3, arg4: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc4* (arg1, arg2, arg3, arg4: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -87,7 +87,7 @@ BEGIN
 END sysfunc4;
 
 
-PROCEDURE [kosapi] sysfunc5* (arg1, arg2, arg3, arg4, arg5: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc5* (arg1, arg2, arg3, arg4, arg5: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -107,7 +107,7 @@ BEGIN
 END sysfunc5;
 
 
-PROCEDURE [kosapi] sysfunc6* (arg1, arg2, arg3, arg4, arg5, arg6: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc6* (arg1, arg2, arg3, arg4, arg5, arg6: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -130,7 +130,7 @@ BEGIN
 END sysfunc6;
 
 
-PROCEDURE [kosapi] sysfunc7* (arg1, arg2, arg3, arg4, arg5, arg6, arg7: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc7* (arg1, arg2, arg3, arg4, arg5, arg6, arg7: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
@@ -156,7 +156,7 @@ BEGIN
 END sysfunc7;
 
 
-PROCEDURE [kosapi] sysfunc22* (arg1, arg2: INTEGER; VAR res2: INTEGER): INTEGER;
+PROCEDURE [stdcall-] sysfunc22* (arg1, arg2: INTEGER; VAR res2: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
     053H,               (*  push    ebx                    *)
