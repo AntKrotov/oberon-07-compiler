@@ -883,6 +883,10 @@ VAR
         t.call   := call;
 
         FormalParameters(parser, t);
+        
+        IF call IN {PROG.systemv, PROG._systemv} THEN
+            check(t.params.size <= PROG.MAXSYSVPARAM, parser, pos, 120)
+        END;
 
         param := t.params.first;
         WHILE param # NIL DO
@@ -919,7 +923,7 @@ VAR
                 fparams := proc.type.params.getfparams(proc.type, 3, int, flt);
                 enter := CODE.Enter(label, LSL(ORD(fparams), 5) + MIN(proc.type.params.size, 4))
             ELSIF call IN {PROG._systemv, PROG.systemv} THEN
-                fparams := proc.type.params.getfparams(proc.type, 25, int, flt);
+                fparams := proc.type.params.getfparams(proc.type, PROG.MAXSYSVPARAM - 1, int, flt);
                 enter := CODE.Enter(label, -(LSL(ORD(fparams), 5) + proc.type.params.size))
             ELSE
                 enter := CODE.Enter(label, 0)

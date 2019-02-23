@@ -12,8 +12,9 @@ IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANT
 
 CONST
 
-    MAXARRDIM*  = 5;
-    MAXSCOPE    = 16;
+    MAXARRDIM*    = 5;
+    MAXSCOPE      = 16;
+    MAXSYSVPARAM* = 26;
 
     idNONE*    =  0;  idGUARD   =  1;  idMODULE* =  2;  idCONST*   =  3;
     idTYPE*    =  4;  idSTFUNC* =  5;  idSTPROC* =  6;  idVAR*     =  7;
@@ -989,7 +990,7 @@ BEGIN
         END;
         param := param.next(PARAM)
     END;
-    
+
     int := self.params.size - flt
 
     RETURN res

@@ -1561,7 +1561,7 @@ BEGIN
         fparams := LSL(ORD(procType.params.getfparams(procType, 3, int, flt)), 5) + MIN(params, 4)
     ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
         callconv := CODE.call_sysv;
-        fparams := LSL(ORD(procType.params.getfparams(procType, 25, int, flt)), 5) + params;
+        fparams := LSL(ORD(procType.params.getfparams(procType, PROG.MAXSYSVPARAM - 1, int, flt)), 5) + params;
         stk_par := MAX(0, int - 6) + MAX(0, flt - 8)
     ELSE
         callconv := CODE.call_stack;

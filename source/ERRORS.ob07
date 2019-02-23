@@ -136,6 +136,7 @@ BEGIN
     |117: str := "'stdcall64', 'win64', 'systemv', 'windows' or 'linux' expected"
     |118: str := "this flag for Windows only"
     |119: str := "this flag for Linux only"
+    |120: str := "too many formal parameters"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);
