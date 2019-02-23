@@ -1600,7 +1600,7 @@ BEGIN
     ELSIF cconv IN {PROG._ccall, PROG.ccall} THEN
         CODE.AddCmd(CODE.opCLEANUP, params)
     END;
-    
+
     IF ~CallStat THEN
         IF isfloat THEN
             PARS.check(CODE.resf(fregs), parser, pos, 41)
@@ -1608,7 +1608,7 @@ BEGIN
             CODE.res(fregs)
         END
     END
-END ProcCall;  
+END ProcCall;
 
 
 PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
@@ -3228,7 +3228,7 @@ BEGIN
 END setrtl;
 
 
-PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version, stack, base: INTEGER; pic, reloc: BOOLEAN; chk: SET);
+PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version, stack, base: INTEGER; pic: BOOLEAN; chk: SET);
 VAR
     parser:  PARS.PARSER;
     ext: PARS.PATH;
@@ -3287,9 +3287,9 @@ BEGIN
 
     CODE.codes.bss := PARS.program.bss;
     IF amd64 THEN
-        AMD64.CodeGen(CODE.codes, outname, target, stack, base, version)
+        AMD64.CodeGen(CODE.codes, outname, target, stack, base)
     ELSE
-        X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic, reloc)
+        X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic)
     END
 END compile;
 

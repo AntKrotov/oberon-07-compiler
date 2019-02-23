@@ -842,7 +842,7 @@ BEGIN
             INC(p, 8)
         END
     END
-END SysVPassing; 
+END SysVPassing;
 
 
 PROCEDURE fcmp (op: INTEGER; xmm: INTEGER);
@@ -876,7 +876,7 @@ BEGIN
     |CODE.opGEF, CODE.opLEFI:
         comisd(xmm - 1, xmm);
         cc := setnc
-    END;    
+    END;
     OutByte2(7AH, 3 + reg DIV 8); // jp L
     setcc(cc, reg);
     //L:
@@ -935,9 +935,9 @@ BEGIN
             OutByte2(0FFH, 0D0H); // call rax
             REG.Restore(R);
             ASSERT(R.top = -1)
-            
+
         |CODE.opCALLI, CODE.opWIN64CALLI, CODE.opSYSVCALLI:
-            REG.Store(R);  
+            REG.Store(R);
             CASE cmd.opcode OF
             |CODE.opCALLI:
             |CODE.opWIN64CALLI: Win64Passing(param2)
@@ -1047,7 +1047,7 @@ BEGIN
                 a := 0;
                 b := 0;
                 c := 0;
-                
+
                 INC(n, 16);
 
                 FOR i := 16 TO n - 8 BY 8 DO
@@ -2141,8 +2141,8 @@ BEGIN
             n := param2 * 8;
             IF n # 0 THEN
                 addrc(rsp, n)
-            END  
-            
+            END
+
         |CODE.opPOPSP:
             pop(rsp)
 
@@ -2232,7 +2232,7 @@ BEGIN
             OutByte3(00FH, 0AEH, 054H); OutByte2(024H, 004H); // ldmxcsr dword[rsp+4];
             addrc(rsp, 8);
             DEC(xmm)
-            
+
         |CODE.opEQF .. CODE.opGEFI:
             fcmp(cmd.opcode, xmm);
             DEC(xmm, 2)
@@ -2719,7 +2719,7 @@ BEGIN
 END rsave;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER);
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base: INTEGER);
 VAR
     path, modname, ext: PATHS.PATH;
     n: INTEGER;
@@ -2759,7 +2759,7 @@ BEGIN
     NewNumber(LSR(ASR(ROR(1, 1), 9), 2));  (* {52..61} *)
 
     prog := BIN.create(code.lcount);
-    BIN.SetParams(prog, code.bss, stack, WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    BIN.SetParams(prog, code.bss, stack, WCHR(1), WCHR(0));
 
     X86.SetProgram(prog);
 
@@ -2769,7 +2769,7 @@ BEGIN
 
     BIN.fixup(prog);
     IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
-        PE32.write(prog, outname, base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE, FALSE, TRUE)
+        PE32.write(prog, outname, base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
     ELSIF target = mConst.Target_iELF64 THEN
         ELF.write(prog, outname, TRUE)
     END

@@ -43,7 +43,7 @@ BEGIN
 END Target;
 
 
-PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic, reloc: BOOLEAN; VAR checking: SET);
+PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic: BOOLEAN; VAR checking: SET);
 VAR
     param: PARS.PATH;
     i, j:  INTEGER;
@@ -125,9 +125,6 @@ BEGIN
         ELSIF param = "-pic" THEN
             pic := TRUE
 
-        ELSIF param = "-reloc" THEN
-            reloc := TRUE
-
         ELSIF param = "" THEN
             end := TRUE
 
@@ -160,7 +157,7 @@ VAR
     StackSize,
     Version,
     BaseAdr:    INTEGER;
-    pic, reloc: BOOLEAN;
+    pic:        BOOLEAN;
     checking:   SET;
 
     bits64: BOOLEAN;
@@ -169,7 +166,6 @@ BEGIN
     StackSize := 2;
     Version := 65536;
     pic := FALSE;
-    reloc := FALSE;
     checking := ST.chkALL;
 
     PATHS.GetCurrentDirectory(app_path);
@@ -189,8 +185,6 @@ BEGIN
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
         C.StringLn("  -base <address>        set base address of image in kilobytes"); C.Ln;
-        C.StringLn("  -pic                   generate position-independent code"); C.Ln;
-        C.StringLn("  -reloc                 make relocation table"); C.Ln;
         C.StringLn('  -ver <major.minor>     set version of program'); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
@@ -268,9 +262,9 @@ BEGIN
 
     STRINGS.append(lib_path, UTILS.slash);
 
-    keys(StackSize, BaseAdr, Version, pic, reloc, checking);
+    keys(StackSize, BaseAdr, Version, pic, checking);
 
-    ST.compile(path, lib_path, modname, outname, target, Version, StackSize, BaseAdr, pic, reloc, checking);
+    ST.compile(path, lib_path, modname, outname, target, Version, StackSize, BaseAdr, pic, checking);
 
     time := UTILS.GetTickCount() - UTILS.time;
 
