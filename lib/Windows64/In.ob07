@@ -26,12 +26,12 @@ TYPE
 VAR
 
   Done*: BOOLEAN;
-  hConsoleInput: INTEGER;   
-  
-PROCEDURE [win64, "kernel32.dll", "GetStdHandle"]
-    GetStdHandle (nStdHandle: INTEGER): INTEGER; 
-    
-PROCEDURE [win64, "kernel32.dll", "ReadConsoleA"]
+  hConsoleInput: INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
+    GetStdHandle (nStdHandle: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "ReadConsoleA"]
     ReadConsole (hConsoleInput, lpBuffer, nNumberOfCharsToRead, lpNumberOfCharsRead, lpReserved: INTEGER): INTEGER;
 
 PROCEDURE digit(ch: CHAR): BOOLEAN;

@@ -43,10 +43,10 @@ VAR
   Realp: PROCEDURE (x: REAL; width: INTEGER);
 
 
-PROCEDURE [win64, "kernel32.dll", "GetStdHandle"]
+PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
     GetStdHandle (nStdHandle: INTEGER): INTEGER;
 
-PROCEDURE [win64, "kernel32.dll", "WriteFile"]
+PROCEDURE [windows-, "kernel32.dll", "WriteFile"]
     WriteFile (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
 
