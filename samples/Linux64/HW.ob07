@@ -1,0 +1,50 @@
+﻿MODULE HW;
+
+IMPORT SYSTEM, LINAPI;
+
+
+VAR
+
+    puts: PROCEDURE [linux] (pStr: INTEGER);
+
+
+PROCEDURE OutStringLn (s: ARRAY OF CHAR);
+BEGIN
+    puts(SYSTEM.ADR(s[0]))
+END OutStringLn;
+
+
+PROCEDURE main;
+VAR
+    i: INTEGER;
+    s: ARRAY 80 OF CHAR;
+
+BEGIN
+    OutStringLn("Hello");
+
+    OutStringLn("");
+    i := 0;
+    WHILE i < LINAPI.argc DO
+        LINAPI.GetArg(i, s);
+        INC(i);
+        OutStringLn(s)
+    END;
+
+    OutStringLn("");
+    i := 0;
+    WHILE i < LINAPI.envc DO
+        LINAPI.GetEnv(i, s);
+        INC(i);
+        OutStringLn(s)
+    END;
+    OutStringLn("");
+
+    OutStringLn("Bye")
+END main;
+
+
+BEGIN
+    SYSTEM.PUT(SYSTEM.ADR(puts), LINAPI.dlsym(LINAPI.libc, "puts"));
+    ASSERT(puts # NIL);
+    main
+END HW.
