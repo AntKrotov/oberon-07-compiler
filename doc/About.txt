@@ -20,16 +20,8 @@ UTF-8 с BOM-сигнатурой.
   4) необязательные параметры-ключи
       -stk <size> размер стэка в мегабайтах (по умолчанию 2 Мб)
       -base <address> адрес загрузки исполняемого файла в килобайтах
-      -pic генерировать позиционно-независимый код
-      -reloc добавить таблицу перемещений (relocation)
       -ver <major.minor> версия программы (только для obj)
       -nochk <"ptibcwra"> отключить проверки при выполнении (см. ниже)
-
-      параметры -base и -reloc только для Windows
-      параметр -base выравнивается по границе 64 кб      
-      параметр -pic игнорируется для obj и elfexe
-      если указан параметр -pic, то параметр -reloc игнорируется
-      для dll необходимо указать параметр -pic либо -reloc
 
       параметр -nochk задается в виде строки из символов:
       "p" - указатели
@@ -49,9 +41,9 @@ UTF-8 с BOM-сигнатурой.
 
   Например:
 
-  Compiler.exe "C:\example.ob07" "C:\example.exe" console -reloc -stk 1
-  Compiler.exe "C:\example.ob07" "C:\example.dll" dll -pic
-  Compiler.exe "C:\example.ob07" "C:\example.exe" gui -base 1024 -stk 4
+  Compiler.exe "C:\example.ob07" "C:\example.exe" console -stk 1
+  Compiler.exe "C:\example.ob07" "C:\example.dll" dll
+  Compiler.exe "C:\example.ob07" "C:\example.exe" gui -stk 4
   Compiler.exe "C:\example.ob07" "C:\example.exe" console -nochk pti
   Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.kex" kos -stk 2
   Compiler.kex "/tmp0/1/example.ob07" "/tmp0/1/example.obj" obj -ver 2.7
