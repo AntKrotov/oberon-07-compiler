@@ -12,7 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
-    SIZE_OF_DWORD = 4;
+    WORD_SIZE = 4;
 
 
 TYPE
@@ -65,17 +65,17 @@ END DebugMsg;
 
 PROCEDURE _NEW* (size: INTEGER): INTEGER;
 VAR
-    res, ptr, dwords: INTEGER;
+    res, ptr, words: INTEGER;
 
 BEGIN
     res := malloc(size);
     IF res # 0 THEN
         ptr := res;
-        dwords := size DIV SIZE_OF_DWORD;
-        WHILE dwords > 0 DO
+        words := size DIV WORD_SIZE;
+        WHILE words > 0 DO
             SYSTEM.PUT(ptr, 0);
-            INC(ptr, SIZE_OF_DWORD);
-            DEC(dwords)
+            INC(ptr, WORD_SIZE);
+            DEC(words)
         END
     END
 
@@ -100,13 +100,13 @@ BEGIN
 END GetProcAdr;
 
 
-PROCEDURE init* (esp, code: INTEGER);
+PROCEDURE init* (sp, code: INTEGER);
 BEGIN
-    SYSTEM.GET(code - 1000H - SIZE_OF_DWORD * 2, dlopen);
-    SYSTEM.GET(code - 1000H - SIZE_OF_DWORD,     dlsym);
-    eol := 0AX;
+    SYSTEM.GET(code - 1000H - WORD_SIZE * 2, dlopen);
+    SYSTEM.GET(code - 1000H - WORD_SIZE,     dlsym);
+    MainParam := sp;
     base := 08048000H;
-    MainParam := esp + SIZE_OF_DWORD;
+    eol := 0AX;
 
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
     GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));
@@ -115,9 +115,9 @@ BEGIN
     GetProcAdr(libc, "stdout", SYSTEM.ADR(stdout));
     GetProcAdr(libc, "stdin", SYSTEM.ADR(stdin));
     GetProcAdr(libc, "stderr", SYSTEM.ADR(stderr));
-    SYSTEM.GET(stdout - 4, stdout);
-    SYSTEM.GET(stdin - 4, stdin);
-    SYSTEM.GET(stderr - 4, stderr);
+    SYSTEM.GET(stdout - WORD_SIZE, stdout);
+    SYSTEM.GET(stdin  - WORD_SIZE, stdin);
+    SYSTEM.GET(stderr - WORD_SIZE, stderr);
     GetProcAdr(libc, "puts", SYSTEM.ADR(puts));
     GetProcAdr(libc, "fwrite", SYSTEM.ADR(fwrite));
     GetProcAdr(libc, "fread", SYSTEM.ADR(fread));
@@ -126,7 +126,7 @@ BEGIN
     GetProcAdr(libc, "time", SYSTEM.ADR(time));
 
     librt := dlopen(SYSTEM.SADR("librt.so.1"), 1);
-    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime));
+    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime))
 END init;
 
 

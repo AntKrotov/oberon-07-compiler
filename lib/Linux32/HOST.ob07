@@ -19,7 +19,7 @@ CONST
     maxint* = 7FFFFFFFH;
     minint* = 80000000H;
 
-    SIZE_OF_DWORD = 4;
+    SIZE_WORD = 4;
 
 
 VAR
@@ -43,8 +43,8 @@ VAR
 BEGIN
     i := 0;
     len := LEN(s) - 1;
-    IF (n < argc) & (len > 0) THEN        
-        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_OF_DWORD, ptr);
+    IF (n < argc) & (len > 0) THEN
+        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_WORD, ptr);
         REPEAT
             SYSTEM.GET(ptr, c);
             s[i] := c;

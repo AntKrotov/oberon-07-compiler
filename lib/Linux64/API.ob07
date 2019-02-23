@@ -12,7 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
-    SIZE_OF_QWORD = 8;
+    WORD_SIZE = 8;
 
 
 TYPE
@@ -65,17 +65,17 @@ END DebugMsg;
 
 PROCEDURE _NEW* (size: INTEGER): INTEGER;
 VAR
-    res, ptr, qwords: INTEGER;
+    res, ptr, words: INTEGER;
 
 BEGIN
     res := malloc(size);
     IF res # 0 THEN
         ptr := res;
-        qwords := size DIV SIZE_OF_QWORD;
-        WHILE qwords > 0 DO
+        words := size DIV WORD_SIZE;
+        WHILE words > 0 DO
             SYSTEM.PUT(ptr, 0);
-            INC(ptr, SIZE_OF_QWORD);
-            DEC(qwords)
+            INC(ptr, WORD_SIZE);
+            DEC(words)
         END
     END
 
@@ -100,33 +100,33 @@ BEGIN
 END GetProcAdr;
 
 
-PROCEDURE init* (rsp, code: INTEGER);
+PROCEDURE init* (sp, code: INTEGER);
 BEGIN
-    MainParam := rsp;
+    SYSTEM.GET(code - 1000H - WORD_SIZE * 2, dlopen);
+    SYSTEM.GET(code - 1000H - WORD_SIZE,     dlsym);
+    MainParam := sp;
     base := 400000H;
-    SYSTEM.GET(base + 305H - 16, dlopen);
-    SYSTEM.GET(base + 305H -  8, dlsym);
+    eol := 0AX;
+
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
-    ASSERT(libc # 0);
     GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));
     GetProcAdr(libc, "free", SYSTEM.ADR(free));
     GetProcAdr(libc, "exit", SYSTEM.ADR(_exit));
     GetProcAdr(libc, "stdout", SYSTEM.ADR(stdout));
     GetProcAdr(libc, "stdin", SYSTEM.ADR(stdin));
     GetProcAdr(libc, "stderr", SYSTEM.ADR(stderr));
-    SYSTEM.GET(stdout - 8, stdout);
-    SYSTEM.GET(stdin  - 8, stdin);
-    SYSTEM.GET(stderr - 8, stderr);
+    SYSTEM.GET(stdout - WORD_SIZE, stdout);
+    SYSTEM.GET(stdin  - WORD_SIZE, stdin);
+    SYSTEM.GET(stderr - WORD_SIZE, stderr);
     GetProcAdr(libc, "puts", SYSTEM.ADR(puts));
     GetProcAdr(libc, "fwrite", SYSTEM.ADR(fwrite));
     GetProcAdr(libc, "fread", SYSTEM.ADR(fread));
     GetProcAdr(libc, "fopen", SYSTEM.ADR(fopen));
     GetProcAdr(libc, "fclose", SYSTEM.ADR(fclose));
     GetProcAdr(libc, "time", SYSTEM.ADR(time));
+
     librt := dlopen(SYSTEM.SADR("librt.so.1"), 1);
-    ASSERT(librt # 0);
-    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime));
-    eol := 0AX
+    GetProcAdr(librt, "clock_gettime", SYSTEM.ADR(clock_gettime))
 END init;
 
 

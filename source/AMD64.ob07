@@ -2592,12 +2592,15 @@ END translate;
 
 PROCEDURE prolog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack_size: INTEGER);
 VAR
-    ModName_Offs: INTEGER;
+    ModName_Offs, entry: INTEGER;
 
 BEGIN
     ModName_Offs := CHL.Length(code.types) * 8 + CHL.Length(code.data);
     Numbers_Offs := ModName_Offs + LENGTH(modname) + 1;
     ASSERT(MACHINE.Align(Numbers_Offs, 16));
+
+    entry := NewLabel();
+    X86.SetLabel(entry);
 
     IF target = mConst.Target_iDLL64 THEN
         dllret := NewLabel();
@@ -2610,7 +2613,7 @@ BEGIN
     END;
 
     push(rsp);
-    lea(rax, 0, sCODE);
+    lea(rax, entry, sCODE);
     push(rax);
     pushDA(0); //TYPES
     pushc(CHL.Length(code.types));

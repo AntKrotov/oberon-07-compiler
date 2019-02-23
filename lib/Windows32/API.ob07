@@ -39,7 +39,7 @@ PROCEDURE _DISPOSE* (p: INTEGER): INTEGER;
 END _DISPOSE;
 
 
-PROCEDURE init* (import, code: INTEGER);
+PROCEDURE init* (reserved, code: INTEGER);
 BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     base := code - 4096

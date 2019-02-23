@@ -2214,16 +2214,6 @@ BEGIN
         SetLabel(dllinit)
     END;
 
-    IF pic THEN
-        reg1 := REG.GetAnyReg(R);
-        Pic(reg1, BIN.PICCODE, entry);
-        push(reg1);     // push CODE
-        drop
-    ELSE
-        OutByte(68H);  // push CODE
-        Reloc(BIN.RCODE, entry)
-    END;
-
     IF target = mConst.Target_iKolibri THEN
         reg1 := REG.GetAnyReg(R);
         Pic(reg1, BIN.IMPTAB, 0);
@@ -2236,6 +2226,16 @@ BEGIN
         push(esp)
     ELSE
         pushc(0)
+    END;  
+    
+    IF pic THEN
+        reg1 := REG.GetAnyReg(R);
+        Pic(reg1, BIN.PICCODE, entry);
+        push(reg1);     // push CODE
+        drop
+    ELSE
+        OutByte(68H);  // push CODE
+        Reloc(BIN.RCODE, entry)
     END;
 
     IF pic THEN

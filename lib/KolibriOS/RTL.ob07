@@ -609,7 +609,7 @@ BEGIN
 END _exit;
 
 
-PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; param, code: INTEGER);
+PROCEDURE [stdcall] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
 BEGIN
     SYSTEM.CODE(09BH, 0DBH, 0E3H); (* finit *)
     API.init(param, code);
