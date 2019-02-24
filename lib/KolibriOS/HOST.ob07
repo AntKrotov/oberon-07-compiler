@@ -7,7 +7,7 @@
 
 MODULE HOST;
 
-IMPORT SYSTEM, K := KOSAPI, API;
+IMPORT SYSTEM, K := KOSAPI, API, RTL;
 
 
 CONST
@@ -15,9 +15,9 @@ CONST
     slash* = "/";
     OS* = "KOS";
 
-    bit_depth* = 32;
-    maxint* = 7FFFFFFFH;
-    minint* = 80000000H;
+    bit_depth* = RTL.bit_depth;
+    maxint* = RTL.maxint;
+    minint* = RTL.minint;
 
     MAX_PARAM = 1024;
 
@@ -445,7 +445,7 @@ BEGIN
     time  := time DIV 16;
 
     year := year + 2000
-END now;    
+END now;
 
 
 PROCEDURE UnixTime* (): INTEGER;

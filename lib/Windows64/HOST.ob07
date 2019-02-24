@@ -7,17 +7,17 @@
 
 MODULE HOST;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM, RTL;
 
 
 CONST
 
     slash* = "\";
-    OS* = "WIN64";
+    OS* = "WINDOWS";
 
-    bit_depth* = 64;
-    maxint* = 7FFFFFFFFFFFFFFFH;
-    minint* = 8000000000000000H;
+    bit_depth* = RTL.bit_depth;
+    maxint* = RTL.maxint;
+    minint* = RTL.minint;
 
     MAX_PARAM = 1024;
 

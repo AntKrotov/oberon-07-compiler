@@ -10,11 +10,6 @@ MODULE LINAPI;
 IMPORT SYSTEM, API;
 
 
-CONST
-
-    SIZE_OF_QWORD = 8;
-
-
 TYPE
 
     TP* = API.TP;
@@ -43,24 +38,6 @@ VAR
     clock_gettime* : PROCEDURE [linux] (clock_id: INTEGER; VAR tp: TP): INTEGER;
 
 
-PROCEDURE [stdcall64-] syscall* (rax, rdi, rsi, rdx, r10, r8, r9: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
-    048H, 08BH, 07DH, 018H,  (*  mov rdi, qword [rbp + 24]  *)
-    048H, 08BH, 075H, 020H,  (*  mov rsi, qword [rbp + 32]  *)
-    048H, 08BH, 055H, 028H,  (*  mov rdx, qword [rbp + 40]  *)
-    04CH, 08BH, 055H, 030H,  (*  mov r10, qword [rbp + 48]  *)
-    04CH, 08BH, 045H, 038H,  (*  mov r8,  qword [rbp + 56]  *)
-    04CH, 08BH, 04DH, 040H,  (*  mov r9,  qword [rbp + 64]  *)
-    00FH, 005H,              (*  syscall                    *)
-    0C9H,                    (*  leave                      *)
-    0C2H, 038H, 000H         (*  ret 56                     *)
-    )
-    RETURN 0
-END syscall;
-
-
 PROCEDURE dlopen* (filename: ARRAY OF CHAR): INTEGER;
     RETURN API.dlopen(SYSTEM.ADR(filename[0]), 1)
 END dlopen;
@@ -80,7 +57,7 @@ BEGIN
     i := 0;
     len := LEN(s) - 1;
     IF (0 <= n) & (n <= argc + envc) & (n # argc) & (len > 0) THEN
-        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_OF_QWORD, ptr);
+        SYSTEM.GET(API.MainParam + (n + 1) * SYSTEM.SIZE(INTEGER), ptr);
         REPEAT
             SYSTEM.GET(ptr, c);
             s[i] := c;
@@ -107,11 +84,10 @@ VAR
     ptr: INTEGER;
 
 BEGIN
-
     envc := -1;
     SYSTEM.GET(API.MainParam, argc);
     REPEAT
-        SYSTEM.GET(API.MainParam + (envc + argc + 3) * SIZE_OF_QWORD, ptr);
+        SYSTEM.GET(API.MainParam + (envc + argc + 3) * SYSTEM.SIZE(INTEGER), ptr);
         INC(envc)
     UNTIL ptr = 0;
 
@@ -133,9 +109,26 @@ BEGIN
 
     librt := API.librt;
 
-    clock_gettime := API.clock_gettime;
-
+    clock_gettime := API.clock_gettime
 END init;
+
+
+PROCEDURE [stdcall64-] syscall* (rax, rdi, rsi, rdx, r10, r8, r9: INTEGER): INTEGER;
+BEGIN
+    SYSTEM.CODE(
+    048H, 08BH, 045H, 010H,  (*  mov rax, qword [rbp + 16]  *)
+    048H, 08BH, 07DH, 018H,  (*  mov rdi, qword [rbp + 24]  *)
+    048H, 08BH, 075H, 020H,  (*  mov rsi, qword [rbp + 32]  *)
+    048H, 08BH, 055H, 028H,  (*  mov rdx, qword [rbp + 40]  *)
+    04CH, 08BH, 055H, 030H,  (*  mov r10, qword [rbp + 48]  *)
+    04CH, 08BH, 045H, 038H,  (*  mov r8,  qword [rbp + 56]  *)
+    04CH, 08BH, 04DH, 040H,  (*  mov r9,  qword [rbp + 64]  *)
+    00FH, 005H,              (*  syscall                    *)
+    0C9H,                    (*  leave                      *)
+    0C2H, 038H, 000H         (*  ret 56                     *)
+    )
+    RETURN 0
+END syscall;
 
 
 BEGIN

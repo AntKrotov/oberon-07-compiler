@@ -12,7 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
-    WORD_SIZE = 4;
+    BASE_ADR = 08048000H;
 
 
 TYPE
@@ -71,10 +71,10 @@ BEGIN
     res := malloc(size);
     IF res # 0 THEN
         ptr := res;
-        words := size DIV WORD_SIZE;
+        words := size DIV SYSTEM.SIZE(INTEGER);
         WHILE words > 0 DO
             SYSTEM.PUT(ptr, 0);
-            INC(ptr, WORD_SIZE);
+            INC(ptr, SYSTEM.SIZE(INTEGER));
             DEC(words)
         END
     END
@@ -102,10 +102,10 @@ END GetProcAdr;
 
 PROCEDURE init* (sp, code: INTEGER);
 BEGIN
-    SYSTEM.GET(code - 1000H - WORD_SIZE * 2, dlopen);
-    SYSTEM.GET(code - 1000H - WORD_SIZE,     dlsym);
+    SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER) * 2, dlopen);
+    SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER),     dlsym);
     MainParam := sp;
-    base := 08048000H;
+    base := BASE_ADR;
     eol := 0AX;
 
     libc := dlopen(SYSTEM.SADR("libc.so.6"), 1);
@@ -115,9 +115,9 @@ BEGIN
     GetProcAdr(libc, "stdout", SYSTEM.ADR(stdout));
     GetProcAdr(libc, "stdin", SYSTEM.ADR(stdin));
     GetProcAdr(libc, "stderr", SYSTEM.ADR(stderr));
-    SYSTEM.GET(stdout - WORD_SIZE, stdout);
-    SYSTEM.GET(stdin  - WORD_SIZE, stdin);
-    SYSTEM.GET(stderr - WORD_SIZE, stderr);
+    SYSTEM.GET(stdout - SYSTEM.SIZE(INTEGER), stdout);
+    SYSTEM.GET(stdin  - SYSTEM.SIZE(INTEGER), stdin);
+    SYSTEM.GET(stderr - SYSTEM.SIZE(INTEGER), stderr);
     GetProcAdr(libc, "puts", SYSTEM.ADR(puts));
     GetProcAdr(libc, "fwrite", SYSTEM.ADR(fwrite));
     GetProcAdr(libc, "fread", SYSTEM.ADR(fread));

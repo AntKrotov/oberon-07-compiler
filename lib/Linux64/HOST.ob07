@@ -7,19 +7,17 @@
 
 MODULE HOST;
 
-IMPORT SYSTEM, API;
+IMPORT SYSTEM, API, RTL;
 
 
 CONST
 
     slash* = "/";
-    OS* = "LINUX64";
+    OS* = "LINUX";
 
-    bit_depth* = 64;
-    maxint* = 7FFFFFFFFFFFFFFFH;
-    minint* = 8000000000000000H;
-
-    SIZE_WORD = 8;
+    bit_depth* = RTL.bit_depth;
+    maxint* = RTL.maxint;
+    minint* = RTL.minint;
 
 
 VAR
@@ -44,7 +42,7 @@ BEGIN
     i := 0;
     len := LEN(s) - 1;
     IF (n < argc) & (len > 0) THEN
-        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_WORD, ptr);
+        SYSTEM.GET(API.MainParam + (n + 1) * SYSTEM.SIZE(INTEGER), ptr);
         REPEAT
             SYSTEM.GET(ptr, c);
             s[i] := c;

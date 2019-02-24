@@ -7,19 +7,17 @@
 
 MODULE HOST;
 
-IMPORT SYSTEM, API;
+IMPORT SYSTEM, API, RTL;
 
 
 CONST
 
     slash* = "/";
-    OS* = "LINUX32";
+    OS* = "LINUX";
 
-    bit_depth* = 32;
-    maxint* = 7FFFFFFFH;
-    minint* = 80000000H;
-
-    SIZE_WORD = 4;
+    bit_depth* = RTL.bit_depth;
+    maxint* = RTL.maxint;
+    minint* = RTL.minint;
 
 
 VAR
@@ -44,7 +42,7 @@ BEGIN
     i := 0;
     len := LEN(s) - 1;
     IF (n < argc) & (len > 0) THEN
-        SYSTEM.GET(API.MainParam + (n + 1) * SIZE_WORD, ptr);
+        SYSTEM.GET(API.MainParam + (n + 1) * SYSTEM.SIZE(INTEGER), ptr);
         REPEAT
             SYSTEM.GET(ptr, c);
             s[i] := c;
@@ -161,10 +159,16 @@ END UnixTime;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
 BEGIN
-    SYSTEM.GET(SYSTEM.ADR(x),     a);
-    SYSTEM.GET(SYSTEM.ADR(x) + 4, b)
-    RETURN a
+    a := 0;
+    b := 0;
+    SYSTEM.MOVE(SYSTEM.ADR(x), SYSTEM.ADR(a), 4);
+    SYSTEM.MOVE(SYSTEM.ADR(x) + 4, SYSTEM.ADR(b), 4);
+    SYSTEM.GET(SYSTEM.ADR(x), res)
+    RETURN res
 END splitf;
 
 

@@ -10,7 +10,11 @@ MODULE RTL;
 IMPORT SYSTEM, API;
 
 
-CONST
+CONST 
+
+    bit_depth* = 32;
+    maxint* = 7FFFFFFFH;
+    minint* = 80000000H;
 
     DLL_PROCESS_ATTACH  = 1;
     DLL_THREAD_ATTACH   = 2;

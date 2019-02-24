@@ -13,11 +13,12 @@ IMPORT HOST, UNIXTIME;
 CONST
 
     slash* = HOST.slash;
-    OS* = HOST.OS;
 
     bit_depth* = HOST.bit_depth;
     maxint* = HOST.maxint;
     minint* = HOST.minint;
+    
+    OS = HOST.OS;
 
 
 VAR
@@ -100,7 +101,7 @@ VAR
     res: INTEGER;
 
 BEGIN
-    IF (OS = "LINUX32") OR (OS = "LINUX64") THEN
+    IF OS = "LINUX" THEN
         res := HOST.UnixTime()
     ELSE
         HOST.now(year, month, day, hour, min, sec);
