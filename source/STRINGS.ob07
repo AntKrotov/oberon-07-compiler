@@ -255,18 +255,18 @@ BEGIN
         |0C1X..0DFX:
             u := LSL(ORD(c) - 0C0H, 6);
             IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
+                u := u + ROR(LSL(ORD(src[i + 1]), UTILS.bit_depth - 6), UTILS.bit_depth - 6);
                 INC(i)
             END
 
         |0E1X..0EFX:
             u := LSL(ORD(c) - 0E0H, 12);
             IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 20);
+                u := u + ROR(LSL(ORD(src[i + 1]), UTILS.bit_depth - 6), UTILS.bit_depth - 12);
                 INC(i)
             END;
             IF i + 1 < srclen THEN
-                u := u + ROR(LSL(ORD(src[i + 1]), 26), 26);
+                u := u + ROR(LSL(ORD(src[i + 1]), UTILS.bit_depth - 6), UTILS.bit_depth - 6);
                 INC(i)
             END
 (*
