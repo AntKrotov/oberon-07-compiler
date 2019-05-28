@@ -48,13 +48,22 @@ PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
 
 PROCEDURE [windows-, "kernel32.dll", "WriteFile"]
     WriteFile (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
+    
+PROCEDURE [windows-, "kernel32.dll", "WriteConsoleW"]
+    WriteConsoleW (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
 
 
 PROCEDURE Char*(x: CHAR);
 VAR count: INTEGER;
 BEGIN
     WriteFile(hConsoleOutput, sys.ADR(x), 1, sys.ADR(count), NIL)
-END Char;
+END Char;   
+
+PROCEDURE StringW*(s: ARRAY OF WCHAR);
+VAR count: INTEGER;
+BEGIN
+    WriteConsoleW(hConsoleOutput, sys.ADR(s[0]), LENGTH(s), sys.ADR(count), 0)
+END StringW;
 
 PROCEDURE String*(s: ARRAY OF CHAR);
 VAR len, i: INTEGER;
