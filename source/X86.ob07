@@ -1086,7 +1086,7 @@ BEGIN
                 reg1 := REG.GetAnyReg(R);
                 setcc(cc + 16, reg1);
                 andrc(reg1, 1)
-            END;
+            END
 
         |CODE.opGT, CODE.opGE, CODE.opLT,
          CODE.opLE, CODE.opEQ, CODE.opNE:
@@ -1134,6 +1134,14 @@ BEGIN
                 setcc(setne, reg1)
             END;
             andrc(reg1, 1)
+            
+        |CODE.opACC:
+            IF (R.top # 0) OR (R.stk[0] # eax) THEN
+                PushAll(0);
+                GetRegA;
+                pop(eax);
+                DEC(R.pushed)
+            END
 
         |CODE.opDROP:
             UnOp(reg1);

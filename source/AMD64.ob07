@@ -747,7 +747,7 @@ BEGIN
          CODE.opDIVL, CODE.opMOD,
          CODE.opMODL, CODE.opLENGTH, CODE.opLENGTHW:
             leaf := FALSE
-            
+
         |CODE.opDIVR, CODE.opMODR:
             param2 := cur.param2;
             IF param2 >= 1 THEN
@@ -1453,6 +1453,14 @@ BEGIN
             ELSE
                 ASSERT(R.top + 1 <= n);
                 PushAll(n)
+            END   
+            
+        |CODE.opACC:
+            IF (R.top # 0) OR (R.stk[0] # rax) THEN
+                PushAll(0);
+                GetRegA;
+                pop(rax);
+                DEC(R.pushed)
             END
 
         |CODE.opJNZ:
