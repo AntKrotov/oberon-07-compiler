@@ -1,18 +1,8 @@
 ﻿(*
-    Copyright 2013, 2017, 2018 Anton Krotov
+    BSD 2-Clause License
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
 *)
 
 MODULE File;
@@ -109,7 +99,7 @@ VAR
 
 BEGIN
     res := 0;
-    F := Open(FName, OPEN_R); 
+    F := Open(FName, OPEN_R);
 
     IF F # -1 THEN
         Size := Seek(F, 0, SEEK_END);
@@ -123,10 +113,30 @@ BEGIN
             END
         END;
         Close(F)
-    END 
+    END
 
     RETURN res
-END Load;
+END Load;    
+
+
+PROCEDURE RemoveDir* (DirName: ARRAY OF CHAR): BOOLEAN;
+    RETURN WINAPI.RemoveDirectory(SYSTEM.ADR(DirName[0])) # 0
+END RemoveDir;
+
+
+PROCEDURE ExistsDir* (DirName: ARRAY OF CHAR): BOOLEAN;
+VAR
+    Code: SET;
+
+BEGIN
+    Code := WINAPI.GetFileAttributes(SYSTEM.ADR(DirName[0]))
+    RETURN (Code # {0..31}) & (4 IN Code)
+END ExistsDir;
+
+
+PROCEDURE CreateDir* (DirName: ARRAY OF CHAR): BOOLEAN;
+    RETURN WINAPI.CreateDirectory(SYSTEM.ADR(DirName[0]), NIL) # 0
+END CreateDir;
 
 
 END File.

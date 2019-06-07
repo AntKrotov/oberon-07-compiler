@@ -1,18 +1,8 @@
 ﻿(*
-    Copyright 2013, 2018 Anton Krotov
+    BSD 2-Clause License
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
 *)
 
 MODULE Console;
@@ -33,44 +23,9 @@ VAR
     hConsoleOutput: INTEGER;
 
 
-PROCEDURE IntToCard16 (i: INTEGER): SYSTEM.CARD16;
-VAR
-    w: SYSTEM.CARD16;
-
-BEGIN
-    SYSTEM.GET(SYSTEM.ADR(i), w)
-    RETURN w
-END IntToCard16;
-
-
-PROCEDURE Card16ToInt (w: SYSTEM.CARD16): INTEGER;
-VAR
-    i: INTEGER;
-
-BEGIN
-    SYSTEM.PUT(SYSTEM.ADR(i), w)
-    RETURN i
-END Card16ToInt;
-
-
-PROCEDURE CoordToInt (Coord: WINAPI.TCoord): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    SYSTEM.GET(SYSTEM.ADR(Coord), res)
-    RETURN res
-END CoordToInt;
-
-
 PROCEDURE SetCursor* (X, Y: INTEGER);
-VAR
-    Coord: WINAPI.TCoord;
-
 BEGIN
-    Coord.X := IntToCard16(X);
-    Coord.Y := IntToCard16(Y);
-    WINAPI.SetConsoleCursorPosition(hConsoleOutput, CoordToInt(Coord))
+    WINAPI.SetConsoleCursorPosition(hConsoleOutput, X + Y * 65536)
 END SetCursor;
 
 
@@ -80,8 +35,8 @@ VAR
 
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo);
-    X := Card16ToInt(ScrBufInfo.dwCursorPosition.X);
-    Y := Card16ToInt(ScrBufInfo.dwCursorPosition.Y)
+    X := ORD(ScrBufInfo.dwCursorPosition.X);
+    Y := ORD(ScrBufInfo.dwCursorPosition.Y)
 END GetCursor;
 
 
@@ -92,9 +47,9 @@ VAR
 
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo);
-    fill := Card16ToInt(ScrBufInfo.dwSize.X) * Card16ToInt(ScrBufInfo.dwSize.Y);
+    fill := ORD(ScrBufInfo.dwSize.X) * ORD(ScrBufInfo.dwSize.Y);
     WINAPI.FillConsoleOutputCharacter(hConsoleOutput, 20H, fill, 0, SYSTEM.ADR(fill));
-    WINAPI.FillConsoleOutputAttribute(hConsoleOutput, Card16ToInt(ScrBufInfo.wAttributes), fill, 0, SYSTEM.ADR(fill));
+    WINAPI.FillConsoleOutputAttribute(hConsoleOutput, ORD(ScrBufInfo.wAttributes), fill, 0, SYSTEM.ADR(fill));
     SetCursor(0, 0)
 END Cls;
 
@@ -113,7 +68,7 @@ VAR
 
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo)
-    RETURN Card16ToInt(ScrBufInfo.dwCursorPosition.X)
+    RETURN ORD(ScrBufInfo.dwCursorPosition.X)
 END GetCursorX;
 
 
@@ -123,7 +78,7 @@ VAR
 
 BEGIN
     WINAPI.GetConsoleScreenBufferInfo(hConsoleOutput, ScrBufInfo)
-    RETURN Card16ToInt(ScrBufInfo.dwCursorPosition.Y)
+    RETURN ORD(ScrBufInfo.dwCursorPosition.Y)
 END GetCursorY;
 
 
