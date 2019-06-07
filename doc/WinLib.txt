@@ -98,8 +98,8 @@ MODULE Math - математические функции
 
         CONST
 
-                pi = 3.141592653589793D+00
-                e  = 2.718281828459045D+00
+                pi = 3.141592653589793E+00
+                e  = 2.718281828459045E+00
 
         PROCEDURE IsNan(x: REAL): BOOLEAN
                 возвращает TRUE, если x - не число
@@ -181,7 +181,7 @@ MODULE Math - математические функции
                 если x = 0 возвращает 0
 
 ------------------------------------------------------------------------------
-MODULE File - работа с файлами
+MODULE File - работа с файловой системой
 
         CONST
 
@@ -242,51 +242,15 @@ MODULE File - работа с файлами
                 записывает размер файла в параметр Size;
                 при ошибке возвращает 0
 
-------------------------------------------------------------------------------
-MODULE Read - чтение основных типов данных из файла F
-
-        Процедуры возвращают TRUE в случае успешной операции чтения
-
-        PROCEDURE Char(F: INTEGER; VAR x: CHAR): BOOLEAN
-
-        PROCEDURE Int(F: INTEGER; VAR x: INTEGER): BOOLEAN
-
-        PROCEDURE Real(F: INTEGER; VAR x: REAL): BOOLEAN
-
-        PROCEDURE Boolean(F: INTEGER; VAR x: BOOLEAN): BOOLEAN
-
-        PROCEDURE Set(F: INTEGER; VAR x: SET): BOOLEAN
-
-        PROCEDURE Card16(F: INTEGER; VAR x: SYSTEM.CARD16): BOOLEAN
-
-------------------------------------------------------------------------------
-MODULE Write - запись основных типов данных в файл F
-
-        Процедуры возвращают TRUE в случае успешной операции записи
-
-        PROCEDURE Char(F: INTEGER; x: CHAR): BOOLEAN
-
-        PROCEDURE Int(F: INTEGER; x: INTEGER): BOOLEAN
-
-        PROCEDURE Real(F: INTEGER; x: REAL): BOOLEAN
-
-        PROCEDURE Boolean(F: INTEGER; x: BOOLEAN): BOOLEAN
-
-        PROCEDURE Set(F: INTEGER; x: SET): BOOLEAN
-
-        PROCEDURE Card16(F: INTEGER; x: SYSTEM.CARD16): BOOLEAN
-
-------------------------------------------------------------------------------
-MODULE Dir - работа с папками
-
-        PROCEDURE Create(DirName: ARRAY OF CHAR): BOOLEAN
+        PROCEDURE CreateDir(DirName: ARRAY OF CHAR): BOOLEAN
                 создает папку с именем DirName, все промежуточные папки
-                должны существовать
+                должны существовать. В случае ошибки, возвращает FALSE
 
-        PROCEDURE Remove(DirName: ARRAY OF CHAR): BOOLEAN
-                удаляет пустую папку с именем DirName
+        PROCEDURE RemoveDir(DirName: ARRAY OF CHAR): BOOLEAN
+                удаляет пустую папку с именем DirName. В случае ошибки,
+                возвращает FALSE
 
-        PROCEDURE Exists(DirName: ARRAY OF CHAR): BOOLEAN
+        PROCEDURE ExistsDir(DirName: ARRAY OF CHAR): BOOLEAN
                 возвращает TRUE, если папка с именем DirName существует
 
 ------------------------------------------------------------------------------
@@ -306,7 +270,7 @@ MODULE DateTime - дата, время
             Hour, Min, Sec, MSec: INTEGER): REAL
                 возвращает дату, полученную из компонентов
                 Year, Month, Day, Hour, Min, Sec, MSec;
-                при ошибке возвращает константу ERR = -7.0D5
+                при ошибке возвращает константу ERR = -7.0E5
 
         PROCEDURE Decode(Date: REAL; VAR Year, Month, Day,
                 Hour, Min, Sec, MSec: INTEGER): BOOLEAN

@@ -98,8 +98,8 @@ MODULE Math - математические функции
 
 	CONST
 
-		pi = 3.141592653589793D+00
-		e  = 2.718281828459045D+00
+		pi = 3.141592653589793E+00
+		e  = 2.718281828459045E+00
 
 
 	PROCEDURE IsNan(x: REAL): BOOLEAN
@@ -337,7 +337,7 @@ MODULE DateTime - дата, время
 	PROCEDURE Encode(Year, Month, Day, Hour, Min, Sec: INTEGER): REAL
 		возвращает дату, полученную из компонентов
 		Year, Month, Day, Hour, Min, Sec;
-		при ошибке возвращает константу ERR = -7.0D5
+		при ошибке возвращает константу ERR = -7.0E5
 
 	PROCEDURE Decode(Date: REAL; VAR Year, Month, Day,
 				Hour, Min, Sec: INTEGER): BOOLEAN
