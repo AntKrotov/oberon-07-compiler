@@ -883,7 +883,7 @@ VAR
         t.call   := call;
 
         FormalParameters(parser, t);
-        
+
         IF call IN {PROG.systemv, PROG._systemv} THEN
             check(t.params.size <= PROG.MAXSYSVPARAM, parser, pos, 120)
         END;
@@ -1118,7 +1118,8 @@ VAR
 BEGIN
     citem := C.pop(parsers);
     IF citem = NIL THEN
-        NEW(pars)
+        NEW(pars);
+        ERRORS.OutOfMemory(pars = NIL)
     ELSE
         pars := citem(PARSER)
     END

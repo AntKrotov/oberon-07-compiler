@@ -165,7 +165,15 @@ BEGIN
     C.Ln;
     C.String(s1); C.String(s2); C.String(s3); C.String(s4); C.StringLn(s5);
     UTILS.Exit(1)
-END error5;
+END error5;   
+
+
+PROCEDURE OutOfMemory* (error: BOOLEAN);
+BEGIN 
+    IF error THEN
+        error1("Out of memory")
+    END
+END OutOfMemory;
 
 
 END ERRORS.

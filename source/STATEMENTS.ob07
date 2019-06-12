@@ -1860,7 +1860,7 @@ VAR
 
                     IF e.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e.value)))
-                    END;            
+                    END;
                     CODE.AddCmd0(CODE.opACC);
                     CODE.AddJmpCmd(CODE.opJZ, label);
                     CODE.drop
@@ -2057,7 +2057,7 @@ VAR
 
                     IF e.obj = eCONST THEN
                         CODE.AddCmd(CODE.opCONST, ORD(ARITH.getBool(e.value)))
-                    END;         
+                    END;
                     CODE.AddCmd0(CODE.opACC);
                     CODE.AddJmpCmd(CODE.opJNZ, label);
                     CODE.drop
@@ -2664,7 +2664,8 @@ VAR
 BEGIN
     citem := C.pop(CaseVar);
     IF citem = NIL THEN
-        NEW(res)
+        NEW(res);
+        ERRORS.OutOfMemory(res = NIL)
     ELSE
         res := citem(CASE_VARIANT)
     END;
@@ -2753,7 +2754,8 @@ VAR
     BEGIN
         citem := C.pop(CaseLabels);
         IF citem = NIL THEN
-            NEW(label)
+            NEW(label);
+            ERRORS.OutOfMemory(label = NIL)
         ELSE
             label := citem(CASE_LABEL)
         END;

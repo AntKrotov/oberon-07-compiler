@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE LISTS;
 
-IMPORT C := COLLECTIONS;
+IMPORT C := COLLECTIONS, ERRORS;
 
 
 TYPE
@@ -171,7 +171,8 @@ END count;
 PROCEDURE create* (list: LIST): LIST;
 BEGIN
     IF list = NIL THEN
-        NEW(list)
+        NEW(list);
+        ERRORS.OutOfMemory(list = NIL)
     END;
 
     list.first  := NIL;

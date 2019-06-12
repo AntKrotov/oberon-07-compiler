@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE FILES;
 
-IMPORT UTILS, C := COLLECTIONS, CONSOLE;
+IMPORT UTILS, C := COLLECTIONS, CONSOLE, ERRORS;
 
 
 TYPE
@@ -63,7 +63,8 @@ VAR
 BEGIN
     citem := C.pop(files);
     IF citem = NIL THEN
-        NEW(file)
+        NEW(file);
+        ERRORS.OutOfMemory(file = NIL)
     ELSE
         file := citem(FILE)
     END

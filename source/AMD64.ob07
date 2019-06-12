@@ -8,7 +8,7 @@
 MODULE AMD64;
 
 IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS,
-       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86;
+       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86, ERRORS;
 
 
 CONST
@@ -129,7 +129,8 @@ VAR
     number: Number;
 
 BEGIN
-    NEW(number);
+    NEW(number); 
+    ERRORS.OutOfMemory(number = NIL);
     number.value := value;
     LISTS.push(Numbers, number);
     INC(Numbers_Count)
@@ -1453,8 +1454,8 @@ BEGIN
             ELSE
                 ASSERT(R.top + 1 <= n);
                 PushAll(n)
-            END   
-            
+            END
+
         |CODE.opACC:
             IF (R.top # 0) OR (R.stk[0] # rax) THEN
                 PushAll(0);

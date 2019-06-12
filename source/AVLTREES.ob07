@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
-MODULE AVLTREES; 
+MODULE AVLTREES;
 
-IMPORT C := COLLECTIONS;
+IMPORT C := COLLECTIONS, ERRORS;
 
 
 TYPE
@@ -39,10 +39,11 @@ VAR
     node:  NODE;
     citem: C.ITEM;
 
-BEGIN  
+BEGIN
     citem := C.pop(nodes);
     IF citem = NIL THEN
-        NEW(node)
+        NEW(node);
+        ERRORS.OutOfMemory(node = NIL)
     ELSE
         node := citem(NODE)
     END;
@@ -181,8 +182,8 @@ BEGIN
 
         IF destructor # NIL THEN
             destructor(node.data)
-        END; 
-        
+        END;
+
         C.push(nodes, node);
         node := NIL;
 

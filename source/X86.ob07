@@ -7,7 +7,8 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS;
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF,
+       mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS, ERRORS;
 
 
 CONST
@@ -113,7 +114,8 @@ BEGIN
         c.code[c.length] := n;
         INC(c.length)
     ELSE
-        NEW(c);
+        NEW(c);   
+        ERRORS.OutOfMemory(c = NIL);
         c.code[0] := n;
         c.length  := 1;
         LISTS.push(CodeList, c)
@@ -376,7 +378,8 @@ VAR
     reloc: RELOC;
 
 BEGIN
-    NEW(reloc);
+    NEW(reloc);     
+    ERRORS.OutOfMemory(reloc = NIL);
     reloc.op := op;
     reloc.value := value;
     LISTS.push(CodeList, reloc)
@@ -388,7 +391,8 @@ VAR
     j: JCC;
 
 BEGIN
-    NEW(j);
+    NEW(j);   
+    ERRORS.OutOfMemory(j = NIL);
     j.label := label;
     j.jmp   := cc;
     j.short := FALSE;
@@ -401,7 +405,8 @@ VAR
     j: JMP;
 
 BEGIN
-    NEW(j);
+    NEW(j);       
+    ERRORS.OutOfMemory(j = NIL);
     j.label := label;
     j.short := FALSE;
     LISTS.push(CodeList, j)
@@ -413,7 +418,8 @@ VAR
     c: CALL;
 
 BEGIN
-    NEW(c);
+    NEW(c);  
+    ERRORS.OutOfMemory(c = NIL);
     c.label := label;
     c.short := TRUE;
     LISTS.push(CodeList, c)
@@ -460,7 +466,8 @@ VAR
     L: LABEL;
 
 BEGIN
-    NEW(L);
+    NEW(L);       
+    ERRORS.OutOfMemory(L = NIL);
     L.label := label;
     LISTS.push(CodeList, L)
 END SetLabel;
@@ -1134,7 +1141,7 @@ BEGIN
                 setcc(setne, reg1)
             END;
             andrc(reg1, 1)
-            
+
         |CODE.opACC:
             IF (R.top # 0) OR (R.stk[0] # eax) THEN
                 PushAll(0);

@@ -5,7 +5,9 @@
     All rights reserved.
 *)
 
-MODULE REG;
+MODULE REG;  
+
+IMPORT ERRORS;
 
 
 CONST
@@ -407,7 +409,8 @@ VAR
     i: INTEGER;
 
 BEGIN
-    NEW(R);
+    NEW(R);   
+    ERRORS.OutOfMemory(R = NIL);
 
     R.regs := regs;
     R.pushed := 0;

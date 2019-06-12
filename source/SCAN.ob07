@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE SCAN;
 
-IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, C := COLLECTIONS;
+IMPORT TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, C := COLLECTIONS, ERRORS;
 
 
 CONST
@@ -152,7 +152,8 @@ BEGIN
     vocabulary.idents := AVL.insert(vocabulary.idents, vocabulary.ident, nodecmp, newnode, node);
 
     IF newnode THEN
-        NEW(vocabulary.ident);
+        NEW(vocabulary.ident);   
+        ERRORS.OutOfMemory(vocabulary.ident = NIL);
         vocabulary.ident.offset  := -1;
         vocabulary.ident.offsetW := -1
     END
@@ -609,7 +610,8 @@ VAR
 BEGIN
     citem := C.pop(scanners);
     IF citem = NIL THEN
-        NEW(scan)
+        NEW(scan);
+        ERRORS.OutOfMemory(scan = NIL)
     ELSE
         scan := citem(SCANNER)
     END
@@ -710,7 +712,8 @@ BEGIN
     enterkw(i, "VAR");
     enterkw(i, "WHILE");
 
-    NEW(vocabulary.ident);
+    NEW(vocabulary.ident);   
+    ERRORS.OutOfMemory(vocabulary.ident = NIL);
     vocabulary.ident.s       := "";
     vocabulary.ident.offset  := -1;
     vocabulary.ident.offsetW := -1;

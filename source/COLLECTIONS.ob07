@@ -1,12 +1,14 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
-MODULE COLLECTIONS;
-                 
+MODULE COLLECTIONS;  
+
+IMPORT ERRORS;
+
 
 TYPE
 
@@ -49,7 +51,8 @@ VAR
     collection: COLLECTION;
 
 BEGIN
-    NEW(collection);
+    NEW(collection); 
+    ERRORS.OutOfMemory(collection = NIL);
     collection.last := NIL
 
     RETURN collection

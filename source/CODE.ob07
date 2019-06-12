@@ -7,7 +7,7 @@
 
 MODULE CODE;
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, ERRORS;
 
 
 CONST
@@ -89,7 +89,7 @@ CONST
     opALIGN16* = 236; opPOPSP* = 237;
     opWIN64CALL* = 238; opWIN64CALLI* = 239; opWIN64CALLP* = 240; opLOOP* = 241; opENDLOOP* = 242;
     opSYSVCALL* = 243; opSYSVCALLI* = 244; opSYSVCALLP* = 245; opSYSVALIGN16* = 246; opWIN64ALIGN16* = 247;
-    
+
     opACC* = 248;
 
 
@@ -230,7 +230,8 @@ VAR
 BEGIN
     citem := C.pop(commands);
     IF citem = NIL THEN
-        NEW(cmd)
+        NEW(cmd);
+        ERRORS.OutOfMemory(cmd = NIL)
     ELSE
         cmd := citem(COMMAND)
     END;
@@ -249,7 +250,8 @@ VAR
 BEGIN
     citem := C.pop(variables);
     IF citem = NIL THEN
-        NEW(lvar)
+        NEW(lvar);
+        ERRORS.OutOfMemory(lvar = NIL)
     ELSE
         lvar := citem(LOCALVAR)
     END;
@@ -1074,7 +1076,8 @@ VAR
     exp: EXPORT_PROC;
 
 BEGIN
-    NEW(exp);
+    NEW(exp);   
+    ERRORS.OutOfMemory(exp = NIL);
     exp.label := label;
     exp.name  := name;
     LISTS.push(codes.export, exp)
@@ -1093,7 +1096,8 @@ BEGIN
     END;
 
     IF lib = NIL THEN
-        NEW(lib);
+        NEW(lib);   
+        ERRORS.OutOfMemory(lib = NIL);
         lib.name := dll;
         lib.procs := LISTS.create(NIL);
         LISTS.push(codes.import, lib)
@@ -1105,7 +1109,8 @@ BEGIN
     END;
 
     IF p = NIL THEN
-        NEW(p);
+        NEW(p);     
+        ERRORS.OutOfMemory(p = NIL);
         p.name  := proc;
         p.label := NewLabel();
         p.lib   := lib;
@@ -1146,10 +1151,13 @@ BEGIN
     numRegsFloat := pNumRegsFloat;
     endianness := pEndianness;
 
-    NEW(codes);
-    NEW(codes.begcall);
+    NEW(codes);    
+    ERRORS.OutOfMemory(codes = NIL);
+    NEW(codes.begcall); 
+    ERRORS.OutOfMemory(codes.begcall = NIL);
     codes.begcall.top := -1;
-    NEW(codes.endcall);
+    NEW(codes.endcall); 
+    ERRORS.OutOfMemory(codes.endcall = NIL);
     codes.endcall.top := -1;
     codes.commands := LISTS.create(NIL);
     codes.export   := LISTS.create(NIL);
@@ -1157,9 +1165,9 @@ BEGIN
     codes.types    := CHL.CreateIntList();
     codes.data     := CHL.CreateByteList();
 
-    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
+    NEW(cmd); ERRORS.OutOfMemory(cmd = NIL); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
     codes.last := cmd;
-    NEW(cmd); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
+    NEW(cmd); ERRORS.OutOfMemory(cmd = NIL); cmd.opcode := opNOP; LISTS.push(codes.commands, cmd);
 
     AddRec(0);
 

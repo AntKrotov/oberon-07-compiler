@@ -7,7 +7,7 @@
 
 MODULE BIN;
 
-IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH, UTILS;
+IMPORT LISTS, MACHINE, CHL := CHUNKLISTS, ARITH, UTILS, ERRORS;
 
 
 CONST
@@ -77,6 +77,7 @@ VAR
 
 BEGIN
     NEW(program);
+    ERRORS.OutOfMemory(program = NIL);
 
     program.bss := 0;
 
@@ -112,7 +113,8 @@ VAR
     cmd: RELOC;
 
 BEGIN
-    NEW(cmd);
+    NEW(cmd);  
+    ERRORS.OutOfMemory(cmd = NIL);
     cmd.opcode := opcode;
     cmd.offset := CHL.Length(program.code);
     LISTS.push(program.rel_list, cmd)
@@ -227,7 +229,8 @@ BEGIN
         CHL.PushByte(program.import, 0)
     END;
 
-    NEW(imp);
+    NEW(imp);   
+    ERRORS.OutOfMemory(imp = NIL);
     imp.nameoffs := CHL.Length(program.import);
     imp.label := label;
     LISTS.push(program.imp_list, imp);
@@ -265,7 +268,8 @@ VAR
     i: INTEGER;
 
 BEGIN
-    NEW(exp);
+    NEW(exp);       
+    ERRORS.OutOfMemory(exp = NIL);
     exp.nameoffs := CHL.Length(program.export);
     exp.label := CHL.GetInt(program.labels, label);
 

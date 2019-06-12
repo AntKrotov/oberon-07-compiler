@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
 MODULE CHUNKLISTS;
 
-IMPORT LISTS, WR := WRITER;
+IMPORT LISTS, WR := WRITER, ERRORS;
 
 
 CONST
@@ -106,7 +106,8 @@ BEGIN
     chunk := list.last(BYTECHUNK);
 
     IF chunk.count = LENOFBYTECHUNK THEN
-        NEW(chunk);
+        NEW(chunk);   
+        ERRORS.OutOfMemory(chunk = NIL);
         chunk.count := 0;
         LISTS.push(list, chunk)
     END;
@@ -122,7 +123,7 @@ PROCEDURE WriteToFile* (file: WR.FILE; list: BYTELIST);
 VAR
     chunk: BYTECHUNK;
 
-BEGIN              
+BEGIN
     chunk := list.first(BYTECHUNK);
     WHILE chunk # NIL DO
         WR.Write(file, chunk.data, chunk.count);
@@ -138,11 +139,13 @@ VAR
     chunk:    BYTECHUNK;
 
 BEGIN
-    NEW(bytelist);
+    NEW(bytelist);     
+    ERRORS.OutOfMemory(bytelist = NIL);
     list := LISTS.create(bytelist);
     bytelist.length := 0;
 
-    NEW(chunk);
+    NEW(chunk);  
+    ERRORS.OutOfMemory(chunk = NIL);
     chunk.count := 0;
     LISTS.push(list, chunk)
 
@@ -212,7 +215,8 @@ BEGIN
     chunk := list.last(INTCHUNK);
 
     IF chunk.count = LENOFINTCHUNK THEN
-        NEW(chunk);
+        NEW(chunk);  
+        ERRORS.OutOfMemory(chunk = NIL);
         chunk.count := 0;
         LISTS.push(list, chunk)
     END;
@@ -231,11 +235,13 @@ VAR
     chunk:    INTCHUNK;
 
 BEGIN
-    NEW(intlist);
+    NEW(intlist);   
+    ERRORS.OutOfMemory(intlist = NIL);
     list := LISTS.create(intlist);
     intlist.length := 0;
 
-    NEW(chunk);
+    NEW(chunk);  
+    ERRORS.OutOfMemory(chunk = NIL);
     chunk.count := 0;
     LISTS.push(list, chunk)
 
