@@ -113,7 +113,7 @@ VAR
     cmd: RELOC;
 
 BEGIN
-    NEW(cmd);  
+    NEW(cmd);
     ERRORS.OutOfMemory(cmd = NIL);
     cmd.opcode := opcode;
     cmd.offset := CHL.Length(program.code);
@@ -140,7 +140,10 @@ BEGIN
     END;
 
     IF UTILS.bit_depth = 64 THEN
-        x := MACHINE.Int32To64(x)
+        x := LSL(x, 16);
+        x := LSL(x, 16);
+        x := ASR(x, 16);
+        x := ASR(x, 16)
     END
 
     RETURN x
@@ -229,7 +232,7 @@ BEGIN
         CHL.PushByte(program.import, 0)
     END;
 
-    NEW(imp);   
+    NEW(imp);
     ERRORS.OutOfMemory(imp = NIL);
     imp.nameoffs := CHL.Length(program.import);
     imp.label := label;
@@ -268,7 +271,7 @@ VAR
     i: INTEGER;
 
 BEGIN
-    NEW(exp);       
+    NEW(exp);
     ERRORS.OutOfMemory(exp = NIL);
     exp.nameoffs := CHL.Length(program.export);
     exp.label := CHL.GetInt(program.labels, label);
@@ -393,7 +396,7 @@ BEGIN
         array[i + idx] := hexdgt(hex[2 * i]) * 16 + hexdgt(hex[2 * i + 1])
     END;
 
-    idx := idx + k
+    INC(idx, k)
 END InitArray;
 
 

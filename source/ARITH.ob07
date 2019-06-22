@@ -53,10 +53,7 @@ BEGIN
     ELSIF v.typ = tWCHAR THEN
         res := v.int
     ELSIF v.typ = tSET THEN
-        res := ORD(v.set);
-        IF MACHINE._64to32 THEN
-            res := MACHINE.Int32To64(res)
-        END
+        res := MACHINE.long(ORD(v.set))
     ELSIF v.typ = tBOOLEAN THEN
         res := ORD(v.bool)
     END
@@ -179,11 +176,9 @@ BEGIN
             INC(i)
         END
 
-    END;
-
-    IF MACHINE._64to32 THEN
-        value := MACHINE.Int32To64(value);
-    END;
+    END;   
+    
+    value := MACHINE.long(value);
 
     IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
         error := 3
@@ -471,58 +466,53 @@ END mulInt;
 
 
 PROCEDURE _ASR (x, n: INTEGER): INTEGER;
-BEGIN
-    IF MACHINE._64to32 THEN
-        x := MACHINE.Int32To64(x)
-    END
-
-    RETURN ASR(x, n)
+    RETURN ASR(MACHINE.long(x), n)
 END _ASR;
 
 
 PROCEDURE _LSR (x, n: INTEGER): INTEGER;
-BEGIN
-    IF MACHINE._64to32 THEN
-        x := MACHINE.Int64To32(x);
-        x := LSR(x, n);
-        x := MACHINE.Int32To64(x)
-    ELSE
-        x := LSR(x, n)
-    END
-
-    RETURN x
+    RETURN MACHINE.long(LSR(MACHINE.short(x), n))
 END _LSR;
 
 
 PROCEDURE _LSL (x, n: INTEGER): INTEGER;
-BEGIN
-    x := LSL(x, n);
-    IF MACHINE._64to32 THEN
-        x := MACHINE.Int32To64(x)
-    END
-
-    RETURN x
+    RETURN MACHINE.long(LSL(x, n))
 END _LSL;
 
 
 PROCEDURE _ROR1_32 (x: INTEGER): INTEGER;
 BEGIN
-    x := MACHINE.Int64To32(x);
+    x := MACHINE.short(x);
     x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 31)))
-    RETURN MACHINE.Int32To64(x)
+    RETURN MACHINE.long(x)
 END _ROR1_32;
+
+
+PROCEDURE _ROR1_16 (x: INTEGER): INTEGER;
+BEGIN
+    x := x MOD 65536;
+    x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 15)))
+    RETURN MACHINE.long(x)
+END _ROR1_16;
 
 
 PROCEDURE _ROR (x, n: INTEGER): INTEGER;
 BEGIN
-    IF MACHINE._64to32 THEN
+
+    CASE MACHINE.bit_diff OF
+    |0: x := ROR(x, n)
+    |16, 48:
+        n := n MOD 16;
+        WHILE n > 0 DO
+            x := _ROR1_16(x);
+            DEC(n)
+        END
+    |32:
         n := n MOD 32;
         WHILE n > 0 DO
             x := _ROR1_32(x);
             DEC(n)
         END
-    ELSE
-        x := ROR(x, n)
     END
 
     RETURN x
@@ -587,11 +577,7 @@ BEGIN
     CASE v.typ OF
     |tCHAR, tWCHAR:
     |tBOOLEAN: v.int := ORD(v.bool)
-    |tSET:
-        v.int := ORD(v.set);
-        IF MACHINE._64to32 THEN
-            v.int := MACHINE.Int32To64(v.int)
-        END
+    |tSET:     v.int := MACHINE.long(ORD(v.set))
     END;
     v.typ := tINTEGER
 END ord;
@@ -616,7 +602,7 @@ VAR
     res: BOOLEAN;
 
 BEGIN
-    res := FALSE;  
+    res := FALSE;
 
     CASE v.typ OF
     |tREAL:
@@ -627,8 +613,8 @@ BEGIN
             v.int := ABS(v.int);
             res := TRUE
         END
-    END 
-    
+    END
+
     RETURN res
 END abs;
 

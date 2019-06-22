@@ -32,34 +32,27 @@ VAR
 
       END;
 
-    _64to32*: BOOLEAN;
+    bit_diff*: INTEGER;
 
 
-PROCEDURE SetBitDepth* (pBitDepth: INTEGER);
+PROCEDURE SetBitDepth* (BitDepth: INTEGER);
 BEGIN
-    ASSERT(pBitDepth <= UTILS.bit_depth);
-    ASSERT((pBitDepth = 32) OR (pBitDepth = 64));
+    ASSERT((BitDepth = 16) OR (BitDepth = 32) OR (BitDepth = 64));
+    bit_diff := UTILS.bit_depth - BitDepth;
+    ASSERT(bit_diff >= 0);
 
-    _64to32 := (UTILS.bit_depth = 64) & (pBitDepth = 32);
-
-    target.bit_depth   := pBitDepth;
-    target.maxSet      := pBitDepth - 1;
-    target.maxHex      := pBitDepth DIV 4;
-    target.minInt      := ASR(UTILS.minint, UTILS.bit_depth - pBitDepth);
-    target.maxInt      := ASR(UTILS.maxint, UTILS.bit_depth - pBitDepth);
-    target.maxReal     := 1.9;
+    target.bit_depth := BitDepth;
+    target.maxSet    := BitDepth - 1;
+    target.maxHex    := BitDepth DIV 4;
+    target.minInt    := ASR(UTILS.minint, bit_diff);
+    target.maxInt    := ASR(UTILS.maxint, bit_diff);
+    target.maxReal   := 1.9;
     PACK(target.maxReal, 1023);
 END SetBitDepth;
 
 
 PROCEDURE Byte* (n: INTEGER; idx: INTEGER): BYTE;
-BEGIN
-    WHILE idx > 0 DO
-        n := ASR(n, 8);
-        DEC(idx)
-    END
-
-    RETURN ORD(BITS(n) * {0..7})
+    RETURN ASR(n, 8 * idx) MOD 256
 END Byte;
 
 
@@ -69,7 +62,7 @@ VAR
 
 BEGIN
     IF bytes MOD align # 0 THEN
-        res  := UTILS.maxint - bytes >= align - (bytes MOD align);
+        res := UTILS.maxint - bytes >= align - (bytes MOD align);
         IF res THEN
             bytes := bytes + align - (bytes MOD align)
         END
@@ -81,30 +74,14 @@ BEGIN
 END Align;
 
 
-PROCEDURE Int32To64* (value: INTEGER): INTEGER;
-BEGIN
-    IF UTILS.bit_depth = 64 THEN
-        value := LSL(value, 16);
-        value := LSL(value, 16);
-        value := ASR(value, 16);
-        value := ASR(value, 16)
-    END
-
-    RETURN value
-END Int32To64;
+PROCEDURE long* (value: INTEGER): INTEGER;
+    RETURN ASR(LSL(value, bit_diff), bit_diff)
+END long;
 
 
-PROCEDURE Int64To32* (value: INTEGER): INTEGER;
-BEGIN
-    IF UTILS.bit_depth = 64 THEN
-        value := LSL(value, 16);
-        value := LSL(value, 16);
-        value := LSR(value, 16);
-        value := LSR(value, 16)
-    END
-
-    RETURN value
-END Int64To32;
+PROCEDURE short* (value: INTEGER): INTEGER;
+    RETURN LSR(LSL(value, bit_diff), bit_diff)
+END short;
 
 
 END MACHINE.

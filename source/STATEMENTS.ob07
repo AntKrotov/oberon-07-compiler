@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64,
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64, VM16,
     ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
 
 
@@ -156,7 +156,12 @@ END isPtr;
 
 PROCEDURE isRec (e: PARS.EXPR): BOOLEAN;
     RETURN isExpr(e) & (e.type.typ = PROG.tRECORD)
-END isRec;
+END isRec; 
+
+
+PROCEDURE isRecPtr (e: PARS.EXPR): BOOLEAN;
+    RETURN isRec(e) OR isPtr(e)
+END isRecPtr;
 
 
 PROCEDURE isArr (e: PARS.EXPR): BOOLEAN;
@@ -2443,14 +2448,12 @@ BEGIN
             END
 
         |SCAN.lxIS:
-            PARS.check(isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}), parser, pos, 73);
-            IF e.type.typ = PROG.tRECORD THEN
-                PARS.check(e.obj = eVREC, parser, pos0, 78)
-            END;
+            PARS.check(isRecPtr(e), parser, pos, 73);
             PARS.check(e1.obj = eTYPE, parser, pos1, 79);
 
-            IF e.type.typ = PROG.tRECORD THEN
-                PARS.check(e1.type.typ = PROG.tRECORD,  parser, pos1, 80);
+            IF isRec(e) THEN
+                PARS.check(e.obj = eVREC, parser, pos0, 78);
+                PARS.check(e1.type.typ = PROG.tRECORD, parser, pos1, 80);
                 IF e.ident = NIL THEN
                     CODE.TypeCheck(e1.type.num)
                 ELSE
@@ -2682,11 +2685,6 @@ PROCEDURE CaseStatement (parser: PARS.PARSER);
 VAR
     e:      PARS.EXPR;
     pos:    SCAN.POSITION;
-
-
-    PROCEDURE isRecPtr (caseExpr: PARS.EXPR): BOOLEAN;
-        RETURN isRec(caseExpr) OR isPtr(caseExpr)
-    END isRecPtr;
 
 
     PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR type: PROG.TYPE_): INTEGER;
@@ -3238,10 +3236,14 @@ PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version
 VAR
     parser:  PARS.PARSER;
     ext: PARS.PATH;
-    amd64: BOOLEAN;
+    amd64, x86, vm16: BOOLEAN;
 
 BEGIN
     amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
+    x86 := target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
+                      mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32};
+    vm16 := target = mConst.Target_iVM16;
+
     ext := mConst.FILE_EXT;
     CaseLabels := C.create();
     CaseVar := C.create();
@@ -3253,8 +3255,12 @@ BEGIN
 
     IF amd64 THEN
         CODE.init(6, CODE.little_endian)
-    ELSE
+    ELSIF x86 THEN
         CODE.init(8, CODE.little_endian)
+    ELSIF vm16 THEN
+        CODE.init(8, CODE.little_endian)
+    ELSE
+        ASSERT(FALSE)
     END;
 
     parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
@@ -3294,8 +3300,12 @@ BEGIN
     CODE.codes.bss := PARS.program.bss;
     IF amd64 THEN
         AMD64.CodeGen(CODE.codes, outname, target, stack, base)
-    ELSE
+    ELSIF x86 THEN
         X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic)
+    ELSIF vm16 THEN
+        VM16.CodeGen(CODE.codes, outname)
+    ELSE
+        ASSERT(FALSE)
     END
 END compile;
 

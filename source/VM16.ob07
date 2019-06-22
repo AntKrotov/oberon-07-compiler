@@ -1,0 +1,19 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE VM16;
+
+IMPORT CODE;
+
+
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR);
+BEGIN
+
+END CodeGen;
+
+
+END VM16.

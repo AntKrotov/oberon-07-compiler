@@ -27,6 +27,7 @@ CONST
     Target_iDLL64*     =  8;
     Target_iELF32*     =  9;
     Target_iELF64*     = 10;
+    Target_iVM16*      = 11;
 
     Target_sConsole*   = "console";
     Target_sGUI*       = "gui";
@@ -38,6 +39,7 @@ CONST
     Target_sDLL64*     = "dll64";
     Target_sELF32*     = "elfexe";
     Target_sELF64*     = "elfexe64";
+    Target_sVM16*      = "vm16";
 
 
 END CONSTANTS.

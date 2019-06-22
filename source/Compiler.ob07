@@ -35,6 +35,8 @@ BEGIN
         res := mConst.Target_iELF32
     ELSIF s = mConst.Target_sELF64 THEN
         res := mConst.Target_iELF64
+    ELSIF s = mConst.Target_sVM16 THEN
+        res := mConst.Target_iVM16
     ELSE
         res := 0
     END
@@ -151,6 +153,7 @@ VAR
     temp:       PARS.PATH;
 
     target:     INTEGER;
+    bit_depth:  INTEGER;
 
     time:       INTEGER;
 
@@ -159,8 +162,6 @@ VAR
     BaseAdr:    INTEGER;
     pic:        BOOLEAN;
     checking:   SET;
-
-    bits64: BOOLEAN;
 
 BEGIN
     StackSize := 2;
@@ -221,24 +222,30 @@ BEGIN
         ERRORS.error1("bad parameter <target>")
     END;
 
-    bits64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
-
-    IF bits64 THEN
-        IF UTILS.bit_depth = 32 THEN
-            ERRORS.error1("bad parameter <target>")
-        END;
-        PARS.init(64, target)
-    ELSE
-        PARS.init(32, target)
+    CASE target OF
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64:
+        bit_depth := 64
+    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
+     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
+        bit_depth := 32
+    |mConst.Target_iVM16:
+        bit_depth := 16
     END;
+    
+    IF UTILS.bit_depth < bit_depth THEN
+        ERRORS.error1("bad parameter <target>")
+    END;
+
+    PARS.init(bit_depth, target);
 
     PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};
     PARS.program.obj := target = mConst.Target_iObject;
 
     STRINGS.append(lib_path, "lib");
     STRINGS.append(lib_path, UTILS.slash);
-
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
+      
+    CASE target OF
+    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL:
         IF target = mConst.Target_iDLL THEN
             BaseAdr := 10000000H
         ELSE
@@ -246,17 +253,20 @@ BEGIN
         END;
         STRINGS.append(lib_path, "Windows32")
 
-    ELSIF target IN {mConst.Target_iKolibri, mConst.Target_iObject} THEN
+    |mConst.Target_iKolibri, mConst.Target_iObject:
         STRINGS.append(lib_path, "KolibriOS")
 
-    ELSIF target = mConst.Target_iELF32 THEN
+    |mConst.Target_iELF32:
         STRINGS.append(lib_path, "Linux32")
 
-    ELSIF target = mConst.Target_iELF64 THEN
+    |mConst.Target_iELF64:
         STRINGS.append(lib_path, "Linux64")
 
-    ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64:
         STRINGS.append(lib_path, "Windows64")
+        
+    |mConst.Target_iVM16:
+        STRINGS.append(lib_path, "VM16")
 
     END;
 
