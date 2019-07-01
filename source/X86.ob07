@@ -114,7 +114,7 @@ BEGIN
         c.code[c.length] := n;
         INC(c.length)
     ELSE
-        NEW(c);   
+        NEW(c);
         ERRORS.OutOfMemory(c = NIL);
         c.code[0] := n;
         c.length  := 1;
@@ -361,16 +361,9 @@ BEGIN
 END cond;
 
 
-PROCEDURE inv1* (op: INTEGER): INTEGER;
-BEGIN
-    IF ODD(op) THEN
-        DEC(op)
-    ELSE
-        INC(op)
-    END
-
-    RETURN op
-END inv1;
+PROCEDURE inv0* (op: INTEGER): INTEGER;
+    RETURN ORD(BITS(op) / {0})
+END inv0;
 
 
 PROCEDURE Reloc* (op, value: INTEGER);
@@ -378,7 +371,7 @@ VAR
     reloc: RELOC;
 
 BEGIN
-    NEW(reloc);     
+    NEW(reloc);
     ERRORS.OutOfMemory(reloc = NIL);
     reloc.op := op;
     reloc.value := value;
@@ -391,7 +384,7 @@ VAR
     j: JCC;
 
 BEGIN
-    NEW(j);   
+    NEW(j);
     ERRORS.OutOfMemory(j = NIL);
     j.label := label;
     j.jmp   := cc;
@@ -405,7 +398,7 @@ VAR
     j: JMP;
 
 BEGIN
-    NEW(j);       
+    NEW(j);
     ERRORS.OutOfMemory(j = NIL);
     j.label := label;
     j.short := FALSE;
@@ -418,7 +411,7 @@ VAR
     c: CALL;
 
 BEGIN
-    NEW(c);  
+    NEW(c);
     ERRORS.OutOfMemory(c = NIL);
     c.label := label;
     c.short := TRUE;
@@ -466,7 +459,7 @@ VAR
     L: LABEL;
 
 BEGIN
-    NEW(L);       
+    NEW(L);
     ERRORS.OutOfMemory(L = NIL);
     L.label := label;
     LISTS.push(CodeList, L)
@@ -1069,13 +1062,22 @@ BEGIN
 
         |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
          CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
-         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL:
-            UnOp(reg1);
-            IF param2 = 0 THEN
-                test(reg1)
+         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL,
+         CODE.opEQ..CODE.opGE:
+
+            IF (CODE.opEQ <= cmd.opcode) & (cmd.opcode <= CODE.opGE) THEN
+                BinOp(reg1, reg2);
+                cmprr(reg1, reg2);
+                drop
             ELSE
-                cmprc(reg1, param2)
+                UnOp(reg1);
+                IF param2 = 0 THEN
+                    test(reg1)
+                ELSE
+                    cmprc(reg1, param2)
+                END
             END;
+
             drop;
             cc := cond(cmd.opcode);
 
@@ -1086,31 +1088,7 @@ BEGIN
 
             ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
                 label := cmd.next(COMMAND).param1;
-                jcc(inv1(cc), label);
-                cmd := cmd.next(COMMAND)
-
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                setcc(cc + 16, reg1);
-                andrc(reg1, 1)
-            END
-
-        |CODE.opGT, CODE.opGE, CODE.opLT,
-         CODE.opLE, CODE.opEQ, CODE.opNE:
-            BinOp(reg1, reg2);
-            cmprr(reg1, reg2);
-            drop;
-            drop;
-            cc := cond(cmd.opcode);
-
-            IF cmd.next(COMMAND).opcode = CODE.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(inv1(cc), label);
+                jcc(inv0(cc), label);
                 cmd := cmd.next(COMMAND)
 
             ELSE
@@ -2093,7 +2071,7 @@ BEGIN
                 OutInt(param2);
                 drop
             ELSE
-                OutByte2(0C7H, 05H);  // mov dword[_bss + param2], param2
+                OutByte2(0C7H, 05H);  // mov dword[_bss + param1], param2
                 Reloc(BIN.RBSS, param1);
                 OutInt(param2)
             END

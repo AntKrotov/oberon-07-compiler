@@ -35,8 +35,8 @@ BEGIN
         res := mConst.Target_iELF32
     ELSIF s = mConst.Target_sELF64 THEN
         res := mConst.Target_iELF64
-    ELSIF s = mConst.Target_sVM16 THEN
-        res := mConst.Target_iVM16
+    ELSIF s = mConst.Target_sMSP430 THEN
+        res := mConst.Target_iMSP430
     ELSE
         res := 0
     END
@@ -228,10 +228,10 @@ BEGIN
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
      mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
         bit_depth := 32
-    |mConst.Target_iVM16:
+    |mConst.Target_iMSP430:
         bit_depth := 16
     END;
-    
+
     IF UTILS.bit_depth < bit_depth THEN
         ERRORS.error1("bad parameter <target>")
     END;
@@ -243,7 +243,7 @@ BEGIN
 
     STRINGS.append(lib_path, "lib");
     STRINGS.append(lib_path, UTILS.slash);
-      
+
     CASE target OF
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL:
         IF target = mConst.Target_iDLL THEN
@@ -264,9 +264,9 @@ BEGIN
 
     |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64:
         STRINGS.append(lib_path, "Windows64")
-        
-    |mConst.Target_iVM16:
-        STRINGS.append(lib_path, "VM16")
+
+    |mConst.Target_iMSP430:
+        STRINGS.append(lib_path, "MSP430")
 
     END;
 

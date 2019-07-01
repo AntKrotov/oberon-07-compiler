@@ -1,0 +1,849 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE MSP430;
+
+IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, C := CONSOLE;
+
+
+CONST
+
+    PC = 0; SP = 1; SR = 2; CG = 3;
+
+    R4 = 4; R5 = 5; R6 = 6; R7 = 7; R8 = 8;
+
+    BP = 15; HP = 14; TEMP = 13;
+
+    ACC = R4;
+
+    opRRC  = 0;  opSWPB = 1;  opRRA  = 2;  opSXT = 3;
+    opPUSH = 4;  opCALL = 5;  opRETI = 6;
+
+    opMOV =  4;  opADD =  5;  opADDC =  6;  opSUBC = 7;
+    opSUB =  8;  opCMP =  9;  opDADD = 10;  opBIT = 11;
+    opBIC = 12;  opBIS = 13;  opXOR  = 14;  opAND = 15;
+
+    opJNE = 0;  opJEQ = 1;  opJNC = 2;  opJC  = 3;
+    opJN  = 4;  opJGE = 5;  opJL  = 6;  opJMP = 7;
+
+    opJNZ = opJNE; opJZ = opJEQ;
+    opJLO = opJNC; opJHS = opJC;
+
+    mREG = 0; mIDX = 1; mINDIR = 2; mINCR = 3;
+
+    MAXLABEL = 40000;
+
+    RCODE = 0; RDATA = 1; RBSS = 2;
+
+    je  = 0;  jne = je  + 1;
+    jge = 2;  jl  = jge + 1;
+    jle = 4;  jg  = jle + 1;
+
+
+TYPE
+
+    ANYCODE = POINTER TO RECORD (LISTS.ITEM)
+
+        offset: INTEGER
+
+    END;
+
+    WORD = POINTER TO RECORD (ANYCODE)
+
+        val: INTEGER
+
+    END;
+
+    LABEL = POINTER TO RECORD (ANYCODE)
+
+        num: INTEGER
+
+    END;
+
+    JMP = POINTER TO RECORD (ANYCODE)
+
+        cc, label: INTEGER
+
+    END;
+
+    CALL = POINTER TO RECORD (ANYCODE)
+
+        label: INTEGER
+
+    END;
+
+    COMMAND = CODE.COMMAND;
+
+    RELOC = POINTER TO RECORD (LISTS.ITEM)
+
+        section: INTEGER;
+        WordPtr: WORD
+
+    END;
+
+
+VAR
+
+    R: REG.REGS;
+
+    CodeList: LISTS.LIST;
+    RelList:  LISTS.LIST;
+
+    mem: ARRAY 65536 OF BYTE;
+
+    Labels: ARRAY MAXLABEL + 1 OF LABEL;
+
+
+PROCEDURE EmitLabel (L: INTEGER);
+VAR
+    label: LABEL;
+
+BEGIN
+    ASSERT((0 <= L) & (L <= MAXLABEL));
+    NEW(label);
+    ERRORS.OutOfMemory(label = NIL);
+    label.num := L;
+    LISTS.push(CodeList, label)
+END EmitLabel;
+
+
+PROCEDURE EmitWord (val: INTEGER);
+VAR
+    word: WORD;
+
+BEGIN
+    IF val < 0 THEN
+        ASSERT(val >= -32768);
+        val := ORD(BITS(val) * {0..15})
+    ELSE
+        ASSERT(val <= 65535)
+    END;
+    NEW(word);
+    ERRORS.OutOfMemory(word = NIL);
+    word.val := val;
+    LISTS.push(CodeList, word)
+END EmitWord;
+
+
+PROCEDURE EmitJmp (cc, label: INTEGER);
+VAR
+    jmp: JMP;
+
+BEGIN
+    ASSERT((0 <= label) & (label <= MAXLABEL));
+    NEW(jmp);
+    ERRORS.OutOfMemory(jmp = NIL);
+    jmp.cc := cc;
+    jmp.label := label;
+    LISTS.push(CodeList, jmp)
+END EmitJmp;
+
+
+PROCEDURE EmitCall (label: INTEGER);
+VAR
+    call: CALL;
+
+BEGIN
+    ASSERT((0 <= label) & (label <= MAXLABEL));
+    NEW(call);
+    ERRORS.OutOfMemory(call = NIL);
+    call.label := label;
+    LISTS.push(CodeList, call)
+END EmitCall;
+
+
+PROCEDURE GenBinOp (opcode, src, As, dst, Ad: INTEGER; byte: BOOLEAN);
+VAR
+    word: INTEGER;
+
+BEGIN
+    word := LSL(opcode, 4) + src;
+    word := LSL(word, 1) + Ad;
+    word := LSL(word, 1) + ORD(byte);
+    word := LSL(word, 2) + As;
+    word := LSL(word, 4) + dst;
+    EmitWord(word)
+END GenBinOp;
+
+
+PROCEDURE GenUnOp (opcode, reg, As: INTEGER; byte: BOOLEAN);
+VAR
+    word: INTEGER;
+
+BEGIN
+    word := LSL(opcode + 32, 1) + ORD(byte);
+    word := LSL(word, 2) + As;
+    word := LSL(word, 4) + reg;
+    EmitWord(word)
+END GenUnOp;
+
+
+PROCEDURE OpRegReg (op, src, dst: INTEGER);
+BEGIN
+    GenBinOp(op, src, mREG, dst, mREG, FALSE)
+END OpRegReg;
+
+
+PROCEDURE OpImmReg (op, imm, reg: INTEGER);
+BEGIN
+    GenBinOp(op, PC, mINCR, reg, mREG, FALSE);
+    EmitWord(imm)
+END OpImmReg;
+
+
+PROCEDURE MovRegReg (src, dst: INTEGER);
+BEGIN
+    OpRegReg(opMOV, src, dst)
+END MovRegReg;
+
+
+PROCEDURE MovImmReg (imm, reg: INTEGER);
+BEGIN
+    OpImmReg(opMOV, imm, reg)
+END MovImmReg;
+
+
+PROCEDURE CmpImmReg (imm, reg: INTEGER);
+BEGIN
+    OpImmReg(opCMP, imm, reg)
+END CmpImmReg;
+
+
+PROCEDURE AddImmReg (imm, reg: INTEGER);
+BEGIN
+    OpImmReg(opADD, imm, reg)
+END AddImmReg;
+
+
+PROCEDURE SubImmReg (imm, reg: INTEGER);
+BEGIN
+    OpImmReg(opSUB, imm, reg)
+END SubImmReg;
+
+
+PROCEDURE DecReg (reg: INTEGER);
+BEGIN
+    SubImmReg(1, reg)
+END DecReg;
+
+
+PROCEDURE IncReg (reg: INTEGER);
+BEGIN
+    AddImmReg(1, reg)
+END IncReg;
+
+
+PROCEDURE PushImm (imm: INTEGER);
+BEGIN
+    GenUnOp(opPUSH, PC, mINCR, FALSE);
+    EmitWord(imm)
+END PushImm;
+
+
+PROCEDURE PutWord (word: INTEGER; VAR adr: INTEGER);
+BEGIN
+    ASSERT(~ODD(adr));
+    ASSERT((0 <= word) & (word <= 65535));
+    mem[adr] := word MOD 256;
+    mem[adr + 1] := word DIV 256;
+    INC(adr, 2)
+END PutWord;
+
+
+PROCEDURE Fixup (pc: INTEGER): INTEGER;
+VAR
+    cmd:    ANYCODE;
+    adr:    INTEGER;
+    offset: INTEGER;
+    diff:   INTEGER;
+
+BEGIN
+    offset := pc DIV 2;
+    cmd := CodeList.first(ANYCODE);
+    WHILE cmd # NIL DO
+        cmd.offset := offset;
+        CASE cmd OF
+        |LABEL: Labels[cmd(LABEL).num] := cmd(LABEL)
+        |JMP:   INC(offset)
+        |CALL:  INC(offset, 2)
+        |WORD:  INC(offset)
+        END;
+        cmd := cmd.next(ANYCODE)
+    END;
+
+    adr := pc;
+    cmd := CodeList.first(ANYCODE);
+    WHILE cmd # NIL DO
+        CASE cmd OF
+        |LABEL:
+
+        |JMP:   diff := Labels[cmd.label].offset - cmd.offset - 1;
+                ASSERT((-512 <= diff) & (diff <= 511));
+                PutWord(LSL(cmd.cc + 8, 10) + ORD(BITS(diff) * {0..9}), adr)
+
+        |CALL:  PutWord(12B0H, adr); // CALL @PC+
+                PutWord(Labels[cmd.label].offset * 2, adr)
+
+        |WORD:  PutWord(cmd.val, adr)
+
+        END;
+        cmd := cmd.next(ANYCODE)
+    END
+
+    RETURN adr - pc
+END Fixup;
+
+
+PROCEDURE PushReg (reg: INTEGER);
+BEGIN
+    GenUnOp(opPUSH, reg, mREG, FALSE)
+END PushReg;
+
+
+PROCEDURE Pop (reg: INTEGER);
+BEGIN
+    GenBinOp(opMOV, SP, mINCR, reg, mREG, FALSE)
+END Pop;
+
+
+PROCEDURE Test (reg: INTEGER);
+BEGIN
+    CmpImmReg(0, reg)
+END Test;
+
+
+PROCEDURE mov (dst, src: INTEGER);
+BEGIN
+    MovRegReg(src, dst)
+END mov;
+
+
+PROCEDURE xchg (reg1, reg2: INTEGER);
+BEGIN
+    PushReg(reg1);
+    PushReg(reg2);
+    Pop(reg1);
+    Pop(reg2)
+END xchg;
+
+
+PROCEDURE Reloc (section, value: INTEGER);
+VAR
+    reloc: RELOC;
+
+BEGIN
+    NEW(reloc);
+    ERRORS.OutOfMemory(reloc = NIL);
+    EmitWord(value);
+    reloc.section := section;
+    reloc.WordPtr := CodeList.last(WORD);
+    LISTS.push(RelList, reloc)
+END Reloc;
+
+
+PROCEDURE CallRTL (proc: INTEGER);
+BEGIN
+    EmitCall(CODE.codes.rtl[proc])
+END CallRTL;
+
+
+PROCEDURE UnOp (VAR reg: INTEGER);
+BEGIN
+    REG.UnOp(R, reg)
+END UnOp;
+
+
+PROCEDURE BinOp (VAR reg1, reg2: INTEGER);
+BEGIN
+    REG.BinOp(R, reg1, reg2)
+END BinOp;
+
+
+PROCEDURE GetRegA;
+BEGIN
+    ASSERT(REG.GetReg(R, ACC))
+END GetRegA;
+
+
+PROCEDURE drop;
+BEGIN
+    REG.Drop(R)
+END drop;
+
+
+PROCEDURE PushAll (NumberOfParameters: INTEGER);
+BEGIN
+    REG.PushAll(R);
+    DEC(R.pushed, NumberOfParameters)
+END PushAll;
+
+
+PROCEDURE cond (op: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    CASE op OF
+    |CODE.opGT, CODE.opGTR, CODE.opLTL: res := jg
+    |CODE.opGE, CODE.opGER, CODE.opLEL: res := jge
+    |CODE.opLT, CODE.opLTR, CODE.opGTL: res := jl
+    |CODE.opLE, CODE.opLER, CODE.opGEL: res := jle
+    |CODE.opEQ, CODE.opEQR, CODE.opEQL: res := je
+    |CODE.opNE, CODE.opNER, CODE.opNEL: res := jne
+    END
+
+    RETURN res
+END cond;
+
+
+PROCEDURE inv0 (op: INTEGER): INTEGER;
+    RETURN ORD(BITS(op) / {0})
+END inv0;
+
+
+PROCEDURE jcc (cc, label: INTEGER);
+VAR
+    L: INTEGER;
+
+BEGIN
+    CASE cc OF
+    |jne:
+        EmitJmp(opJNE, label)
+    |je:
+        EmitJmp(opJEQ, label)
+    |jge:
+        EmitJmp(opJGE, label)
+    |jl:
+        EmitJmp(opJL, label)
+    |jle:
+        EmitJmp(opJL, label);
+        EmitJmp(opJEQ, label)
+    |jg:
+        L := CODE.NewLabel();
+        EmitJmp(opJEQ, L);
+        EmitJmp(opJGE, label);
+        EmitLabel(L)
+    END
+END jcc;
+
+
+PROCEDURE setcc (cc, reg: INTEGER);
+VAR
+    L: INTEGER;
+
+BEGIN
+    L := CODE.NewLabel();
+    MovImmReg(1, reg);
+    jcc(cc, L);
+    MovImmReg(0, reg);
+    EmitLabel(L)
+END setcc;
+
+
+PROCEDURE translate (code: CODE.CODES; stroffs: INTEGER);
+VAR
+    cmd: COMMAND;
+
+    param1, param2, label, L: INTEGER;
+
+    reg1, reg2: INTEGER;
+
+    cc: INTEGER;
+
+BEGIN
+    cmd := code.commands.first(COMMAND);
+
+    WHILE cmd # NIL DO
+
+        param1 := cmd.param1;
+        param2 := cmd.param2;
+
+        CASE cmd.opcode OF
+        |CODE.opJMP:
+            EmitJmp(opJMP, param1)
+
+        |CODE.opCALL:
+            EmitCall(param1)
+
+        |CODE.opPRECALL:
+            PushAll(0)
+
+        |CODE.opLABEL:
+            EmitLabel(param2)
+
+        |CODE.opSADR_PARAM:
+            GenUnOp(opPUSH, PC, mINCR, FALSE);
+            Reloc(RDATA, stroffs + param2)
+
+        |CODE.opERR:
+            CallRTL(CODE._error)
+
+        |CODE.opENTER:
+            ASSERT(R.top = -1);
+
+            EmitLabel(param1);
+
+            PushReg(BP);
+            MovRegReg(SP, BP);
+
+            IF param2 > 8 THEN
+                MovImmReg(0, R4);
+                MovImmReg(param2, R5);
+                L := CODE.NewLabel();
+                EmitLabel(L);
+                PushReg(R4);
+                DecReg(R5);
+                Test(R5);
+                EmitJmp(opJNE, L)
+            ELSE
+                MovImmReg(0, R4);
+                WHILE param2 > 0 DO
+                    PushReg(R4);
+                    DEC(param2)
+                END
+            END
+
+        |CODE.opLEAVE, CODE.opLEAVER:
+            ASSERT(param2 = 0);
+            IF cmd.opcode = CODE.opLEAVER THEN
+                UnOp(reg1);
+                IF reg1 # ACC THEN
+                    GetRegA;
+                    ASSERT(REG.Exchange(R, reg1, ACC));
+                    drop
+                END;
+                drop
+            END;
+
+            ASSERT(R.top = -1);
+
+            MovRegReg(BP, SP);
+            Pop(BP);
+            Pop(PC)
+
+        |CODE.opRES:
+            ASSERT(R.top = -1);
+            GetRegA
+
+        |CODE.opCLEANUP:
+            IF param2 # 0 THEN
+                AddImmReg(param2 * 2, SP)
+            END
+
+        |CODE.opCONST:
+            reg1 := REG.GetAnyReg(R);
+            MovImmReg(param2, reg1)
+
+        |CODE.opGADR:
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, PC, mINCR, reg1, mREG, FALSE);
+            Reloc(RBSS, param2)
+
+        |CODE.opLADR:
+            reg1 := REG.GetAnyReg(R);
+            MovRegReg(BP, reg1);
+            OpImmReg(opADD, param2 * 2, reg1)
+
+        |CODE.opLLOAD8:
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, BP, mIDX, reg1, mREG, TRUE);
+            EmitWord(param2 * 2)
+
+        |CODE.opLLOAD16, CODE.opVADR:
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, BP, mIDX, reg1, mREG, FALSE);
+            EmitWord(param2 * 2)
+
+        |CODE.opGLOAD8:
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, SR, mIDX, reg1, mREG, TRUE);
+            Reloc(RBSS, param2)
+
+        |CODE.opGLOAD16:
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, SR, mIDX, reg1, mREG, FALSE);
+            Reloc(RBSS, param2) 
+            
+        |CODE.opVLOAD16: 
+            reg1 := REG.GetAnyReg(R);
+            GenBinOp(opMOV, BP, mIDX, reg1, mREG, FALSE);
+            EmitWord(param2 * 2);
+            GenBinOp(opMOV, reg1, mINDIR, reg1, mREG, FALSE)
+
+        |CODE.opSAVE, CODE.opSAVE16:
+            BinOp(reg2, reg1);
+            GenBinOp(opMOV, reg2, mREG, reg1, mIDX, FALSE);
+            EmitWord(0);
+            drop;
+            drop
+
+        |CODE.opSAVE8C:
+            UnOp(reg1);
+            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, TRUE);
+            EmitWord(param2);
+            EmitWord(0);
+            drop
+
+        |CODE.opADD:
+            BinOp(reg1, reg2);
+            OpRegReg(opADD, reg2, reg1);
+            drop
+
+        |CODE.opADDL, CODE.opADDR:
+            IF param2 # 0 THEN
+                UnOp(reg1);
+                AddImmReg(param2, reg1)
+            END
+
+        |CODE.opSUB:
+            BinOp(reg1, reg2);
+            OpRegReg(opSUB, reg2, reg1);
+            drop
+
+        |CODE.opSUBR, CODE.opSUBL:
+            UnOp(reg1);
+            IF param2 # 0 THEN
+                SubImmReg(param2, reg1)
+            END;
+            IF cmd.opcode = CODE.opSUBL THEN
+                reg2 := REG.GetAnyReg(R);
+                MovImmReg(0, reg2);
+                OpRegReg(opSUB, reg1, reg2);
+                drop;
+                drop;
+                ASSERT(REG.GetReg(R, reg2))
+            END
+
+        |CODE.opLADR_SAVEC:
+            GenBinOp(opMOV, PC, mINCR, BP, mIDX, FALSE);
+            EmitWord(param2);
+            EmitWord(param1 * 2)
+
+        |CODE.opLADR_SAVE:
+            UnOp(reg1);
+            GenBinOp(opMOV, reg1, mREG, BP, mIDX, FALSE);
+            EmitWord(param2 * 2);
+            drop
+
+        |CODE.opGADR_SAVEC:
+            GenBinOp(opMOV, PC, mINCR, SR, mIDX, FALSE);
+            EmitWord(param2);
+            Reloc(RBSS, param1)
+
+        |CODE.opCONST_PARAM:
+            PushImm(param2)
+
+        |CODE.opPARAM:
+            IF param2 = 1 THEN
+                UnOp(reg1);
+                PushReg(reg1);
+                drop
+            ELSE
+                ASSERT(R.top + 1 <= param2);
+                PushAll(param2)
+            END
+
+        |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
+         CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
+         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL,
+         CODE.opEQ..CODE.opGE:
+
+            IF (CODE.opEQ <= cmd.opcode) & (cmd.opcode <= CODE.opGE) THEN
+                BinOp(reg1, reg2);
+                OpRegReg(opCMP, reg2, reg1);
+                drop
+            ELSE
+                UnOp(reg1);
+                CmpImmReg(param2, reg1)
+            END;
+
+            drop;
+            cc := cond(cmd.opcode);
+
+            IF cmd.next(COMMAND).opcode = CODE.opJE THEN
+                label := cmd.next(COMMAND).param1;
+                jcc(cc, label);
+                cmd := cmd.next(COMMAND)
+
+            ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
+                label := cmd.next(COMMAND).param1;
+                jcc(inv0(cc), label);
+                cmd := cmd.next(COMMAND)
+
+            ELSE
+                reg1 := REG.GetAnyReg(R);
+                setcc(cc, reg1)
+            END
+
+        |CODE.opNOP:
+
+        |CODE.opCODE:
+            EmitWord(param2)
+
+        |CODE.opACC:
+            IF (R.top # 0) OR (R.stk[0] # ACC) THEN
+                PushAll(0);
+                GetRegA;
+                Pop(ACC);
+                DEC(R.pushed)
+            END
+
+        |CODE.opDROP:
+            UnOp(reg1);
+            drop
+
+        |CODE.opJNZ:
+            UnOp(reg1);
+            Test(reg1);
+            jcc(jne, param1)
+
+        |CODE.opJZ:
+            UnOp(reg1);
+            Test(reg1);
+            jcc(je, param1)
+
+        |CODE.opJE:
+            UnOp(reg1);
+            Test(reg1);
+            jcc(jne, param1);
+            drop
+
+        |CODE.opJNE:
+            UnOp(reg1);
+            Test(reg1);
+            jcc(je, param1);
+            drop
+
+        |CODE.opNOT:
+            UnOp(reg1);
+            Test(reg1);
+            setcc(je, reg1)
+
+        |CODE.opORD:
+            UnOp(reg1);
+            Test(reg1);
+            setcc(jne, reg1)
+
+        |CODE.opLOOP:
+        |CODE.opENDLOOP:
+
+        |CODE.opGET:
+            BinOp(reg1, reg2);
+            drop;
+            drop;
+            CASE param2 OF
+            |1: GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, TRUE)
+            |2: GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, FALSE)
+            END;
+            EmitWord(0)
+            
+        |CODE.opINC1:
+            UnOp(reg1);
+            GenBinOp(opADD, PC, mINCR, reg1, mIDX, TRUE);
+            EmitWord(1);
+            EmitWord(0);
+            drop
+
+        |CODE.opDEC1:
+            UnOp(reg1);
+            GenBinOp(opSUB, PC, mINCR, reg1, mIDX, TRUE);
+            EmitWord(1);
+            EmitWord(0);
+            drop
+
+        ELSE
+            C.String("CODE "); C.Int(cmd.opcode); C.Ln
+        END;
+
+        cmd := cmd.next(COMMAND)
+    END;
+
+    ASSERT(R.pushed = 0);
+    ASSERT(R.top = -1)
+END translate;
+
+
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR);
+TYPE
+    SECTION = RECORD address, size: INTEGER END;
+
+VAR
+    i, tcount, adr, heap, stack, DataSize: INTEGER;
+
+    Code, Data, Bss: SECTION;
+
+    SecOffs: ARRAY 3 OF INTEGER;
+
+    reloc: RELOC;
+
+    file: FILES.FILE;
+
+BEGIN
+    FOR i := 0 TO 65535 DO
+        mem[i] := 0
+    END;
+
+    ASSERT(code.lcount < MAXLABEL);
+    CodeList := LISTS.create(NIL);
+    RelList  := LISTS.create(NIL);
+    R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7, R8}, {});
+
+    GenBinOp(opMOV, PC, mINCR, SP, mREG, FALSE);
+    EmitWord(0);
+    GenBinOp(opMOV, PC, mINCR, HP, mREG, FALSE);
+    EmitWord(0);
+
+    tcount := CHL.Length(code.types);
+    translate(code, tcount * 2);
+
+    GenBinOp(opMOV, PC, mINCR, SR, mIDX, FALSE);
+    EmitWord(3);
+    EmitWord(0FFFEH);
+
+    Code.address := 200H;
+    Code.size := Fixup(Code.address);
+    Data.address := Code.address + Code.size;
+    Data.size := CHL.Length(code.data) + tcount * 2;
+    Bss.address := Data.address + Data.size + ORD(ODD(Data.size));
+    Bss.size := code.bss;
+    heap := Bss.address + Bss.size + ORD(ODD(Bss.size));
+    stack := 65520;
+    ASSERT(stack - heap >= 64);
+    adr := Code.address + 2;
+    PutWord(stack, adr);
+    adr := Code.address + 6;
+    PutWord(heap, adr);
+
+    SecOffs[RCODE] := Code.address;
+    SecOffs[RDATA] := Data.address;
+    SecOffs[RBSS]  := Bss.address;
+
+    reloc := RelList.first(RELOC);
+    WHILE reloc # NIL DO
+        adr := reloc.WordPtr.offset * 2;
+        PutWord(reloc.WordPtr.val + SecOffs[reloc.section], adr);
+        reloc := reloc.next(RELOC)
+    END;
+
+    adr := Data.address;
+    FOR i := 0 TO tcount - 1 DO
+        PutWord(CHL.GetInt(code.types, i), adr)
+    END;
+
+    DataSize := CHL.Length(code.data);
+    FOR i := 0 TO DataSize - 1 DO
+        mem[adr] := CHL.GetByte(code.data, i);
+        INC(adr)
+    END;
+
+    file := FILES.create(outname);
+    WRITER.Write(file, mem, 65536);
+    FILES.close(file)
+END CodeGen;
+
+
+END MSP430.

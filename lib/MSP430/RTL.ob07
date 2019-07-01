@@ -1,0 +1,152 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE RTL;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    bit_depth* = 16;
+    maxint* = 7FFFH;
+    minint* = 8000H;
+
+    SIZE_OF_WORD = 2;
+
+
+PROCEDURE [ccall] _move* (bytes, source, dest: INTEGER);
+END _move;
+
+
+PROCEDURE [ccall] _move2* (bytes, dest, source: INTEGER);
+END _move2;
+
+
+PROCEDURE [ccall] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _arrcpy;
+
+
+PROCEDURE [ccall] _strcpy* (chr_size, len_dst, dst, len_src, src: INTEGER);
+END _strcpy;
+
+
+PROCEDURE [ccall] _strcpy2* (chr_size, len_src, src, len_dst, dst: INTEGER);
+END _strcpy2;
+
+
+PROCEDURE [ccall] _rot* (VAR A: ARRAY OF INTEGER);
+END _rot;
+
+
+PROCEDURE [ccall] _set2* (a, b: INTEGER): INTEGER;
+    RETURN 0
+END _set2;
+
+
+PROCEDURE [ccall] _set* (b, a: INTEGER): INTEGER;
+    RETURN 0
+END _set;
+
+
+PROCEDURE [ccall] _div* (b, a: INTEGER): INTEGER;
+    RETURN 0
+END _div;
+
+
+PROCEDURE [ccall] _div2* (a, b: INTEGER): INTEGER;
+    RETURN 0
+END _div2;
+
+
+PROCEDURE [ccall] _mod* (b, a: INTEGER): INTEGER;
+    RETURN 0
+END _mod;
+
+
+PROCEDURE [ccall] _mod2* (a, b: INTEGER): INTEGER;
+    RETURN 0
+END _mod2;
+
+
+PROCEDURE [ccall] _new* (t, size: INTEGER; VAR ptr: INTEGER);
+END _new;
+
+
+PROCEDURE [ccall] _dispose* (VAR ptr: INTEGER);
+END _dispose;
+
+
+PROCEDURE [ccall] _length* (len, str: INTEGER): INTEGER;
+    RETURN 0
+END _length;
+
+
+PROCEDURE [ccall] _lengthw* (len, str: INTEGER): INTEGER;
+    RETURN 0
+END _lengthw;
+
+
+PROCEDURE [ccall] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _strcmp;
+
+
+PROCEDURE [ccall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _strcmp2;
+
+
+PROCEDURE [ccall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _strcmpw;
+
+
+PROCEDURE [ccall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _strcmpw2;
+
+
+PROCEDURE [ccall] _error* (module, err: INTEGER);
+END _error;
+
+
+PROCEDURE [ccall] _isrec* (t0, t1, r: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _isrec;
+
+
+PROCEDURE [ccall] _is* (t0, p: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _is;
+
+
+PROCEDURE [ccall] _guardrec* (t0, t1: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _guardrec;
+
+
+PROCEDURE [ccall] _guard* (t0, p: INTEGER): BOOLEAN;
+    RETURN FALSE
+END _guard;
+
+
+PROCEDURE [ccall] _dllentry* (hinstDLL, fdwReason, lpvReserved: INTEGER): INTEGER;
+    RETURN 0
+END _dllentry;
+
+
+PROCEDURE [ccall] _exit* (code: INTEGER);
+END _exit;
+
+
+PROCEDURE [ccall] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
+END _init;
+
+
+END RTL.

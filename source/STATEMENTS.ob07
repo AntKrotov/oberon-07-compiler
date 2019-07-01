@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64, VM16,
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64, MSP430,
     ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
 
 
@@ -72,6 +72,8 @@ VAR
     CaseLabels, CaseVar: C.COLLECTION;
 
     CaseVariants: LISTS.LIST;
+
+    Target: INTEGER;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -156,7 +158,7 @@ END isPtr;
 
 PROCEDURE isRec (e: PARS.EXPR): BOOLEAN;
     RETURN isExpr(e) & (e.type.typ = PROG.tRECORD)
-END isRec; 
+END isRec;
 
 
 PROCEDURE isRecPtr (e: PARS.EXPR): BOOLEAN;
@@ -958,7 +960,11 @@ BEGIN
                 getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, parser, pos, 43);
-                PARS.check(ARITH.range(code, 0, 255), parser, pos, 42);
+                IF Target = mConst.Target_iMSP430 THEN
+                    PARS.check(ARITH.range(code, -32768, 32767), parser, pos, 122)
+                ELSE
+                    PARS.check(ARITH.range(code, 0, 255), parser, pos, 42)
+                END;
                 IF parser.sym = SCAN.lxCOMMA THEN
                     PARS.Next(parser)
                 ELSE
@@ -1602,7 +1608,7 @@ BEGIN
     ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
         CODE.AddCmd(CODE.opCLEANUP, params + stk_par);
         CODE.AddCmd0(CODE.opPOPSP)
-    ELSIF cconv IN {PROG._ccall, PROG.ccall} THEN
+    ELSIF cconv IN {PROG._ccall, PROG.ccall, PROG.default16} THEN
         CODE.AddCmd(CODE.opCLEANUP, params)
     END;
 
@@ -3236,13 +3242,14 @@ PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version
 VAR
     parser:  PARS.PARSER;
     ext: PARS.PATH;
-    amd64, x86, vm16: BOOLEAN;
+    amd64, x86, smp430: BOOLEAN;
 
 BEGIN
+    Target := target;
     amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
     x86 := target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
                       mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32};
-    vm16 := target = mConst.Target_iVM16;
+    smp430 := target = mConst.Target_iMSP430;
 
     ext := mConst.FILE_EXT;
     CaseLabels := C.create();
@@ -3257,7 +3264,7 @@ BEGIN
         CODE.init(6, CODE.little_endian)
     ELSIF x86 THEN
         CODE.init(8, CODE.little_endian)
-    ELSIF vm16 THEN
+    ELSIF smp430 THEN
         CODE.init(8, CODE.little_endian)
     ELSE
         ASSERT(FALSE)
@@ -3302,8 +3309,8 @@ BEGIN
         AMD64.CodeGen(CODE.codes, outname, target, stack, base)
     ELSIF x86 THEN
         X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic)
-    ELSIF vm16 THEN
-        VM16.CodeGen(CODE.codes, outname)
+    ELSIF smp430 THEN
+        MSP430.CodeGen(CODE.codes, outname)
     ELSE
         ASSERT(FALSE)
     END

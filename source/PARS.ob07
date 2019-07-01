@@ -523,6 +523,8 @@ BEGIN
             check1(call IN PROG.callconv64, parser, 117)
         ELSIF program.target.bit_depth = 32 THEN
             check1(call IN PROG.callconv32, parser, 63)
+        ELSIF program.target.bit_depth = 16 THEN
+            check1(call IN PROG.callconv16, parser, 121)
         END;
         Next(parser);
         IF parser.sym = SCAN.lxMINUS THEN
@@ -548,11 +550,13 @@ BEGIN
             call := PROG.default
         ELSIF program.target.bit_depth = 64 THEN
             call := PROG.default64
+        ELSIF program.target.bit_depth = 16 THEN
+            call := PROG.default16
         END
     END;
 
     IF import # NIL THEN
-        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64}), parser, pos, 70)
+        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64, mConst.Target_iMSP430}), parser, pos, 70)
     END
 
     RETURN call

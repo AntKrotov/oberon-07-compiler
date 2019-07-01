@@ -129,7 +129,7 @@ VAR
     number: Number;
 
 BEGIN
-    NEW(number); 
+    NEW(number);
     ERRORS.OutOfMemory(number = NIL);
     number.value := value;
     LISTS.push(Numbers, number);
@@ -1385,39 +1385,24 @@ BEGIN
             reg1 := REG.GetAnyReg(R);
             movrc(reg1, param2)
 
-        |CODE.opGT, CODE.opGE, CODE.opLT,
-         CODE.opLE, CODE.opEQ, CODE.opNE:
-            BinOp(reg1, reg2);
-            cmprr(reg1, reg2);
-            drop;
-            drop;
-            cc := X86.cond(cmd.opcode);
-
-            IF cmd.next(COMMAND).opcode = CODE.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(X86.inv1(cc), label);
-                cmd := cmd.next(COMMAND)
-
-            ELSE
-                reg1 := REG.GetAnyReg(R);
-                setcc(cc + 16, reg1);
-                andrc(reg1, 1)
-            END
-
         |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
          CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
-         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL:
-            UnOp(reg1);
-            IF param2 = 0 THEN
-                test(reg1)
+         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL,
+         CODE.opEQ..CODE.opGE:
+
+            IF (CODE.opEQ <= cmd.opcode) & (cmd.opcode <= CODE.opGE) THEN
+                BinOp(reg1, reg2);
+                cmprr(reg1, reg2);
+                drop
             ELSE
-                cmprc(reg1, param2)
+                UnOp(reg1);
+                IF param2 = 0 THEN
+                    test(reg1)
+                ELSE
+                    cmprc(reg1, param2)
+                END
             END;
+
             drop;
             cc := X86.cond(cmd.opcode);
 
@@ -1428,7 +1413,7 @@ BEGIN
 
             ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
                 label := cmd.next(COMMAND).param1;
-                jcc(X86.inv1(cc), label);
+                jcc(X86.inv0(cc), label);
                 cmd := cmd.next(COMMAND)
 
             ELSE

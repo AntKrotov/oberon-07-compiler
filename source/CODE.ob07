@@ -27,7 +27,7 @@ CONST
     opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opCHKBYTE* = 27; opDROP* = 28;
     opNOT* = 29;
 
-    opEQ*  = 30; opNE*  = 31; opLT*  = 32; opLE*  = 33; opGT*  = 34; opGE*  = 35;
+    opEQ*  = 30; opNE* = opEQ + 1; opLT* = opEQ + 2; opLE* = opEQ + 3; opGT* = opEQ + 4; opGE* = opEQ + 5 (* 35 *);
     opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
     opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
 
@@ -1076,7 +1076,7 @@ VAR
     exp: EXPORT_PROC;
 
 BEGIN
-    NEW(exp);   
+    NEW(exp);
     ERRORS.OutOfMemory(exp = NIL);
     exp.label := label;
     exp.name  := name;
@@ -1096,7 +1096,7 @@ BEGIN
     END;
 
     IF lib = NIL THEN
-        NEW(lib);   
+        NEW(lib);
         ERRORS.OutOfMemory(lib = NIL);
         lib.name := dll;
         lib.procs := LISTS.create(NIL);
@@ -1109,7 +1109,7 @@ BEGIN
     END;
 
     IF p = NIL THEN
-        NEW(p);     
+        NEW(p);
         ERRORS.OutOfMemory(p = NIL);
         p.name  := proc;
         p.label := NewLabel();
@@ -1151,12 +1151,12 @@ BEGIN
     numRegsFloat := pNumRegsFloat;
     endianness := pEndianness;
 
-    NEW(codes);    
+    NEW(codes);
     ERRORS.OutOfMemory(codes = NIL);
-    NEW(codes.begcall); 
+    NEW(codes.begcall);
     ERRORS.OutOfMemory(codes.begcall = NIL);
     codes.begcall.top := -1;
-    NEW(codes.endcall); 
+    NEW(codes.endcall);
     ERRORS.OutOfMemory(codes.endcall = NIL);
     codes.endcall.top := -1;
     codes.commands := LISTS.create(NIL);

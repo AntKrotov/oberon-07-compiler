@@ -137,6 +137,8 @@ BEGIN
     |118: str := "this flag for Windows only"
     |119: str := "this flag for Linux only"
     |120: str := "too many formal parameters"
+    |121: str := "'ccall' expected"  
+    |122: str := "out of range 0H..0FFFFH"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);
@@ -165,11 +167,11 @@ BEGIN
     C.Ln;
     C.String(s1); C.String(s2); C.String(s3); C.String(s4); C.StringLn(s5);
     UTILS.Exit(1)
-END error5;   
+END error5;
 
 
 PROCEDURE OutOfMemory* (error: BOOLEAN);
-BEGIN 
+BEGIN
     IF error THEN
         error1("Out of memory")
     END

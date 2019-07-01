@@ -49,13 +49,15 @@ CONST
     stdcall64* = 12;  _stdcall64* = stdcall64 + 1;
     default64* = 14;
     systemv*   = 16;  _systemv*   = systemv + 1;
+    default16* = 18;
 
     noalign* = 20;
 
     callee_clean_up* = {default, stdcall, _stdcall, default64, stdcall64, _stdcall64};
-    caller_clean_up* = {ccall, ccall16, win64, systemv, _ccall, _ccall16, _win64, _systemv};
+    caller_clean_up* = {default16, ccall, ccall16, win64, systemv, _ccall, _ccall16, _win64, _systemv};
     callconv32* = {default, stdcall, ccall, ccall16, _stdcall, _ccall, _ccall16};
     callconv64* = {default64, win64, stdcall64, systemv, _win64, _stdcall64, _systemv};
+    callconv16* = {default16, ccall, _ccall};
 
     STACK_FRAME = 2;
 
@@ -432,7 +434,7 @@ BEGIN
         END;
 
         IF cur = NIL THEN
-            NEW(proc);   
+            NEW(proc);
             ERRORS.OutOfMemory(proc = NIL);
             proc.proc := call_proc;
             LISTS.push(procs, proc)
@@ -498,7 +500,7 @@ BEGIN
 
         unit.scopes[unit.scopeLvl] := proc;
 
-        NEW(item); 
+        NEW(item);
         ERRORS.OutOfMemory(item = NIL);
         item := NewIdent();
 
@@ -561,7 +563,7 @@ BEGIN
     ASSERT(type # NIL);
     ASSERT(baseIdent # NIL);
 
-    NEW(newptr); 
+    NEW(newptr);
     ERRORS.OutOfMemory(newptr = NIL);
 
     newptr.type       := type;
@@ -779,10 +781,10 @@ BEGIN
     ASSERT(units # NIL);
     ASSERT(name # NIL);
 
-    NEW(unit);    
+    NEW(unit);
     ERRORS.OutOfMemory(unit = NIL);
 
-    NEW(idents);  
+    NEW(idents);
     ERRORS.OutOfMemory(idents = NIL);
     ASSERT(LISTS.create(idents) = idents);
 
@@ -869,7 +871,7 @@ BEGIN
     res := getField(self, name, self.unit) = NIL;
 
     IF res THEN
-        NEW(field);    
+        NEW(field);
         ERRORS.OutOfMemory(field = NIL);
 
         field.name   := name;
@@ -947,7 +949,7 @@ BEGIN
     res := self.params.get(self, name) = NIL;
 
     IF res THEN
-        NEW(param); 
+        NEW(param);
         ERRORS.OutOfMemory(param = NIL);
 
         param.name := name;
@@ -1065,14 +1067,14 @@ VAR
     params:   PARAMS;
 
 BEGIN
-    NEW(t); 
+    NEW(t);
     ERRORS.OutOfMemory(t = NIL);
 
-    NEW(fields);  
+    NEW(fields);
     ERRORS.OutOfMemory(fields = NIL);
     ASSERT(LISTS.create(fields) = fields);
 
-    NEW(params);   
+    NEW(params);
     ERRORS.OutOfMemory(params = NIL);
     ASSERT(LISTS.create(params) = params);
 
@@ -1089,6 +1091,8 @@ BEGIN
         t.call := default
     ELSIF program.target.bit_depth = 64 THEN
         t.call := default64
+    ELSIF program.target.bit_depth = 16 THEN
+        t.call := default16
     END;
     t.import  := FALSE;
     t.noalign := FALSE;
@@ -1262,9 +1266,9 @@ BEGIN
     idents := C.create();
 
     MACHINE.SetBitDepth(bit_depth);
-    NEW(program);  
+    NEW(program);
     ERRORS.OutOfMemory(program = NIL);
-    NEW(units);               
+    NEW(units);
     ERRORS.OutOfMemory(units = NIL);
     ASSERT(LISTS.create(units) = units);
 
