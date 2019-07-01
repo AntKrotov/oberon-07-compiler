@@ -116,7 +116,7 @@ BEGIN
     END
 
     RETURN res
-END Load;    
+END Load;
 
 
 PROCEDURE RemoveDir* (DirName: ARRAY OF CHAR): BOOLEAN;

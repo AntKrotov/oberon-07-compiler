@@ -254,9 +254,9 @@ BEGIN
     END;
     phdr[header].p_flags := PF_R + PF_W;
     phdr[header].p_align := 1000H;
-    
+
     offset := offset + phdr[header].p_filesz;
-    VA := LoadAdr + offset + 1000H;           
+    VA := LoadAdr + offset + 1000H;
 
     phdr[text].p_type := 1;
     phdr[text].p_offset := offset;
@@ -268,7 +268,7 @@ BEGIN
     phdr[text].p_align := 1000H;
 
     ehdr.e_entry := phdr[text].p_vaddr;
-    
+
     offset := offset + phdr[text].p_filesz;
     VA := LoadAdr + offset + 2000H;
     pad := (16 - VA MOD 16) MOD 16;
@@ -281,7 +281,7 @@ BEGIN
     phdr[data].p_memsz := SizeOf.data + pad;
     phdr[data].p_flags := PF_R + PF_W;
     phdr[data].p_align := 1000H;
-                    
+
     offset := offset + phdr[data].p_filesz;
     VA := LoadAdr + offset + 3000H;
 

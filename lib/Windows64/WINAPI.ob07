@@ -1,23 +1,13 @@
 ﻿(*
-    Copyright 2013, 2014, 2017, 2018, 2019 Anton Krotov
+    BSD 2-Clause License
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
 *)
 
 MODULE WINAPI;
 
-IMPORT sys := SYSTEM;
+IMPORT SYSTEM;
 
 
 CONST
@@ -164,6 +154,9 @@ PROCEDURE [windows-, "kernel32.dll", "AllocConsole"]
 
 PROCEDURE [windows-, "kernel32.dll", "FreeConsole"]
     FreeConsole* (): BOOLEAN;
+
+PROCEDURE [windows-, "kernel32.dll", "GetLocalTime"]
+    GetLocalTime* (T: TSystemTime);
 
 
 END WINAPI.

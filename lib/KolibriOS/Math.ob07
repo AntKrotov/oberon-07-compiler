@@ -167,10 +167,10 @@ END ln;
 
 
 PROCEDURE [stdcall] log* (base, x: REAL): REAL;
-BEGIN             
+BEGIN
     SYSTEM.CODE(
     0D9H, 0E8H,                    (*  fld1                       *)
-    0DDH, 045H, 010H,              (*  fld     qword [ebp + 10h]  *) 
+    0DDH, 045H, 010H,              (*  fld     qword [ebp + 10h]  *)
     0D9H, 0F1H,                    (*  fyl2x                      *)
     0D9H, 0E8H,                    (*  fld1                       *)
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -376,6 +376,6 @@ BEGIN
     END
     RETURN res
 END sgn;
-         
+
 
 END Math.

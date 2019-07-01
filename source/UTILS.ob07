@@ -17,7 +17,7 @@ CONST
     bit_depth* = HOST.bit_depth;
     maxint* = HOST.maxint;
     minint* = HOST.minint;
-    
+
     OS = HOST.OS;
 
 

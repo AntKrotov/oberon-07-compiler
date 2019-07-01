@@ -137,7 +137,7 @@ BEGIN
     |118: str := "this flag for Windows only"
     |119: str := "this flag for Linux only"
     |120: str := "too many formal parameters"
-    |121: str := "'ccall' expected"  
+    |121: str := "'ccall' expected"
     |122: str := "out of range 0H..0FFFFH"
     END;
     C.StringLn(str);

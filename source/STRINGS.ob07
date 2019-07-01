@@ -261,12 +261,12 @@ BEGIN
 
         |0E1X..0EFX:
             u := LSL(ORD(c) - 0E0H, 12);
-            IF i + 1 < srclen THEN    
+            IF i + 1 < srclen THEN
                 INC(i);
                 INC(u, ORD(BITS(ORD(src[i])) * {0..5}) * 64)
             END;
             IF i + 1 < srclen THEN
-                INC(i);   
+                INC(i);
                 INC(u, ORD(BITS(ORD(src[i])) * {0..5}))
             END
 (*

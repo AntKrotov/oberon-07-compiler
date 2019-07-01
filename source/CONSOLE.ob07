@@ -45,7 +45,7 @@ END Int2;
 PROCEDURE Ln*;
 BEGIN
     String(UTILS.eol)
-END Ln;  
+END Ln;
 
 
 PROCEDURE StringLn* (s: ARRAY OF CHAR);
@@ -56,14 +56,14 @@ END StringLn;
 
 
 PROCEDURE IntLn* (n: INTEGER);
-BEGIN          
+BEGIN
     Int(n);
     Ln
 END IntLn;
 
 
 PROCEDURE Int2Ln* (n: INTEGER);
-BEGIN       
+BEGIN
     Int2(n);
     Ln
 END Int2Ln;

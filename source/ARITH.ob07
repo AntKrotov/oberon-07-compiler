@@ -176,8 +176,8 @@ BEGIN
             INC(i)
         END
 
-    END;   
-    
+    END;
+
     value := MACHINE.long(value);
 
     IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN

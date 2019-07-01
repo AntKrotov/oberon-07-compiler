@@ -5,7 +5,7 @@
     All rights reserved.
 *)
 
-MODULE COLLECTIONS;  
+MODULE COLLECTIONS;
 
 IMPORT ERRORS;
 
@@ -51,7 +51,7 @@ VAR
     collection: COLLECTION;
 
 BEGIN
-    NEW(collection); 
+    NEW(collection);
     ERRORS.OutOfMemory(collection = NIL);
     collection.last := NIL
 

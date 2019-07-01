@@ -47,8 +47,8 @@ VAR
             cond := 6
         ELSE
             cond := C
-        END  
-        
+        END
+
         RETURN cond
     END ChangeCond;
 

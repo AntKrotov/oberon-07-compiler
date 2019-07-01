@@ -10,7 +10,7 @@ MODULE RTL;
 IMPORT SYSTEM, API;
 
 
-CONST     
+CONST
 
     bit_depth* = 64;
     maxint* = 7FFFFFFFFFFFFFFFH;

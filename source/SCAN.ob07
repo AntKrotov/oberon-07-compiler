@@ -152,7 +152,7 @@ BEGIN
     vocabulary.idents := AVL.insert(vocabulary.idents, vocabulary.ident, nodecmp, newnode, node);
 
     IF newnode THEN
-        NEW(vocabulary.ident);   
+        NEW(vocabulary.ident);
         ERRORS.OutOfMemory(vocabulary.ident = NIL);
         vocabulary.ident.offset  := -1;
         vocabulary.ident.offsetW := -1
@@ -712,7 +712,7 @@ BEGIN
     enterkw(i, "VAR");
     enterkw(i, "WHILE");
 
-    NEW(vocabulary.ident);   
+    NEW(vocabulary.ident);
     ERRORS.OutOfMemory(vocabulary.ident = NIL);
     vocabulary.ident.s       := "";
     vocabulary.ident.offset  := -1;

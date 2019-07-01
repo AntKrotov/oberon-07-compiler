@@ -20,7 +20,7 @@ BEGIN
     Console.open;
 
     main;
-    In.Ln;            
+    In.Ln;
 
     Console.exit(TRUE)
 END HelloRus.
