@@ -139,6 +139,7 @@ BEGIN
     |120: str := "too many formal parameters"
     |121: str := "'ccall' expected"
     |122: str := "out of range 0H..0FFFFH"
+    |123: str := "negative divisor"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);

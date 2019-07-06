@@ -28,8 +28,8 @@ CONST
     opNOT* = 29;
 
     opEQ*  = 30; opNE* = opEQ + 1; opLT* = opEQ + 2; opLE* = opEQ + 3; opGT* = opEQ + 4; opGE* = opEQ + 5 (* 35 *);
-    opEQL* = 36; opNEL* = 37; opLTL* = 38; opLEL* = 39; opGTL* = 40; opGEL* = 41;
-    opEQR* = 42; opNER* = 43; opLTR* = 44; opLER* = 45; opGTR* = 46; opGER* = 47;
+    opEQL* = 36; opNEL* = opEQL + 1; opLTL* = opEQL + 2; opLEL* = opEQL + 3; opGTL* = opEQL + 4; opGEL* = opEQL + 5; (* 41 *)
+    opEQR* = 42; opNER* = opEQR + 1; opLTR* = opEQR + 2; opLER* = opEQR + 3; opGTR* = opEQR + 4; opGER* = opEQR + 5; (* 47 *)
 
     opVLOAD32* = 48; opGLOAD32* = 49;
 
@@ -46,7 +46,7 @@ CONST
 
     opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
 
-    opEQF*  = 80; opNEF*  = opEQF + 1; opLTF*  = opEQF + 2; opLEF*  = opEQF + 3; opGTF*  = opEQF + 4; opGEF*  = opEQF + 5;
+    opEQF*  = 80; opNEF* = opEQF + 1; opLTF* = opEQF + 2; opLEF* = opEQF + 3; opGTF* = opEQF + 4; opGEF* = opEQF + 5;
     opEQFI* = opEQF + 6; opNEFI* = opEQF + 7; opLTFI* = opEQF + 8; opLEFI* = opEQF + 9; opGTFI* = opEQF + 10; opGEFI* = opEQF + 11; (* 91 *)
 
     opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
@@ -134,6 +134,13 @@ CONST
     _strcpy    *=  25;
     _exit      *=  26;
     _strcpy2   *=  27;
+    _mul       *=  28;
+    _shift     *=  29;
+    _shift2    *=  30;
+    _in        *=  31;
+    _in2       *=  32;
+    _incl      *=  33;
+    _excl      *=  34;
 
 
 TYPE
@@ -200,7 +207,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 28 OF INTEGER;
+        rtl*:       ARRAY 35 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;

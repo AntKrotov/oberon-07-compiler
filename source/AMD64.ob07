@@ -916,7 +916,7 @@ PROCEDURE translate (commands: LISTS.LIST; stroffs: INTEGER);
 VAR
     cmd, next: COMMAND;
 
-    param1, param2, param3, a, b, c, n, label, L, i, cc: INTEGER;
+    opcode, param1, param2, param3, a, b, c, n, label, L, i, cc: INTEGER;
 
     reg1, reg2, xmm: INTEGER;
 
@@ -932,14 +932,16 @@ BEGIN
         param1 := cmd.param1;
         param2 := cmd.param2;
 
-        CASE cmd.opcode OF
+        opcode := cmd.opcode;
+
+        CASE opcode OF
 
         |CODE.opJMP:
             jmp(param1)
 
         |CODE.opCALL, CODE.opWIN64CALL, CODE.opSYSVCALL:
             REG.Store(R);
-            CASE cmd.opcode OF
+            CASE opcode OF
             |CODE.opCALL:
             |CODE.opWIN64CALL: Win64Passing(param2)
             |CODE.opSYSVCALL:  SysVPassing(param2)
@@ -956,7 +958,7 @@ BEGIN
             END;
             drop;
             REG.Store(R);
-            CASE cmd.opcode OF
+            CASE opcode OF
             |CODE.opCALLP:
             |CODE.opWIN64CALLP: Win64Passing(param2)
             |CODE.opSYSVCALLP:  SysVPassing(param2)
@@ -967,7 +969,7 @@ BEGIN
 
         |CODE.opCALLI, CODE.opWIN64CALLI, CODE.opSYSVCALLI:
             REG.Store(R);
-            CASE cmd.opcode OF
+            CASE opcode OF
             |CODE.opCALLI:
             |CODE.opWIN64CALLI: Win64Passing(param2)
             |CODE.opSYSVCALLI:  SysVPassing(param2)
@@ -1124,7 +1126,7 @@ BEGIN
             END
 
         |CODE.opLEAVE, CODE.opLEAVER, CODE.opLEAVEF:
-            IF cmd.opcode = CODE.opLEAVER THEN
+            IF opcode = CODE.opLEAVER THEN
                 UnOp(reg1);
                 IF reg1 # rax THEN
                     GetRegA;
@@ -1136,7 +1138,7 @@ BEGIN
 
             ASSERT(R.top = -1);
 
-            IF cmd.opcode = CODE.opLEAVEF THEN
+            IF opcode = CODE.opLEAVEF THEN
                 DEC(xmm)
             END;
 
@@ -1198,7 +1200,7 @@ BEGIN
             IF reg2 # -1 THEN
                 mov(reg1, reg2)
             ELSE
-                movzx(reg1, rbp, param2 * 8, cmd.opcode = CODE.opLLOAD16)
+                movzx(reg1, rbp, param2 * 8, opcode = CODE.opLLOAD16)
             END
 
         |CODE.opLLOAD32:
@@ -1242,7 +1244,7 @@ BEGIN
          CODE.opVLOAD16:
             reg1 := REG.GetAnyReg(R);
             movrm(reg1, rbp, param2 * 8);
-            movzx(reg1, reg1, 0, cmd.opcode = CODE.opVLOAD16)
+            movzx(reg1, reg1, 0, opcode = CODE.opVLOAD16)
 
         |CODE.opVLOAD32:
             reg1 := REG.GetAnyReg(R);
@@ -1339,7 +1341,7 @@ BEGIN
             cmprc(reg1, 64);
             OutByte2(73H, 04H); // jnb L
             Rex(reg2, reg1);
-            OutByte3(0FH, 0ABH + 8 * ORD(cmd.opcode = CODE.opEXCL), 8 * (reg1 MOD 8) + reg2 MOD 8); // bts/btr qword[reg2], reg1
+            OutByte3(0FH, 0ABH + 8 * ORD(opcode = CODE.opEXCL), 8 * (reg1 MOD 8) + reg2 MOD 8); // bts/btr qword[reg2], reg1
             // L:
             drop;
             drop
@@ -1348,49 +1350,48 @@ BEGIN
             UnOp(reg1);
             Rex(reg1, 0);
             OutByte2(0FH, 0BAH);  // bts/btr qword[reg1], param2
-            OutByte2(28H + 8 * ORD(cmd.opcode = CODE.opEXCLC) + reg1 MOD 8, param2);
+            OutByte2(28H + 8 * ORD(opcode = CODE.opEXCLC) + reg1 MOD 8, param2);
             drop
 
         |CODE.opEQS .. CODE.opGES:
             PushAll(4);
-            pushc(cmd.opcode - CODE.opEQS);
+            pushc(opcode - CODE.opEQS);
             CallRTL(CODE._strcmp);
             GetRegA
 
         |CODE.opEQS2 .. CODE.opGES2:
             PushAll(4);
-            pushc(cmd.opcode - CODE.opEQS2);
+            pushc(opcode - CODE.opEQS2);
             CallRTL(CODE._strcmp2);
             GetRegA
 
         |CODE.opEQSW .. CODE.opGESW:
             PushAll(4);
-            pushc(cmd.opcode - CODE.opEQSW);
+            pushc(opcode - CODE.opEQSW);
             CallRTL(CODE._strcmpw);
             GetRegA
 
         |CODE.opEQSW2 .. CODE.opGESW2:
             PushAll(4);
-            pushc(cmd.opcode - CODE.opEQSW2);
+            pushc(opcode - CODE.opEQSW2);
             CallRTL(CODE._strcmpw2);
             GetRegA
 
         |CODE.opINC1, CODE.opDEC1:
             UnOp(reg1);
             Rex(reg1, 0);
-            OutByte2(0FFH, reg1 MOD 8 + 8 * ORD(cmd.opcode = CODE.opDEC1));
+            OutByte2(0FFH, reg1 MOD 8 + 8 * ORD(opcode = CODE.opDEC1));
             drop
 
         |CODE.opCONST:
             reg1 := REG.GetAnyReg(R);
             movrc(reg1, param2)
 
-        |CODE.opGTR, CODE.opLTL, CODE.opGER, CODE.opLEL,
-         CODE.opLER, CODE.opGEL, CODE.opLTR, CODE.opGTL,
-         CODE.opEQR, CODE.opEQL, CODE.opNER, CODE.opNEL,
+        |CODE.opEQL..CODE.opGEL,
+         CODE.opEQR..CODE.opGER,
          CODE.opEQ..CODE.opGE:
 
-            IF (CODE.opEQ <= cmd.opcode) & (cmd.opcode <= CODE.opGE) THEN
+            IF (CODE.opEQ <= opcode) & (opcode <= CODE.opGE) THEN
                 BinOp(reg1, reg2);
                 cmprr(reg1, reg2);
                 drop
@@ -1404,7 +1405,7 @@ BEGIN
             END;
 
             drop;
-            cc := X86.cond(cmd.opcode);
+            cc := X86.cond(opcode);
 
             IF cmd.next(COMMAND).opcode = CODE.opJE THEN
                 label := cmd.next(COMMAND).param1;
@@ -1547,7 +1548,7 @@ BEGIN
             // L2:
             cmprr(reg1, reg2);
             reg1 := REG.GetAnyReg(R);
-            IF cmd.opcode = CODE.opEQB THEN
+            IF opcode = CODE.opEQB THEN
                 setcc(sete, reg1)
             ELSE
                 setcc(setne, reg1)
@@ -1561,7 +1562,7 @@ BEGIN
         |CODE.opDIVSC, CODE.opADDSL, CODE.opADDSR:
             UnOp(reg1);
             Rex(reg1, 0);
-            OutByte2(81H + short(param2), 0C8H + 28H * ORD(cmd.opcode = CODE.opDIVSC) + reg1 MOD 8); // or/xor reg1, param2
+            OutByte2(81H + short(param2), 0C8H + 28H * ORD(opcode = CODE.opDIVSC) + reg1 MOD 8); // or/xor reg1, param2
             OutIntByte(param2)
 
         |CODE.opSUBSL:
@@ -1694,7 +1695,7 @@ BEGIN
             BinOp(reg1, reg2);
             // add/sub qword[reg2], reg1
             Rex(reg2, reg1);
-            OutByte2(01H + 28H * ORD(cmd.opcode = CODE.opDEC), reg2 MOD 8 + (reg1 MOD 8) * 8);
+            OutByte2(01H + 28H * ORD(opcode = CODE.opDEC), reg2 MOD 8 + (reg1 MOD 8) * 8);
             drop;
             drop
 
@@ -1705,12 +1706,12 @@ BEGIN
                 movrc(reg2, param2);
                 // add/sub qword[reg1], reg2
                 Rex(reg1, reg2);
-                OutByte2(01H + 28H * ORD(cmd.opcode = CODE.opDECC), reg1 MOD 8 + (reg2 MOD 8) * 8);
+                OutByte2(01H + 28H * ORD(opcode = CODE.opDECC), reg1 MOD 8 + (reg2 MOD 8) * 8);
                 drop
             ELSE
                 // add/sub qword[reg1], param2
                 Rex(reg1, 0);
-                OutByte2(81H + short(param2), 28H * ORD(cmd.opcode = CODE.opDECC) + reg1 MOD 8);
+                OutByte2(81H + short(param2), 28H * ORD(opcode = CODE.opDECC) + reg1 MOD 8);
                 OutIntByte(param2)
             END;
             drop
@@ -1819,7 +1820,7 @@ BEGIN
             ELSIF n # 0 THEN
                 subrc(reg1, n)
             END;
-            IF cmd.opcode = CODE.opSUBL THEN
+            IF opcode = CODE.opSUBL THEN
                 neg(reg1)
             END
 
@@ -2012,7 +2013,7 @@ BEGIN
             xchg(reg2, rcx);
             Rex(reg1, 0);
             OutByte(0D3H);
-            X86.shift(cmd.opcode, reg1 MOD 8); // shift reg1, cl
+            X86.shift(opcode, reg1 MOD 8); // shift reg1, cl
             xchg(reg2, rcx);
             drop
 
@@ -2023,7 +2024,7 @@ BEGIN
             xchg(reg1, rcx);
             Rex(reg2, 0);
             OutByte(0D3H);
-            X86.shift(cmd.opcode, reg2 MOD 8); // shift reg2, cl
+            X86.shift(opcode, reg2 MOD 8); // shift reg2, cl
             xchg(reg1, rcx);
             drop;
             drop;
@@ -2031,7 +2032,7 @@ BEGIN
 
         |CODE.opASR2, CODE.opROR2, CODE.opLSL2, CODE.opLSR2:
             UnOp(reg1);
-            shiftrc(cmd.opcode, reg1, ORD(BITS(param2) * {0..5}))
+            shiftrc(opcode, reg1, ORD(BITS(param2) * {0..5}))
 
         |CODE.opGET:
             BinOp(reg1, reg2);
@@ -2100,7 +2101,7 @@ BEGIN
             UnOp(reg1);
             reg2 := REG.GetAnyReg(R);
 
-            CASE cmd.opcode OF
+            CASE opcode OF
             |CODE.opEQP, CODE.opNEP:
                 lea(reg2, param1, sCODE)
 
@@ -2114,7 +2115,7 @@ BEGIN
             drop;
             reg1 := REG.GetAnyReg(R);
 
-            CASE cmd.opcode OF
+            CASE opcode OF
             |CODE.opEQP, CODE.opEQIP: setcc(sete,  reg1)
             |CODE.opNEP, CODE.opNEIP: setcc(setne, reg1)
             END;
@@ -2126,7 +2127,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte2(0FEH, 8 * ORD(cmd.opcode = CODE.opDEC1B) + reg1 MOD 8); // inc/dec byte[reg1]
+            OutByte2(0FEH, 8 * ORD(opcode = CODE.opDEC1B) + reg1 MOD 8); // inc/dec byte[reg1]
             drop
 
         |CODE.opINCCB, CODE.opDECCB:
@@ -2134,7 +2135,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(80H, 28H * ORD(cmd.opcode = CODE.opDECCB) + reg1 MOD 8, param2 MOD 256); // add/sub byte[reg1], param2 MOD 256
+            OutByte3(80H, 28H * ORD(opcode = CODE.opDECCB) + reg1 MOD 8, param2 MOD 256); // add/sub byte[reg1], param2 MOD 256
             drop
 
         |CODE.opINCB, CODE.opDECB:
@@ -2142,7 +2143,7 @@ BEGIN
             IF (reg1 >= 8) OR (reg2 >= 8) THEN
                 OutByte(40H + reg2 DIV 8 + 4 * (reg1 DIV 8))
             END;
-            OutByte2(28H * ORD(cmd.opcode = CODE.opDECB), reg2 MOD 8 + 8 * (reg1 MOD 8)); // add/sub byte[reg2], reg1_8
+            OutByte2(28H * ORD(opcode = CODE.opDECB), reg2 MOD 8 + 8 * (reg1 MOD 8)); // add/sub byte[reg2], reg1_8
             drop;
             drop
 
@@ -2256,7 +2257,7 @@ BEGIN
             DEC(xmm)
 
         |CODE.opEQF .. CODE.opGEFI:
-            fcmp(cmd.opcode, xmm);
+            fcmp(opcode, xmm);
             DEC(xmm, 2)
 
         |CODE.opINF:
@@ -2267,7 +2268,7 @@ BEGIN
             drop
 
         |CODE.opPACK, CODE.opPACKC:
-            IF cmd.opcode = CODE.opPACK THEN
+            IF opcode = CODE.opPACK THEN
                 BinOp(reg1, reg2)
             ELSE
                 UnOp(reg1);
@@ -2298,7 +2299,7 @@ BEGIN
 
         |CODE.opUNPK, CODE.opLADR_UNPK:
 
-            IF cmd.opcode = CODE.opLADR_UNPK THEN
+            IF opcode = CODE.opLADR_UNPK THEN
                 n := param2 * 8;
                 UnOp(reg1);
                 reg2 := REG.GetVarReg(R, param2);
@@ -2472,7 +2473,7 @@ BEGIN
                 reg2 := REG.GetAnyReg(R);
                 movrc(reg2, param2);
                 IF reg1 # -1 THEN
-                    IF cmd.opcode = CODE.opLADR_DECC THEN
+                    IF opcode = CODE.opLADR_DECC THEN
                         sub(reg1, reg2)
                     ELSE
                         add(reg1, reg2)
@@ -2480,20 +2481,20 @@ BEGIN
                 ELSE
                     n := param1 * 8;
                     Rex(0, reg2);
-                    OutByte2(01H + 28H * ORD(cmd.opcode = CODE.opLADR_DECC), 45H + long(n) + (reg2 MOD 8) * 8);
+                    OutByte2(01H + 28H * ORD(opcode = CODE.opLADR_DECC), 45H + long(n) + (reg2 MOD 8) * 8);
                     OutIntByte(n) // add/sub qword[rbp+n],reg2
                 END;
                 drop
             ELSE
                 IF reg1 # -1 THEN
-                    IF cmd.opcode = CODE.opLADR_DECC THEN
+                    IF opcode = CODE.opLADR_DECC THEN
                         subrc(reg1, param2)
                     ELSE
                         addrc(reg1, param2)
                     END
                 ELSE
                     n := param1 * 8;
-                    OutByte3(48H, 81H + short(param2), 45H + long(n) + 28H * ORD(cmd.opcode = CODE.opLADR_DECC));
+                    OutByte3(48H, 81H + short(param2), 45H + long(n) + 28H * ORD(opcode = CODE.opLADR_DECC));
                     OutIntByte(n);
                     OutIntByte(param2) // add/sub qword[rbp+n],param2
                 END
@@ -2502,7 +2503,7 @@ BEGIN
         |CODE.opLADR_INC1B, CODE.opLADR_DEC1B:
             reg1 := REG.GetVarReg(R, param2);
             IF reg1 # -1 THEN
-                IF cmd.opcode = CODE.opLADR_DEC1B THEN
+                IF opcode = CODE.opLADR_DEC1B THEN
                     decr(reg1)
                 ELSE
                     incr(reg1)
@@ -2510,7 +2511,7 @@ BEGIN
                 andrc(reg1, 255)
             ELSE
                 n := param2 * 8;
-                OutByte2(0FEH, 45H + long(n) + 8 * ORD(cmd.opcode = CODE.opLADR_DEC1B));
+                OutByte2(0FEH, 45H + long(n) + 8 * ORD(opcode = CODE.opLADR_DEC1B));
                 OutIntByte(n)  // inc/dec byte[rbp+n]
             END
 
@@ -2518,7 +2519,7 @@ BEGIN
             reg1 := REG.GetVarReg(R, param1);
             param2 := param2 MOD 256;
             IF reg1 # -1 THEN
-                IF cmd.opcode = CODE.opLADR_DECCB THEN
+                IF opcode = CODE.opLADR_DECCB THEN
                     subrc(reg1, param2)
                 ELSE
                     addrc(reg1, param2)
@@ -2526,7 +2527,7 @@ BEGIN
                 andrc(reg1, 255)
             ELSE
                 n := param1 * 8;
-                OutByte2(80H, 45H + long(n) + 28H * ORD(cmd.opcode = CODE.opLADR_DECCB));
+                OutByte2(80H, 45H + long(n) + 28H * ORD(opcode = CODE.opLADR_DECCB));
                 OutIntByte(n);
                 OutByte(param2) // add/sub byte[rbp+n],param2
             END
@@ -2535,7 +2536,7 @@ BEGIN
             UnOp(reg1);
             reg2 := REG.GetVarReg(R, param2);
             IF reg2 # -1 THEN
-                IF cmd.opcode = CODE.opLADR_DEC THEN
+                IF opcode = CODE.opLADR_DEC THEN
                     sub(reg2, reg1)
                 ELSE
                     add(reg2, reg1)
@@ -2543,7 +2544,7 @@ BEGIN
             ELSE
                 n := param2 * 8;
                 Rex(0, reg1);
-                OutByte2(01H + 28H * ORD(cmd.opcode = CODE.opLADR_DEC), 45H + long(n) + (reg1 MOD 8) * 8);
+                OutByte2(01H + 28H * ORD(opcode = CODE.opLADR_DEC), 45H + long(n) + (reg1 MOD 8) * 8);
                 OutIntByte(n) // add/sub qword[rbp+n],reg1
             END;
             drop
@@ -2552,7 +2553,7 @@ BEGIN
             UnOp(reg1);
             reg2 := REG.GetVarReg(R, param2);
             IF reg2 # -1 THEN
-                IF cmd.opcode = CODE.opLADR_DECB THEN
+                IF opcode = CODE.opLADR_DECB THEN
                     sub(reg2, reg1)
                 ELSE
                     add(reg2, reg1)
@@ -2563,7 +2564,7 @@ BEGIN
                 IF reg1 >= 8 THEN
                     OutByte(44H)
                 END;
-                OutByte2(28H * ORD(cmd.opcode = CODE.opLADR_DECB), 45H + long(n) + 8 * (reg1 MOD 8));
+                OutByte2(28H * ORD(opcode = CODE.opLADR_DECB), 45H + long(n) + 8 * (reg1 MOD 8));
                 OutIntByte(n) // add/sub byte[rbp+n], reg1_8
             END;
             drop
@@ -2574,12 +2575,12 @@ BEGIN
             reg2 := REG.GetVarReg(R, param2);
             IF reg2 # -1 THEN
                 OutByte2(73H, 4); // jnb L
-                oprr2(0FH, 0ABH + 8 * ORD(cmd.opcode = CODE.opLADR_EXCL), reg2, reg1) // bts/btr reg2, reg1
+                oprr2(0FH, 0ABH + 8 * ORD(opcode = CODE.opLADR_EXCL), reg2, reg1) // bts/btr reg2, reg1
             ELSE
                 n := param2 * 8;
                 OutByte2(73H, 5 + 3 * ORD(~isByte(n))); // jnb L
                 Rex(0, reg1);
-                OutByte3(0FH, 0ABH + 8 * ORD(cmd.opcode = CODE.opLADR_EXCL), 45H + long(n) + 8 * (reg1 MOD 8));
+                OutByte3(0FH, 0ABH + 8 * ORD(opcode = CODE.opLADR_EXCL), 45H + long(n) + 8 * (reg1 MOD 8));
                 OutIntByte(n) // bts/btr qword[rbp+n], reg1
             END;
             // L:
@@ -2590,11 +2591,11 @@ BEGIN
             IF reg1 # -1 THEN
                 Rex(reg1, 0);
                 OutByte3(0FH, 0BAH, 0E8H);  // bts/btr reg1, param2
-                OutByte2(reg1 MOD 8 + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC), param2)
+                OutByte2(reg1 MOD 8 + 8 * ORD(opcode = CODE.opLADR_EXCLC), param2)
             ELSE
                 n := param1 * 8;
                 OutByte3(48H, 0FH, 0BAH);  // bts/btr qword[rbp+n], param2
-                OutByte(6DH + long(n) + 8 * ORD(cmd.opcode = CODE.opLADR_EXCLC));
+                OutByte(6DH + long(n) + 8 * ORD(opcode = CODE.opLADR_EXCLC));
                 OutIntByte(n);
                 OutByte(param2)
             END

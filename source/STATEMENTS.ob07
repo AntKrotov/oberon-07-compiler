@@ -29,6 +29,8 @@ CONST
 
     chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
 
+    cpuX86 = 1; cpuAMD64 = 2; cpuMSP430 = 3;
+
 
 TYPE
 
@@ -73,7 +75,7 @@ VAR
 
     CaseVariants: LISTS.LIST;
 
-    Target: INTEGER;
+    Target, CPU: INTEGER;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -1957,7 +1959,10 @@ VAR
             |SCAN.lxDIV, SCAN.lxMOD:
                 PARS.check(isInt(e) & isInt(e1), parser, pos, 37);
                 IF e1.obj = eCONST THEN
-                    PARS.check(~ARITH.isZero(e1.value), parser, pos, 46)
+                    PARS.check(~ARITH.isZero(e1.value), parser, pos, 46);
+                    IF CPU = cpuMSP430 THEN
+                        PARS.check(ARITH.Int(e1.value) > 0, parser, pos, 123)
+                    END
                 END;
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
@@ -3217,7 +3222,6 @@ BEGIN
     getproc(rtl,  "_arrcpy",    CODE._arrcpy);
     getproc(rtl,  "_rot",       CODE._rot);
     getproc(rtl,  "_new",       CODE._new);
-    getproc(rtl,  "_dispose",   CODE._dispose);
     getproc(rtl,  "_strcmp",    CODE._strcmp);
     getproc(rtl,  "_error",     CODE._error);
     getproc(rtl,  "_is",        CODE._is);
@@ -3226,14 +3230,28 @@ BEGIN
     getproc(rtl,  "_guardrec",  CODE._guardrec);
     getproc(rtl,  "_length",    CODE._length);
     getproc(rtl,  "_init",      CODE._init);
-    getproc(rtl,  "_dllentry",  CODE._dllentry);
     getproc(rtl,  "_strcpy",    CODE._strcpy);
-    getproc(rtl,  "_exit",      CODE._exit);
     getproc(rtl,  "_strcpy2",   CODE._strcpy2);
-    getproc(rtl,  "_lengthw",   CODE._lengthw);
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
-    getproc(rtl,  "_strcmpw",   CODE._strcmpw);
-    getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
+
+    IF CPU IN {cpuX86, cpuAMD64} THEN
+        getproc(rtl,  "_lengthw",   CODE._lengthw);
+        getproc(rtl,  "_strcmpw",   CODE._strcmpw);
+        getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
+        getproc(rtl,  "_dllentry",  CODE._dllentry);
+        getproc(rtl,  "_dispose",   CODE._dispose);
+        getproc(rtl,  "_exit",      CODE._exit)
+    END;
+
+    IF CPU = cpuMSP430 THEN
+        getproc(rtl,  "_mul",       CODE._mul);
+        getproc(rtl,  "_shift",     CODE._shift);
+        getproc(rtl,  "_shift2",    CODE._shift2);
+        getproc(rtl,  "_in",        CODE._in);
+        getproc(rtl,  "_in2",       CODE._in2);
+        getproc(rtl,  "_incl",      CODE._incl);
+        getproc(rtl,  "_excl",      CODE._excl)
+    END
 
 END setrtl;
 
@@ -3242,14 +3260,14 @@ PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version
 VAR
     parser:  PARS.PARSER;
     ext: PARS.PATH;
-    amd64, x86, smp430: BOOLEAN;
+    amd64, x86, msp430: BOOLEAN;
 
 BEGIN
     Target := target;
     amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
     x86 := target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
                       mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32};
-    smp430 := target = mConst.Target_iMSP430;
+    msp430 := target = mConst.Target_iMSP430;
 
     ext := mConst.FILE_EXT;
     CaseLabels := C.create();
@@ -3261,10 +3279,13 @@ BEGIN
     checking := chk;
 
     IF amd64 THEN
+        CPU := cpuAMD64;
         CODE.init(6, CODE.little_endian)
     ELSIF x86 THEN
+        CPU := cpuX86;
         CODE.init(8, CODE.little_endian)
-    ELSIF smp430 THEN
+    ELSIF msp430 THEN
+        CPU := cpuMSP430;
         CODE.init(8, CODE.little_endian)
     ELSE
         ASSERT(FALSE)
@@ -3309,7 +3330,7 @@ BEGIN
         AMD64.CodeGen(CODE.codes, outname, target, stack, base)
     ELSIF x86 THEN
         X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic)
-    ELSIF smp430 THEN
+    ELSIF msp430 THEN
         MSP430.CodeGen(CODE.codes, outname)
     ELSE
         ASSERT(FALSE)
