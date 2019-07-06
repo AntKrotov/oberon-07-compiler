@@ -1975,7 +1975,11 @@ VAR
                 ELSE
                     IF e1.obj # eCONST THEN
                         label1 := CODE.NewLabel();
-                        CODE.AddJmpCmd(CODE.opJNZ, label1)
+                        IF CPU = cpuMSP430 THEN
+                            CODE.AddJmpCmd(CODE.opJG, label1)
+                        ELSE
+                            CODE.AddJmpCmd(CODE.opJNZ, label1)
+                        END
                     END;
                     IF e.obj = eCONST THEN
                         CODE.OnError(pos.line, errDIV);

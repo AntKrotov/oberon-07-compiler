@@ -861,6 +861,11 @@ BEGIN
             Test(reg1);
             jcc(je, param1)
 
+        |CODE.opJG:
+            UnOp(reg1);
+            Test(reg1);
+            jcc(jg, param1)
+
         |CODE.opJE:
             UnOp(reg1);
             Test(reg1);
