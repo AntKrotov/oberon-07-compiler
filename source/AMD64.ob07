@@ -1154,10 +1154,7 @@ BEGIN
             REG.Reset(R)
 
         |CODE.opSAVES:
-            UnOp(reg1);
-            drop;
-            PushAll(0);
-            push(reg1);
+            PushAll(1);
             pushDA(stroffs + param2);
             pushc(param1);
             CallRTL(CODE._move)
@@ -1536,7 +1533,6 @@ BEGIN
         |CODE.opEQB, CODE.opNEB:
             BinOp(reg1, reg2);
             drop;
-            drop;
 
             test(reg1);
             OutByte2(74H, 07H); // je L1
@@ -1547,7 +1543,6 @@ BEGIN
             movrc(reg2, 1);
             // L2:
             cmprr(reg1, reg2);
-            reg1 := REG.GetAnyReg(R);
             IF opcode = CODE.opEQB THEN
                 setcc(sete, reg1)
             ELSE
@@ -1779,8 +1774,10 @@ BEGIN
         |CODE.opSBOOL:
             BinOp(reg2, reg1);
             test(reg2);
-            setcc(setne, reg2);
-            movmr8(reg1, 0, reg2);
+            IF reg1 >= 8 THEN
+                OutByte(41H)
+            END;
+            OutByte3(0FH, 95H, reg1 MOD 8); // setne byte[reg1]
             drop;
             drop
 
@@ -1789,7 +1786,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(0C6H, reg1 MOD 8, ORD(param2 # 0));
+            OutByte3(0C6H, reg1 MOD 8, ORD(param2 # 0)); // mov byte[reg1], 0/1
             drop
 
         |CODE.opODD:

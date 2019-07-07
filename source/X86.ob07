@@ -1048,8 +1048,7 @@ BEGIN
         |CODE.opSBOOL:
             BinOp(reg2, reg1);
             test(reg2);
-            setcc(setne, reg2);
-            OutByte2(88H, reg2 * 8 + reg1); // mov byte[reg1], reg2
+            OutByte3(0FH, 95H, reg1); // setne byte[reg1]
             drop;
             drop
 
@@ -1101,7 +1100,6 @@ BEGIN
         |CODE.opEQB, CODE.opNEB:
             BinOp(reg1, reg2);
             drop;
-            drop;
 
             test(reg1);
             OutByte2(74H, 5);  // je @f
@@ -1113,7 +1111,6 @@ BEGIN
                                // @@:
 
             cmprr(reg1, reg2);
-            reg1 := REG.GetAnyReg(R);
             IF opcode = CODE.opEQB THEN
                 setcc(sete, reg1)
             ELSE

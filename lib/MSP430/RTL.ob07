@@ -186,7 +186,9 @@ BEGIN
     WHILE a >= b DO
         DEC(a, b);
         INC(res)
-    ELSIF a < 0 DO
+    END;
+
+    WHILE a < 0 DO
         INC(a, b);
         DEC(res)
     END;

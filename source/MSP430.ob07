@@ -30,9 +30,6 @@ CONST
     opJNE = 0;  opJEQ = 1;  opJNC = 2;  opJC  = 3;
     opJN  = 4;  opJGE = 5;  opJL  = 6;  opJMP = 7;
 
-    opJNZ = opJNE; opJZ = opJEQ;
-    opJLO = opJNC; opJHS = opJC;
-
     mREG = 0; mIDX = 1; mINDIR = 2; mINCR = 3;
 
     MAXLABEL = 40000;
@@ -186,15 +183,27 @@ BEGIN
 END GenUnOp;
 
 
+PROCEDURE GenBinOpW (opcode, src, As, dst, Ad: INTEGER);
+BEGIN
+    GenBinOp(opcode, src, As, dst, Ad, FALSE)
+END GenBinOpW;
+
+
+PROCEDURE GenUnOpW (opcode, reg, As: INTEGER);
+BEGIN
+    GenUnOp(opcode, reg, As, FALSE)
+END GenUnOpW;
+
+
 PROCEDURE OpRegReg (op, src, dst: INTEGER);
 BEGIN
-    GenBinOp(op, src, mREG, dst, mREG, FALSE)
+    GenBinOpW(op, src, mREG, dst, mREG)
 END OpRegReg;
 
 
 PROCEDURE OpImmReg (op, imm, reg: INTEGER);
 BEGIN
-    GenBinOp(op, PC, mINCR, reg, mREG, FALSE);
+    GenBinOpW(op, PC, mINCR, reg, mREG);
     EmitWord(imm)
 END OpImmReg;
 
@@ -243,7 +252,7 @@ END IncReg;
 
 PROCEDURE PushImm (imm: INTEGER);
 BEGIN
-    GenUnOp(opPUSH, PC, mINCR, FALSE);
+    GenUnOpW(opPUSH, PC, mINCR);
     EmitWord(imm)
 END PushImm;
 
@@ -351,13 +360,13 @@ END Fixup;
 
 PROCEDURE PushReg (reg: INTEGER);
 BEGIN
-    GenUnOp(opPUSH, reg, mREG, FALSE)
+    GenUnOpW(opPUSH, reg, mREG)
 END PushReg;
 
 
 PROCEDURE Pop (reg: INTEGER);
 BEGIN
-    GenBinOp(opMOV, SP, mINCR, reg, mREG, FALSE)
+    GenBinOpW(opMOV, SP, mINCR, reg, mREG)
 END Pop;
 
 
@@ -365,6 +374,12 @@ PROCEDURE Test (reg: INTEGER);
 BEGIN
     CmpImmReg(0, reg)
 END Test;
+
+
+PROCEDURE Clear (reg: INTEGER);
+BEGIN
+    OpRegReg(opSUB, reg, reg)
+END Clear;
 
 
 PROCEDURE mov (dst, src: INTEGER);
@@ -495,7 +510,7 @@ BEGIN
     L := CODE.NewLabel();
     MovImmReg(1, reg);
     jcc(cc, L);
-    OpRegReg(opSUB, reg, reg);
+    Clear(reg);
     EmitLabel(L)
 END setcc;
 
@@ -507,10 +522,10 @@ VAR
 BEGIN
     IF n >= 8 THEN
         CASE op OF
-        |CODE.opASR2: GenUnOp(opSWPB, reg, mREG, FALSE); GenUnOp(opSXT, reg, mREG, FALSE)
-        |CODE.opROR2: GenUnOp(opSWPB, reg, mREG, FALSE)
-        |CODE.opLSL2: GenUnOp(opSWPB, reg, mREG, FALSE); OpImmReg(opBIC, 255, reg)
-        |CODE.opLSR2: OpImmReg(opBIC, 255, reg); GenUnOp(opSWPB, reg, mREG, FALSE)
+        |CODE.opASR2: GenUnOpW(opSWPB, reg, mREG); GenUnOpW(opSXT, reg, mREG)
+        |CODE.opROR2: GenUnOpW(opSWPB, reg, mREG)
+        |CODE.opLSL2: GenUnOpW(opSWPB, reg, mREG); OpImmReg(opBIC, 255, reg)
+        |CODE.opLSR2: OpImmReg(opBIC, 255, reg); GenUnOpW(opSWPB, reg, mREG)
         END;
         DEC(n, 8)
     END;
@@ -524,10 +539,10 @@ BEGIN
 
     WHILE n > 0 DO
         CASE op OF
-        |CODE.opASR2: GenUnOp(opRRA, reg, mREG, FALSE)
-        |CODE.opROR2: GenUnOp(opRRC, reg2, mREG, FALSE); GenUnOp(opRRC, reg, mREG, FALSE)
+        |CODE.opASR2: GenUnOpW(opRRA, reg, mREG)
+        |CODE.opROR2: GenUnOpW(opRRC, reg2, mREG); GenUnOpW(opRRC, reg, mREG)
         |CODE.opLSL2: OpRegReg(opADD, reg, reg)
-        |CODE.opLSR2: OpImmReg(opBIC, 1, SR); GenUnOp(opRRC, reg, mREG, FALSE)
+        |CODE.opLSR2: OpImmReg(opBIC, 1, SR); GenUnOpW(opRRC, reg, mREG)
         END;
         DEC(n)
     END;
@@ -539,17 +554,17 @@ BEGIN
 END Shift2;
 
 
-PROCEDURE neg (reg: INTEGER);
+PROCEDURE Neg (reg: INTEGER);
 VAR
     reg2: INTEGER;
 
 BEGIN
     reg2 := REG.GetAnyReg(R);
-    OpRegReg(opSUB, reg2, reg2);
+    Clear(reg2);
     OpRegReg(opSUB, reg, reg2);
     MovRegReg(reg2, reg);
     drop
-END neg;
+END Neg;
 
 
 PROCEDURE translate (code: CODE.CODES; stroffs: INTEGER);
@@ -581,7 +596,7 @@ BEGIN
 
         |CODE.opCALLP:
             UnOp(reg1);
-            GenUnOp(opCALL, reg1, mREG, FALSE);
+            GenUnOpW(opCALL, reg1, mREG);
             drop;
             ASSERT(R.top = -1)
 
@@ -592,7 +607,7 @@ BEGIN
             EmitLabel(param2)
 
         |CODE.opSADR_PARAM:
-            GenUnOp(opPUSH, PC, mINCR, FALSE);
+            GenUnOpW(opPUSH, PC, mINCR);
             Reloc(RDATA, stroffs + param2)
 
         |CODE.opERR:
@@ -610,16 +625,15 @@ BEGIN
             MovRegReg(SP, BP);
 
             IF param2 > 8 THEN
-                OpRegReg(opSUB, R4, R4);
+                Clear(R4);
                 MovImmReg(param2, R5);
                 L := CODE.NewLabel();
                 EmitLabel(L);
                 PushReg(R4);
                 DecReg(R5);
-                Test(R5);
-                EmitJmp(opJNE, L)
-            ELSE
-                OpRegReg(opSUB, R4, R4);
+                jcc(jne, L)
+            ELSIF param2 > 0 THEN
+                Clear(R4);
                 WHILE param2 > 0 DO
                     PushReg(R4);
                     DEC(param2)
@@ -659,12 +673,12 @@ BEGIN
 
         |CODE.opSADR:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, PC, mINCR, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, reg1, mREG);
             Reloc(RDATA, stroffs + param2)
 
         |CODE.opGADR:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, PC, mINCR, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, reg1, mREG);
             Reloc(RBSS, param2)
 
         |CODE.opLADR:
@@ -679,7 +693,7 @@ BEGIN
 
         |CODE.opLLOAD16, CODE.opVADR:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, BP, mIDX, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, BP, mIDX, reg1, mREG);
             EmitWord(param2 * 2)
 
         |CODE.opGLOAD8:
@@ -689,7 +703,7 @@ BEGIN
 
         |CODE.opGLOAD16:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, SR, mIDX, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, SR, mIDX, reg1, mREG);
             Reloc(RBSS, param2)
 
         |CODE.opLOAD8:
@@ -698,23 +712,23 @@ BEGIN
 
         |CODE.opLOAD16:
             UnOp(reg1);
-            GenBinOp(opMOV, reg1, mINDIR, reg1, mREG, FALSE)
+            GenBinOpW(opMOV, reg1, mINDIR, reg1, mREG)
 
         |CODE.opVLOAD8:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, BP, mIDX, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, BP, mIDX, reg1, mREG);
             EmitWord(param2 * 2);
             GenBinOp(opMOV, reg1, mINDIR, reg1, mREG, TRUE)
 
         |CODE.opVLOAD16:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, BP, mIDX, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, BP, mIDX, reg1, mREG);
             EmitWord(param2 * 2);
-            GenBinOp(opMOV, reg1, mINDIR, reg1, mREG, FALSE)
+            GenBinOpW(opMOV, reg1, mINDIR, reg1, mREG)
 
         |CODE.opSAVE, CODE.opSAVE16:
             BinOp(reg2, reg1);
-            GenBinOp(opMOV, reg2, mREG, reg1, mIDX, FALSE);
+            GenBinOpW(opMOV, reg2, mREG, reg1, mIDX);
             EmitWord(0);
             drop;
             drop
@@ -735,14 +749,14 @@ BEGIN
 
         |CODE.opSAVE16C, CODE.opSAVEC:
             UnOp(reg1);
-            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, reg1, mIDX);
             EmitWord(param2);
             EmitWord(0);
             drop
 
         |CODE.opUMINUS:
             UnOp(reg1);
-            neg(reg1)
+            Neg(reg1)
 
         |CODE.opADD:
             BinOp(reg1, reg2);
@@ -767,7 +781,7 @@ BEGIN
             END;
             IF opcode = CODE.opSUBL THEN
                 reg2 := REG.GetAnyReg(R);
-                OpRegReg(opSUB, reg2, reg2);
+                Clear(reg2);
                 OpRegReg(opSUB, reg1, reg2);
                 drop;
                 drop;
@@ -775,18 +789,18 @@ BEGIN
             END
 
         |CODE.opLADR_SAVEC:
-            GenBinOp(opMOV, PC, mINCR, BP, mIDX, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, BP, mIDX);
             EmitWord(param2);
             EmitWord(param1 * 2)
 
         |CODE.opLADR_SAVE:
             UnOp(reg1);
-            GenBinOp(opMOV, reg1, mREG, BP, mIDX, FALSE);
+            GenBinOpW(opMOV, reg1, mREG, BP, mIDX);
             EmitWord(param2 * 2);
             drop
 
         |CODE.opGADR_SAVEC:
-            GenBinOp(opMOV, PC, mINCR, SR, mIDX, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, SR, mIDX);
             EmitWord(param2);
             Reloc(RBSS, param1)
 
@@ -897,7 +911,7 @@ BEGIN
             drop;
             CASE param2 OF
             |1: GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, TRUE)
-            |2: GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, FALSE)
+            |2: GenBinOpW(opMOV, reg1, mINDIR, reg2, mIDX)
             END;
             EmitWord(0)
 
@@ -996,7 +1010,7 @@ BEGIN
         |CODE.opPUSHT:
             UnOp(reg1);
             reg2 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, reg1, mIDX, reg2, mREG, FALSE);
+            GenBinOpW(opMOV, reg1, mIDX, reg2, mREG);
             EmitWord(-2)
 
         |CODE.opISREC:
@@ -1028,7 +1042,7 @@ BEGIN
         |CODE.opTYPEGD:
             UnOp(reg1);
             PushAll(0);
-            GenUnOp(opPUSH, reg1, mIDX, FALSE);
+            GenUnOpW(opPUSH, reg1, mIDX);
             EmitWord(-2);
             PushImm(param2);
             CallRTL(CODE._guardrec, 2);
@@ -1157,8 +1171,9 @@ BEGIN
 
         |CODE.opSBOOLC:
             UnOp(reg1);
-            GenBinOp(opMOV, PC, mINCR, reg1, mREG, TRUE);
+            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, TRUE);
             EmitWord(ORD(param2 # 0));
+            EmitWord(0);
             drop
 
         |CODE.opODD:
@@ -1246,13 +1261,13 @@ BEGIN
             IF a = 1 THEN
 
             ELSIF a = -1 THEN
-                neg(reg1)
+                Neg(reg1)
             ELSIF a = 0 THEN
-                OpRegReg(opSUB, reg1, reg1)
+                Clear(reg1)
             ELSE
                 IF n > 0 THEN
                     IF a < 0 THEN
-                        neg(reg1)
+                        Neg(reg1)
                     END;
                     Shift2(CODE.opLSL2, reg1, n)
                 ELSE
@@ -1269,34 +1284,13 @@ BEGIN
             GetRegA
 
         |CODE.opDIVR:
-            a := param2;
-            IF a > 1 THEN
-                n := X86.log2(a)
-            ELSIF a < -1 THEN
-                n := X86.log2(-a)
-            ELSE
-                n := -1
-            END;
+            ASSERT(param2 > 0);
 
-            IF a = 1 THEN
-
-            ELSIF a = -1 THEN
-                UnOp(reg1);
-                neg(reg1)
-            ELSE
+            IF param2 > 1 THEN
+                n := X86.log2(param2);
                 IF n > 0 THEN
                     UnOp(reg1);
-
-                    IF a < 0 THEN
-                        reg2 := REG.GetAnyReg(R);
-                        MovRegReg(reg1, reg2);
-                        Shift2(CODE.opASR2, reg1, n);
-                        OpRegReg(opSUB, reg2, reg1);
-                        drop
-                    ELSE
-                        Shift2(CODE.opASR2, reg1, n)
-                    END
-
+                    Shift2(CODE.opASR2, reg1, n)
                 ELSE
                     PushAll(1);
                     PushImm(param2);
@@ -1317,30 +1311,15 @@ BEGIN
             GetRegA
 
         |CODE.opMODR:
-            a := param2;
-            IF a > 1 THEN
-                n := X86.log2(a)
-            ELSIF a < -1 THEN
-                n := X86.log2(-a)
-            ELSE
-                n := -1
-            END;
+            ASSERT(param2 > 0);
 
-            IF ABS(a) = 1 THEN
+            IF param2 = 1 THEN
                 UnOp(reg1);
-                OpRegReg(opSUB, reg1, reg1)
+                Clear(reg1)
             ELSE
-                IF n > 0 THEN
+                IF X86.log2(param2) > 0 THEN
                     UnOp(reg1);
-                    OpImmReg(opAND, ABS(a) - 1, reg1);
-                    IF a < 0 THEN
-                        L := CODE.NewLabel();
-                        Test(reg1);
-                        jcc(je, L);
-                        AddImmReg(a, reg1);
-                        EmitLabel(L)
-                    END
-
+                    OpImmReg(opAND, param2 - 1, reg1)
                 ELSE
                     PushAll(1);
                     PushImm(param2);
@@ -1380,18 +1359,14 @@ BEGIN
 
         |CODE.opROT:
             PushAll(0);
-            ASSERT(R.top = -1);
             MovRegReg(SP, ACC);
             PushReg(ACC);
             PushImm(param2);
             CallRTL(CODE._rot, 2)
 
         |CODE.opSAVES:
-            UnOp(reg1);
-            drop;
-            PushAll(0);
-            PushReg(reg1);
-            GenUnOp(opPUSH, PC, mINCR, FALSE);
+            PushAll(1);
+            GenUnOpW(opPUSH, PC, mINCR);
             Reloc(RDATA, stroffs + param2);
             PushImm(param1);
             CallRTL(CODE._move, 3)
@@ -1414,12 +1389,11 @@ BEGIN
             Test(reg1);
             L := CODE.NewLabel();
             jcc(jge, L);
-            neg(reg1);
+            Neg(reg1);
             EmitLabel(L)
 
         |CODE.opEQB, CODE.opNEB:
             BinOp(reg1, reg2);
-            drop;
             drop;
 
             Test(reg1);
@@ -1435,29 +1409,27 @@ BEGIN
             EmitLabel(L);
 
             OpRegReg(opCMP, reg2, reg1);
-            reg1 := REG.GetAnyReg(R);
             IF opcode = CODE.opEQB THEN
                 setcc(je, reg1)
             ELSE
                 setcc(jne, reg1)
-            END;
-            OpImmReg(opAND, 1, reg1)
+            END
 
         |CODE.opSAVEP:
             UnOp(reg1);
-            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, reg1, mIDX);
             Reloc(RCODE, param2);
             EmitWord(0);
             drop
 
         |CODE.opPUSHP:
             reg1 := REG.GetAnyReg(R);
-            GenBinOp(opMOV, PC, mINCR, reg1, mREG, FALSE);
+            GenBinOpW(opMOV, PC, mINCR, reg1, mREG);
             Reloc(RCODE, param2)
 
         |CODE.opEQP, CODE.opNEP:
             UnOp(reg1);
-            GenBinOp(opCMP, PC, mINCR, reg1, mREG, FALSE);
+            GenBinOpW(opCMP, PC, mINCR, reg1, mREG);
             Reloc(RCODE, param1);
             drop;
             reg1 := REG.GetAnyReg(R);
@@ -1466,12 +1438,10 @@ BEGIN
                 setcc(je, reg1)
             ELSIF opcode = CODE.opNEP THEN
                 setcc(jne, reg1)
-            END;
-
-            OpImmReg(opAND, 1, reg1)
+            END
 
         |CODE.opVADR_PARAM:
-            GenUnOp(opPUSH, BP, mIDX, FALSE);
+            GenUnOpW(opPUSH, BP, mIDX);
             EmitWord(param2 * 2)
 
         |CODE.opNEW:
@@ -1508,14 +1478,14 @@ BEGIN
 
         |CODE.opINCLC:
             UnOp(reg1);
-            GenBinOp(opBIS, PC, mINCR, reg1, mIDX, FALSE);
+            GenBinOpW(opBIS, PC, mINCR, reg1, mIDX);
             EmitWord(LSL(1, param2));
             EmitWord(0);
             drop
 
         |CODE.opEXCLC:
             UnOp(reg1);
-            GenBinOp(opBIC, PC, mINCR, reg1, mIDX, FALSE);
+            GenBinOpW(opBIC, PC, mINCR, reg1, mIDX);
             EmitWord(LSL(1, param2));
             EmitWord(0);
             drop
@@ -1557,12 +1527,12 @@ BEGIN
             END
 
         |CODE.opLADR_INCLC:
-            GenBinOp(opBIS, PC, mINCR, BP, mIDX, FALSE);
+            GenBinOpW(opBIS, PC, mINCR, BP, mIDX);
             EmitWord(LSL(1, param2));
             EmitWord(param1 * 2)
 
         |CODE.opLADR_EXCLC:
-            GenBinOp(opBIC, PC, mINCR, BP, mIDX, FALSE);
+            GenBinOpW(opBIC, PC, mINCR, BP, mIDX);
             EmitWord(LSL(1, param2));
             EmitWord(param1 * 2)
 
@@ -1605,13 +1575,13 @@ BEGIN
     ASSERT(code.lcount < MAXLABEL);
     CodeList := LISTS.create(NIL);
     RelList  := LISTS.create(NIL);
-    R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7, R8}, {});
+    R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
-    GenBinOp(opMOV, PC, mINCR, SP, mREG, FALSE);
+    GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
-    GenBinOp(opMOV, PC, mINCR, HP, mREG, FALSE);
+    GenBinOpW(opMOV, PC, mINCR, HP, mREG);
     EmitWord(0);
-    GenUnOp(opPUSH, PC, mINCR, FALSE);
+    GenUnOpW(opPUSH, PC, mINCR);
     EmitWord(0);
     CallRTL(CODE._init, 1);
 
