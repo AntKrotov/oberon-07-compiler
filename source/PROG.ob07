@@ -54,10 +54,13 @@ CONST
     noalign* = 20;
 
     callee_clean_up* = {default, stdcall, _stdcall, default64, stdcall64, _stdcall64};
-    caller_clean_up* = {default16, ccall, ccall16, win64, systemv, _ccall, _ccall16, _win64, _systemv};
-    callconv32* = {default, stdcall, ccall, ccall16, _stdcall, _ccall, _ccall16};
-    callconv64* = {default64, win64, stdcall64, systemv, _win64, _stdcall64, _systemv};
-    callconv16* = {default16, ccall, _ccall};
+
+    sf_stdcall* = 0; sf_stdcall64* = 1; sf_ccall*   = 2; sf_ccall16* = 3;
+    sf_win64*   = 4; sf_systemv*   = 5; sf_windows* = 6; sf_linux*   = 7;
+    sf_noalign* = 8;
+
+    proc_flags* = {sf_stdcall, sf_stdcall64, sf_ccall, sf_ccall16, sf_win64, sf_systemv, sf_windows, sf_linux};
+    rec_flags*  = {sf_noalign};
 
     STACK_FRAME = 2;
 
@@ -252,7 +255,8 @@ TYPE
             bit_depth*:  INTEGER;
             word*:       INTEGER;
             adr*:        INTEGER;
-            sys*:        INTEGER
+            sys*:        INTEGER;
+            sysflags*:   SET
 
         END;
 
@@ -710,10 +714,6 @@ BEGIN
     ident      := addIdent(unit, stName, idTYPE);
     ident.type := program.stTypes.tCHAR;
 
-    stName     := SCAN.enterid("WCHAR");
-    ident      := addIdent(unit, stName, idTYPE);
-    ident.type := program.stTypes.tWCHAR;
-
     stName     := SCAN.enterid("SET");
     ident      := addIdent(unit, stName, idTYPE);
     ident.type := program.stTypes.tSET;
@@ -722,9 +722,15 @@ BEGIN
     ident      := addIdent(unit, stName, idTYPE);
     ident.type := program.stTypes.tBOOLEAN;
 
-    stName     := SCAN.enterid("REAL");
-    ident      := addIdent(unit, stName, idTYPE);
-    ident.type := program.stTypes.tREAL;
+    IF program.target.sys # mConst.Target_iMSP430 THEN
+        stName     := SCAN.enterid("REAL");
+        ident      := addIdent(unit, stName, idTYPE);
+        ident.type := program.stTypes.tREAL;
+
+        stName     := SCAN.enterid("WCHAR");
+        ident      := addIdent(unit, stName, idTYPE);
+        ident.type := program.stTypes.tWCHAR;
+    END
 
 END enterStTypes;
 
@@ -748,17 +754,11 @@ BEGIN
     EnterProc(unit, "INC",      idSTPROC,  stINC);
     EnterProc(unit, "INCL",     idSTPROC,  stINCL);
     EnterProc(unit, "NEW",      idSTPROC,  stNEW);
-    EnterProc(unit, "PACK",     idSTPROC,  stPACK);
-    EnterProc(unit, "UNPK",     idSTPROC,  stUNPK);
-    EnterProc(unit, "DISPOSE",  idSTPROC,  stDISPOSE);
     EnterProc(unit, "COPY",     idSTPROC,  stCOPY);
 
     EnterProc(unit, "ABS",      idSTFUNC,  stABS);
     EnterProc(unit, "ASR",      idSTFUNC,  stASR);
     EnterProc(unit, "CHR",      idSTFUNC,  stCHR);
-    EnterProc(unit, "WCHR",     idSTFUNC,  stWCHR);
-    EnterProc(unit, "FLOOR",    idSTFUNC,  stFLOOR);
-    EnterProc(unit, "FLT",      idSTFUNC,  stFLT);
     EnterProc(unit, "LEN",      idSTFUNC,  stLEN);
     EnterProc(unit, "LSL",      idSTFUNC,  stLSL);
     EnterProc(unit, "ODD",      idSTFUNC,  stODD);
@@ -769,6 +769,17 @@ BEGIN
     EnterProc(unit, "LENGTH",   idSTFUNC,  stLENGTH);
     EnterProc(unit, "MIN",      idSTFUNC,  stMIN);
     EnterProc(unit, "MAX",      idSTFUNC,  stMAX);
+
+    IF unit.program.target.sys # mConst.Target_iMSP430 THEN
+        EnterProc(unit, "PACK",     idSTPROC,  stPACK);
+        EnterProc(unit, "UNPK",     idSTPROC,  stUNPK);
+        EnterProc(unit, "DISPOSE",  idSTPROC,  stDISPOSE);
+
+        EnterProc(unit, "WCHR",   idSTFUNC,  stWCHR);
+        EnterProc(unit, "FLOOR",  idSTFUNC,  stFLOOR);
+        EnterProc(unit, "FLT",    idSTFUNC,  stFLT);
+    END
+
 END enterStProcs;
 
 
@@ -1175,26 +1186,30 @@ BEGIN
     EnterProc(unit, "ADR",    idSYSFUNC, sysADR);
     EnterProc(unit, "SIZE",   idSYSFUNC, sysSIZE);
     EnterProc(unit, "SADR",   idSYSFUNC, sysSADR);
-    EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
     EnterProc(unit, "TYPEID", idSYSFUNC, sysTYPEID);
-    EnterProc(unit, "INF",    idSYSFUNC, sysINF);
 
     EnterProc(unit, "GET",    idSYSPROC, sysGET);
-    EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
     EnterProc(unit, "PUT8",   idSYSPROC, sysPUT8);
     EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
-    EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
     EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
     EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
     EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
 
-    ident := addIdent(unit, SCAN.enterid("CARD16"), idTYPE);
-    ident.type := program.stTypes.tCARD16;
-    ident.export := TRUE;
+    IF program.target.sys # mConst.Target_iMSP430 THEN
+        EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
+        EnterProc(unit, "INF",    idSYSFUNC, sysINF);
 
-    ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
-    ident.type := program.stTypes.tCARD32;
-    ident.export := TRUE;
+        EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
+        EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
+
+        ident := addIdent(unit, SCAN.enterid("CARD16"), idTYPE);
+        ident.type := program.stTypes.tCARD16;
+        ident.export := TRUE;
+
+        ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
+        ident.type := program.stTypes.tCARD32;
+        ident.export := TRUE;
+    END;
 
     unit.close(unit);
 
@@ -1257,7 +1272,7 @@ BEGIN
 END DelUnused;
 
 
-PROCEDURE create* (bit_depth, sys: INTEGER): PROGRAM;
+PROCEDURE create* (bit_depth, target: INTEGER): PROGRAM;
 VAR
     program: PROGRAM;
     units:   UNITS;
@@ -1275,7 +1290,26 @@ BEGIN
     program.target.bit_depth := bit_depth;
     program.target.word      := bit_depth DIV 8;
     program.target.adr       := bit_depth DIV 8;
-    program.target.sys       := sys;
+    program.target.sys       := target;
+
+    CASE target OF
+    |mConst.Target_iConsole,
+     mConst.Target_iGUI,
+     mConst.Target_iDLL:        program.target.sysflags := {sf_windows, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+
+    |mConst.Target_iELF32:      program.target.sysflags := {sf_linux, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+
+    |mConst.Target_iKolibri,
+     mConst.Target_iObject:     program.target.sysflags := {sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+
+    |mConst.Target_iConsole64,
+     mConst.Target_iGUI64,
+     mConst.Target_iDLL64:      program.target.sysflags := {sf_windows, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
+
+    |mConst.Target_iELF64:      program.target.sysflags := {sf_linux, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
+
+    |mConst.Target_iMSP430:     program.target.sysflags := {}
+    END;
 
     program.recCount := -1;
     program.bss := 0;
@@ -1291,26 +1325,34 @@ BEGIN
     program.stTypes.tINTEGER := enterType(program, tINTEGER,  program.target.word, 0, NIL);
     program.stTypes.tBYTE    := enterType(program, tBYTE,                       1, 0, NIL);
     program.stTypes.tCHAR    := enterType(program, tCHAR,                       1, 0, NIL);
-    program.stTypes.tWCHAR   := enterType(program, tWCHAR,                      2, 0, NIL);
     program.stTypes.tSET     := enterType(program, tSET,      program.target.word, 0, NIL);
     program.stTypes.tBOOLEAN := enterType(program, tBOOLEAN,                    1, 0, NIL);
-    program.stTypes.tREAL    := enterType(program, tREAL,                       8, 0, NIL);
-    program.stTypes.tSTRING  := enterType(program, tSTRING,   program.target.word, 0, NIL);
-    program.stTypes.tNIL     := enterType(program, tNIL,      program.target.word, 0, NIL);
-    program.stTypes.tCARD16  := enterType(program, tCARD16,                     2, 0, NIL);
-    program.stTypes.tCARD32  := enterType(program, tCARD32,                     4, 0, NIL);
-    program.stTypes.tANYREC  := enterType(program, tRECORD,                     0, 0, NIL);
+
+    IF target # mConst.Target_iMSP430 THEN
+        program.stTypes.tWCHAR   := enterType(program, tWCHAR,  2, 0, NIL);
+        program.stTypes.tREAL    := enterType(program, tREAL,   8, 0, NIL);
+        program.stTypes.tCARD16  := enterType(program, tCARD16, 2, 0, NIL);
+        program.stTypes.tCARD32  := enterType(program, tCARD32, 4, 0, NIL)
+    END;
+
+    program.stTypes.tSTRING  := enterType(program, tSTRING, program.target.word, 0, NIL);
+    program.stTypes.tNIL     := enterType(program, tNIL,    program.target.word, 0, NIL);
+
+    program.stTypes.tANYREC  := enterType(program, tRECORD, 0, 0, NIL);
     program.stTypes.tANYREC.closed := TRUE;
 
     program.stTypes.tINTEGER.align := program.stTypes.tINTEGER.size;
     program.stTypes.tBYTE.align    := 1;
     program.stTypes.tCHAR.align    := program.stTypes.tCHAR.size;
-    program.stTypes.tWCHAR.align   := program.stTypes.tWCHAR.size;
     program.stTypes.tSET.align     := program.stTypes.tSET.size;
     program.stTypes.tBOOLEAN.align := program.stTypes.tBOOLEAN.size;
-    program.stTypes.tREAL.align    := program.stTypes.tREAL.size;
-    program.stTypes.tCARD16.align   := program.stTypes.tCARD16.size;
-    program.stTypes.tCARD32.align   := program.stTypes.tCARD32.size;
+
+    IF target # mConst.Target_iMSP430 THEN
+        program.stTypes.tWCHAR.align   := program.stTypes.tWCHAR.size;
+        program.stTypes.tREAL.align    := program.stTypes.tREAL.size;
+        program.stTypes.tCARD16.align  := program.stTypes.tCARD16.size;
+        program.stTypes.tCARD32.align  := program.stTypes.tCARD32.size
+    END;
 
     units.program := program;
 

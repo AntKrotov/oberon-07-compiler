@@ -36,6 +36,7 @@ BEGIN
     |  6: str := "identifier too long"
     |  7: str := "number too long"
     |  8..12: str := "number too large"
+    | 13: str := "real numbers not supported"
 
     | 21: str := "'MODULE' expected"
     | 22: str := "identifier expected"
@@ -79,7 +80,7 @@ BEGIN
     | 60: str := "identifier does not match procedure name"
     | 61: str := "illegally marked identifier"
     | 62: str := "expression should be constant"
-    | 63: str := "'stdcall', 'ccall', 'ccall16', 'windows' or 'linux' expected"
+
     | 64: str := "'(' expected"
     | 65: str := "',' expected"
     | 66: str := "incompatible parameter"
@@ -126,20 +127,20 @@ BEGIN
     |107: str := "too large parameter of CHR"
     |108: str := "a variable or a procedure expected"
     |109: str := "expression should be constant"
-    |110: str := "'noalign' expected"
+
     |111: str := "record [noalign] cannot have a base type"
     |112: str := "record [noalign] cannot be a base type"
     |113: str := "result type of procedure should not be REAL"
     |114: str := "identifiers 'lib_init' and 'version' are reserved"
     |115: str := "recursive constant definition"
     |116: str := "procedure too deep nested"
-    |117: str := "'stdcall64', 'win64', 'systemv', 'windows' or 'linux' expected"
-    |118: str := "this flag for Windows only"
-    |119: str := "this flag for Linux only"
+
     |120: str := "too many formal parameters"
-    |121: str := "'ccall' expected"
-    |122: str := "out of range 0H..0FFFFH"
-    |123: str := "negative divisor"
+
+    |122: str := "negative divisor"
+    |123: str := "illegal flag"
+    |124: str := "unknown flag"
+    |125: str := "flag not supported"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);

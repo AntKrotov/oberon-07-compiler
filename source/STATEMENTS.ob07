@@ -962,9 +962,7 @@ BEGIN
                 getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, parser, pos, 43);
-                IF Target = mConst.Target_iMSP430 THEN
-                    PARS.check(ARITH.range(code, -32768, 32767), parser, pos, 122)
-                ELSE
+                IF CPU # cpuMSP430 THEN
                     PARS.check(ARITH.range(code, 0, 255), parser, pos, 42)
                 END;
                 IF parser.sym = SCAN.lxCOMMA THEN
@@ -1961,7 +1959,7 @@ VAR
                 IF e1.obj = eCONST THEN
                     PARS.check(~ARITH.isZero(e1.value), parser, pos, 46);
                     IF CPU = cpuMSP430 THEN
-                        PARS.check(ARITH.Int(e1.value) > 0, parser, pos, 123)
+                        PARS.check(ARITH.Int(e1.value) > 0, parser, pos, 122)
                     END
                 END;
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN

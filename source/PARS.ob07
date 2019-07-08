@@ -118,6 +118,14 @@ VAR
 BEGIN
     SCAN.Next(parser.scanner, parser.lex);
     errno := parser.lex.error;
+    IF (errno = 0) & (program.target.sys = mConst.Target_iMSP430) THEN
+        IF parser.lex.sym = SCAN.lxFLOAT THEN
+            errno := -SCAN.lxERROR13
+        ELSIF (parser.lex.sym = SCAN.lxCHAR) & (parser.lex.value.typ = ARITH.tWCHAR) THEN
+            errno := -SCAN.lxERROR10
+        END
+    END;
+
     IF errno # 0 THEN
         check1(FALSE, parser, errno)
     END;
@@ -461,43 +469,68 @@ BEGIN
 END FormalParameters;
 
 
-PROCEDURE sysflag (parser: PARSER): INTEGER;
+PROCEDURE sysflag (parser: PARSER; proc: BOOLEAN): INTEGER;
 VAR
-    res: INTEGER;
+    res, sf: INTEGER;
 
 BEGIN
     IF parser.lex.s = "stdcall" THEN
-        res := PROG.stdcall
+        sf := PROG.sf_stdcall
     ELSIF parser.lex.s = "stdcall64" THEN
-        res := PROG.stdcall64
+        sf := PROG.sf_stdcall64
     ELSIF parser.lex.s = "ccall" THEN
-        res := PROG.ccall
+        sf := PROG.sf_ccall
     ELSIF parser.lex.s = "ccall16" THEN
-        res := PROG.ccall16
+        sf := PROG.sf_ccall16
     ELSIF parser.lex.s = "win64" THEN
-        res := PROG.win64
+        sf := PROG.sf_win64
     ELSIF parser.lex.s = "systemv" THEN
-        res := PROG.systemv
+        sf := PROG.sf_systemv
     ELSIF parser.lex.s = "windows" THEN
+        sf := PROG.sf_windows
+    ELSIF parser.lex.s = "linux" THEN
+        sf := PROG.sf_linux
+    ELSIF parser.lex.s = "noalign" THEN
+        sf := PROG.sf_noalign
+    ELSE
+        check1(FALSE, parser, 124)
+    END;
+
+    check1(sf IN program.target.sysflags, parser, 125);
+
+    IF proc THEN
+        check1(sf IN PROG.proc_flags, parser, 123)
+    ELSE
+        check1(sf IN PROG.rec_flags, parser, 123)
+    END;
+
+    CASE sf OF
+    |PROG.sf_stdcall:
+        res := PROG.stdcall
+    |PROG.sf_stdcall64:
+        res := PROG.stdcall64
+    |PROG.sf_ccall:
+        res := PROG.ccall
+    |PROG.sf_ccall16:
+        res := PROG.ccall16
+    |PROG.sf_win64:
+        res := PROG.win64
+    |PROG.sf_systemv:
+        res := PROG.systemv
+    |PROG.sf_windows:
         IF program.target.sys IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
             res := PROG.stdcall
         ELSIF program.target.sys IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
             res := PROG.win64
-        ELSE
-            check1(FALSE, parser, 118)
         END
-    ELSIF parser.lex.s = "linux" THEN
+    |PROG.sf_linux:
         IF program.target.sys = mConst.Target_iELF32 THEN
             res := PROG.ccall16
         ELSIF program.target.sys = mConst.Target_iELF64 THEN
             res := PROG.systemv
-        ELSE
-            check1(FALSE, parser, 119)
         END
-    ELSIF parser.lex.s = "noalign" THEN
+    |PROG.sf_noalign:
         res := PROG.noalign
-    ELSE
-        res := 0
     END
 
     RETURN res
@@ -518,14 +551,7 @@ BEGIN
         getpos(parser, pos);
         check1(parser.unit.sysimport, parser, 54);
         Next(parser);
-        call := sysflag(parser);
-        IF program.target.bit_depth = 64 THEN
-            check1(call IN PROG.callconv64, parser, 117)
-        ELSIF program.target.bit_depth = 32 THEN
-            check1(call IN PROG.callconv32, parser, 63)
-        ELSIF program.target.bit_depth = 16 THEN
-            check1(call IN PROG.callconv16, parser, 121)
-        END;
+        call := sysflag(parser, TRUE);
         Next(parser);
         IF parser.sym = SCAN.lxMINUS THEN
             Next(parser);
@@ -643,13 +669,8 @@ BEGIN
         IF parser.sym = SCAN.lxLSQUARE THEN
             check1(parser.unit.sysimport, parser, 54);
             Next(parser);
-            RecFlag := sysflag(parser);
-            IF RecFlag = PROG.noalign THEN
-                t.noalign := TRUE
-            ELSE
-                check1(FALSE, parser, 110)
-            END;
-
+            RecFlag := sysflag(parser, FALSE);
+            t.noalign := RecFlag = PROG.noalign;
             ExpectSym(parser, SCAN.lxRSQUARE);
             Next(parser)
         END;
@@ -1161,9 +1182,9 @@ BEGIN
 END create;
 
 
-PROCEDURE init* (bit_depth, sys: INTEGER);
+PROCEDURE init* (bit_depth, target: INTEGER);
 BEGIN
-    program := PROG.create(bit_depth, sys);
+    program := PROG.create(bit_depth, target);
     parsers := C.create()
 END init;
 

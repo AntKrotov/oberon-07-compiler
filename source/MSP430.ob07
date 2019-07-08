@@ -321,15 +321,14 @@ BEGIN
         |LABEL:
 
         |JMP:   IF ~cmd.short THEN
-                    cc := cmd.cc;
-                    CASE cc OF
+                    CASE cmd.cc OF
                     |opJNE: cc := opJEQ
                     |opJEQ: cc := opJNE
                     |opJNC: cc := opJC
                     |opJC:  cc := opJNC
                     |opJGE: cc := opJL
                     |opJL:  cc := opJGE
-                    |opJMP:
+                    |opJMP: cc := opJMP
                     END;
 
                     IF cc # opJMP THEN

@@ -38,9 +38,10 @@ CONST
     lxRSQUARE* = 221;  lxRCURLY*  = 222;  lxLE*        = 223;  lxGE*      = 224;
     lxASSIGN*  = 225;  lxRANGE*   = 226;
 
-    lxERROR01 =  -1;  lxERROR02 =  -2;  lxERROR03   =  -3;  lxERROR04 =  -4;
-    lxERROR05 =  -5;  lxERROR06 =  -6;  lxERROR07   =  -7;  lxERROR08 =  -8;
-    lxERROR09 =  -9;  lxERROR10 = -10;  lxERROR11   = -11;  lxERROR12 = -12;
+    lxERROR01* =  -1;  lxERROR02* =  -2;  lxERROR03*   =  -3;  lxERROR04* =  -4;
+    lxERROR05* =  -5;  lxERROR06* =  -6;  lxERROR07*   =  -7;  lxERROR08* =  -8;
+    lxERROR09* =  -9;  lxERROR10* = -10;  lxERROR11*   = -11;  lxERROR12* = -12;
+    lxERROR13* = -13;
 
 
 TYPE
