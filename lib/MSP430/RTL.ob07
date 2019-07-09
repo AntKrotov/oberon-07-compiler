@@ -10,9 +10,20 @@ MODULE RTL;
 IMPORT SYSTEM;
 
 
+CONST
+
+    BP = 15;
+
+
+TYPE
+
+    TRAP = PROCEDURE (module, err: INTEGER);
+
+
 VAR
 
-    types: INTEGER;
+    types, sp: INTEGER;
+    trap: TRAP;
 
 
 PROCEDURE _shift* (op, x, n: INTEGER): INTEGER;
@@ -238,10 +249,6 @@ PROCEDURE _mod2* (a, b: INTEGER): INTEGER;
 END _mod2;
 
 
-PROCEDURE _new* (t, size: INTEGER; VAR ptr: INTEGER);
-END _new;
-
-
 PROCEDURE _length* (len, str: INTEGER): INTEGER;
 VAR
     c:   CHAR;
@@ -316,76 +323,31 @@ END _strcmp2;
 
 
 PROCEDURE _error* (module, err: INTEGER);
-
-
-    PROCEDURE outchar (c: CHAR);
-    BEGIN
-        SYSTEM.PUT16(0100H, ORD(c) + 256)
-    END outchar;
-
-
-    PROCEDURE outint (i: INTEGER);
-    BEGIN
-        SYSTEM.PUT16(0100H, i MOD 256 + 256*2);
-        SYSTEM.PUT16(0100H, LSR(i, 8) + 256*3)
-    END outint;
-
-
-    PROCEDURE outln;
-    BEGIN
-        outchar(0DX);
-        outchar(0AX)
-    END outln;
-
-
-    PROCEDURE OutStr (s: ARRAY OF CHAR);
-    VAR
-        i: INTEGER;
-
-    BEGIN
-        i := 0;
-        WHILE s[i] # 0X DO
-            outchar(s[i]);
-            INC(i)
-        END
-    END OutStr;
-
-
-    PROCEDURE OutPChar (pchar: INTEGER);
-    VAR
-        c: CHAR;
-
-    BEGIN
-        SYSTEM.GET(pchar, c);
-        WHILE c # 0X DO
-            outchar(c);
-            INC(pchar);
-            SYSTEM.GET(pchar, c)
-        END
-    END OutPChar;
-
+VAR
+    _sp: INTEGER;
 
 BEGIN
+    SYSTEM.CODE(
+    0C032H, 0008H,       // BIC #8, SR; DINT
+    4404H                // MOV R4, R4; NOP
+    );
+    _sp := sp;
+    SYSTEM.CODE(
+    4011H + BP * 100H,   // MOV  -2(BP), SP
+    0FFFEH,
+    1210H + BP, 0006H,   // PUSH  6(BP)
+    1210H + BP, 0004H,   // PUSH  4(BP)
+    1210H + BP, 0002H,   // PUSH  2(BP)
+    1210H + BP, 0000H,   // PUSH  0(BP)
+    1210H + BP, 0FFFEH,  // PUSH -2(BP)
+    4100H + BP,          // MOV   SP, BP
+    5030H + BP, 0002H    // ADD   #2, BP
+    );
 
-    CASE err MOD 16 OF
-    | 1: OutStr("assertion failure")
-    | 2: OutStr("NIL dereference")
-    | 3: OutStr("bad divisor")
-    | 4: OutStr("NIL procedure call")
-    | 5: OutStr("type guard error")
-    | 6: OutStr("index out of range")
-    | 7: OutStr("invalid CASE")
-    | 8: OutStr("array assignment error")
-    | 9: OutStr("CHR out of range")
-    |11: OutStr("BYTE out of range")
+    IF trap # NIL THEN
+        trap(module, err)
     END;
-
-    outln;
-
-    OutStr("module: "); OutPChar(module); outln;
-    OutStr("line: "); outint(LSR(err, 4)); outln;
-
-    SYSTEM.CODE(0D032H, 00010H) // BIS #10H, SR; CPUOFF
+    SYSTEM.CODE(0D032H, 0010H) // BIS #10H, SR; CPUOFF
 END _error;
 
 
@@ -456,10 +418,17 @@ BEGIN
 END _guard;
 
 
-PROCEDURE _init* (_types: INTEGER);
+PROCEDURE _init* (_types, _sp: INTEGER);
 BEGIN
-    types := _types
+    types := _types;
+    sp := _sp
 END _init;
+
+
+PROCEDURE SetTrap* (_trap: TRAP);
+BEGIN
+    trap  := _trap
+END SetTrap;
 
 
 END RTL.

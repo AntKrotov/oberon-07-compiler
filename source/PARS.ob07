@@ -871,7 +871,7 @@ VAR
         unit:       PROG.UNIT;
         ident:      PROG.IDENT;
         e:          EXPR;
-        pos:        SCAN.POSITION;
+        pos, pos1:  SCAN.POSITION;
         label:      INTEGER;
         enter:      CODE.COMMAND;
         call:       INTEGER;
@@ -890,6 +890,7 @@ VAR
         call := procflag(parser, import, TRUE);
 
         getpos(parser, pos);
+        pos1 := pos;
         checklex(parser, SCAN.lxIDENT);
 
         IF import # NIL THEN
@@ -970,6 +971,9 @@ VAR
             proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL),
                 t.params.size * ORD((t.call IN PROG.callee_clean_up) OR (t.call IN {PROG.systemv, PROG._systemv})));
             enter.param2 := program.locsize;
+            IF program.target.sys = mConst.Target_iMSP430 THEN
+                check((enter.param2 + proc.type.params.size) * 2 + 16 < program.target.options.ram, parser, pos1, 63)
+            END;
             checklex(parser, SCAN.lxEND)
         END;
 
@@ -1182,9 +1186,9 @@ BEGIN
 END create;
 
 
-PROCEDURE init* (bit_depth, target: INTEGER);
+PROCEDURE init* (bit_depth, target: INTEGER; options: PROG.OPTIONS);
 BEGIN
-    program := PROG.create(bit_depth, target);
+    program := PROG.create(bit_depth, target, options);
     parsers := C.create()
 END init;
 

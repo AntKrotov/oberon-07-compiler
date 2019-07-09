@@ -80,7 +80,7 @@ BEGIN
     | 60: str := "identifier does not match procedure name"
     | 61: str := "illegally marked identifier"
     | 62: str := "expression should be constant"
-
+    | 63: str := "not enough RAM"
     | 64: str := "'(' expected"
     | 65: str := "',' expected"
     | 66: str := "incompatible parameter"

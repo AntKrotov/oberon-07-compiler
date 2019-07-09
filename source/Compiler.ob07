@@ -7,7 +7,7 @@
 
 MODULE Compiler;
 
-IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER;
+IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER;
 
 
 PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
@@ -45,7 +45,7 @@ BEGIN
 END Target;
 
 
-PROCEDURE keys (VAR StackSize, BaseAddress, Version: INTEGER; VAR pic: BOOLEAN; VAR checking: SET);
+PROCEDURE keys (VAR options: PROG.OPTIONS);
 VAR
     param: PARS.PATH;
     i, j:  INTEGER;
@@ -53,8 +53,10 @@ VAR
     value: INTEGER;
     minor,
     major: INTEGER;
+    checking: SET;
 
 BEGIN
+    checking := options.checking;
     end := FALSE;
     i := 4;
     REPEAT
@@ -64,7 +66,7 @@ BEGIN
             INC(i);
             UTILS.GetArg(i, param);
             IF STRINGS.StrToInt(param, value) & (1 <= value) & (value <= 32) THEN
-                StackSize := value
+                options.stack := value
             END;
             IF param[0] = "-" THEN
                 DEC(i)
@@ -74,7 +76,27 @@ BEGIN
             INC(i);
             UTILS.GetArg(i, param);
             IF STRINGS.StrToInt(param, value) THEN
-                BaseAddress := ((value DIV 64) * 64) * 1024
+                options.base := ((value DIV 64) * 64) * 1024
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END
+
+        ELSIF param = "-ram" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) THEN
+                options.ram := value
+            END;
+            IF param[0] = "-" THEN
+                DEC(i)
+            END
+
+        ELSIF param = "-rom" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF STRINGS.StrToInt(param, value) THEN
+                options.rom := value
             END;
             IF param[0] = "-" THEN
                 DEC(i)
@@ -111,21 +133,22 @@ BEGIN
                     END;
 
                     INC(j)
-                END
+                END;
+
             END
 
         ELSIF param = "-ver" THEN
             INC(i);
             UTILS.GetArg(i, param);
             IF STRINGS.StrToVer(param, major, minor) THEN
-                Version := major * 65536 + minor
+                options.version := major * 65536 + minor
             END;
             IF param[0] = "-" THEN
                 DEC(i)
             END
 
         ELSIF param = "-pic" THEN
-            pic := TRUE
+            options.pic := TRUE
 
         ELSIF param = "" THEN
             end := TRUE
@@ -135,8 +158,9 @@ BEGIN
         END;
 
         INC(i)
-    UNTIL end
+    UNTIL end;
 
+    options.checking := checking
 END keys;
 
 
@@ -151,23 +175,18 @@ VAR
     outname:    PARS.PATH;
     param:      PARS.PATH;
     temp:       PARS.PATH;
-
     target:     INTEGER;
     bit_depth:  INTEGER;
-
     time:       INTEGER;
-
-    StackSize,
-    Version,
-    BaseAdr:    INTEGER;
-    pic:        BOOLEAN;
-    checking:   SET;
+    options:    PROG.OPTIONS;
 
 BEGIN
-    StackSize := 2;
-    Version := 65536;
-    pic := FALSE;
-    checking := ST.chkALL;
+    options.stack := 2;
+    options.version := 65536;
+    options.pic := FALSE;
+    options.checking := ST.chkALL;
+    options.ram := -1;
+    options.rom := -1;
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
@@ -236,20 +255,15 @@ BEGIN
         ERRORS.error1("bad parameter <target>")
     END;
 
-    PARS.init(bit_depth, target);
-
-    PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};
-    PARS.program.obj := target = mConst.Target_iObject;
-
     STRINGS.append(lib_path, "lib");
     STRINGS.append(lib_path, UTILS.slash);
 
     CASE target OF
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL:
         IF target = mConst.Target_iDLL THEN
-            BaseAdr := 10000000H
+            options.base := 10000000H
         ELSE
-            BaseAdr := 400000H
+            options.base := 400000H
         END;
         STRINGS.append(lib_path, "Windows32")
 
@@ -272,9 +286,14 @@ BEGIN
 
     STRINGS.append(lib_path, UTILS.slash);
 
-    keys(StackSize, BaseAdr, Version, pic, checking);
+    keys(options);
 
-    ST.compile(path, lib_path, modname, outname, target, Version, StackSize, BaseAdr, pic, checking);
+    PARS.init(bit_depth, target, options);
+
+    PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};
+    PARS.program.obj := target = mConst.Target_iObject;
+
+    ST.compile(path, lib_path, modname, outname, target, options);
 
     time := UTILS.GetTickCount() - UTILS.time;
 

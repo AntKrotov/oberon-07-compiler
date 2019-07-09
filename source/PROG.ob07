@@ -67,6 +67,14 @@ CONST
 
 TYPE
 
+    OPTIONS* = RECORD
+
+        version*, stack*, base*, ram*, rom*: INTEGER;
+        pic*: BOOLEAN;
+        checking*: SET
+
+    END;
+
     IDENT* = POINTER TO rIDENT;
 
     UNIT* = POINTER TO rUNIT;
@@ -256,7 +264,8 @@ TYPE
             word*:       INTEGER;
             adr*:        INTEGER;
             sys*:        INTEGER;
-            sysflags*:   SET
+            sysflags*:   SET;
+            options*:    OPTIONS
 
         END;
 
@@ -1272,7 +1281,7 @@ BEGIN
 END DelUnused;
 
 
-PROCEDURE create* (bit_depth, target: INTEGER): PROGRAM;
+PROCEDURE create* (bit_depth, target: INTEGER; options: OPTIONS): PROGRAM;
 VAR
     program: PROGRAM;
     units:   UNITS;
@@ -1291,6 +1300,7 @@ BEGIN
     program.target.word      := bit_depth DIV 8;
     program.target.adr       := bit_depth DIV 8;
     program.target.sys       := target;
+    program.target.options   := options;
 
     CASE target OF
     |mConst.Target_iConsole,

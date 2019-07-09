@@ -7,7 +7,7 @@
 
 MODULE AMD64;
 
-IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS,
+IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS, PROG,
        REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86, ERRORS;
 
 
@@ -2742,10 +2742,11 @@ BEGIN
 END rsave;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base: INTEGER);
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     path, modname, ext: PATHS.PATH;
     n: INTEGER;
+    opt: PROG.OPTIONS;
 
 BEGIN
     Win64RegPar[0] := rcx;
@@ -2782,17 +2783,17 @@ BEGIN
     NewNumber(LSR(ASR(ROR(1, 1), 9), 2));  (* {52..61} *)
 
     prog := BIN.create(code.lcount);
-    BIN.SetParams(prog, code.bss, stack, WCHR(1), WCHR(0));
+    BIN.SetParams(prog, code.bss, opt.stack, WCHR(1), WCHR(0));
 
     X86.SetProgram(prog);
 
-    prolog(code, modname, target, stack);
+    prolog(code, modname, target, opt.stack);
     translate(code.commands, CHL.Length(code.types) * 8);
     epilog(code, modname, target);
 
     BIN.fixup(prog);
     IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
-        PE32.write(prog, outname, base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
+        PE32.write(prog, outname, opt.base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
     ELSIF target = mConst.Target_iELF64 THEN
         ELF.write(prog, outname, TRUE)
     END

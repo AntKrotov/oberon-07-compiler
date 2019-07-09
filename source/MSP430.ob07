@@ -7,7 +7,7 @@
 
 MODULE MSP430;
 
-IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, X86, MACHINE, C := CONSOLE;
+IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, X86, MACHINE, C := CONSOLE, PROG;
 
 
 CONST
@@ -31,8 +31,6 @@ CONST
     opJN  = 4;  opJGE = 5;  opJL  = 6;  opJMP = 7;
 
     mREG = 0; mIDX = 1; mINDIR = 2; mINCR = 3;
-
-    MAXLABEL = 40000;
 
     RCODE = 0; RDATA = 1; RBSS = 2;
 
@@ -94,7 +92,9 @@ VAR
 
     mem: ARRAY 65536 OF BYTE;
 
-    Labels: ARRAY MAXLABEL + 1 OF LABEL;
+    Labels: ARRAY 30000 OF LABEL;
+
+    _new: INTEGER;
 
 
 PROCEDURE EmitLabel (L: INTEGER);
@@ -102,7 +102,6 @@ VAR
     label: LABEL;
 
 BEGIN
-    ASSERT((0 <= L) & (L <= MAXLABEL));
     NEW(label);
     ERRORS.OutOfMemory(label = NIL);
     label.num := L;
@@ -133,7 +132,6 @@ VAR
     jmp: JMP;
 
 BEGIN
-    ASSERT((0 <= label) & (label <= MAXLABEL));
     NEW(jmp);
     ERRORS.OutOfMemory(jmp = NIL);
     jmp.cc := cc;
@@ -148,7 +146,6 @@ VAR
     call: CALL;
 
 BEGIN
-    ASSERT((0 <= label) & (label <= MAXLABEL));
     NEW(call);
     ERRORS.OutOfMemory(call = NIL);
     call.label := label;
@@ -267,7 +264,7 @@ BEGIN
 END PutWord;
 
 
-PROCEDURE Fixup (pc: INTEGER): INTEGER;
+PROCEDURE Fixup (CodeAdr, IntVectorSize: INTEGER): INTEGER;
 VAR
     cmd:      ANYCODE;
     adr:      INTEGER;
@@ -279,7 +276,7 @@ VAR
 BEGIN
     REPEAT
         shorted := FALSE;
-        offset := pc DIV 2;
+        offset := CodeAdr DIV 2;
 
         cmd := CodeList.first(ANYCODE);
         WHILE cmd # NIL DO
@@ -314,7 +311,11 @@ BEGIN
 
     UNTIL ~shorted;
 
-    adr := pc;
+    IF offset * 2 > 10000H - IntVectorSize THEN
+        ERRORS.error1("size of program is too large")
+    END;
+
+    adr := CodeAdr;
     cmd := CodeList.first(ANYCODE);
     WHILE cmd # NIL DO
         CASE cmd OF
@@ -353,8 +354,22 @@ BEGIN
         cmd := cmd.next(ANYCODE)
     END
 
-    RETURN adr - pc
+    RETURN adr - CodeAdr
 END Fixup;
+
+
+PROCEDURE NewLabel (): INTEGER;
+VAR
+    L: INTEGER;
+
+BEGIN
+    L := CODE.NewLabel();
+    IF L >= LEN(Labels) THEN
+        ERRORS.error1("size of program is too large")
+    END
+
+    RETURN L
+END NewLabel;
 
 
 PROCEDURE PushReg (reg: INTEGER);
@@ -491,7 +506,7 @@ BEGIN
         EmitJmp(opJL, label);
         EmitJmp(opJEQ, label)
     |jg:
-        L := CODE.NewLabel();
+        L := NewLabel();
         EmitJmp(opJEQ, L);
         EmitJmp(opJGE, label);
         EmitLabel(L)
@@ -506,7 +521,7 @@ VAR
     L: INTEGER;
 
 BEGIN
-    L := CODE.NewLabel();
+    L := NewLabel();
     MovImmReg(1, reg);
     jcc(cc, L);
     Clear(reg);
@@ -626,7 +641,7 @@ BEGIN
             IF param2 > 8 THEN
                 Clear(R4);
                 MovImmReg(param2, R5);
-                L := CODE.NewLabel();
+                L := NewLabel();
                 EmitLabel(L);
                 PushReg(R4);
                 DecReg(R5);
@@ -1117,7 +1132,7 @@ BEGIN
         |CODE.opMINC:
             UnOp(reg1);
             CmpImmReg(param2, reg1);
-            L := CODE.NewLabel();
+            L := NewLabel();
             jcc(jl, L);
             MovImmReg(param2, reg1);
             EmitLabel(L)
@@ -1125,7 +1140,7 @@ BEGIN
         |CODE.opMAXC:
             UnOp(reg1);
             CmpImmReg(param2, reg1);
-            L := CODE.NewLabel();
+            L := NewLabel();
             jcc(jge, L);
             MovImmReg(param2, reg1);
             EmitLabel(L)
@@ -1386,7 +1401,7 @@ BEGIN
         |CODE.opABS:
             UnOp(reg1);
             Test(reg1);
-            L := CODE.NewLabel();
+            L := NewLabel();
             jcc(jge, L);
             Neg(reg1);
             EmitLabel(L)
@@ -1396,13 +1411,13 @@ BEGIN
             drop;
 
             Test(reg1);
-            L := CODE.NewLabel();
+            L := NewLabel();
             jcc(je, L);
             MovImmReg(1, reg1);
             EmitLabel(L);
 
             Test(reg2);
-            L := CODE.NewLabel();
+            L := NewLabel();
             jcc(je, L);
             MovImmReg(1, reg2);
             EmitLabel(L);
@@ -1545,36 +1560,17 @@ BEGIN
 END translate;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR);
-TYPE
-    SECTION = RECORD address, size: INTEGER END;
-
+PROCEDURE prolog;
 VAR
-    i, tcount, adr, heap, stack, DataSize, L: INTEGER;
-
-    Code, Data, Bss: SECTION;
-
-    SecOffs: ARRAY 3 OF INTEGER;
-
-    reloc: RELOC;
-
-    file: FILES.FILE;
-
-    ram, rom, ivec: INTEGER;
+    L1, L2, L3, L4: INTEGER;
 
 BEGIN
-    ram := 2048;
-    rom := 1024*8;
-    ivec := 32;
-
-    FOR i := 0 TO LEN(mem) - 1 DO
-        mem[i] := 0
-    END;
-
-    ASSERT(code.lcount < MAXLABEL);
-    CodeList := LISTS.create(NIL);
-    RelList  := LISTS.create(NIL);
-    R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
+    L1 := NewLabel();
+    L2 := NewLabel();
+    L3 := NewLabel();
+    L4 := NewLabel();
+    _new := NewLabel();
+    CODE.codes.rtl[CODE._new] := _new;
 
     GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
@@ -1582,42 +1578,134 @@ BEGIN
     EmitWord(0);
     GenUnOpW(opPUSH, PC, mINCR);
     EmitWord(0);
-    CallRTL(CODE._init, 1);
+    GenUnOpW(opPUSH, PC, mINCR);
+    EmitWord(0);
+    CallRTL(CODE._init, 2);
+    EmitJmp(opJMP, L3);
 
-    tcount := CHL.Length(code.types);
-    translate(code, tcount * 2);
-    EmitWord(0D032H); EmitWord(00010H); // BIS #10H, SR; CPUOFF
-    L := CODE.NewLabel();
-    EmitLabel(L);
+    EmitLabel(_new);
+    PushReg(SR);
+    Clear(SR);
+    MovRegReg(R4, R4);
+    MovRegReg(SP, R4);
+    SubImmReg(16, R4);
+    MovRegReg(HP, R5);
+    GenBinOpW(opADD, SP, mIDX, R5, mREG); EmitWord(6);
+    OpRegReg(opCMP, R5, R4);
+    GenBinOpW(opMOV, SP, mIDX, R4, mREG); EmitWord(8);
+    jcc(jl, L1);
+    GenBinOpW(opMOV, SP, mIDX, HP, mIDX); EmitWord(4); EmitWord(0);
+    AddImmReg(2, HP);
+    GenBinOpW(opMOV, HP, mREG, R4, mIDX); EmitWord(0);
+    EmitLabel(L4);
+    GenBinOpW(opMOV, PC, mINCR, HP, mIDX); EmitWord(0); EmitWord(0);
+    AddImmReg(2, HP);
+    OpRegReg(opCMP, R5, HP);
+    jcc(jl, L4);
+    EmitJmp(opJMP, L2);
+    EmitLabel(L1);
+    GenBinOpW(opMOV, PC, mINCR, R4, mIDX); EmitWord(0); EmitWord(0);
+    EmitLabel(L2);
     EmitWord(01300H); // RETI
 
+    EmitLabel(L3)
+END prolog;
+
+
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
+CONST
+    IntVectorSize = 64;
+    ramAdr = 200H;
+    minStackSize = 64;
+
+    minRAM = 128;  maxRAM = 2048;
+    minROM = 4096; maxROM = 49152;
+
+VAR
+    i, tcount, adr, heap, stack, DataSize, L,
+    TextSize, maxTextSize, maxBssSize: INTEGER;
+
+    Code, Data, Bss: RECORD address, size: INTEGER END;
+
+    ram, rom: INTEGER;
+
+    reloc: RELOC;
+
+    file: FILES.FILE;
+
+BEGIN
+    ram := options.ram;
+    rom := options.rom;
+
+    IF ODD(ram) THEN DEC(ram) END;
+    IF ODD(rom) THEN DEC(rom) END;
+
+    IF ram < minRAM THEN ram := minRAM END;
+    IF ram > maxRAM THEN ram := maxRAM END;
+    IF rom < minROM THEN rom := minROM END;
+    IF rom > maxROM THEN rom := maxROM END;
+
+    maxBssSize  := ram - minStackSize;
+    maxTextSize := rom - IntVectorSize;
+
+    IF code.bss > maxBssSize THEN
+        ERRORS.error1("size of global variables is too large")
+    END;
+
+    IF code.lcount >= LEN(Labels) THEN
+        ERRORS.error1("size of program is too large")
+    END;
+
+    FOR i := 0 TO LEN(mem) - 1 DO
+        mem[i] := 0
+    END;
+
+    tcount := CHL.Length(code.types);
+    CodeList := LISTS.create(NIL);
+    RelList  := LISTS.create(NIL);
+    R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
+
+    prolog;
+    translate(code, tcount * 2);
+
+    EmitWord(0D032H); EmitWord(0010H); // BIS #10H, SR; CPUOFF
+    L := NewLabel();
+    EmitLabel(L);
+    EmitWord(4404H); // NOP
+    EmitWord(1300H); // RETI
+
     Code.address := 10000H - rom;
-    Code.size := Fixup(Code.address);
+    Code.size := Fixup(Code.address, IntVectorSize);
     Data.address := Code.address + Code.size;
     Data.size := CHL.Length(code.data) + tcount * 2;
-    Bss.address := 200H;
+    Data.size := Data.size + ORD(ODD(Data.size));
+    TextSize  := Code.size + Data.size;
+
+    IF Code.address + TextSize > 10000H - IntVectorSize THEN
+        ERRORS.error1("size of program is too large")
+    END;
+
+    Bss.address := ramAdr;
     Bss.size := code.bss + ORD(ODD(code.bss));
     heap := Bss.address + Bss.size;
-    stack := ram + 200H;
-    ASSERT(stack - heap >= 64);
+    stack := ramAdr + ram;
+    ASSERT(stack - heap >= minStackSize);
     adr := Code.address + 2;
     PutWord(stack, adr);
     adr := Code.address + 6;
     PutWord(heap, adr);
     adr := Code.address + 10;
+    PutWord(stack, adr);
+    adr := Code.address + 14;
     PutWord(Data.address, adr);
-
-    SecOffs[RCODE] := Code.address;
-    SecOffs[RDATA] := Data.address;
-    SecOffs[RBSS]  := Bss.address;
 
     reloc := RelList.first(RELOC);
     WHILE reloc # NIL DO
         adr := reloc.WordPtr.offset * 2;
-        IF reloc.section = RCODE THEN
-            PutWord(Labels[reloc.WordPtr.val].offset * 2, adr)
-        ELSE
-            PutWord(reloc.WordPtr.val + SecOffs[reloc.section], adr)
+        CASE reloc.section OF
+        |RCODE: PutWord(Labels[reloc.WordPtr.val].offset * 2, adr)
+        |RDATA: PutWord(reloc.WordPtr.val + Data.address, adr)
+        |RBSS:  PutWord(reloc.WordPtr.val + Bss.address, adr)
         END;
         reloc := reloc.next(RELOC)
     END;
@@ -1633,8 +1721,8 @@ BEGIN
         INC(adr)
     END;
 
-    adr := 10000H - 2 * ivec;
-    FOR i := ivec TO 2 BY -1 DO
+    adr := 10000H - IntVectorSize;
+    FOR i := IntVectorSize DIV 2 TO 2 BY -1 DO
         PutWord(Labels[L].offset * 2, adr)
     END;
     PutWord(Code.address, adr);
@@ -1643,11 +1731,11 @@ BEGIN
     WRITER.Write(file, mem, LEN(mem));
     FILES.close(file);
 
-    C.StringLn("-------------------");
+    C.StringLn("------------------------------------");
     C.StringLn("  size of:"); C.Ln;
-    C.String(  "    code    "); C.IntLn(Code.size + Data.size + ORD(ODD(Data.size)));
-    C.String(  "    bss     "); C.IntLn(Bss.size);
-    C.StringLn("-------------------")
+    C.String(  "    code    "); C.Int(TextSize); C.String(" of "); C.Int(maxTextSize); C.String("  ("); C.Int(TextSize * 100 DIV maxTextSize); C.StringLn("%)");
+    C.String(  "    bss     "); C.Int(Bss.size); C.String(" of "); C.Int(maxBssSize); C.String("  ("); C.Int(Bss.size * 100 DIV maxBssSize); C.StringLn("%)");
+    C.StringLn("------------------------------------")
 
 END CodeGen;
 

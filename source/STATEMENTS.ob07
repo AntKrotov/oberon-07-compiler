@@ -21,9 +21,9 @@ CONST
     eSTFUNC  =  PARS.eSTFUNC;  eSYSFUNC  =  PARS.eSYSFUNC;  eSYSPROC  =  PARS.eSYSPROC;
     eIMP     =  PARS.eIMP;
 
-    errASSERT = 1;  errPTR  =  2;  errDIV  =  3;  errPROC = 4;
-    errGUARD  = 5;  errIDX  =  6;  errCASE =  7;  errCOPY = 8;
-    errCHR    = 9;  errWCHR = 10;  errBYTE = 11;
+    errASSERT = 1;  errPTR  =  2;  errDIV  =  3;  errPROC =  4;
+    errGUARD  = 5;  errIDX  =  6;  errCASE =  7;  errCOPY =  8;
+    errCHR    = 9;  errWCHR = 10;  errBYTE = 11;  errSTK  = 12;
 
     chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2; chkCHR* = 3; chkWCHR* = 4; chkBYTE* = 5;
 
@@ -67,15 +67,15 @@ TYPE
 
 VAR
 
-    begcall, endcall: CODE.COMMAND;
+    Options: PROG.OPTIONS;
 
-    checking: SET;
+    begcall, endcall: CODE.COMMAND;
 
     CaseLabels, CaseVar: C.COLLECTION;
 
     CaseVariants: LISTS.LIST;
 
-    Target, CPU: INTEGER;
+    CPU: INTEGER;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -415,7 +415,7 @@ BEGIN
                         CODE.AddCmd(CODE.opSAVE8C, ARITH.Int(e.value))
                     END
                 ELSE
-                    IF chkBYTE IN checking THEN
+                    IF chkBYTE IN Options.checking THEN
                         label := CODE.NewLabel();
                         CODE.AddCmd2(CODE.opCHKBYTE, label, 0);
                         CODE.OnError(line, errBYTE);
@@ -646,7 +646,7 @@ BEGIN
             ELSIF isExpr(e) & (e.type.typ = PROG.tREAL) THEN
                 CODE.pushf
             ELSE
-                IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN checking) THEN
+                IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN Options.checking) THEN
                     CheckRange(256, pos.line, errBYTE)
                 END;
                 CODE.AddCmd(CODE.opPARAM, 1)
@@ -782,6 +782,9 @@ BEGIN
 
         |PROG.stNEW:
             varparam(parser, pos, isPtr, TRUE, e);
+            IF CPU = cpuMSP430 THEN
+                PARS.check(e.type.base.size + 16 < Options.ram, parser, pos, 63)
+            END;
             CODE.New(e.type.base.size, e.type.base.num)
 
         |PROG.stDISPOSE:
@@ -1019,7 +1022,7 @@ BEGIN
                 ARITH.setChar(e.value, ARITH.getInt(e.value));
                 PARS.check(ARITH.check(e.value), parser, pos, 107)
             ELSE
-                IF chkCHR IN checking THEN
+                IF chkCHR IN Options.checking THEN
                     CheckRange(256, pos.line, errCHR)
                 ELSE
                     CODE.AddCmd0(CODE.opCHR)
@@ -1034,7 +1037,7 @@ BEGIN
                 ARITH.setWChar(e.value, ARITH.getInt(e.value));
                 PARS.check(ARITH.check(e.value), parser, pos, 101)
             ELSE
-                IF chkWCHR IN checking THEN
+                IF chkWCHR IN Options.checking THEN
                     CheckRange(65536, pos.line, errWCHR)
                 ELSE
                     CODE.AddCmd0(CODE.opWCHR)
@@ -1332,7 +1335,7 @@ BEGIN
         CODE.load(e.type.size)
     END;
 
-    IF chkPTR IN checking THEN
+    IF chkPTR IN Options.checking THEN
         label := CODE.NewLabel();
         CODE.AddJmpCmd(CODE.opJNZ, label);
         CODE.OnError(pos.line, error);
@@ -1400,7 +1403,7 @@ VAR
 
     BEGIN
 
-        IF chkIDX IN checking THEN
+        IF chkIDX IN Options.checking THEN
             label := CODE.NewLabel();
             CODE.AddCmd2(CODE.opCHKIDX2, label, 0);
             CODE.OnError(pos.line, errIDX);
@@ -1486,7 +1489,7 @@ BEGIN
                 END
             ELSE
                 IF e.type.length > 0 THEN
-                    IF chkIDX IN checking THEN
+                    IF chkIDX IN Options.checking THEN
                         CheckRange(e.type.length, pos.line, errIDX)
                     END;
                     IF e.type.base.size # 1 THEN
@@ -1527,7 +1530,7 @@ BEGIN
 
         IF e.type.typ = PROG.tRECORD THEN
             PARS.check(t.type.typ = PROG.tRECORD, parser, pos, 80);
-            IF chkGUARD IN checking THEN
+            IF chkGUARD IN Options.checking THEN
                 IF e.ident = NIL THEN
                     CODE.TypeGuard(CODE.opTYPEGD, t.type.num, pos.line, errGUARD)
                 ELSE
@@ -1537,7 +1540,7 @@ BEGIN
             END;
         ELSE
             PARS.check(t.type.typ = PROG.tPOINTER, parser, pos, 81);
-            IF chkGUARD IN checking THEN
+            IF chkGUARD IN Options.checking THEN
                 CODE.TypeGuard(CODE.opTYPEGP, t.type.base.num, pos.line, errGUARD)
             END
         END;
@@ -3167,7 +3170,7 @@ BEGIN
             ELSE
                 LoadConst(e)
             END
-        ELSIF (e.type.typ = PROG.tINTEGER) & (t.typ = PROG.tBYTE) & (chkBYTE IN checking) THEN
+        ELSIF (e.type.typ = PROG.tINTEGER) & (t.typ = PROG.tBYTE) & (chkBYTE IN Options.checking) THEN
             CheckRange(256, pos.line, errBYTE)
         ELSIF e.obj = ePROC THEN
             PARS.check(e.ident.global, parser, pos, 85);
@@ -3223,7 +3226,6 @@ BEGIN
     getproc(rtl,  "_mod2",      CODE._mod2);
     getproc(rtl,  "_arrcpy",    CODE._arrcpy);
     getproc(rtl,  "_rot",       CODE._rot);
-    getproc(rtl,  "_new",       CODE._new);
     getproc(rtl,  "_strcmp",    CODE._strcmp);
     getproc(rtl,  "_error",     CODE._error);
     getproc(rtl,  "_is",        CODE._is);
@@ -3241,6 +3243,7 @@ BEGIN
         getproc(rtl,  "_strcmpw",   CODE._strcmpw);
         getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
         getproc(rtl,  "_dllentry",  CODE._dllentry);
+        getproc(rtl,  "_new",       CODE._new);
         getproc(rtl,  "_dispose",   CODE._dispose);
         getproc(rtl,  "_exit",      CODE._exit)
     END;
@@ -3258,18 +3261,23 @@ BEGIN
 END setrtl;
 
 
-PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target, version, stack, base: INTEGER; pic: BOOLEAN; chk: SET);
+PROCEDURE compile* (path, lib_path, modname, outname: PARS.PATH; target: INTEGER; options: PROG.OPTIONS);
 VAR
-    parser:  PARS.PARSER;
+    parser: PARS.PARSER;
     ext: PARS.PATH;
-    amd64, x86, msp430: BOOLEAN;
 
 BEGIN
-    Target := target;
-    amd64 := target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64};
-    x86 := target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-                      mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32};
-    msp430 := target = mConst.Target_iMSP430;
+    Options := options;
+
+    CASE target OF
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64:
+        CPU := cpuAMD64
+    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
+     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
+        CPU := cpuX86
+    |mConst.Target_iMSP430:
+        CPU := cpuMSP430
+    END;
 
     ext := mConst.FILE_EXT;
     CaseLabels := C.create();
@@ -3278,19 +3286,10 @@ BEGIN
     CaseVariants := LISTS.create(NIL);
     LISTS.push(CaseVariants, NewVariant(0, NIL));
 
-    checking := chk;
-
-    IF amd64 THEN
-        CPU := cpuAMD64;
-        CODE.init(6, CODE.little_endian)
-    ELSIF x86 THEN
-        CPU := cpuX86;
-        CODE.init(8, CODE.little_endian)
-    ELSIF msp430 THEN
-        CPU := cpuMSP430;
-        CODE.init(8, CODE.little_endian)
-    ELSE
-        ASSERT(FALSE)
+    CASE CPU OF
+    |cpuAMD64:   CODE.init(6, CODE.little_endian)
+    |cpuX86:     CODE.init(8, CODE.little_endian)
+    |cpuMSP430:  CODE.init(0, CODE.little_endian)
     END;
 
     parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
@@ -3328,15 +3327,13 @@ BEGIN
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
     CODE.codes.bss := PARS.program.bss;
-    IF amd64 THEN
-        AMD64.CodeGen(CODE.codes, outname, target, stack, base)
-    ELSIF x86 THEN
-        X86.CodeGen(CODE.codes, outname, target, stack, base, version, pic)
-    ELSIF msp430 THEN
-        MSP430.CodeGen(CODE.codes, outname)
-    ELSE
-        ASSERT(FALSE)
+
+    CASE CPU OF
+    | cpuAMD64:   AMD64.CodeGen(CODE.codes, outname, target, options)
+    |   cpuX86:     X86.CodeGen(CODE.codes, outname, target, options)
+    |cpuMSP430:  MSP430.CodeGen(CODE.codes, outname, target, options)
     END
+
 END compile;
 
 

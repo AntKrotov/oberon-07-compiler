@@ -7,7 +7,7 @@
 
 MODULE X86;
 
-IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF,
+IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, PROG,
        mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS, ERRORS;
 
 
@@ -2349,12 +2349,14 @@ BEGIN
 END epilog;
 
 
-PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target, stack, base, ver: INTEGER; pic: BOOLEAN);
+PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     dllret, dllinit: INTEGER;
+    opt: PROG.OPTIONS;
 
 BEGIN
 
+    opt := options;
     CodeList := LISTS.create(NIL);
 
     program := BIN.create(code.lcount);
@@ -2363,27 +2365,27 @@ BEGIN
     dllret  := NewLabel();
 
     IF target = mConst.Target_iObject THEN
-        pic := FALSE
+        opt.pic := FALSE
     END;
 
     IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL, mConst.Target_iELF32} THEN
-        pic := TRUE
+        opt.pic := TRUE
     END;
 
     R := REG.Create(push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
-    prolog(code, pic, target, stack, dllinit, dllret);
-    translate(code, pic, CHL.Length(code.types) * 4);
-    epilog(code, pic, outname, target, stack, ver, dllinit, dllret);
+    prolog(code, opt.pic, target, opt.stack, dllinit, dllret);
+    translate(code, opt.pic, CHL.Length(code.types) * 4);
+    epilog(code, opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret);
 
     BIN.fixup(program);
 
     IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
-        PE32.write(program, outname, base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, FALSE)
+        PE32.write(program, outname, opt.base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, FALSE)
     ELSIF target = mConst.Target_iKolibri THEN
         KOS.write(program, outname)
     ELSIF target = mConst.Target_iObject THEN
-        MSCOFF.write(program, outname, ver)
+        MSCOFF.write(program, outname, opt.version)
     ELSIF target = mConst.Target_iELF32 THEN
         ELF.write(program, outname, FALSE)
     END
