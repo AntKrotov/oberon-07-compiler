@@ -3255,7 +3255,8 @@ BEGIN
         getproc(rtl,  "_in",        CODE._in);
         getproc(rtl,  "_in2",       CODE._in2);
         getproc(rtl,  "_incl",      CODE._incl);
-        getproc(rtl,  "_excl",      CODE._excl)
+        getproc(rtl,  "_excl",      CODE._excl);
+        getproc(rtl,  "_int",       CODE._int)
     END
 
 END setrtl;

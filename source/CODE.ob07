@@ -141,6 +141,7 @@ CONST
     _in2       *=  32;
     _incl      *=  33;
     _excl      *=  34;
+    _int       *=  35;
 
 
 TYPE
@@ -207,7 +208,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 35 OF INTEGER;
+        rtl*:       ARRAY 36 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;

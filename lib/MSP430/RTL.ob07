@@ -17,13 +17,18 @@ CONST
 
 TYPE
 
-    TRAP = PROCEDURE (module, err: INTEGER);
+    TRAPPROC = PROCEDURE (module, err: INTEGER);
+
+    INTPROC = PROCEDURE (n, sr, pc: INTEGER);
+
+    INTREC = RECORD n, sr, pc: INTEGER END;
 
 
 VAR
 
     types, sp: INTEGER;
-    trap: TRAP;
+    trap: TRAPPROC;
+    int:  INTPROC;
 
 
 PROCEDURE _shift* (op, x, n: INTEGER): INTEGER;
@@ -418,6 +423,14 @@ BEGIN
 END _guard;
 
 
+PROCEDURE _int* (interrupt: INTREC);
+BEGIN
+    IF int # NIL THEN
+        int(interrupt.n, interrupt.sr, interrupt.pc)
+    END
+END _int;
+
+
 PROCEDURE _init* (_types, _sp: INTEGER);
 BEGIN
     types := _types;
@@ -425,10 +438,16 @@ BEGIN
 END _init;
 
 
-PROCEDURE SetTrap* (_trap: TRAP);
+PROCEDURE SetTrap* (_trap: TRAPPROC);
 BEGIN
-    trap  := _trap
+    trap := _trap
 END SetTrap;
+
+
+PROCEDURE SetInt* (_int: INTPROC);
+BEGIN
+    int := _int
+END SetInt;
 
 
 END RTL.

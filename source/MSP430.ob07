@@ -16,7 +16,7 @@ CONST
 
     R4 = 4; R5 = 5; R6 = 6; R7 = 7; R8 = 8;
 
-    BP = 15; HP = 14;
+    BP = 15; HP = 14; IR = 13;
 
     ACC = R4;
 
@@ -37,7 +37,7 @@ CONST
     je  = 0;  jne = je  + 1;
     jge = 2;  jl  = jge + 1;
     jle = 4;  jg  = jle + 1;
-    jb  = 6;  //jnb = jb  + 1;
+    jb  = 6;
 
 
 TYPE
@@ -95,6 +95,8 @@ VAR
     Labels: ARRAY 30000 OF LABEL;
 
     _new: INTEGER;
+
+    IV: ARRAY 32 OF INTEGER;
 
 
 PROCEDURE EmitLabel (L: INTEGER);
@@ -1561,17 +1563,9 @@ END translate;
 
 
 PROCEDURE prolog;
-VAR
-    L1, L2, L3, L4: INTEGER;
-
 BEGIN
-    L1 := NewLabel();
-    L2 := NewLabel();
-    L3 := NewLabel();
-    L4 := NewLabel();
     _new := NewLabel();
     CODE.codes.rtl[CODE._new] := _new;
-
     GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, HP, mREG);
@@ -1580,8 +1574,22 @@ BEGIN
     EmitWord(0);
     GenUnOpW(opPUSH, PC, mINCR);
     EmitWord(0);
-    CallRTL(CODE._init, 2);
-    EmitJmp(opJMP, L3);
+    CallRTL(CODE._init, 2)
+END prolog;
+
+
+PROCEDURE epilog;
+VAR
+    L1, L2, L3, L4: INTEGER;
+    i: INTEGER;
+
+BEGIN
+    EmitWord(0D032H); EmitWord(0010H); // BIS #10H, SR; CPUOFF
+
+    L1 := NewLabel();
+    L2 := NewLabel();
+    L3 := NewLabel();
+    L4 := NewLabel();
 
     EmitLabel(_new);
     PushReg(SR);
@@ -1597,24 +1605,52 @@ BEGIN
     GenBinOpW(opMOV, SP, mIDX, HP, mIDX); EmitWord(4); EmitWord(0);
     AddImmReg(2, HP);
     GenBinOpW(opMOV, HP, mREG, R4, mIDX); EmitWord(0);
-    EmitLabel(L4);
+    EmitLabel(L3);
     GenBinOpW(opMOV, PC, mINCR, HP, mIDX); EmitWord(0); EmitWord(0);
     AddImmReg(2, HP);
     OpRegReg(opCMP, R5, HP);
-    jcc(jl, L4);
+    jcc(jl, L3);
     EmitJmp(opJMP, L2);
     EmitLabel(L1);
     GenBinOpW(opMOV, PC, mINCR, R4, mIDX); EmitWord(0); EmitWord(0);
     EmitLabel(L2);
     EmitWord(01300H); // RETI
 
-    EmitLabel(L3)
-END prolog;
+    FOR i := 1 TO LEN(IV) - 1 DO
+        IV[i] := NewLabel();
+        EmitLabel(IV[i]);
+        PushImm(i);
+        EmitJmp(opJMP, L4)
+    END;
+
+    EmitLabel(L4);
+
+    MovRegReg(SP, IR);
+
+    FOR i := 0 TO 31 DO
+        IF i IN R.regs + R.vregs THEN
+            PushReg(i)
+        END
+    END;
+
+    PushReg(IR);
+    CallRTL(CODE._int, 0);
+    Pop(IR);
+
+    FOR i := 31 TO 0 BY -1 DO
+        IF i IN R.regs + R.vregs THEN
+            Pop(i)
+        END
+    END;
+
+    Pop(IR);
+    EmitWord(01300H) // RETI
+END epilog;
 
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
-    IntVectorSize = 64;
+    IntVectorSize = LEN(IV) * 2;
     ramAdr = 200H;
     minStackSize = 64;
 
@@ -1622,7 +1658,7 @@ CONST
     minROM = 4096; maxROM = 49152;
 
 VAR
-    i, tcount, adr, heap, stack, DataSize, L,
+    i, tcount, adr, heap, stack, DataSize,
     TextSize, maxTextSize, maxBssSize: INTEGER;
 
     Code, Data, Bss: RECORD address, size: INTEGER END;
@@ -1667,12 +1703,7 @@ BEGIN
 
     prolog;
     translate(code, tcount * 2);
-
-    EmitWord(0D032H); EmitWord(0010H); // BIS #10H, SR; CPUOFF
-    L := NewLabel();
-    EmitLabel(L);
-    EmitWord(4404H); // NOP
-    EmitWord(1300H); // RETI
+    epilog;
 
     Code.address := 10000H - rom;
     Code.size := Fixup(Code.address, IntVectorSize);
@@ -1722,9 +1753,10 @@ BEGIN
     END;
 
     adr := 10000H - IntVectorSize;
-    FOR i := IntVectorSize DIV 2 TO 2 BY -1 DO
-        PutWord(Labels[L].offset * 2, adr)
+    FOR i := LEN(IV) - 1 TO 1 BY -1 DO
+        PutWord(Labels[IV[i]].offset * 2, adr)
     END;
+
     PutWord(Code.address, adr);
 
     file := FILES.create(outname);
