@@ -198,9 +198,9 @@ BEGIN
             C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)"); C.Ln;
         C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
         IF UTILS.bit_depth = 64 THEN
-            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfexe64'); C.Ln;
+            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfexe64 | msp430'); C.Ln;
         ELSIF UTILS.bit_depth = 32 THEN
-            C.StringLn('target = console | gui | dll | kos | obj | elfexe'); C.Ln;
+            C.StringLn('target = console | gui | dll | kos | obj | elfexe | msp430'); C.Ln;
         END;
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
@@ -208,6 +208,8 @@ BEGIN
         C.StringLn('  -ver <major.minor>     set version of program'); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
+        C.StringLn("  -ram <size>            set size of RAM in bytes (MSP430)"); C.Ln;
+        C.StringLn("  -rom <size>            set size of ROM in bytes (MSP430)"); C.Ln;
         UTILS.Exit(0)
     END;
 
