@@ -1648,6 +1648,49 @@ BEGIN
 END epilog;
 
 
+PROCEDURE hexdgt (n: BYTE): BYTE;
+BEGIN
+    IF n < 10 THEN
+        n := n + ORD("0")
+    ELSE
+        n := n - 10 + ORD("A")
+    END
+
+    RETURN n
+END hexdgt;
+
+
+PROCEDURE WriteHexByte (file: FILES.FILE; byte: BYTE);
+BEGIN
+    WRITER.WriteByte(file, hexdgt(byte DIV 16));
+    WRITER.WriteByte(file, hexdgt(byte MOD 16));
+END WriteHexByte;
+
+
+PROCEDURE WriteHex (file: FILES.FILE; mem: ARRAY OF BYTE; idx, cnt: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    WHILE cnt > 0 DO
+        WRITER.WriteByte(file, ORD(":"));
+        WriteHexByte(file, MIN(16, cnt));
+        WriteHexByte(file, idx DIV 256);
+        WriteHexByte(file, idx MOD 256);
+        WriteHexByte(file, 0);
+        i := MIN(16, cnt);
+        WHILE i > 0 DO
+            WriteHexByte(file, mem[idx]);
+            INC(idx);
+            DEC(i)
+        END;
+        DEC(cnt, MIN(16, cnt));
+        WRITER.WriteByte(file, 0DH);
+        WRITER.WriteByte(file, 0AH)
+    END
+END WriteHex;
+
+
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
     IntVectorSize = LEN(IV) * 2;
@@ -1760,7 +1803,18 @@ BEGIN
     PutWord(Code.address, adr);
 
     file := FILES.create(outname);
-    WRITER.Write(file, mem, LEN(mem));
+    WriteHex(file, mem, Code.address, TextSize);
+    WriteHex(file, mem, 10000H - IntVectorSize, IntVectorSize);
+
+    WRITER.WriteByte(file, ORD(":"));
+    WriteHexByte(file, 0);
+    WriteHexByte(file, 0);
+    WriteHexByte(file, 0);
+    WriteHexByte(file, 1);
+    WriteHexByte(file, 255);
+    WRITER.WriteByte(file, 0DH);
+    WRITER.WriteByte(file, 0AH);
+
     FILES.close(file);
 
     C.StringLn("------------------------------------");
