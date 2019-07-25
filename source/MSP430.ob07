@@ -200,11 +200,38 @@ BEGIN
 END OpRegReg;
 
 
+PROCEDURE OpImmRegMode (op, imm, reg, mode: INTEGER; byte: BOOLEAN);
+BEGIN
+    CASE imm OF
+    | 0: GenBinOp(op, CG, mREG,   reg, mode, byte)
+    | 1: GenBinOp(op, CG, mIDX,   reg, mode, byte)
+    | 2: GenBinOp(op, CG, mINDIR, reg, mode, byte)
+    | 4: GenBinOp(op, SR, mINDIR, reg, mode, byte)
+    | 8: GenBinOp(op, SR, mINCR,  reg, mode, byte)
+    |-1: GenBinOp(op, CG, mINCR,  reg, mode, byte)
+    ELSE
+        GenBinOp(op, PC, mINCR, reg, mode, byte);
+        EmitWord(imm)
+    END
+END OpImmRegMode;
+
+
 PROCEDURE OpImmReg (op, imm, reg: INTEGER);
 BEGIN
-    GenBinOpW(op, PC, mINCR, reg, mREG);
-    EmitWord(imm)
+    OpImmRegMode(op, imm, reg, mREG, FALSE)
 END OpImmReg;
+
+
+PROCEDURE OpImmRegIdx (op, imm, reg: INTEGER);
+BEGIN
+    OpImmRegMode(op, imm, reg, mIDX, FALSE)
+END OpImmRegIdx;
+
+
+PROCEDURE OpImmRegIdxBW (op, imm, reg: INTEGER; byte: BOOLEAN);
+BEGIN
+    OpImmRegMode(op, imm, reg, mIDX, byte)
+END OpImmRegIdxBW;
 
 
 PROCEDURE MovRegReg (src, dst: INTEGER);
@@ -251,8 +278,15 @@ END IncReg;
 
 PROCEDURE PushImm (imm: INTEGER);
 BEGIN
-    GenUnOpW(opPUSH, PC, mINCR);
-    EmitWord(imm)
+    CASE imm OF
+    | 0: GenUnOpW(opPUSH, CG, mREG)
+    | 1: GenUnOpW(opPUSH, CG, mIDX)
+    | 2: GenUnOpW(opPUSH, CG, mINDIR)
+    |-1: GenUnOpW(opPUSH, CG, mINCR)
+    ELSE
+        GenUnOpW(opPUSH, PC, mINCR);
+        EmitWord(imm)
+    END
 END PushImm;
 
 
@@ -641,17 +675,15 @@ BEGIN
             MovRegReg(SP, BP);
 
             IF param2 > 8 THEN
-                Clear(R4);
-                MovImmReg(param2, R5);
+                MovImmReg(param2, R4);
                 L := NewLabel();
                 EmitLabel(L);
-                PushReg(R4);
-                DecReg(R5);
+                PushReg(CG);
+                DecReg(R4);
                 jcc(jne, L)
             ELSIF param2 > 0 THEN
-                Clear(R4);
                 WHILE param2 > 0 DO
-                    PushReg(R4);
+                    PushReg(CG);
                     DEC(param2)
                 END
             END
@@ -758,15 +790,13 @@ BEGIN
 
         |CODE.opSAVE8C:
             UnOp(reg1);
-            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, TRUE);
-            EmitWord(param2);
+            OpImmRegIdxBW(opMOV, param2, reg1, TRUE);
             EmitWord(0);
             drop
 
         |CODE.opSAVE16C, CODE.opSAVEC:
             UnOp(reg1);
-            GenBinOpW(opMOV, PC, mINCR, reg1, mIDX);
-            EmitWord(param2);
+            OpImmRegIdx(opMOV, param2, reg1);
             EmitWord(0);
             drop
 
@@ -805,8 +835,7 @@ BEGIN
             END
 
         |CODE.opLADR_SAVEC:
-            GenBinOpW(opMOV, PC, mINCR, BP, mIDX);
-            EmitWord(param2);
+            OpImmRegIdx(opMOV, param2, BP);
             EmitWord(param1 * 2)
 
         |CODE.opLADR_SAVE:
@@ -816,8 +845,7 @@ BEGIN
             drop
 
         |CODE.opGADR_SAVEC:
-            GenBinOpW(opMOV, PC, mINCR, SR, mIDX);
-            EmitWord(param2);
+            OpImmRegIdx(opMOV, param2, SR);
             Reloc(RBSS, param1)
 
         |CODE.opCONST_PARAM:
@@ -925,10 +953,7 @@ BEGIN
             BinOp(reg1, reg2);
             drop;
             drop;
-            CASE param2 OF
-            |1: GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, TRUE)
-            |2: GenBinOpW(opMOV, reg1, mINDIR, reg2, mIDX)
-            END;
+            GenBinOp(opMOV, reg1, mINDIR, reg2, mIDX, param2 = 1);
             EmitWord(0)
 
         |CODE.opCHKIDX:
@@ -951,29 +976,25 @@ BEGIN
 
         |CODE.opINC1, CODE.opINC1B:
             UnOp(reg1);
-            GenBinOp(opADD, PC, mINCR, reg1, mIDX, opcode = CODE.opINC1B);
-            EmitWord(1);
+            GenBinOp(opADD, CG, mIDX, reg1, mIDX, opcode = CODE.opINC1B);
             EmitWord(0);
             drop
 
         |CODE.opDEC1, CODE.opDEC1B:
             UnOp(reg1);
-            GenBinOp(opSUB, PC, mINCR, reg1, mIDX, opcode = CODE.opDEC1B);
-            EmitWord(1);
+            GenBinOp(opSUB, CG, mIDX, reg1, mIDX, opcode = CODE.opDEC1B);
             EmitWord(0);
             drop
 
         |CODE.opINCC, CODE.opINCCB:
             UnOp(reg1);
-            GenBinOp(opADD, PC, mINCR, reg1, mIDX, opcode = CODE.opINCCB);
-            EmitWord(param2);
+            OpImmRegIdxBW(opADD, param2, reg1, opcode = CODE.opINCCB);
             EmitWord(0);
             drop
 
         |CODE.opDECC, CODE.opDECCB:
             UnOp(reg1);
-            GenBinOp(opSUB, PC, mINCR, reg1, mIDX, opcode = CODE.opDECCB);
-            EmitWord(param2);
+            OpImmRegIdxBW(opSUB, param2, reg1, opcode = CODE.opDECCB);
             EmitWord(0);
             drop
 
@@ -992,23 +1013,19 @@ BEGIN
             drop
 
         |CODE.opLADR_INC1, CODE.opLADR_INC1B:
-            GenBinOp(opADD, PC, mINCR, BP, mIDX, opcode = CODE.opLADR_INC1B);
-            EmitWord(1);
+            GenBinOp(opADD, CG, mIDX, BP, mIDX, opcode = CODE.opLADR_INC1B);
             EmitWord(param2 * 2)
 
         |CODE.opLADR_DEC1, CODE.opLADR_DEC1B:
-            GenBinOp(opSUB, PC, mINCR, BP, mIDX, opcode = CODE.opLADR_DEC1B);
-            EmitWord(1);
+            GenBinOp(opSUB, CG, mIDX, BP, mIDX, opcode = CODE.opLADR_DEC1B);
             EmitWord(param2 * 2)
 
         |CODE.opLADR_INCC, CODE.opLADR_INCCB:
-            GenBinOp(opADD, PC, mINCR, BP, mIDX, opcode = CODE.opLADR_INCCB);
-            EmitWord(param2);
+            OpImmRegIdxBW(opADD, param2, BP, opcode = CODE.opLADR_INCCB);
             EmitWord(param1 * 2)
 
         |CODE.opLADR_DECC, CODE.opLADR_DECCB:
-            GenBinOp(opSUB, PC, mINCR, BP, mIDX, opcode = CODE.opLADR_DECCB);
-            EmitWord(param2);
+            OpImmRegIdxBW(opSUB, param2, BP, opcode = CODE.opLADR_DECCB);
             EmitWord(param1 * 2)
 
         |CODE.opLADR_INC, CODE.opLADR_INCB:
@@ -1187,8 +1204,11 @@ BEGIN
 
         |CODE.opSBOOLC:
             UnOp(reg1);
-            GenBinOp(opMOV, PC, mINCR, reg1, mIDX, TRUE);
-            EmitWord(ORD(param2 # 0));
+            IF param2 # 0 THEN
+                GenBinOp(opMOV, CG, mIDX, reg1, mIDX, TRUE)
+            ELSE
+                GenBinOp(opMOV, CG, mREG, reg1, mIDX, TRUE)
+            END;
             EmitWord(0);
             drop
 
@@ -1494,15 +1514,13 @@ BEGIN
 
         |CODE.opINCLC:
             UnOp(reg1);
-            GenBinOpW(opBIS, PC, mINCR, reg1, mIDX);
-            EmitWord(LSL(1, param2));
+            OpImmRegIdx(opBIS, LSL(1, param2), reg1);
             EmitWord(0);
             drop
 
         |CODE.opEXCLC:
             UnOp(reg1);
-            GenBinOpW(opBIC, PC, mINCR, reg1, mIDX);
-            EmitWord(LSL(1, param2));
+            OpImmRegIdx(opBIC, LSL(1, param2), reg1);
             EmitWord(0);
             drop
 
@@ -1543,13 +1561,11 @@ BEGIN
             END
 
         |CODE.opLADR_INCLC:
-            GenBinOpW(opBIS, PC, mINCR, BP, mIDX);
-            EmitWord(LSL(1, param2));
+            OpImmRegIdx(opBIS, LSL(1, param2), BP);
             EmitWord(param1 * 2)
 
         |CODE.opLADR_EXCLC:
-            GenBinOpW(opBIC, PC, mINCR, BP, mIDX);
-            EmitWord(LSL(1, param2));
+            OpImmRegIdx(opBIC, LSL(1, param2), BP);
             EmitWord(param1 * 2)
 
         END;
@@ -1589,8 +1605,6 @@ BEGIN
     L1 := NewLabel();
     L2 := NewLabel();
     L3 := NewLabel();
-    L4 := NewLabel();
-
     EmitLabel(_new);
     PushReg(SR);
     Clear(SR);
@@ -1606,16 +1620,17 @@ BEGIN
     AddImmReg(2, HP);
     GenBinOpW(opMOV, HP, mREG, R4, mIDX); EmitWord(0);
     EmitLabel(L3);
-    GenBinOpW(opMOV, PC, mINCR, HP, mIDX); EmitWord(0); EmitWord(0);
+    GenBinOpW(opMOV, CG, mREG, HP, mIDX); EmitWord(0);
     AddImmReg(2, HP);
     OpRegReg(opCMP, R5, HP);
     jcc(jl, L3);
     EmitJmp(opJMP, L2);
     EmitLabel(L1);
-    GenBinOpW(opMOV, PC, mINCR, R4, mIDX); EmitWord(0); EmitWord(0);
+    GenBinOpW(opMOV, CG, mREG, R4, mIDX); EmitWord(0);
     EmitLabel(L2);
     EmitWord(01300H); // RETI
 
+    L4 := NewLabel();
     FOR i := 1 TO LEN(IV) - 1 DO
         IV[i] := NewLabel();
         EmitLabel(IV[i]);
