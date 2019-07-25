@@ -1,0 +1,120 @@
+﻿(*
+
+Пример для MSP-EXP430G2 Rev1.5
+
+  Мигает зеленый светодиод.
+  При нажатии на кнопку P1.3, включается/выключается красный светодиод.
+
+*)
+
+MODULE Example1;
+
+IMPORT SYSTEM, RTL;
+
+
+CONST
+
+    REDLED   = 0;
+    GREENLED = 6;
+    BUTTON   = 3;
+
+    P1OUT = 21H;
+    P1DIR = 22H;
+    P1IFG = 23H;
+    P1IE  = 25H;
+    P1REN = 27H;
+
+
+PROCEDURE delay (n: INTEGER);
+BEGIN
+    WHILE n > 0 DO DEC(n) END
+END delay;
+
+
+PROCEDURE get_bit (mem, bit: INTEGER): BOOLEAN;
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b)
+    RETURN bit IN BITS(b)
+END get_bit;
+
+
+PROCEDURE set_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, ORD(BITS(b) + {bit}))
+END set_bit;
+
+
+PROCEDURE clr_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, ORD(BITS(b) - {bit}))
+END clr_bit;
+
+
+PROCEDURE inv_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, ORD(BITS(b) / {bit}))
+END inv_bit;
+
+
+(*
+обработчик прерываний
+  n - номер прерывания в векторе прерываний:
+
+  адрес    номер
+  0FFFEH     0
+  0FFFCH     1
+  0FFFAH     2
+  ...
+
+  sr, pc - значение регистров SR и PC в момент прерывания
+*)
+PROCEDURE int (n, sr, pc: INTEGER);
+BEGIN
+    IF n = 13 THEN  (* прерывание от порта P1 - #13 *)
+        IF get_bit(P1IFG, BUTTON) THEN (* нажата кнопка *)
+            inv_bit(P1OUT, REDLED);
+            delay(30000);
+            clr_bit(P1IFG, BUTTON)
+        END
+    END
+END int;
+
+
+PROCEDURE main;
+BEGIN
+    SYSTEM.PUT16(0120H, 5A80H); (* отключить сторожевой таймер *)
+
+    (* инициализация спец. регистров *)
+    SYSTEM.PUT8(P1DIR, ORD({REDLED, GREENLED}));
+    set_bit(P1REN, BUTTON);
+    set_bit(P1OUT, BUTTON);
+    set_bit(P1IE,  BUTTON);
+
+    RTL.SetInt(int); (* назначить обработчик прерываний *)
+    SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
+
+    WHILE TRUE DO
+        inv_bit(P1OUT, GREENLED);
+        delay(30000)
+    END
+END main;
+
+
+BEGIN
+    main
+END Example1.
