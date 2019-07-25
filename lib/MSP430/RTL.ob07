@@ -215,43 +215,33 @@ BEGIN
 END divmod;
 
 
-PROCEDURE div_ (x, y: INTEGER): INTEGER;
+PROCEDURE _div2* (a, b: INTEGER): INTEGER;
 VAR
     mod: INTEGER;
 
 BEGIN
-    RETURN divmod(x, y, mod)
-END div_;
+    RETURN divmod(a, b, mod)
+END _div2;
 
 
-PROCEDURE mod_ (x, y: INTEGER): INTEGER;
+PROCEDURE _mod2* (a, b: INTEGER): INTEGER;
 VAR
     div, mod: INTEGER;
 
 BEGIN
-    div := divmod(x, y, mod)
+    div := divmod(a, b, mod)
     RETURN mod
-END mod_;
+END _mod2;
 
 
 PROCEDURE _div* (b, a: INTEGER): INTEGER;
-    RETURN div_(a, b)
+    RETURN _div2(a, b)
 END _div;
 
 
-PROCEDURE _div2* (a, b: INTEGER): INTEGER;
-    RETURN div_(a, b)
-END _div2;
-
-
 PROCEDURE _mod* (b, a: INTEGER): INTEGER;
-    RETURN mod_(a, b)
+    RETURN _mod2(a, b)
 END _mod;
-
-
-PROCEDURE _mod2* (a, b: INTEGER): INTEGER;
-    RETURN mod_(a, b)
-END _mod2;
 
 
 PROCEDURE _length* (len, str: INTEGER): INTEGER;
@@ -333,7 +323,7 @@ VAR
 
 BEGIN
     SYSTEM.CODE(
-    0C032H, 0008H,       // BIC #8, SR; DINT
+    0C232H,              // BIC #8, SR; DINT
     4404H                // MOV R4, R4; NOP
     );
     _sp := sp;
@@ -346,7 +336,7 @@ BEGIN
     1210H + BP, 0000H,   // PUSH  0(BP)
     1210H + BP, 0FFFEH,  // PUSH -2(BP)
     4100H + BP,          // MOV   SP, BP
-    5030H + BP, 0002H    // ADD   #2, BP
+    5320H + BP           // ADD   #2, BP
     );
 
     IF trap # NIL THEN
