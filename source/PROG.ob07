@@ -1199,17 +1199,16 @@ BEGIN
 
     EnterProc(unit, "GET",    idSYSPROC, sysGET);
     EnterProc(unit, "PUT8",   idSYSPROC, sysPUT8);
-    EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
+    EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
     EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
     EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
-    EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
 
     IF program.target.sys # mConst.Target_iMSP430 THEN
         EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
         EnterProc(unit, "INF",    idSYSFUNC, sysINF);
-
-        EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
         EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
+        EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
+        EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
 
         ident := addIdent(unit, SCAN.enterid("CARD16"), idTYPE);
         ident.type := program.stTypes.tCARD16;

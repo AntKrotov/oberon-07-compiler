@@ -138,13 +138,13 @@ UTF-8 с BOM-сигнатурой.
                 до 64 бит, для записи байтов использовать SYSTEM.PUT8,
                 для WCHAR -- SYSTEM.PUT16
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, BYTE, CHAR, WCHAR)
+        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR)
                 Память[a] := младшие 8 бит (x)
 
-        PROCEDURE PUT16(a: INTEGER; x: INTEGER, BYTE, CHAR, WCHAR)
+        PROCEDURE PUT16(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR)
                 Память[a] := младшие 16 бит (x)
 
-        PROCEDURE PUT32(a: INTEGER; x: INTEGER, BYTE, CHAR, WCHAR)
+        PROCEDURE PUT32(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR)
                 Память[a] := младшие 32 бит (x)
 
         PROCEDURE MOVE(Source, Dest, n: INTEGER)

@@ -906,7 +906,7 @@ BEGIN
                 END
 
             ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
-                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
+                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, parser, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
                 END;

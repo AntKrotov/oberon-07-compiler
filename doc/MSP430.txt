@@ -113,20 +113,17 @@ UTF-8 с BOM-сигнатурой.
                 VAR v: любой основной тип, PROCEDURE, POINTER)
                 v := Память[a]
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, BYTE, CHAR)
+        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR)
                 Память[a] := младшие 8 бит (x)
 
-        PROCEDURE PUT16(a: INTEGER; x: INTEGER, BYTE, CHAR)
-                Память[a] := младшие 16 бит (x)
+        PROCEDURE PUT(a: INTEGER; x: любой основной тип, PROCEDURE, POINTER)
+                Память[a] := x;
+                Если x: BYTE, то значение x будет расширено до 16 бит,
+                для записи байтов использовать SYSTEM.PUT8
 
         PROCEDURE MOVE(Source, Dest, n: INTEGER)
                 Копирует n байт памяти из Source в Dest,
                 области Source и Dest не могут перекрываться
-
-        PROCEDURE COPY(VAR Source: любой тип; VAR Dest: любой тип; n: INTEGER)
-                Копирует n байт памяти из Source в Dest.
-                Эквивалентно
-                SYSTEM.MOVE(SYSTEM.ADR(Source), SYSTEM.ADR(Dest), n)
 
         PROCEDURE CODE(word1, word2,... : INTEGER)
                 Вставка машинного кода,
