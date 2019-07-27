@@ -12,6 +12,9 @@ IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, X86, MACHINE,
 
 CONST
 
+    minRAM* = 128;  maxRAM* = 2048;
+    minROM* = 4096; maxROM* = 49152;
+
     PC = 0; SP = 1; SR = 2; CG = 3;
 
     R4 = 4; R5 = 5; R6 = 6; R7 = 7; R8 = 8;
@@ -1586,11 +1589,7 @@ BEGIN
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, HP, mREG);
     EmitWord(0);
-    GenUnOpW(opPUSH, PC, mINCR);
-    EmitWord(0);
-    GenUnOpW(opPUSH, PC, mINCR);
-    EmitWord(0);
-    CallRTL(CODE._init, 2)
+    CallRTL(CODE._init, 0)
 END prolog;
 
 
@@ -1709,11 +1708,9 @@ END WriteHex;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
     IntVectorSize = LEN(IV) * 2;
+    RTLDataSize = 4;
     ramAdr = 200H;
     minStackSize = 64;
-
-    minRAM = 128;  maxRAM = 2048;
-    minROM = 4096; maxROM = 49152;
 
 VAR
     i, tcount, adr, heap, stack, DataSize,
@@ -1734,13 +1731,11 @@ BEGIN
     IF ODD(ram) THEN DEC(ram) END;
     IF ODD(rom) THEN DEC(rom) END;
 
-    IF ram < minRAM THEN ram := minRAM END;
-    IF ram > maxRAM THEN ram := maxRAM END;
-    IF rom < minROM THEN rom := minROM END;
-    IF rom > maxROM THEN rom := maxROM END;
+    ram := MIN(MAX(ram, minRAM), maxRAM);
+    rom := MIN(MAX(rom, minROM), maxROM);
 
     maxBssSize  := ram - minStackSize;
-    maxTextSize := rom - IntVectorSize;
+    maxTextSize := rom - IntVectorSize - RTLDataSize;
 
     IF code.bss > maxBssSize THEN
         ERRORS.error1("size of global variables is too large")
@@ -1764,13 +1759,13 @@ BEGIN
     epilog;
 
     Code.address := 10000H - rom;
-    Code.size := Fixup(Code.address, IntVectorSize);
+    Code.size := Fixup(Code.address, IntVectorSize + RTLDataSize);
     Data.address := Code.address + Code.size;
     Data.size := CHL.Length(code.data) + tcount * 2;
     Data.size := Data.size + ORD(ODD(Data.size));
     TextSize  := Code.size + Data.size;
 
-    IF Code.address + TextSize > 10000H - IntVectorSize THEN
+    IF Code.address + TextSize > 10000H - IntVectorSize - RTLDataSize THEN
         ERRORS.error1("size of program is too large")
     END;
 
@@ -1783,10 +1778,6 @@ BEGIN
     PutWord(stack, adr);
     adr := Code.address + 6;
     PutWord(heap, adr);
-    adr := Code.address + 10;
-    PutWord(stack, adr);
-    adr := Code.address + 14;
-    PutWord(Data.address, adr);
 
     reloc := RelList.first(RELOC);
     WHILE reloc # NIL DO
@@ -1810,7 +1801,11 @@ BEGIN
         INC(adr)
     END;
 
-    adr := 10000H - IntVectorSize;
+    adr := 10000H - IntVectorSize - RTLDataSize;
+
+    PutWord(stack, adr);
+    PutWord(Data.address, adr);
+
     FOR i := LEN(IV) - 1 TO 1 BY -1 DO
         PutWord(Labels[IV[i]].offset * 2, adr)
     END;
@@ -1819,7 +1814,7 @@ BEGIN
 
     file := FILES.create(outname);
     WriteHex(file, mem, Code.address, TextSize);
-    WriteHex(file, mem, 10000H - IntVectorSize, IntVectorSize);
+    WriteHex(file, mem, 10000H - IntVectorSize - RTLDataSize, IntVectorSize + RTLDataSize);
 
     WRITER.WriteByte(file, ORD(":"));
     WriteHexByte(file, 0);

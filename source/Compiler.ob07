@@ -7,7 +7,7 @@
 
 MODULE Compiler;
 
-IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER;
+IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER, MSP430;
 
 
 PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
@@ -185,8 +185,6 @@ BEGIN
     options.version := 65536;
     options.pic := FALSE;
     options.checking := ST.chkALL;
-    options.ram := -1;
-    options.rom := -1;
 
     PATHS.GetCurrentDirectory(app_path);
     lib_path := app_path;
@@ -250,7 +248,9 @@ BEGIN
      mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
         bit_depth := 32
     |mConst.Target_iMSP430:
-        bit_depth := 16
+        bit_depth := 16;
+        options.ram := MSP430.minRAM;
+        options.rom := MSP430.minROM
     END;
 
     IF UTILS.bit_depth < bit_depth THEN

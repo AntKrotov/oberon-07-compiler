@@ -12,7 +12,11 @@ IMPORT SYSTEM;
 
 CONST
 
+    SR = 2;
     BP = 15;
+
+    sp_adr = 0FFBCH;
+    types_adr = sp_adr + 2;
 
 
 TYPE
@@ -26,7 +30,7 @@ TYPE
 
 VAR
 
-    types, sp: INTEGER;
+    types: INTEGER;
     trap: TRAPPROC;
     int:  INTPROC;
 
@@ -318,25 +322,17 @@ END _strcmp2;
 
 
 PROCEDURE _error* (module, err: INTEGER);
-VAR
-    _sp: INTEGER;
-
 BEGIN
     SYSTEM.CODE(
     0C232H,              // BIC #8, SR; DINT
-    4404H                // MOV R4, R4; NOP
-    );
-    _sp := sp;
-    SYSTEM.CODE(
-    4011H + BP * 100H,   // MOV  -2(BP), SP
-    0FFFEH,
+    4404H,               // MOV R4, R4; NOP
+    4011H + SR * 100H,   // MOV  0FFBCH(SR), SP
+    sp_adr,
     1210H + BP, 0006H,   // PUSH  6(BP)
     1210H + BP, 0004H,   // PUSH  4(BP)
     1210H + BP, 0002H,   // PUSH  2(BP)
     1210H + BP, 0000H,   // PUSH  0(BP)
-    1210H + BP, 0FFFEH,  // PUSH -2(BP)
     4100H + BP,          // MOV   SP, BP
-    5320H + BP           // ADD   #2, BP
     );
 
     IF trap # NIL THEN
@@ -421,10 +417,9 @@ BEGIN
 END _int;
 
 
-PROCEDURE _init* (_types, _sp: INTEGER);
+PROCEDURE _init*;
 BEGIN
-    types := _types;
-    sp := _sp
+    SYSTEM.GET(types_adr, types)
 END _init;
 
 
