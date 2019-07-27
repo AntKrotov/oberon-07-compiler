@@ -31,8 +31,8 @@ TYPE
 VAR
 
     types: INTEGER;
-    trap: TRAPPROC;
-    int:  INTPROC;
+    trap:  TRAPPROC;
+    int:   INTPROC;
 
 
 PROCEDURE _shift* (op, x, n: INTEGER): INTEGER;
@@ -324,21 +324,22 @@ END _strcmp2;
 PROCEDURE _error* (module, err: INTEGER);
 BEGIN
     SYSTEM.CODE(
-    0C232H,              // BIC #8, SR; DINT
-    4404H,               // MOV R4, R4; NOP
-    4011H + SR * 100H,   // MOV  0FFBCH(SR), SP
+    0C232H,              (*  BIC   #8, SR; DINT    *)
+    4404H,               (*  MOV   R4, R4; NOP     *)
+    4011H + SR * 100H,   (*  MOV   sp_adr(SR), SP  *)
     sp_adr,
-    1210H + BP, 0006H,   // PUSH  6(BP)
-    1210H + BP, 0004H,   // PUSH  4(BP)
-    1210H + BP, 0002H,   // PUSH  2(BP)
-    1210H + BP, 0000H,   // PUSH  0(BP)
-    4100H + BP,          // MOV   SP, BP
+    1210H + BP, 0006H,   (*  PUSH  6(BP)           *)
+    1210H + BP, 0004H,   (*  PUSH  4(BP)           *)
+    1210H + BP, 0002H,   (*  PUSH  2(BP)           *)
+    1210H + BP, 0000H,   (*  PUSH  0(BP)           *)
+    4100H + BP,          (*  MOV   SP, BP          *)
     );
 
     IF trap # NIL THEN
         trap(module, err)
     END;
-    SYSTEM.CODE(0D032H, 0010H) // BIS #10H, SR; CPUOFF
+
+    SYSTEM.CODE(0D032H, 0010H) (* BIS #10H, SR; CPUOFF  *)
 END _error;
 
 
@@ -417,12 +418,6 @@ BEGIN
 END _int;
 
 
-PROCEDURE _init*;
-BEGIN
-    SYSTEM.GET(types_adr, types)
-END _init;
-
-
 PROCEDURE SetTrap* (_trap: TRAPPROC);
 BEGIN
     trap := _trap
@@ -435,4 +430,6 @@ BEGIN
 END SetInt;
 
 
+BEGIN
+    SYSTEM.GET(types_adr, types)
 END RTL.

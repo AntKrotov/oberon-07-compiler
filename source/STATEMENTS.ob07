@@ -3233,7 +3233,6 @@ BEGIN
     getproc(rtl,  "_guard",     CODE._guard);
     getproc(rtl,  "_guardrec",  CODE._guardrec);
     getproc(rtl,  "_length",    CODE._length);
-    getproc(rtl,  "_init",      CODE._init);
     getproc(rtl,  "_strcpy",    CODE._strcpy);
     getproc(rtl,  "_strcpy2",   CODE._strcpy2);
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
@@ -3245,7 +3244,8 @@ BEGIN
         getproc(rtl,  "_dllentry",  CODE._dllentry);
         getproc(rtl,  "_new",       CODE._new);
         getproc(rtl,  "_dispose",   CODE._dispose);
-        getproc(rtl,  "_exit",      CODE._exit)
+        getproc(rtl,  "_exit",      CODE._exit);
+        getproc(rtl,  "_init",      CODE._init)
     END;
 
     IF CPU = cpuMSP430 THEN

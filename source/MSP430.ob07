@@ -1588,8 +1588,7 @@ BEGIN
     GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, HP, mREG);
-    EmitWord(0);
-    CallRTL(CODE._init, 0)
+    EmitWord(0)
 END prolog;
 
 
@@ -1707,8 +1706,8 @@ END WriteHex;
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
-    IntVectorSize = LEN(IV) * 2;
     RTLDataSize = 4;
+    IntVectorSize = LEN(IV) * 2 + RTLDataSize;
     ramAdr = 200H;
     minStackSize = 64;
 
@@ -1735,7 +1734,7 @@ BEGIN
     rom := MIN(MAX(rom, minROM), maxROM);
 
     maxBssSize  := ram - minStackSize;
-    maxTextSize := rom - IntVectorSize - RTLDataSize;
+    maxTextSize := rom - IntVectorSize;
 
     IF code.bss > maxBssSize THEN
         ERRORS.error1("size of global variables is too large")
@@ -1759,13 +1758,13 @@ BEGIN
     epilog;
 
     Code.address := 10000H - rom;
-    Code.size := Fixup(Code.address, IntVectorSize + RTLDataSize);
+    Code.size := Fixup(Code.address, IntVectorSize);
     Data.address := Code.address + Code.size;
     Data.size := CHL.Length(code.data) + tcount * 2;
     Data.size := Data.size + ORD(ODD(Data.size));
     TextSize  := Code.size + Data.size;
 
-    IF Code.address + TextSize > 10000H - IntVectorSize - RTLDataSize THEN
+    IF Code.address + TextSize > 10000H - IntVectorSize THEN
         ERRORS.error1("size of program is too large")
     END;
 
@@ -1801,7 +1800,7 @@ BEGIN
         INC(adr)
     END;
 
-    adr := 10000H - IntVectorSize - RTLDataSize;
+    adr := 10000H - IntVectorSize;
 
     PutWord(stack, adr);
     PutWord(Data.address, adr);
@@ -1814,7 +1813,7 @@ BEGIN
 
     file := FILES.create(outname);
     WriteHex(file, mem, Code.address, TextSize);
-    WriteHex(file, mem, 10000H - IntVectorSize - RTLDataSize, IntVectorSize + RTLDataSize);
+    WriteHex(file, mem, 10000H - IntVectorSize, IntVectorSize);
 
     WRITER.WriteByte(file, ORD(":"));
     WriteHexByte(file, 0);
@@ -1827,11 +1826,13 @@ BEGIN
 
     FILES.close(file);
 
-    C.StringLn("------------------------------------");
-    C.StringLn("  size of:"); C.Ln;
-    C.String(  "    code    "); C.Int(TextSize); C.String(" of "); C.Int(maxTextSize); C.String("  ("); C.Int(TextSize * 100 DIV maxTextSize); C.StringLn("%)");
-    C.String(  "    bss     "); C.Int(Bss.size); C.String(" of "); C.Int(maxBssSize); C.String("  ("); C.Int(Bss.size * 100 DIV maxBssSize); C.StringLn("%)");
-    C.StringLn("------------------------------------")
+    INC(TextSize, IntVectorSize);
+    INC(Bss.size, minStackSize);
+
+    C.StringLn("-------------------------------");
+    C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
+    C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)");
+    C.StringLn("-------------------------------")
 
 END CodeGen;
 
