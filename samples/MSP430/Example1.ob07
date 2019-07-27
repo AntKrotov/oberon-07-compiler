@@ -1,6 +1,6 @@
 ﻿(*
 
-Пример для MSP-EXP430G2 Rev1.5
+Пример для LaunchPad MSP-EXP430G2 Rev1.5
 
   Мигает зеленый светодиод.
   При нажатии на кнопку P1.3, включается/выключается красный светодиод.
@@ -47,7 +47,7 @@ VAR
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, ORD(BITS(b) + {bit}))
+    SYSTEM.PUT8(mem, BITS(b) + {bit})
 END set_bit;
 
 
@@ -57,7 +57,7 @@ VAR
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, ORD(BITS(b) - {bit}))
+    SYSTEM.PUT8(mem, BITS(b) - {bit})
 END clr_bit;
 
 
@@ -67,7 +67,7 @@ VAR
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, ORD(BITS(b) / {bit}))
+    SYSTEM.PUT8(mem, BITS(b) / {bit})
 END inv_bit;
 
 
@@ -97,10 +97,10 @@ END int;
 
 PROCEDURE main;
 BEGIN
-    SYSTEM.PUT16(0120H, 5A80H); (* отключить сторожевой таймер *)
+    SYSTEM.PUT(0120H, 5A80H); (* отключить сторожевой таймер *)
 
     (* инициализация спец. регистров *)
-    SYSTEM.PUT8(P1DIR, ORD({REDLED, GREENLED}));
+    SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
     set_bit(P1REN, BUTTON);
     set_bit(P1OUT, BUTTON);
     set_bit(P1IE,  BUTTON);

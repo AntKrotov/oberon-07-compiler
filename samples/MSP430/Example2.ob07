@@ -1,0 +1,129 @@
+﻿(*
+
+Пример для LaunchPad MSP-EXP430G2 Rev1.5
+
+  Светодиоды мигают по сигналам от таймера A
+
+*)
+
+MODULE Example2;
+
+IMPORT SYSTEM, RTL;
+
+
+CONST
+
+    REDLED   = 0;
+    GREENLED = 6;
+
+    P1OUT = 21H;
+    P1DIR = 22H;
+
+    (* регистры таймера A*)
+    TACTL   = 0160H;
+    TAR     = 0170H;
+    TACCTL0 = 0162H;
+    TACCR0  = 0172H;
+
+    (* биты регистра TACTL *)
+    TAIFG   = 0;
+    TAIE    = 1;
+    TACLR   = 2;
+    MC0     = 4;
+    MC1     = 5;
+    ID0     = 6;
+    ID1     = 7;
+    TASSEL0 = 8;
+    TASSEL1 = 9;
+
+    (* биты регистра TACCTL0 *)
+    CCIE = 4;
+    CAP  = 8;
+
+
+PROCEDURE set_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) + {bit})
+END set_bit;
+
+
+PROCEDURE clr_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) - {bit})
+END clr_bit;
+
+
+PROCEDURE inv_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) / {bit})
+END inv_bit;
+
+
+(*
+обработчик прерываний
+  n - номер прерывания в векторе прерываний:
+
+  адрес    номер
+  0FFFEH     0
+  0FFFCH     1
+  0FFFAH     2
+  ...
+
+  sr, pc - значение регистров SR и PC в момент прерывания
+*)
+PROCEDURE int (n, sr, pc: INTEGER);
+VAR
+    x: SET;
+
+BEGIN
+    IF n = 7 THEN (* прерывание от таймера A - #7 *)
+        SYSTEM.GET(TACTL, x);
+        IF TAIFG IN x THEN (* прерывание было *)
+            inv_bit(P1OUT, REDLED);
+            inv_bit(P1OUT, GREENLED);
+            EXCL(x, TAIFG); (* сбросить флаг прерывания *)
+            SYSTEM.PUT(TACTL, x)  (* обновить регистр TACTL *)
+        END
+    END
+END int;
+
+
+PROCEDURE main;
+BEGIN
+    SYSTEM.PUT(0120H, 5A80H); (* отключить сторожевой таймер *)
+
+    (* инициализация регистра P1DIR *)
+    SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
+
+    (* начальное состояние светодиодов *)
+    set_bit(P1OUT, GREENLED);
+    clr_bit(P1OUT, REDLED);
+
+    RTL.SetInt(int);     (* назначить обработчик прерываний *)
+    SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
+
+    (* инициализация регистров таймера A *)
+    SYSTEM.PUT(TAR, 0);
+    SYSTEM.PUT(TACCTL0, {CCIE, CAP});
+    SYSTEM.PUT(TACCR0, 1000);
+    SYSTEM.PUT(TACTL, {TAIE, MC0, TASSEL0});
+
+    SYSTEM.CODE(0D032H, 0010H); (* BIS #10H, SR; выключить CPU *)
+END main;
+
+
+BEGIN
+    main
+END Example2.
