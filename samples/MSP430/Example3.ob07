@@ -2,11 +2,12 @@
 
 Пример для LaunchPad MSP-EXP430G2 Rev1.5
 
-  Светодиоды мигают по сигналам от таймера A
+  Зеленый светодиод мигает по сигналам от таймера A,
+  красный - по сигналам от сторожевого таймера в интервальном режиме
 
 *)
 
-MODULE Example2;
+MODULE Example3;
 
 IMPORT SYSTEM, RTL;
 
@@ -18,6 +19,32 @@ CONST
 
     P1OUT = 21H;
     P1DIR = 22H;
+
+    (* регистры сторожевого таймера *)
+    WDTCTL = 0120H;
+    IE1    = 0000H;
+    IFG1   = 0002H;
+
+    (* биты регистра WDTCTL *)
+    WDTIS0   = 0;
+    WDTIS1   = 1;
+    WDTSSEL  = 2;
+    WDTCNTCL = 3;
+    WDTTMSEL = 4;
+    WDTNMI   = 5;
+    WDTNMIES = 6;
+    WDTHOLD  = 7;
+
+    (* биты регистра IE1 *)
+    WDTIE = 0;
+    NMIIE = 4;
+
+    (* биты регистра IFG1 *)
+    WDTIFG = 0;
+    NMIIFG = 4;
+
+    (* ключ защиты сторожевого таймера *)
+    WDTPW = 5A00H;
 
     (* регистры таймера A *)
     TACTL   = 0160H;
@@ -51,16 +78,6 @@ BEGIN
 END set_bit;
 
 
-PROCEDURE clr_bit (mem, bit: INTEGER);
-VAR
-    b: BYTE;
-
-BEGIN
-    SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) - {bit})
-END clr_bit;
-
-
 PROCEDURE inv_bit (mem, bit: INTEGER);
 VAR
     b: BYTE;
@@ -92,11 +109,12 @@ BEGIN
     IF n = 7 THEN (* прерывание от таймера A - #7 *)
         SYSTEM.GET(TACTL, x);
         IF TAIFG IN x THEN (* прерывание было *)
-            inv_bit(P1OUT, REDLED);
             inv_bit(P1OUT, GREENLED);
             (* сбросить флаг прерывания и обновить регистр TACTL *)
             SYSTEM.PUT(TACTL, x - {TAIFG})
         END
+    ELSIF n = 5 THEN (* прерывание от сторожевого таймера - #5 *)
+        inv_bit(P1OUT, REDLED)
     END
 END int;
 
@@ -106,9 +124,9 @@ BEGIN
     (* инициализация регистра P1DIR *)
     SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
 
-    (* начальное состояние светодиодов *)
+    (* начальное состояние светодиодов - включены *)
     set_bit(P1OUT, GREENLED);
-    clr_bit(P1OUT, REDLED);
+    set_bit(P1OUT, REDLED);
 
     RTL.SetInt(int);     (* назначить обработчик прерываний *)
     SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
@@ -116,11 +134,15 @@ BEGIN
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);
     SYSTEM.PUT(TACCTL0, {CCIE, CAP});
-    SYSTEM.PUT(TACCR0, 1000);
-    SYSTEM.PUT(TACTL, {TAIE, MC0, TASSEL0})
+    SYSTEM.PUT(TACCR0, 1500);
+    SYSTEM.PUT(TACTL, {TAIE, MC0, TASSEL0});
+
+    (* инициализация регистров сторожевого таймера *)
+    set_bit(IE1, WDTIE);
+    SYSTEM.PUT(WDTCTL, WDTPW + ORD({WDTIS1, WDTSSEL, WDTCNTCL, WDTTMSEL}))
 END main;
 
 
 BEGIN
     main
-END Example2.
+END Example3.
