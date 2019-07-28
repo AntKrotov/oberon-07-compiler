@@ -1,0 +1,47 @@
+﻿(*
+
+Пример для LaunchPad MSP-EXP430G2 Rev1.5
+
+  Мигает красный светодиод.
+
+*)
+MODULE Blink;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    REDLED = 0;
+
+    P1OUT = 21H;
+    P1DIR = 22H;
+
+VAR
+
+    n: INTEGER;
+
+
+PROCEDURE inv_bit (mem, bit: INTEGER);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) / {bit})
+END inv_bit;
+
+
+BEGIN
+    (* инициализация регистра P1DIR *)
+    SYSTEM.PUT8(P1DIR, {REDLED});
+
+    (* бесконечный цикл *)
+    WHILE TRUE DO
+        (* изменить состояние светодиода *)
+        inv_bit(P1OUT, REDLED);
+        (* задержка *)
+        n := 30000;
+        WHILE n > 0 DO DEC(n) END
+    END
+END Blink.
