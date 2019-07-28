@@ -80,6 +80,7 @@ END inv_bit;
   0FFFCH     1
   0FFFAH     2
   ...
+  0FFC0H    31
 
   sr, pc - значение регистров SR и PC в момент прерывания
 *)
@@ -102,8 +103,6 @@ END int;
 
 PROCEDURE main;
 BEGIN
-    SYSTEM.PUT(0120H, 5A80H); (* отключить сторожевой таймер *)
-
     (* инициализация регистра P1DIR *)
     SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
 

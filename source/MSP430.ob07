@@ -372,19 +372,19 @@ BEGIN
                     END;
 
                     IF cc # opJMP THEN
-                        PutWord(LSL(cc + 8, 10) + 2, adr)  // jcc L
+                        PutWord(LSL(cc + 8, 10) + 2, adr)  (* jcc L *)
                     END;
 
-                    PutWord(4030H, adr); // MOV @PC+, PC
+                    PutWord(4030H, adr); (* MOV @PC+, PC *)
                     PutWord(Labels[cmd.label].offset * 2, adr)
-                    // L:
+                    (* L: *)
                 ELSE
                     diff := Labels[cmd.label].offset - cmd.offset - 1;
                     ASSERT((-512 <= diff) & (diff <= 511));
                     PutWord(LSL(cmd.cc + 8, 10) + ORD(BITS(diff) * {0..9}), adr)
                 END
 
-        |CALL:  PutWord(12B0H, adr); // CALL @PC+
+        |CALL:  PutWord(12B0H, adr); (* CALL @PC+ *)
                 PutWord(Labels[cmd.label].offset * 2, adr)
 
         |WORD:  PutWord(cmd.val, adr)
@@ -1137,18 +1137,18 @@ BEGIN
         |CODE.opMIN:
             BinOp(reg1, reg2);
             OpRegReg(opCMP, reg2, reg1);
-            EmitWord(LSL(opJL + 8, 10) + 1); // jl L
+            EmitWord(LSL(opJL + 8, 10) + 1); (* jl L *)
             MovRegReg(reg2, reg1);
-                                             // L:
+                                             (* L: *)
             drop
 
 
         |CODE.opMAX:
             BinOp(reg1, reg2);
             OpRegReg(opCMP, reg2, reg1);
-            EmitWord(LSL(opJGE + 8, 10) + 1); // jge L
+            EmitWord(LSL(opJGE + 8, 10) + 1); (* jge L *)
             MovRegReg(reg2, reg1);
-                                              // L:
+                                              (* L: *)
             drop
 
         |CODE.opMINC:
@@ -1588,7 +1588,10 @@ BEGIN
     GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, HP, mREG);
-    EmitWord(0)
+    EmitWord(0);
+    GenBinOpW(opMOV, PC, mINCR, SR, mIDX); (* stop WDT *)
+    EmitWord(5A80H);
+    EmitWord(0120H)
 END prolog;
 
 
@@ -1598,11 +1601,12 @@ VAR
     i: INTEGER;
 
 BEGIN
-    EmitWord(0D032H); EmitWord(0010H); // BIS #10H, SR; CPUOFF
+    EmitWord(0D032H); EmitWord(0010H); (* BIS #10H, SR; CPUOFF *)
 
     L1 := NewLabel();
     L2 := NewLabel();
     L3 := NewLabel();
+
     EmitLabel(_new);
     PushReg(SR);
     Clear(SR);
@@ -1626,7 +1630,7 @@ BEGIN
     EmitLabel(L1);
     GenBinOpW(opMOV, CG, mREG, R4, mIDX); EmitWord(0);
     EmitLabel(L2);
-    EmitWord(01300H); // RETI
+    EmitWord(01300H); (* RETI *)
 
     L4 := NewLabel();
     FOR i := 1 TO LEN(IV) - 1 DO
@@ -1657,7 +1661,7 @@ BEGIN
     END;
 
     Pop(IR);
-    EmitWord(01300H) // RETI
+    EmitWord(01300H) (* RETI *)
 END epilog;
 
 
