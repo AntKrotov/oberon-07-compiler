@@ -1712,6 +1712,7 @@ END WriteHex;
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
+    RTLVarSize  = 4;
     RTLDataSize = 2;
     IntVectorSize = LEN(IV) * 2 + RTLDataSize;
     ramAdr = 200H;
@@ -1739,7 +1740,7 @@ BEGIN
     ram := MIN(MAX(ram, minRAM), maxRAM);
     rom := MIN(MAX(rom, minROM), maxROM);
 
-    IF code.bss > ram - minStackSize THEN
+    IF code.bss > ram - minStackSize - RTLVarSize THEN
         ERRORS.error1("size of global variables is too large")
     END;
 
@@ -1771,7 +1772,7 @@ BEGIN
         ERRORS.error1("size of program is too large")
     END;
 
-    Bss.address := ramAdr;
+    Bss.address := ramAdr + RTLVarSize;
     Bss.size := code.bss + ORD(ODD(code.bss));
     heap := Bss.address + Bss.size;
     stack := ramAdr + ram;
@@ -1828,7 +1829,7 @@ BEGIN
     FILES.close(file);
 
     INC(TextSize, IntVectorSize + tcount * 2);
-    INC(Bss.size, minStackSize);
+    INC(Bss.size, minStackSize + RTLVarSize);
 
     C.StringLn("-------------------------------");
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
