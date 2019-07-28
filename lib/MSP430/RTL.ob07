@@ -15,8 +15,8 @@ CONST
     SR = 2;
     BP = 15;
 
-    sp_adr = 0FFBCH;
-    types_adr = sp_adr + 2;
+    sp_adr = 0FFBEH;
+    types_adr = sp_adr - 2;
 
 
 TYPE
@@ -30,7 +30,6 @@ TYPE
 
 VAR
 
-    types: INTEGER;
     trap:  TRAPPROC;
     int:   INTPROC;
 
@@ -348,7 +347,7 @@ BEGIN
     (* r IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * 2, t1)
+        SYSTEM.GET(types_adr - t1 * 2, t1)
     END
 
     RETURN t1 = t0
@@ -366,7 +365,7 @@ BEGIN
         DEC(p, 2);
         SYSTEM.GET(p, t1);
         WHILE (t1 # 0) & (t1 # t0) DO
-            SYSTEM.GET(types + t1 * 2, t1)
+            SYSTEM.GET(types_adr - t1 * 2, t1)
         END
     ELSE
         t1 := -1
@@ -381,7 +380,7 @@ BEGIN
     (* r:t1 IS t0 *)
 
     WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * 2, t1)
+        SYSTEM.GET(types_adr - t1 * 2, t1)
     END
 
     RETURN t1 = t0
@@ -400,7 +399,7 @@ BEGIN
         DEC(p, 2);
         SYSTEM.GET(p, t1);
         WHILE (t1 # t0) & (t1 # 0) DO
-            SYSTEM.GET(types + t1 * 2, t1)
+            SYSTEM.GET(types_adr - t1 * 2, t1)
         END
     ELSE
         t1 := t0
@@ -430,6 +429,4 @@ BEGIN
 END SetInt;
 
 
-BEGIN
-    SYSTEM.GET(types_adr, types)
 END RTL.

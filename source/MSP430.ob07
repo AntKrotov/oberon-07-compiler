@@ -620,7 +620,7 @@ BEGIN
 END Neg;
 
 
-PROCEDURE translate (code: CODE.CODES; stroffs: INTEGER);
+PROCEDURE translate (code: CODE.CODES);
 VAR
     cmd: COMMAND;
 
@@ -661,7 +661,7 @@ BEGIN
 
         |CODE.opSADR_PARAM:
             GenUnOpW(opPUSH, PC, mINCR);
-            Reloc(RDATA, stroffs + param2)
+            Reloc(RDATA, param2)
 
         |CODE.opERR:
             CallRTL(CODE._error, 2)
@@ -725,7 +725,7 @@ BEGIN
         |CODE.opSADR:
             reg1 := REG.GetAnyReg(R);
             GenBinOpW(opMOV, PC, mINCR, reg1, mREG);
-            Reloc(RDATA, stroffs + param2)
+            Reloc(RDATA, param2)
 
         |CODE.opGADR:
             reg1 := REG.GetAnyReg(R);
@@ -1406,7 +1406,7 @@ BEGIN
         |CODE.opSAVES:
             PushAll(1);
             GenUnOpW(opPUSH, PC, mINCR);
-            Reloc(RDATA, stroffs + param2);
+            Reloc(RDATA, param2);
             PushImm(param1);
             CallRTL(CODE._move, 3)
 
@@ -1712,14 +1712,14 @@ END WriteHex;
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
-    RTLDataSize = 4;
+    RTLDataSize = 2;
     IntVectorSize = LEN(IV) * 2 + RTLDataSize;
     ramAdr = 200H;
     minStackSize = 64;
 
 VAR
     i, tcount, adr, heap, stack, DataSize,
-    TextSize, maxTextSize, maxBssSize: INTEGER;
+    TextSize: INTEGER;
 
     Code, Data, Bss: RECORD address, size: INTEGER END;
 
@@ -1739,10 +1739,7 @@ BEGIN
     ram := MIN(MAX(ram, minRAM), maxRAM);
     rom := MIN(MAX(rom, minROM), maxROM);
 
-    maxBssSize  := ram - minStackSize;
-    maxTextSize := rom - IntVectorSize;
-
-    IF code.bss > maxBssSize THEN
+    IF code.bss > ram - minStackSize THEN
         ERRORS.error1("size of global variables is too large")
     END;
 
@@ -1760,17 +1757,17 @@ BEGIN
     R := REG.Create(PushReg, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
     prolog;
-    translate(code, tcount * 2);
+    translate(code);
     epilog;
 
     Code.address := 10000H - rom;
-    Code.size := Fixup(Code.address, IntVectorSize);
+    Code.size := Fixup(Code.address, IntVectorSize + tcount * 2);
     Data.address := Code.address + Code.size;
-    Data.size := CHL.Length(code.data) + tcount * 2;
+    Data.size := CHL.Length(code.data);
     Data.size := Data.size + ORD(ODD(Data.size));
     TextSize  := Code.size + Data.size;
 
-    IF Code.address + TextSize > 10000H - IntVectorSize THEN
+    IF Code.address + TextSize > 10000H - IntVectorSize - tcount * 2 THEN
         ERRORS.error1("size of program is too large")
     END;
 
@@ -1796,9 +1793,6 @@ BEGIN
     END;
 
     adr := Data.address;
-    FOR i := 0 TO tcount - 1 DO
-        PutWord(CHL.GetInt(code.types, i), adr)
-    END;
 
     DataSize := CHL.Length(code.data);
     FOR i := 0 TO DataSize - 1 DO
@@ -1806,10 +1800,13 @@ BEGIN
         INC(adr)
     END;
 
-    adr := 10000H - IntVectorSize;
+    adr := 10000H - IntVectorSize - tcount * 2;
+
+    FOR i := tcount - 1 TO 0 BY -1 DO
+        PutWord(CHL.GetInt(code.types, i), adr)
+    END;
 
     PutWord(stack, adr);
-    PutWord(Data.address, adr);
 
     FOR i := 0 TO LEN(IV) - 1 DO
         PutWord(Labels[IV[i]].offset * 2, adr)
@@ -1817,7 +1814,7 @@ BEGIN
 
     file := FILES.create(outname);
     WriteHex(file, mem, Code.address, TextSize);
-    WriteHex(file, mem, 10000H - IntVectorSize, IntVectorSize);
+    WriteHex(file, mem, 10000H - IntVectorSize - tcount * 2, IntVectorSize + tcount * 2);
 
     WRITER.WriteByte(file, ORD(":"));
     WriteHexByte(file, 0);
@@ -1830,7 +1827,7 @@ BEGIN
 
     FILES.close(file);
 
-    INC(TextSize, IntVectorSize);
+    INC(TextSize, IntVectorSize + tcount * 2);
     INC(Bss.size, minStackSize);
 
     C.StringLn("-------------------------------");
