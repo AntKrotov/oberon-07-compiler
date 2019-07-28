@@ -73,23 +73,23 @@ END inv_bit;
 
 (*
 обработчик прерываний
-  n - номер прерывания в векторе прерываний:
+  priority - приоритет прерывания в векторе прерываний:
 
-  адрес    номер
-  0FFFEH     0
-  0FFFCH     1
-  0FFFAH     2
+  адрес    приоритет
+  0FFFEH     31
+  0FFFCH     30
+  0FFFAH     29
   ...
-  0FFC0H    31
+  0FFC0H      0
 
   sr, pc - значение регистров SR и PC в момент прерывания
 *)
-PROCEDURE int (n, sr, pc: INTEGER);
+PROCEDURE int (priority, sr, pc: INTEGER);
 VAR
     x: SET;
 
 BEGIN
-    IF n = 7 THEN (* прерывание от таймера A - #7 *)
+    IF priority = 24 THEN (* прерывание от таймера A *)
         SYSTEM.GET(TACTL, x);
         IF TAIFG IN x THEN (* прерывание было *)
             inv_bit(P1OUT, REDLED);

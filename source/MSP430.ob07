@@ -1585,6 +1585,8 @@ PROCEDURE prolog;
 BEGIN
     _new := NewLabel();
     CODE.codes.rtl[CODE._new] := _new;
+    IV[LEN(IV) - 1] := NewLabel();
+    EmitLabel(IV[LEN(IV) - 1]);
     GenBinOpW(opMOV, PC, mINCR, SP, mREG);
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, HP, mREG);
@@ -1633,7 +1635,7 @@ BEGIN
     EmitWord(01300H); (* RETI *)
 
     L4 := NewLabel();
-    FOR i := 1 TO LEN(IV) - 1 DO
+    FOR i := 0 TO LEN(IV) - 2 DO
         IV[i] := NewLabel();
         EmitLabel(IV[i]);
         PushImm(i);
@@ -1644,7 +1646,7 @@ BEGIN
 
     MovRegReg(SP, IR);
 
-    FOR i := 0 TO 31 DO
+    FOR i := 0 TO 15 DO
         IF i IN R.regs + R.vregs THEN
             PushReg(i)
         END
@@ -1654,7 +1656,7 @@ BEGIN
     CallRTL(CODE._int, 0);
     Pop(IR);
 
-    FOR i := 31 TO 0 BY -1 DO
+    FOR i := 15 TO 0 BY -1 DO
         IF i IN R.regs + R.vregs THEN
             Pop(i)
         END
@@ -1809,11 +1811,9 @@ BEGIN
     PutWord(stack, adr);
     PutWord(Data.address, adr);
 
-    FOR i := LEN(IV) - 1 TO 1 BY -1 DO
+    FOR i := 0 TO LEN(IV) - 1 DO
         PutWord(Labels[IV[i]].offset * 2, adr)
     END;
-
-    PutWord(Code.address, adr);
 
     file := FILES.create(outname);
     WriteHex(file, mem, Code.address, TextSize);
