@@ -17,7 +17,10 @@ CONST
     CG = 3;
     R4 = 4;
     R5 = 5;
-    BP = 15;
+    R13 = 13;
+    R15 = 15;
+    IR = R13;
+    BP = R15;
 
     ram_adr = 200H;
     iv_adr  = 0FFC0H;
@@ -386,18 +389,16 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE _int* (interrupt: INTREC);
+PROCEDURE _int*;
 BEGIN
     SYSTEM.CODE(
     4010H + SR * 100H + R4,   (*  MOV   int_adr(SR), R4  *)
     int_adr,
     9000H + CG * 100H + R4,   (*  TST   R4               *)
-    2400H + 9,                (*  JZ    L                *)
-    4010H + BP * 100H + R5,   (*  MOV   4(BP), R5        *)
-    0004H,
-    1210H + R5, 0004H,        (*  PUSH  4(R5)            *)
-    1210H + R5, 0002H,        (*  PUSH  2(R5)            *)
-    1210H + R5, 0000H,        (*  PUSH  0(R5)            *)
+    2400H + 7,                (*  JZ    L                *)
+    1210H + IR, 0004H,        (*  PUSH  4(IR)            *)
+    1210H + IR, 0002H,        (*  PUSH  2(IR)            *)
+    1210H + IR, 0000H,        (*  PUSH  0(IR)            *)
     1280H + R4                (*  CALL  R4               *)
                               (*  L:                     *)
     )

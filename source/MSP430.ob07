@@ -1632,7 +1632,7 @@ BEGIN
     EmitLabel(L1);
     GenBinOpW(opMOV, CG, mREG, R4, mIDX); EmitWord(0);
     EmitLabel(L2);
-    EmitWord(01300H); (* RETI *)
+    EmitWord(1300H); (* RETI *)
 
     L4 := NewLabel();
     FOR i := 0 TO LEN(IV) - 2 DO
@@ -1652,9 +1652,7 @@ BEGIN
         END
     END;
 
-    PushReg(IR);
     CallRTL(CODE._int, 0);
-    Pop(IR);
 
     FOR i := 15 TO 0 BY -1 DO
         IF i IN R.regs + R.vregs THEN
@@ -1663,7 +1661,7 @@ BEGIN
     END;
 
     Pop(IR);
-    EmitWord(01300H) (* RETI *)
+    EmitWord(1300H) (* RETI *)
 END epilog;
 
 
