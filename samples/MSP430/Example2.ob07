@@ -73,6 +73,7 @@ END inv_bit;
 
 (*
 обработчик прерываний
+
   priority - приоритет прерывания:
 
   адрес    приоритет
@@ -82,9 +83,15 @@ END inv_bit;
   ...
   0FFC0H      0
 
-  sr, pc - значение регистров SR и PC в момент прерывания
+
+  ptr - указатель на структуру:
+
+  смещение    значение
+     0:     priority
+    +2:     сохраненное значение регистра SR
+    +4:     сохраненное значение регистра PC
 *)
-PROCEDURE int (priority, sr, pc: INTEGER);
+PROCEDURE int (priority, ptr: INTEGER);
 VAR
     x: SET;
 
