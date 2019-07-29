@@ -1052,7 +1052,7 @@ BEGIN
         |CODE.opISREC:
             PushAll(2);
             PushImm(param2);
-            CallRTL(CODE._isrec, 3);
+            CallRTL(CODE._guardrec, 3);
             GetRegA
 
         |CODE.opIS:

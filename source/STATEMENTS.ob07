@@ -3229,7 +3229,6 @@ BEGIN
     getproc(rtl,  "_strcmp",    CODE._strcmp);
     getproc(rtl,  "_error",     CODE._error);
     getproc(rtl,  "_is",        CODE._is);
-    getproc(rtl,  "_isrec",     CODE._isrec);
     getproc(rtl,  "_guard",     CODE._guard);
     getproc(rtl,  "_guardrec",  CODE._guardrec);
     getproc(rtl,  "_length",    CODE._length);
@@ -3238,6 +3237,7 @@ BEGIN
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
 
     IF CPU IN {cpuX86, cpuAMD64} THEN
+        getproc(rtl,  "_isrec",     CODE._isrec);
         getproc(rtl,  "_lengthw",   CODE._lengthw);
         getproc(rtl,  "_strcmpw",   CODE._strcmpw);
         getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
