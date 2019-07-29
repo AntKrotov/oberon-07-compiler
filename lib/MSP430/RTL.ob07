@@ -387,21 +387,6 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE _int*;
-BEGIN
-    SYSTEM.CODE(
-    4010H + SR * 100H + R4,   (*  MOV   int_adr(SR), R4  *)
-    int_adr,
-    9000H + CG * 100H + R4,   (*  TST   R4               *)
-    2400H + 3,                (*  JZ    L                *)
-    1200H + IR,               (*  PUSH  IR               *)
-    1220H + IR,               (*  PUSH  @IR              *)
-    1280H + R4                (*  CALL  R4               *)
-                              (*  L:                     *)
-    )
-END _int;
-
-
 PROCEDURE _error* (module, err: INTEGER);
 BEGIN
     SYSTEM.CODE(
@@ -439,4 +424,10 @@ BEGIN
 END SetInt;
 
 
+PROCEDURE int_empty (priority, ptr: INTEGER);
+END int_empty;
+
+
+BEGIN
+    SYSTEM.PUT(int_adr, SYSTEM.ADR(int_empty))
 END RTL.

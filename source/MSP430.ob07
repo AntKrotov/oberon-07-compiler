@@ -43,6 +43,16 @@ CONST
     jb  = 6;
 
 
+    ram_adr = 200H;
+    iv_adr  = 0FFC0H;
+
+    sp_adr    = iv_adr - 2;
+    types_adr = sp_adr - 2;
+
+    trap_adr = ram_adr;
+    int_adr  = trap_adr + 2;
+
+
 TYPE
 
     ANYCODE = POINTER TO RECORD (LISTS.ITEM)
@@ -1639,7 +1649,9 @@ BEGIN
         IV[i] := NewLabel();
         EmitLabel(IV[i]);
         PushImm(i);
-        EmitJmp(opJMP, L4)
+        IF i # LEN(IV) - 2 THEN
+            EmitJmp(opJMP, L4)
+        END
     END;
 
     EmitLabel(L4);
@@ -1652,7 +1664,11 @@ BEGIN
         END
     END;
 
-    CallRTL(CODE._int, 0);
+    PushReg(IR);
+    EmitWord(1220H + IR); (* PUSH @IR *)
+    EmitWord(1292H);      (* CALL int_adr(SR) *)
+    EmitWord(int_adr);
+    AddImmReg(4, SP);
 
     FOR i := 15 TO 0 BY -1 DO
         IF i IN R.regs + R.vregs THEN
@@ -1660,7 +1676,7 @@ BEGIN
         END
     END;
 
-    Pop(IR);
+    AddImmReg(2, SP);
     EmitWord(1300H) (* RETI *)
 END epilog;
 
@@ -1713,7 +1729,6 @@ CONST
     RTLVarSize  = 4;
     RTLDataSize = 2;
     IntVectorSize = LEN(IV) * 2 + RTLDataSize;
-    ramAdr = 200H;
     minStackSize = 64;
 
 VAR
@@ -1770,10 +1785,10 @@ BEGIN
         ERRORS.error1("size of program is too large")
     END;
 
-    Bss.address := ramAdr + RTLVarSize;
+    Bss.address := ram_adr + RTLVarSize;
     Bss.size := code.bss + ORD(ODD(code.bss));
     heap := Bss.address + Bss.size;
-    stack := ramAdr + ram;
+    stack := ram_adr + ram;
     ASSERT(stack - heap >= minStackSize);
     adr := Code.address + 2;
     PutWord(stack, adr);
