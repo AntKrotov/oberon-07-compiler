@@ -46,8 +46,9 @@ CONST
     ram_adr = 200H;
     iv_adr  = 0FFC0H;
 
-    sp_adr    = iv_adr - 2;
-    types_adr = sp_adr - 2;
+    sp_adr         = iv_adr - 2;
+    empty_proc_adr = sp_adr - 2;
+    types_adr      = empty_proc_adr - 2;
 
     trap_adr = ram_adr;
     int_adr  = trap_adr + 2;
@@ -1603,7 +1604,10 @@ BEGIN
     EmitWord(0);
     GenBinOpW(opMOV, PC, mINCR, SR, mIDX); (* stop WDT *)
     EmitWord(5A80H);
-    EmitWord(0120H)
+    EmitWord(0120H);
+    GenBinOpW(opMOV, PC, mINCR, SR, mIDX);
+    EmitWord(empty_proc_adr);
+    EmitWord(int_adr)
 END prolog;
 
 
@@ -1727,7 +1731,7 @@ END WriteHex;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
     RTLVarSize  = 4;
-    RTLDataSize = 2;
+    RTLDataSize = 4;
     IntVectorSize = LEN(IV) * 2 + RTLDataSize;
     minStackSize = 64;
 
@@ -1820,6 +1824,7 @@ BEGIN
         PutWord(CHL.GetInt(code.types, i), adr)
     END;
 
+    PutWord(4130H, adr); (* RET *)
     PutWord(stack, adr);
 
     FOR i := 0 TO LEN(IV) - 1 DO

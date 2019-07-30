@@ -25,8 +25,9 @@ CONST
     ram_adr = 200H;
     iv_adr  = 0FFC0H;
 
-    sp_adr    = iv_adr - 2;
-    types_adr = sp_adr - 2;
+    sp_adr         = iv_adr - 2;
+    empty_proc_adr = sp_adr - 2;
+    types_adr      = empty_proc_adr - 2;
 
     trap_adr = ram_adr;
     int_adr  = trap_adr + 2;
@@ -424,10 +425,4 @@ BEGIN
 END SetInt;
 
 
-PROCEDURE int_empty (priority, ptr: INTEGER);
-END int_empty;
-
-
-BEGIN
-    SYSTEM.PUT(int_adr, SYSTEM.ADR(int_empty))
 END RTL.
