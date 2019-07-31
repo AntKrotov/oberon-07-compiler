@@ -74,14 +74,35 @@ BEGIN
 END Align;
 
 
-PROCEDURE long* (value: INTEGER): INTEGER;
+PROCEDURE Long* (value: INTEGER): INTEGER;
     RETURN ASR(LSL(value, bit_diff), bit_diff)
-END long;
+END Long;
 
 
-PROCEDURE short* (value: INTEGER): INTEGER;
+PROCEDURE Short* (value: INTEGER): INTEGER;
     RETURN LSR(LSL(value, bit_diff), bit_diff)
-END short;
+END Short;
+
+
+PROCEDURE Log2* (x: INTEGER): INTEGER;
+VAR
+    n: INTEGER;
+
+BEGIN
+    ASSERT(x > 0);
+
+    n := 0;
+    WHILE ~ODD(x) DO
+        x := x DIV 2;
+        INC(n)
+    END;
+
+    IF x # 1 THEN
+        n := -1
+    END
+
+    RETURN n
+END Log2;
 
 
 END MACHINE.

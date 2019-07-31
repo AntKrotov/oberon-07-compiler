@@ -322,27 +322,6 @@ BEGIN
 END drop;
 
 
-PROCEDURE log2* (x: INTEGER): INTEGER;
-VAR
-    n: INTEGER;
-
-BEGIN
-    ASSERT(x > 0);
-
-    n := 0;
-    WHILE ~ODD(x) DO
-        x := x DIV 2;
-        INC(n)
-    END;
-
-    IF x # 1 THEN
-        n := -1
-    END
-
-    RETURN n
-END log2;
-
-
 PROCEDURE cond* (op: INTEGER): INTEGER;
 VAR
     res: INTEGER;
@@ -933,9 +912,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := MACHINE.Log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := MACHINE.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1561,9 +1540,9 @@ BEGIN
         |CODE.opDIVR:
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := MACHINE.Log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := MACHINE.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1617,9 +1596,9 @@ BEGIN
         |CODE.opMODR:
             a := param2;
             IF a > 1 THEN
-                n := log2(a)
+                n := MACHINE.Log2(a)
             ELSIF a < -1 THEN
-                n := log2(-a)
+                n := MACHINE.Log2(-a)
             ELSE
                 n := -1
             END;

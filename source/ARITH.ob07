@@ -53,7 +53,7 @@ BEGIN
     ELSIF v.typ = tWCHAR THEN
         res := v.int
     ELSIF v.typ = tSET THEN
-        res := MACHINE.long(ORD(v.set))
+        res := MACHINE.Long(ORD(v.set))
     ELSIF v.typ = tBOOLEAN THEN
         res := ORD(v.bool)
     END
@@ -178,7 +178,7 @@ BEGIN
 
     END;
 
-    value := MACHINE.long(value);
+    value := MACHINE.Long(value);
 
     IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
         error := 3
@@ -466,25 +466,25 @@ END mulInt;
 
 
 PROCEDURE _ASR (x, n: INTEGER): INTEGER;
-    RETURN ASR(MACHINE.long(x), n)
+    RETURN ASR(MACHINE.Long(x), n)
 END _ASR;
 
 
 PROCEDURE _LSR (x, n: INTEGER): INTEGER;
-    RETURN MACHINE.long(LSR(MACHINE.short(x), n))
+    RETURN MACHINE.Long(LSR(MACHINE.Short(x), n))
 END _LSR;
 
 
 PROCEDURE _LSL (x, n: INTEGER): INTEGER;
-    RETURN MACHINE.long(LSL(x, n))
+    RETURN MACHINE.Long(LSL(x, n))
 END _LSL;
 
 
 PROCEDURE _ROR1_32 (x: INTEGER): INTEGER;
 BEGIN
-    x := MACHINE.short(x);
+    x := MACHINE.Short(x);
     x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 31)))
-    RETURN MACHINE.long(x)
+    RETURN MACHINE.Long(x)
 END _ROR1_32;
 
 
@@ -492,7 +492,7 @@ PROCEDURE _ROR1_16 (x: INTEGER): INTEGER;
 BEGIN
     x := x MOD 65536;
     x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 15)))
-    RETURN MACHINE.long(x)
+    RETURN MACHINE.Long(x)
 END _ROR1_16;
 
 
@@ -577,7 +577,7 @@ BEGIN
     CASE v.typ OF
     |tCHAR, tWCHAR:
     |tBOOLEAN: v.int := ORD(v.bool)
-    |tSET:     v.int := MACHINE.long(ORD(v.set))
+    |tSET:     v.int := MACHINE.Long(ORD(v.set))
     END;
     v.typ := tINTEGER
 END ord;

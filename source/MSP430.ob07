@@ -7,7 +7,7 @@
 
 MODULE MSP430;
 
-IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, X86, MACHINE, C := CONSOLE, PROG;
+IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, MACHINE, C := CONSOLE, PROG;
 
 
 CONST
@@ -1218,9 +1218,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := X86.log2(a)
+                n := MACHINE.Log2(a)
             ELSIF a < -1 THEN
-                n := X86.log2(-a)
+                n := MACHINE.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1254,7 +1254,7 @@ BEGIN
             ASSERT(param2 > 0);
 
             IF param2 > 1 THEN
-                n := X86.log2(param2);
+                n := MACHINE.Log2(param2);
                 IF n > 0 THEN
                     UnOp(reg1);
                     Shift2(CODE.opASR2, reg1, n)
@@ -1284,7 +1284,7 @@ BEGIN
                 UnOp(reg1);
                 Clear(reg1)
             ELSE
-                IF X86.log2(param2) > 0 THEN
+                IF MACHINE.Log2(param2) > 0 THEN
                     UnOp(reg1);
                     Op2(opAND, imm(param2 - 1), reg1)
                 ELSE
@@ -1648,8 +1648,7 @@ CONST
     minStackSize = 64;
 
 VAR
-    i, tcount, adr, heap, stack, DataSize,
-    TextSize: INTEGER;
+    i, adr, heap, stack, TextSize, TypesSize: INTEGER;
 
     Code, Data, Bss: RECORD address, size: INTEGER END;
 
@@ -1684,7 +1683,7 @@ BEGIN
         mem[i] := 0
     END;
 
-    tcount := CHL.Length(code.types);
+    TypesSize := CHL.Length(code.types) * 2;
     CodeList := LISTS.create(NIL);
     RelList  := LISTS.create(NIL);
     R := REG.Create(Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
@@ -1694,13 +1693,13 @@ BEGIN
     epilog;
 
     Code.address := 10000H - rom;
-    Code.size := Fixup(Code.address, IntVectorSize + tcount * 2);
+    Code.size := Fixup(Code.address, IntVectorSize + TypesSize);
     Data.address := Code.address + Code.size;
     Data.size := CHL.Length(code.data);
     Data.size := Data.size + ORD(ODD(Data.size));
     TextSize  := Code.size + Data.size;
 
-    IF Code.address + TextSize > 10000H - IntVectorSize - tcount * 2 THEN
+    IF Code.address + TextSize > 10000H - IntVectorSize - TypesSize THEN
         ERRORS.error1("size of program is too large")
     END;
 
@@ -1727,15 +1726,14 @@ BEGIN
 
     adr := Data.address;
 
-    DataSize := CHL.Length(code.data);
-    FOR i := 0 TO DataSize - 1 DO
+    FOR i := 0 TO CHL.Length(code.data) - 1 DO
         mem[adr] := CHL.GetByte(code.data, i);
         INC(adr)
     END;
 
-    adr := 10000H - IntVectorSize - tcount * 2;
+    adr := 10000H - IntVectorSize - TypesSize;
 
-    FOR i := tcount - 1 TO 0 BY -1 DO
+    FOR i := TypesSize DIV 2 - 1 TO 0 BY -1 DO
         PutWord(CHL.GetInt(code.types, i), adr)
     END;
 
@@ -1748,7 +1746,7 @@ BEGIN
 
     file := FILES.create(outname);
     WriteHex(file, mem, Code.address, TextSize);
-    WriteHex(file, mem, 10000H - IntVectorSize - tcount * 2, IntVectorSize + tcount * 2);
+    WriteHex(file, mem, 10000H - IntVectorSize - TypesSize, IntVectorSize + TypesSize);
 
     WRITER.WriteByte(file, ORD(":"));
     WriteHexByte(file, 0);
@@ -1761,7 +1759,7 @@ BEGIN
 
     FILES.close(file);
 
-    INC(TextSize, IntVectorSize + tcount * 2);
+    INC(TextSize, IntVectorSize + TypesSize);
     INC(Bss.size, minStackSize + RTLVarSize);
 
     C.StringLn("-------------------------------");
