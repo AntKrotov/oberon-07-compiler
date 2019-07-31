@@ -389,12 +389,6 @@ BEGIN
 END putstrW1;
 
 
-PROCEDURE SetMinDataSize* (size: INTEGER);
-BEGIN
-    codes.dmin := CHL.Length(codes.data) + size
-END SetMinDataSize;
-
-
 PROCEDURE push (stk: CMDSTACK; cmd: COMMAND);
 BEGIN
     INC(stk.top);

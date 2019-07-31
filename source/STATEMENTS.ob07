@@ -502,6 +502,8 @@ END LoadConst;
 
 
 PROCEDURE paramcomp (parser: PARS.PARSER; pos: SCAN.POSITION; e: PARS.EXPR; p: PROG.PARAM);
+VAR
+    stroffs: INTEGER;
 
     PROCEDURE arrcomp (e: PARS.EXPR; p: PROG.PARAM): BOOLEAN;
     VAR
@@ -625,12 +627,14 @@ BEGIN
                     CODE.AddCmd(CODE.opPARAM, 1)
                 ELSIF (e.type.typ = PROG.tSTRING) OR
                       (e.type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
-                    CODE.SetMinDataSize(p.type.size);
                     IF p.type.base.typ = PROG.tCHAR THEN
-                        CODE.AddCmd(CODE.opSADR, String(e))
+                        stroffs := String(e);
+                        CODE.AddCmd(CODE.opSADR, stroffs)
                     ELSE (* WCHAR *)
-                        CODE.AddCmd(CODE.opSADR, StringW(e))
+                        stroffs := StringW(e);
+                        CODE.AddCmd(CODE.opSADR, stroffs)
                     END;
+                    CODE.codes.dmin := stroffs + p.type.size;
                     CODE.AddCmd(CODE.opPARAM, 1)
                 ELSE
                     LoadConst(e);

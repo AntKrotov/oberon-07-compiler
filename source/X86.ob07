@@ -2243,11 +2243,10 @@ END prolog;
 
 PROCEDURE epilog (code: CODE.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret: INTEGER);
 VAR
-    i, n:  INTEGER;
-    exp:   CODE.EXPORT_PROC;
+    exp:  CODE.EXPORT_PROC;
     path, name, ext: PATHS.PATH;
 
-    tcount, dcount: INTEGER;
+    tcount, dcount, i: INTEGER;
 
 
     PROCEDURE import (imp: LISTS.LIST);
@@ -2318,12 +2317,9 @@ BEGIN
 
     import(code.import);
 
-    n := code.dmin - CHL.Length(code.data);
-    IF n > 0 THEN
-        INC(code.bss, n)
-    END;
+    code.bss := MAX(code.bss, MAX(code.dmin - CHL.Length(code.data), 4));
 
-    BIN.SetParams(program, MAX(code.bss, 4), stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    BIN.SetParams(program, code.bss, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
 
 END epilog;
 

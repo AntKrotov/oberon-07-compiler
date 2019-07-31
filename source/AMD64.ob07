@@ -2745,7 +2745,6 @@ END rsave;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     path, modname, ext: PATHS.PATH;
-    n: INTEGER;
     opt: PROG.OPTIONS;
 
 BEGIN
@@ -2766,11 +2765,7 @@ BEGIN
 
     R := REG.Create(push, pop, mov, xchg, rload, rsave, {rax, r10, r11}, {rcx, rdx, r8, r9});
 
-    n := code.dmin - CHL.Length(code.data);
-    IF n > 0 THEN
-        INC(code.bss, n)
-    END;
-    code.bss := MAX(code.bss, 8);
+    code.bss := MAX(code.bss, MAX(code.dmin - CHL.Length(code.data), 8));
 
     Numbers := LISTS.create(NIL);
     Numbers_Count := 0;
