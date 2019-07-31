@@ -19,7 +19,7 @@ CONST
 
     R4 = 4; R5 = 5; R6 = 6; R7 = 7;
 
-    BP = 15; HP = 14; IR = 13;
+    IR = 13; HP = 14; BP = 15;
 
     ACC = R4;
 
@@ -497,11 +497,6 @@ BEGIN
 END cond;
 
 
-PROCEDURE inv0 (op: INTEGER): INTEGER;
-    RETURN ORD(BITS(op) / {0})
-END inv0;
-
-
 PROCEDURE jcc (cc, label: INTEGER);
 VAR
     L: INTEGER;
@@ -689,18 +684,15 @@ BEGIN
             END
 
         |CODE.opCONST:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, imm(param2), reg1)
+            Op2(opMOV, imm(param2), REG.GetAnyReg(R))
 
         |CODE.opSADR:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, incr(PC), reg1);
+            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
             EmitWord(param2);
             Reloc(RDATA)
 
         |CODE.opGADR:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, incr(PC), reg1);
+            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
             EmitWord(param2);
             Reloc(RBSS)
 
@@ -710,21 +702,17 @@ BEGIN
             Op2(opADD, imm(param2 * 2), reg1)
 
         |CODE.opLLOAD8:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV + BW, src_x(param2 * 2, BP), reg1)
+            Op2(opMOV + BW, src_x(param2 * 2, BP), REG.GetAnyReg(R))
 
         |CODE.opLLOAD16, CODE.opVADR:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, src_x(param2 * 2, BP), reg1)
+            Op2(opMOV, src_x(param2 * 2, BP), REG.GetAnyReg(R))
 
         |CODE.opGLOAD8:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV + BW, src_x(param2, SR), reg1);
+            Op2(opMOV + BW, src_x(param2, SR), REG.GetAnyReg(R));
             Reloc(RBSS)
 
         |CODE.opGLOAD16:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, src_x(param2, SR), reg1);
+            Op2(opMOV, src_x(param2, SR), REG.GetAnyReg(R));
             Reloc(RBSS)
 
         |CODE.opLOAD8:
@@ -849,12 +837,11 @@ BEGIN
 
             ELSIF cmd.next(COMMAND).opcode = CODE.opJNE THEN
                 label := cmd.next(COMMAND).param1;
-                jcc(inv0(cc), label);
+                jcc(ORD(BITS(cc) / {0}), label);
                 cmd := cmd.next(COMMAND)
 
             ELSE
-                reg1 := REG.GetAnyReg(R);
-                setcc(cc, reg1)
+                setcc(cc, REG.GetAnyReg(R))
             END
 
         |CODE.opNOP:
@@ -994,8 +981,7 @@ BEGIN
 
         |CODE.opPUSHT:
             UnOp(reg1);
-            reg2 := REG.GetAnyReg(R);
-            Op2(opMOV, src_x(-2, reg1), reg2)
+            Op2(opMOV, src_x(-2, reg1), REG.GetAnyReg(R))
 
         |CODE.opISREC:
             PushAll(2);
@@ -1406,8 +1392,7 @@ BEGIN
             drop
 
         |CODE.opPUSHP:
-            reg1 := REG.GetAnyReg(R);
-            Op2(opMOV, incr(PC), reg1);
+            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
             EmitWord(param2);
             Reloc(RCODE)
 
