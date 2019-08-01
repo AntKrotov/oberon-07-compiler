@@ -85,7 +85,7 @@ END destroy;
 
 PROCEDURE error* (parser: PARSER; pos: SCAN.POSITION; errno: INTEGER);
 BEGIN
-    ERRORS.errormsg(parser.fname, pos.line, pos.col, errno)
+    ERRORS.ErrorMsg(parser.fname, pos.line, pos.col, errno)
 END error;
 
 

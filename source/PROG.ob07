@@ -340,7 +340,7 @@ BEGIN
     ident := unit.idents.last(IDENT);
     WHILE (ident # NIL) & (ident.typ # idGUARD) DO
         IF (ident.typ = idVAR) & (ident.offset = -1) THEN
-            ERRORS.hintmsg(ident.name.s, ident.pos.line, ident.pos.col, 0);
+            ERRORS.HintMsg(ident.name.s, ident.pos.line, ident.pos.col, 0);
             IF ident.export THEN
                 offset := getOffset(unit.program, ident)
             END
@@ -540,7 +540,7 @@ BEGIN
         del  := item;
         item := item.prev(IDENT);
         IF (del.typ = idVAR) & (del.offset = -1) THEN
-            ERRORS.hintmsg(del.name.s, del.pos.line, del.pos.col, 0)
+            ERRORS.HintMsg(del.name.s, del.pos.line, del.pos.col, 0)
         END;
         IF (variables # NIL) & (del.typ IN {idVAR, idPARAM}) & (del.offset # -1) THEN
             IF del.type.typ IN BASICTYPES - {tREAL} + {tPOINTER, tPROCEDURE} THEN

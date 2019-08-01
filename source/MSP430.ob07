@@ -15,6 +15,13 @@ CONST
     minRAM* = 128;  maxRAM* = 2048;
     minROM* = 4096; maxROM* = 49152;
 
+    LenIV = 32;
+
+    RTLVarSize  = 4;
+    RTLDataSize = 4;
+    IntVectorSize* = LenIV * 2 + RTLDataSize;
+    minStackSize = 64;
+
     PC = 0; SP = 1; SR = 2; CG = 3;
 
     R4 = 4; R5 = 5; R6 = 6; R7 = 7;
@@ -112,7 +119,7 @@ VAR
 
     _new: INTEGER;
 
-    IV: ARRAY 32 OF INTEGER;
+    IV: ARRAY LenIV OF INTEGER;
 
     IdxWords: RECORD src, dst: INTEGER END;
 
@@ -327,7 +334,7 @@ BEGIN
     UNTIL ~shorted;
 
     IF offset * 2 > 10000H - IntVectorSize THEN
-        ERRORS.error1("size of program is too large")
+        ERRORS.Error(203)
     END;
 
     adr := CodeAdr;
@@ -380,7 +387,7 @@ VAR
 BEGIN
     L := CODE.NewLabel();
     IF L >= LEN(Labels) THEN
-        ERRORS.error1("size of program is too large")
+        ERRORS.Error(203)
     END
 
     RETURN L
@@ -1641,12 +1648,6 @@ END WriteHex;
 
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
-CONST
-    RTLVarSize  = 4;
-    RTLDataSize = 4;
-    IntVectorSize = LEN(IV) * 2 + RTLDataSize;
-    minStackSize = 64;
-
 VAR
     i, adr, heap, stack, TextSize, TypesSize: INTEGER;
 
@@ -1672,11 +1673,11 @@ BEGIN
     rom := MIN(MAX(rom, minROM), maxROM);
 
     IF code.bss > ram - minStackSize - RTLVarSize THEN
-        ERRORS.error1("size of global variables is too large")
+        ERRORS.Error(204)
     END;
 
     IF code.lcount >= LEN(Labels) THEN
-        ERRORS.error1("size of program is too large")
+        ERRORS.Error(203)
     END;
 
     FOR i := 0 TO LEN(mem) - 1 DO
@@ -1695,12 +1696,12 @@ BEGIN
     Code.address := 10000H - rom;
     Code.size := Fixup(Code.address, IntVectorSize + TypesSize);
     Data.address := Code.address + Code.size;
-    Data.size := MAX(CHL.Length(code.data), code.dmin);
+    Data.size := CHL.Length(code.data);
     Data.size := Data.size + ORD(ODD(Data.size));
     TextSize  := Code.size + Data.size;
 
-    IF Code.address + TextSize > 10000H - IntVectorSize - TypesSize THEN
-        ERRORS.error1("size of program is too large")
+    IF Code.address + TextSize + MAX(code.dmin - Data.size, IntVectorSize + TypesSize) > 10000H  THEN
+        ERRORS.Error(203)
     END;
 
     Bss.address := ram_adr + RTLVarSize;

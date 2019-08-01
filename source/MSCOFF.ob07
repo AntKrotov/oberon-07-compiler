@@ -136,7 +136,7 @@ VAR
     PROCEDURE SetNumberOfRelocations (VAR section: SH; NumberOfRelocations: INTEGER);
     BEGIN
         IF NumberOfRelocations >= 65536 THEN
-            ERRORS.error1("too many relocations")
+            ERRORS.Error(202)
         END;
         section.NumberOfRelocations := WCHR(NumberOfRelocations)
     END SetNumberOfRelocations;

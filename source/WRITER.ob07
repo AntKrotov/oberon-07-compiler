@@ -35,7 +35,7 @@ BEGIN
     IF FILES.WriteByte(file, n) THEN
         INC(counter)
     ELSE
-        ERRORS.error1("writing file error")
+        ERRORS.Error(201)
     END
 END WriteByte;
 
@@ -47,7 +47,7 @@ VAR
 BEGIN
     n := FILES.write(file, chunk, bytes);
     IF n # bytes THEN
-        ERRORS.error1("writing file error")
+        ERRORS.Error(201)
     END;
     INC(counter, n)
 END Write;

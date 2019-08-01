@@ -629,7 +629,10 @@ BEGIN
                       (e.type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
                     IF p.type.base.typ = PROG.tCHAR THEN
                         stroffs := String(e);
-                        CODE.AddCmd(CODE.opSADR, stroffs)
+                        CODE.AddCmd(CODE.opSADR, stroffs);
+                        IF (CPU = cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
+                            ERRORS.WarningMsg(pos.line, pos.col, 0)
+                        END
                     ELSE (* WCHAR *)
                         stroffs := StringW(e);
                         CODE.AddCmd(CODE.opSADR, stroffs)
@@ -3211,7 +3214,7 @@ VAR
             CODE.codes.rtl[idx] := id.proc.label;
             id.proc.used := TRUE
         ELSE
-            ERRORS.error5("procedure ", mConst.RTL_NAME, ".", name, " not found")
+            ERRORS.WrongRTL(name)
         END
     END getproc;
 
@@ -3307,7 +3310,7 @@ BEGIN
             parser.parse(parser);
             PARS.destroy(parser)
         ELSE
-            ERRORS.error5("file ", lib_path, mConst.RTL_NAME, mConst.FILE_EXT, " not found")
+            ERRORS.FileNotFound(lib_path, mConst.RTL_NAME, mConst.FILE_EXT)
         END
     END;
 
@@ -3317,13 +3320,13 @@ BEGIN
     IF parser.open(parser, modname) THEN
         parser.parse(parser)
     ELSE
-        ERRORS.error5("file ", path, modname, mConst.FILE_EXT, " not found")
+        ERRORS.FileNotFound(path, modname, mConst.FILE_EXT)
     END;
 
     PARS.destroy(parser);
 
     IF PARS.program.bss > mConst.MAX_GLOBAL_SIZE THEN
-        ERRORS.error1("size of global variables is too large")
+        ERRORS.Error(204)
     END;
 
     setrtl;

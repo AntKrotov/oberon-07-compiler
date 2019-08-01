@@ -154,7 +154,7 @@ BEGIN
             end := TRUE
 
         ELSE
-            ERRORS.error3("bad parameter: ", param, "")
+            ERRORS.BadParam(param)
         END;
 
         INC(i)
@@ -214,8 +214,9 @@ BEGIN
     PATHS.split(inname, path, modname, ext);
 
     IF ext # mConst.FILE_EXT THEN
-        ERRORS.error3('inputfile name extension must be "', mConst.FILE_EXT, '"')
+        ERRORS.Error(207)
     END;
+
     IF PATHS.isRelative(path) THEN
         PATHS.RelPath(app_path, path, temp);
         path := temp
@@ -223,7 +224,7 @@ BEGIN
 
     UTILS.GetArg(2, outname);
     IF outname = "" THEN
-        ERRORS.error1("not enough parameters")
+        ERRORS.Error(205)
     END;
     IF PATHS.isRelative(outname) THEN
         PATHS.RelPath(app_path, outname, temp);
@@ -232,13 +233,13 @@ BEGIN
 
     UTILS.GetArg(3, param);
     IF param = "" THEN
-        ERRORS.error1("not enough parameters")
+        ERRORS.Error(205)
     END;
 
     target := Target(param);
 
     IF target = 0 THEN
-        ERRORS.error1("bad parameter <target>")
+        ERRORS.Error(206)
     END;
 
     CASE target OF
@@ -254,7 +255,7 @@ BEGIN
     END;
 
     IF UTILS.bit_depth < bit_depth THEN
-        ERRORS.error1("bad parameter <target>")
+        ERRORS.Error(206)
     END;
 
     STRINGS.append(lib_path, "lib");
