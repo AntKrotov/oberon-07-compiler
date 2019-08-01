@@ -149,7 +149,7 @@ BEGIN
 END _rot;
 
 
-PROCEDURE _set2* (a, b: INTEGER): INTEGER;
+PROCEDURE _set* (b, a: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
@@ -167,12 +167,12 @@ BEGIN
     END
 
     RETURN res
-END _set2;
-
-
-PROCEDURE _set* (b, a: INTEGER): INTEGER;
-    RETURN _set2(a, b)
 END _set;
+
+
+PROCEDURE _set2* (a, b: INTEGER): INTEGER;
+    RETURN _set(b, a)
+END _set2;
 
 
 PROCEDURE _in2* (i, s: INTEGER): BOOLEAN;

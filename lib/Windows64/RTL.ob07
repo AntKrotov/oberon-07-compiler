@@ -121,7 +121,7 @@ BEGIN
 END _rot;
 
 
-PROCEDURE [stdcall64] _set2* (a, b: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
@@ -139,12 +139,12 @@ BEGIN
     END
 
     RETURN res
-END _set2;
-
-
-PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
-    RETURN _set2(a, b)
 END _set;
+
+
+PROCEDURE [stdcall64] _set2* (a, b: INTEGER): INTEGER;
+    RETURN _set(b, a)
+END _set2;
 
 
 PROCEDURE [stdcall64] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
