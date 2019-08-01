@@ -12,7 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
-    REDLED = 0;
+    REDLED = {0};
 
     P1OUT = 21H;
     P1DIR = 22H;
@@ -22,24 +22,24 @@ VAR
     n: INTEGER;
 
 
-PROCEDURE inv_bit (mem, bit: INTEGER);
+PROCEDURE inv_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) / {bit})
-END inv_bit;
+    SYSTEM.PUT8(mem, BITS(b) / bits)
+END inv_bits;
 
 
 BEGIN
     (* инициализация регистра P1DIR *)
-    SYSTEM.PUT8(P1DIR, {REDLED});
+    SYSTEM.PUT8(P1DIR, REDLED);
 
     (* бесконечный цикл *)
     WHILE TRUE DO
         (* изменить состояние светодиода *)
-        inv_bit(P1OUT, REDLED);
+        inv_bits(P1OUT, REDLED);
         (* задержка *)
         n := 30000;
         WHILE n > 0 DO DEC(n) END

@@ -7,15 +7,15 @@
 
 *)
 
-MODULE Example3;
+MODULE TwoTimers;
 
 IMPORT SYSTEM, RTL;
 
 
 CONST
 
-    REDLED   = 0;
-    GREENLED = 6;
+    REDLED   = {0};
+    GREENLED = {6};
 
     P1OUT = 21H;
     P1DIR = 22H;
@@ -26,25 +26,25 @@ CONST
     IFG1   = 0002H;
 
     (* биты регистра WDTCTL *)
-    WDTIS0   = 0;
-    WDTIS1   = 1;
-    WDTSSEL  = 2;
-    WDTCNTCL = 3;
-    WDTTMSEL = 4;
-    WDTNMI   = 5;
-    WDTNMIES = 6;
-    WDTHOLD  = 7;
+    WDTIS0   = {0};
+    WDTIS1   = {1};
+    WDTSSEL  = {2};
+    WDTCNTCL = {3};
+    WDTTMSEL = {4};
+    WDTNMI   = {5};
+    WDTNMIES = {6};
+    WDTHOLD  = {7};
 
     (* биты регистра IE1 *)
-    WDTIE = 0;
-    NMIIE = 4;
+    WDTIE = {0};
+    NMIIE = {4};
 
     (* биты регистра IFG1 *)
-    WDTIFG = 0;
-    NMIIFG = 4;
+    WDTIFG = {0};
+    NMIIFG = {4};
 
     (* ключ защиты сторожевого таймера *)
-    WDTPW = 5A00H;
+    WDTPW = BITS(5A00H);
 
     (* регистры таймера A *)
     TACTL   = 0160H;
@@ -53,39 +53,39 @@ CONST
     TACCR0  = 0172H;
 
     (* биты регистра TACTL *)
-    TAIFG   = 0;
-    TAIE    = 1;
-    TACLR   = 2;
-    MC0     = 4;
-    MC1     = 5;
-    ID0     = 6;
-    ID1     = 7;
-    TASSEL0 = 8;
-    TASSEL1 = 9;
+    TAIFG   = {0};
+    TAIE    = {1};
+    TACLR   = {2};
+    MC0     = {4};
+    MC1     = {5};
+    ID0     = {6};
+    ID1     = {7};
+    TASSEL0 = {8};
+    TASSEL1 = {9};
 
     (* биты регистра TACCTL0 *)
-    CCIE = 4;
-    CAP  = 8;
+    CCIE = {4};
+    CAP  = {8};
 
 
-PROCEDURE set_bit (mem, bit: INTEGER);
+PROCEDURE set_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) + {bit})
-END set_bit;
+    SYSTEM.PUT8(mem, BITS(b) + bits)
+END set_bits;
 
 
-PROCEDURE inv_bit (mem, bit: INTEGER);
+PROCEDURE inv_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) / {bit})
-END inv_bit;
+    SYSTEM.PUT8(mem, BITS(b) / bits)
+END inv_bits;
 
 
 (*
@@ -113,14 +113,13 @@ VAR
     x: SET;
 
 BEGIN
-    IF priority = 26 THEN (* прерывание от сторожевого таймера *)
-        inv_bit(P1OUT, REDLED)
-    ELSIF priority = 24 THEN (* прерывание от таймера A *)
-        SYSTEM.GET(TACTL, x);
-        IF TAIFG IN x THEN (* прерывание было *)
-            inv_bit(P1OUT, GREENLED);
-            (* сбросить флаг прерывания и обновить регистр TACTL *)
-            SYSTEM.PUT(TACTL, x - {TAIFG})
+    IF priority = 26 THEN                 (* прерывание от сторожевого таймера *)
+        inv_bits(P1OUT, REDLED)           (* изменить состояние светодиода *)
+    ELSIF priority = 24 THEN              (* прерывание от таймера A *)
+        SYSTEM.GET(TACTL, x);             (* взять регистр TACTL *)
+        IF TAIFG * x # {} THEN            (* прерывание было *)
+            inv_bits(P1OUT, GREENLED);    (* изменить состояние светодиода *)
+            SYSTEM.PUT(TACTL, x - TAIFG)  (* сбросить флаг прерывания и обновить регистр TACTL *)
         END
     END
 END int;
@@ -129,27 +128,27 @@ END int;
 PROCEDURE main;
 BEGIN
     (* инициализация регистра P1DIR *)
-    SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
+    SYSTEM.PUT8(P1DIR, REDLED + GREENLED);
 
     (* начальное состояние светодиодов - включены *)
-    set_bit(P1OUT, GREENLED);
-    set_bit(P1OUT, REDLED);
+    set_bits(P1OUT, GREENLED);
+    set_bits(P1OUT, REDLED);
 
     RTL.SetInt(int);     (* назначить обработчик прерываний *)
     SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
 
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);
-    SYSTEM.PUT(TACCTL0, {CCIE, CAP});
+    SYSTEM.PUT(TACCTL0, CCIE + CAP);
     SYSTEM.PUT(TACCR0, 1500);
-    SYSTEM.PUT(TACTL, {TAIE, MC0, TASSEL0});
+    SYSTEM.PUT(TACTL, TAIE + MC0 + TASSEL0);
 
     (* инициализация регистров сторожевого таймера *)
-    set_bit(IE1, WDTIE);
-    SYSTEM.PUT(WDTCTL, WDTPW + ORD({WDTIS1, WDTSSEL, WDTCNTCL, WDTTMSEL}))
+    set_bits(IE1, WDTIE);
+    SYSTEM.PUT(WDTCTL, WDTPW + WDTIS1 + WDTSSEL + WDTCNTCL + WDTTMSEL)
 END main;
 
 
 BEGIN
     main
-END Example3.
+END TwoTimers.

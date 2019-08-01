@@ -6,15 +6,15 @@
 
 *)
 
-MODULE Example2;
+MODULE TimerA;
 
 IMPORT SYSTEM, RTL;
 
 
 CONST
 
-    REDLED   = 0;
-    GREENLED = 6;
+    REDLED   = {0};
+    GREENLED = {6};
 
     P1OUT = 21H;
     P1DIR = 22H;
@@ -26,50 +26,49 @@ CONST
     TACCR0  = 0172H;
 
     (* биты регистра TACTL *)
-    TAIFG   = 0;
-    TAIE    = 1;
-    TACLR   = 2;
-    MC0     = 4;
-    MC1     = 5;
-    ID0     = 6;
-    ID1     = 7;
-    TASSEL0 = 8;
-    TASSEL1 = 9;
+    TAIFG   = {0};
+    TAIE    = {1};
+    TACLR   = {2};
+    MC0     = {4};
+    MC1     = {5};
+    ID0     = {6};
+    ID1     = {7};
+    TASSEL0 = {8};
+    TASSEL1 = {9};
 
     (* биты регистра TACCTL0 *)
-    CCIE = 4;
-    CAP  = 8;
+    CCIE = {4};
+    CAP  = {8};
 
 
-PROCEDURE set_bit (mem, bit: INTEGER);
+PROCEDURE set_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) + {bit})
-END set_bit;
+    SYSTEM.PUT8(mem, BITS(b) + bits)
+END set_bits;
 
 
-PROCEDURE clr_bit (mem, bit: INTEGER);
+PROCEDURE clr_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) - {bit})
-END clr_bit;
+    SYSTEM.PUT8(mem, BITS(b) - bits)
+END clr_bits;
 
 
-PROCEDURE inv_bit (mem, bit: INTEGER);
+PROCEDURE inv_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) / {bit})
-END inv_bit;
-
+    SYSTEM.PUT8(mem, BITS(b) / bits)
+END inv_bits;
 
 (*
 обработчик прерываний
@@ -96,13 +95,12 @@ VAR
     x: SET;
 
 BEGIN
-    IF priority = 24 THEN (* прерывание от таймера A *)
-        SYSTEM.GET(TACTL, x);
-        IF TAIFG IN x THEN (* прерывание было *)
-            inv_bit(P1OUT, REDLED);
-            inv_bit(P1OUT, GREENLED);
-            (* сбросить флаг прерывания и обновить регистр TACTL *)
-            SYSTEM.PUT(TACTL, x - {TAIFG})
+    IF priority = 24 THEN                 (* прерывание от таймера A *)
+        SYSTEM.GET(TACTL, x);             (* взять регистр TACTL *)
+        IF TAIFG * x # {} THEN            (* прерывание было *)
+            inv_bits(P1OUT, REDLED);      (* изменить состояние светодиода *)
+            inv_bits(P1OUT, GREENLED);    (* изменить состояние светодиода *)
+            SYSTEM.PUT(TACTL, x - TAIFG)  (* сбросить флаг прерывания и обновить регистр TACTL *)
         END
     END
 END int;
@@ -111,23 +109,23 @@ END int;
 PROCEDURE main;
 BEGIN
     (* инициализация регистра P1DIR *)
-    SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
+    SYSTEM.PUT8(P1DIR, REDLED + GREENLED);
 
     (* начальное состояние светодиодов *)
-    set_bit(P1OUT, GREENLED);
-    clr_bit(P1OUT, REDLED);
+    set_bits(P1OUT, GREENLED); (* включен *)
+    clr_bits(P1OUT, REDLED);   (* выключен *)
 
     RTL.SetInt(int);     (* назначить обработчик прерываний *)
     SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
 
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);
-    SYSTEM.PUT(TACCTL0, {CCIE, CAP});
+    SYSTEM.PUT(TACCTL0, CCIE + CAP);
     SYSTEM.PUT(TACCR0, 1000);
-    SYSTEM.PUT(TACTL, {TAIE, MC0, TASSEL0})
+    SYSTEM.PUT(TACTL, TAIE + MC0 + TASSEL0)
 END main;
 
 
 BEGIN
     main
-END Example2.
+END TimerA.

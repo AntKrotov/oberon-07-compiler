@@ -7,16 +7,16 @@
 
 *)
 
-MODULE Example1;
+MODULE Button;
 
 IMPORT SYSTEM, RTL;
 
 
 CONST
 
-    REDLED   = 0;
-    GREENLED = 6;
-    BUTTON   = 3;
+    REDLED   = {0};
+    GREENLED = {6};
+    BUTTON   = {3};
 
     P1OUT = 21H;
     P1DIR = 22H;
@@ -31,44 +31,44 @@ BEGIN
 END delay;
 
 
-PROCEDURE get_bit (mem, bit: INTEGER): BOOLEAN;
+PROCEDURE get_bit (mem: INTEGER; bit: SET): BOOLEAN;
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b)
-    RETURN bit IN BITS(b)
+    RETURN bit * BITS(b) # {}
 END get_bit;
 
 
-PROCEDURE set_bit (mem, bit: INTEGER);
+PROCEDURE set_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) + {bit})
-END set_bit;
+    SYSTEM.PUT8(mem, BITS(b) + bits)
+END set_bits;
 
 
-PROCEDURE clr_bit (mem, bit: INTEGER);
+PROCEDURE clr_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) - {bit})
-END clr_bit;
+    SYSTEM.PUT8(mem, BITS(b) - bits)
+END clr_bits;
 
 
-PROCEDURE inv_bit (mem, bit: INTEGER);
+PROCEDURE inv_bits (mem: INTEGER; bits: SET);
 VAR
     b: BYTE;
 
 BEGIN
     SYSTEM.GET(mem, b);
-    SYSTEM.PUT8(mem, BITS(b) / {bit})
-END inv_bit;
+    SYSTEM.PUT8(mem, BITS(b) / bits)
+END inv_bits;
 
 
 (*
@@ -93,11 +93,11 @@ END inv_bit;
 *)
 PROCEDURE int (priority, ptr: INTEGER);
 BEGIN
-    IF priority = 18 THEN  (* прерывание от порта P1 *)
-        IF get_bit(P1IFG, BUTTON) THEN (* нажата кнопка *)
-            inv_bit(P1OUT, REDLED);
-            delay(30000);
-            clr_bit(P1IFG, BUTTON)
+    IF priority = 18 THEN               (* прерывание от порта P1 *)
+        IF get_bit(P1IFG, BUTTON) THEN  (* нажата кнопка *)
+            inv_bits(P1OUT, REDLED);    (* изменить состояние светодиода *)
+            delay(30000);               (* задержка для отпускания кнопки *)
+            clr_bits(P1IFG, BUTTON)     (* сбросить флаг прерывания *)
         END
     END
 END int;
@@ -106,21 +106,22 @@ END int;
 PROCEDURE main;
 BEGIN
     (* инициализация спец. регистров *)
-    SYSTEM.PUT8(P1DIR, {REDLED, GREENLED});
-    set_bit(P1REN, BUTTON);
-    set_bit(P1OUT, BUTTON);
-    set_bit(P1IE,  BUTTON);
+    SYSTEM.PUT8(P1DIR, REDLED + GREENLED);
+    set_bits(P1REN, BUTTON);
+    set_bits(P1OUT, BUTTON);
+    set_bits(P1IE,  BUTTON);
 
-    RTL.SetInt(int); (* назначить обработчик прерываний *)
+    RTL.SetInt(int);     (* назначить обработчик прерываний *)
     SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
 
+    (* бесконечный цикл *)
     WHILE TRUE DO
-        inv_bit(P1OUT, GREENLED);
-        delay(30000)
+        inv_bits(P1OUT, GREENLED); (* изменить состояние светодиода *)
+        delay(30000)               (* задержка *)
     END
 END main;
 
 
 BEGIN
     main
-END Example1.
+END Button.
