@@ -3257,7 +3257,10 @@ BEGIN
 
     IF CPU = cpuMSP430 THEN
         getproc(rtl,  "_mul",       CODE._mul);
-        getproc(rtl,  "_shift",     CODE._shift);
+        getproc(rtl,  "_lsl",       CODE._lsl);
+        getproc(rtl,  "_asr",       CODE._asr);
+        getproc(rtl,  "_ror",       CODE._ror);
+        getproc(rtl,  "_lsr",       CODE._lsr);
         getproc(rtl,  "_in",        CODE._in);
         getproc(rtl,  "_in2",       CODE._in2);
         getproc(rtl,  "_set1",      CODE._set1);

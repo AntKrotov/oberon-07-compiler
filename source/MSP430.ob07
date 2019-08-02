@@ -1196,12 +1196,11 @@ BEGIN
         |CODE.opLSL, CODE.opASR, CODE.opROR, CODE.opLSR:
             PushAll(2);
             CASE opcode OF
-            |CODE.opLSL: PushImm(0)
-            |CODE.opASR: PushImm(1)
-            |CODE.opROR: PushImm(2)
-            |CODE.opLSR: PushImm(3)
+            |CODE.opLSL: CallRTL(CODE._lsl, 2)
+            |CODE.opASR: CallRTL(CODE._asr, 2)
+            |CODE.opROR: CallRTL(CODE._ror, 2)
+            |CODE.opLSR: CallRTL(CODE._lsr, 2)
             END;
-            CallRTL(CODE._shift, 3);
             GetRegA
 
         |CODE.opLSL1, CODE.opASR1, CODE.opROR1, CODE.opLSR1:
@@ -1211,12 +1210,11 @@ BEGIN
             Push(reg1);
             drop;
             CASE opcode OF
-            |CODE.opLSL1: PushImm(0)
-            |CODE.opASR1: PushImm(1)
-            |CODE.opROR1: PushImm(2)
-            |CODE.opLSR1: PushImm(3)
+            |CODE.opLSL1: CallRTL(CODE._lsl, 2)
+            |CODE.opASR1: CallRTL(CODE._asr, 2)
+            |CODE.opROR1: CallRTL(CODE._ror, 2)
+            |CODE.opLSR1: CallRTL(CODE._lsr, 2)
             END;
-            CallRTL(CODE._shift, 3);
             GetRegA
 
         |CODE.opASR2, CODE.opROR2, CODE.opLSL2, CODE.opLSR2:

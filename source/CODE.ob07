@@ -135,12 +135,15 @@ CONST
     _exit      *=  26;
     _strcpy2   *=  27;
     _mul       *=  28;
-    _shift     *=  29;
-    _set1      *=  30;
-    _in        *=  31;
-    _in2       *=  32;
-    _incl      *=  33;
-    _excl      *=  34;
+    _set1      *=  29;
+    _in        *=  30;
+    _in2       *=  31;
+    _incl      *=  32;
+    _excl      *=  33;
+    _lsl       *=  34;
+    _asr       *=  35;
+    _ror       *=  36;
+    _lsr       *=  37;
 
 
 TYPE
@@ -207,7 +210,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 35 OF INTEGER;
+        rtl*:       ARRAY 38 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
