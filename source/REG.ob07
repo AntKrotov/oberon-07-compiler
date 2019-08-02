@@ -283,6 +283,14 @@ BEGIN
 END PushAll;
 
 
+PROCEDURE PushAll_1* (R: REGS);
+BEGIN
+    WHILE R.top >= 1 DO
+        push(R)
+    END
+END PushAll_1;
+
+
 PROCEDURE Lock* (R: REGS; reg, offs, size: INTEGER);
 BEGIN
     ASSERT(reg IN R.vregs);

@@ -18,7 +18,7 @@ CONST
     LenIV = 32;
 
     RTLVarSize  = 4;
-    RTLDataSize = 4;
+    RTLDataSize = 308;
     IntVectorSize* = LenIV * 2 + RTLDataSize;
     minStackSize = 64;
 
@@ -57,7 +57,9 @@ CONST
 
     sp_adr         = iv_adr - 2;
     empty_proc_adr = sp_adr - 2;
-    types_adr      = empty_proc_adr - 2;
+    bits_adr       = empty_proc_adr - 272;
+    bits_offs_adr  = bits_adr - 32;
+    types_adr      = bits_offs_adr - 2;
 
     trap_adr = ram_adr;
     int_adr  = trap_adr + 2;
@@ -484,6 +486,12 @@ BEGIN
     REG.PushAll(R);
     DEC(R.pushed, NumberOfParameters)
 END PushAll;
+
+
+PROCEDURE PushAll_1;
+BEGIN
+    REG.PushAll_1(R)
+END PushAll_1;
 
 
 PROCEDURE cond (op: INTEGER): INTEGER;
@@ -1193,12 +1201,15 @@ BEGIN
             |CODE.opROR: PushImm(2)
             |CODE.opLSR: PushImm(3)
             END;
-            CallRTL(CODE._shift2, 3);
+            CallRTL(CODE._shift, 3);
             GetRegA
 
         |CODE.opLSL1, CODE.opASR1, CODE.opROR1, CODE.opLSR1:
-            PushAll(1);
+            UnOp(reg1);
+            PushAll_1;
             PushImm(param2);
+            Push(reg1);
+            drop;
             CASE opcode OF
             |CODE.opLSL1: PushImm(0)
             |CODE.opASR1: PushImm(1)
@@ -1274,9 +1285,12 @@ BEGIN
             END
 
         |CODE.opDIVL:
-            PushAll(1);
+            UnOp(reg1);
+            PushAll_1;
             PushImm(param2);
-            CallRTL(CODE._div2, 2);
+            Push(reg1);
+            drop;
+            CallRTL(CODE._div, 2);
             GetRegA
 
         |CODE.opMOD:
@@ -1303,9 +1317,12 @@ BEGIN
             END
 
         |CODE.opMODL:
-            PushAll(1);
+            UnOp(reg1);
+            PushAll_1;
             PushImm(param2);
-            CallRTL(CODE._mod2, 2);
+            Push(reg1);
+            drop;
+            CallRTL(CODE._mod, 2);
             GetRegA
 
         |CODE.opCOPYS:
@@ -1319,11 +1336,11 @@ BEGIN
         |CODE.opCOPY:
             PushAll(2);
             PushImm(param2);
-            CallRTL(CODE._move2, 3)
+            CallRTL(CODE._move, 3)
 
         |CODE.opMOVE:
             PushAll(3);
-            CallRTL(CODE._move2, 3)
+            CallRTL(CODE._move, 3)
 
         |CODE.opCOPYA:
             PushAll(4);
@@ -1339,10 +1356,13 @@ BEGIN
             CallRTL(CODE._rot, 2)
 
         |CODE.opSAVES:
-            PushAll(1);
+            UnOp(reg1);
+            PushAll_1;
             Op1(opPUSH, PC, sINCR);
             EmitWord(param2);
             Reloc(RDATA);
+            Push(reg1);
+            drop;
             PushImm(param1);
             CallRTL(CODE._move, 3)
 
@@ -1441,16 +1461,17 @@ BEGIN
             GetRegA
 
         |CODE.opRSETL:
-            PushAll(1);
+            UnOp(reg1);
+            PushAll_1;
             PushImm(param2);
-            CallRTL(CODE._set2, 2);
+            Push(reg1);
+            drop;
+            CallRTL(CODE._set, 2);
             GetRegA
 
         |CODE.opRSET1:
-            UnOp(reg1);
             PushAll(1);
-            Push(reg1);
-            CallRTL(CODE._set, 2);
+            CallRTL(CODE._set1, 1);
             GetRegA
 
         |CODE.opINCLC:
@@ -1649,7 +1670,7 @@ END WriteHex;
 
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
-    i, adr, heap, stack, TextSize, TypesSize: INTEGER;
+    i, adr, heap, stack, TextSize, TypesSize, bits, n: INTEGER;
 
     Code, Data, Bss: RECORD address, size: INTEGER END;
 
@@ -1736,6 +1757,18 @@ BEGIN
 
     FOR i := TypesSize DIV 2 - 1 TO 0 BY -1 DO
         PutWord(CHL.GetInt(code.types, i), adr)
+    END;
+
+    FOR i := 0 TO 15 DO
+        PutWord((33 - i) * i, adr);
+    END;
+
+    FOR n := 0 TO 15 DO
+        bits := ORD({0 .. n});
+        FOR i := 0 TO 15 - n DO
+            PutWord(bits, adr);
+            bits := LSL(bits, 1)
+        END
     END;
 
     PutWord(4130H, adr); (* RET *)

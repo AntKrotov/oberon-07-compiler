@@ -17,17 +17,16 @@ CONST
     CG = 3;
     R4 = 4;
     R5 = 5;
-    R13 = 13;
-    R15 = 15;
-    IR = R13;
-    BP = R15;
+    BP = 15;
 
     ram_adr = 200H;
     iv_adr  = 0FFC0H;
 
     sp_adr         = iv_adr - 2;
     empty_proc_adr = sp_adr - 2;
-    types_adr      = empty_proc_adr - 2;
+    bits_adr       = empty_proc_adr - 272;
+    bits_offs_adr  = bits_adr - 32;
+    types_adr      = bits_offs_adr - 2;
 
     trap_adr = ram_adr;
     int_adr  = trap_adr + 2;
@@ -40,27 +39,19 @@ TYPE
     INTPROC = PROCEDURE (priority, ptr: INTEGER);
 
 
-PROCEDURE _shift* (op, x, n: INTEGER): INTEGER;
+PROCEDURE _shift* (op, n, x: INTEGER): INTEGER;
 BEGIN
     n := ORD(BITS(n) * {0..3});
 
-    WHILE n > 0 DO
-        CASE op OF
-        |0: x := LSL(x, 1)
-        |1: x := ASR(x, 1)
-        |2: x := ROR(x, 1)
-        |3: x := LSR(x, 1)
-        END;
-        DEC(n)
+    CASE op OF
+    |0: WHILE n > 0 DO x := LSL(x, 1); DEC(n) END
+    |1: WHILE n > 0 DO x := ASR(x, 1); DEC(n) END
+    |2: WHILE n > 0 DO x := ROR(x, 1); DEC(n) END
+    |3: WHILE n > 0 DO x := LSR(x, 1); DEC(n) END
     END
 
     RETURN x
 END _shift;
-
-
-PROCEDURE _shift2* (op, n, x: INTEGER): INTEGER;
-    RETURN _shift(op, x, n)
-END _shift2;
 
 
 PROCEDURE _mul* (a, b: INTEGER): INTEGER;
@@ -82,7 +73,7 @@ BEGIN
 END _mul;
 
 
-PROCEDURE _move* (bytes, source, dest: INTEGER);
+PROCEDURE _move* (bytes, dest, source: INTEGER);
 VAR
     byte:  BYTE;
 
@@ -97,12 +88,6 @@ BEGIN
 END _move;
 
 
-PROCEDURE _move2* (bytes, dest, source: INTEGER);
-BEGIN
-    _move(bytes, source, dest)
-END _move2;
-
-
 PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
 VAR
     res: BOOLEAN;
@@ -111,7 +96,7 @@ BEGIN
     IF len_src > len_dst THEN
         res := FALSE
     ELSE
-        _move(len_src * base_size, src, dst);
+        _move(len_src * base_size, dst, src);
         res := TRUE
     END
 
@@ -121,13 +106,13 @@ END _arrcpy;
 
 PROCEDURE _strcpy* (len_dst, dst, len_src, src: INTEGER);
 BEGIN
-    _move(MIN(len_dst, len_src), src, dst)
+    _move(MIN(len_dst, len_src), dst, src)
 END _strcpy;
 
 
 PROCEDURE _strcpy2* (len_src, src, len_dst, dst: INTEGER);
 BEGIN
-    _move(MIN(len_dst, len_src), src, dst)
+    _move(MIN(len_dst, len_src), dst, src)
 END _strcpy2;
 
 
@@ -150,9 +135,6 @@ END _rot;
 
 
 PROCEDURE _set* (b, a: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-
 BEGIN
     IF (a <= b) & (a <= 15) & (b >= 0) THEN
         IF b > 15 THEN
@@ -161,34 +143,54 @@ BEGIN
         IF a < 0 THEN
             a := 0
         END;
-        res := LSR(ASR(ROR(1, 1), b - a), 15 - b)
+        DEC(b, a);
+        SYSTEM.GET(bits_offs_adr + b * 2, b);
+        SYSTEM.GET(bits_adr + b + a * 2, b)
     ELSE
-        res := 0
+        b := 0
     END
 
-    RETURN res
+    RETURN b
 END _set;
 
 
-PROCEDURE _set2* (a, b: INTEGER): INTEGER;
-    RETURN _set(b, a)
-END _set2;
+PROCEDURE _set1* (a: INTEGER): INTEGER;
+BEGIN
+    IF BITS(a) * {4..15} = {} THEN
+        SYSTEM.GET(bits_adr + a * 2, a)
+    ELSE
+        a := 0
+    END
+
+    RETURN a
+END _set1;
 
 
 PROCEDURE _in2* (i, s: INTEGER): BOOLEAN;
-    RETURN (BITS(i) * {4..15} = {}) & ODD(ASR(s, i))
+BEGIN
+    SYSTEM.GET(bits_adr + i * 2, i)
+    RETURN BITS(i) * BITS(s) # {}
 END _in2;
 
 
 PROCEDURE _in* (s, i: INTEGER): BOOLEAN;
-    RETURN (BITS(i) * {4..15} = {}) & ODD(ASR(s, i))
+BEGIN
+    IF BITS(i) * {4..15} = {} THEN
+        SYSTEM.GET(bits_adr + i * 2, i);
+        s := ORD(BITS(i) * BITS(s))
+    ELSE
+        s := 0
+    END
+
+    RETURN s # 0
 END _in;
 
 
 PROCEDURE _incl* (VAR s: SET; i: INTEGER);
 BEGIN
     IF BITS(i) * {4..15} = {} THEN
-        s := s + BITS(LSL(1, i))
+        SYSTEM.GET(bits_adr + i * 2, i);
+        s := s + BITS(i)
     END
 END _incl;
 
@@ -196,7 +198,8 @@ END _incl;
 PROCEDURE _excl* (VAR s: SET; i: INTEGER);
 BEGIN
     IF BITS(i) * {4..15} = {} THEN
-        s := s - BITS(LSL(1, i))
+        SYSTEM.GET(bits_adr + i * 2, i);
+        s := s - BITS(i)
     END
 END _excl;
 
@@ -231,53 +234,43 @@ BEGIN
 END divmod;
 
 
-PROCEDURE _div2* (a, b: INTEGER): INTEGER;
+PROCEDURE _div* (b, a: INTEGER): INTEGER;
 VAR
     mod: INTEGER;
 
 BEGIN
     RETURN divmod(a, b, mod)
-END _div2;
-
-
-PROCEDURE _mod2* (a, b: INTEGER): INTEGER;
-VAR
-    div, mod: INTEGER;
-
-BEGIN
-    div := divmod(a, b, mod)
-    RETURN mod
-END _mod2;
-
-
-PROCEDURE _div* (b, a: INTEGER): INTEGER;
-    RETURN _div2(a, b)
 END _div;
 
 
 PROCEDURE _mod* (b, a: INTEGER): INTEGER;
-    RETURN _mod2(a, b)
+VAR
+    mod: INTEGER;
+
+BEGIN
+    a := divmod(a, b, mod)
+    RETURN mod
 END _mod;
 
 
 PROCEDURE _length* (len, str: INTEGER): INTEGER;
-VAR
-    c:   CHAR;
-    res: INTEGER;
-
 BEGIN
-    res := 0;
-    REPEAT
-        SYSTEM.GET(str, c); INC(str);
-        DEC(len);
-        INC(res)
-    UNTIL (c = 0X) OR (len = 0);
-
-    IF c = 0X THEN
-        DEC(res)
-    END
-
-    RETURN res
+    SYSTEM.CODE(
+    4016H + BP * 100H, 4,  (* MOV 4(BP), R6; R6 <- len *)
+    4017H + BP * 100H, 6,  (* MOV 6(BP), R7; R7 <- str *)
+    4304H,                 (* MOV #0, R4; res := 0 *)
+                           (* L2: *)
+    4775H,                 (* MOV.B @R7+, R5 *)
+    9305H,                 (* CMP #0, R5 *)
+    2400H + 3,             (* JZ L1 *)
+    5314H,                 (* ADD #1, R4 *)
+    8316H,                 (* SUB #1, R6 *)
+    2000H + 3FAH,          (* JNZ L2 *)
+                           (* L1: *)
+    4130H + BP,            (* MOV @SP+, BP *)
+    4130H                  (* MOV @SP+, PC *)
+    )
+    RETURN 0
 END _length;
 
 

@@ -3224,13 +3224,9 @@ BEGIN
     ASSERT(rtl # NIL);
 
     getproc(rtl,  "_move",      CODE._move);
-    getproc(rtl,  "_move2",     CODE._move2);
     getproc(rtl,  "_set",       CODE._set);
-    getproc(rtl,  "_set2",      CODE._set2);
     getproc(rtl,  "_div",       CODE._div);
     getproc(rtl,  "_mod",       CODE._mod);
-    getproc(rtl,  "_div2",      CODE._div2);
-    getproc(rtl,  "_mod2",      CODE._mod2);
     getproc(rtl,  "_arrcpy",    CODE._arrcpy);
     getproc(rtl,  "_rot",       CODE._rot);
     getproc(rtl,  "_strcmp",    CODE._strcmp);
@@ -3244,6 +3240,10 @@ BEGIN
     getproc(rtl,  "_strcmp2",   CODE._strcmp2);
 
     IF CPU IN {cpuX86, cpuAMD64} THEN
+        getproc(rtl,  "_move2",     CODE._move2);
+        getproc(rtl,  "_div2",      CODE._div2);
+        getproc(rtl,  "_mod2",      CODE._mod2);
+        getproc(rtl,  "_set2",      CODE._set2);
         getproc(rtl,  "_isrec",     CODE._isrec);
         getproc(rtl,  "_lengthw",   CODE._lengthw);
         getproc(rtl,  "_strcmpw",   CODE._strcmpw);
@@ -3258,9 +3258,9 @@ BEGIN
     IF CPU = cpuMSP430 THEN
         getproc(rtl,  "_mul",       CODE._mul);
         getproc(rtl,  "_shift",     CODE._shift);
-        getproc(rtl,  "_shift2",    CODE._shift2);
         getproc(rtl,  "_in",        CODE._in);
         getproc(rtl,  "_in2",       CODE._in2);
+        getproc(rtl,  "_set1",      CODE._set1);
         getproc(rtl,  "_incl",      CODE._incl);
         getproc(rtl,  "_excl",      CODE._excl)
     END

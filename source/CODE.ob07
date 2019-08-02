@@ -136,7 +136,7 @@ CONST
     _strcpy2   *=  27;
     _mul       *=  28;
     _shift     *=  29;
-    _shift2    *=  30;
+    _set1      *=  30;
     _in        *=  31;
     _in2       *=  32;
     _incl      *=  33;
