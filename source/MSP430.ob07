@@ -1263,7 +1263,7 @@ BEGIN
 
         |CODE.opDIV:
             PushAll(2);
-            CallRTL(CODE._div, 2);
+            CallRTL(CODE._divmod, 2);
             GetRegA
 
         |CODE.opDIVR:
@@ -1277,7 +1277,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     PushImm(param2);
-                    CallRTL(CODE._div, 2);
+                    CallRTL(CODE._divmod, 2);
                     GetRegA
                 END
             END
@@ -1288,13 +1288,13 @@ BEGIN
             PushImm(param2);
             Push(reg1);
             drop;
-            CallRTL(CODE._div, 2);
+            CallRTL(CODE._divmod, 2);
             GetRegA
 
         |CODE.opMOD:
             PushAll(2);
-            CallRTL(CODE._mod, 2);
-            GetRegA
+            CallRTL(CODE._divmod, 2);
+            ASSERT(REG.GetReg(R, R5))
 
         |CODE.opMODR:
             ASSERT(param2 > 0);
@@ -1309,8 +1309,8 @@ BEGIN
                 ELSE
                     PushAll(1);
                     PushImm(param2);
-                    CallRTL(CODE._mod, 2);
-                    GetRegA
+                    CallRTL(CODE._divmod, 2);
+                    ASSERT(REG.GetReg(R, R5))
                 END
             END
 
@@ -1320,8 +1320,8 @@ BEGIN
             PushImm(param2);
             Push(reg1);
             drop;
-            CallRTL(CODE._mod, 2);
-            GetRegA
+            CallRTL(CODE._divmod, 2);
+            ASSERT(REG.GetReg(R, R5))
 
         |CODE.opCOPYS:
             PushAll(4);

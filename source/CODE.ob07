@@ -144,6 +144,7 @@ CONST
     _asr       *=  35;
     _ror       *=  36;
     _lsr       *=  37;
+    _divmod    *=  38;
 
 
 TYPE
@@ -210,7 +211,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 38 OF INTEGER;
+        rtl*:       ARRAY 39 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
