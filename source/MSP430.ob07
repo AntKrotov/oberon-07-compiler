@@ -1316,12 +1316,19 @@ BEGIN
             ASSERT(REG.GetReg(R, R5))
 
         |CODE.opCOPYS:
-            PushAll(4);
-            CallRTL(CODE._strcpy, 4)
-
-        |CODE.opCOPYS2:
-            PushAll(4);
-            CallRTL(CODE._strcpy2, 4)
+            ASSERT(R.top = 3);
+            Push(R.stk[2]);
+            Push(R.stk[0]);
+            Op2(opCMP, R.stk[1] * 256, R.stk[3]);
+            EmitWord(3801H); (* JL L1 *)
+            MovRR(R.stk[1], R.stk[3]);
+                             (* L1:   *)
+            Push(R.stk[3]);
+            drop;
+            drop;
+            drop;
+            drop;
+            CallRTL(CODE._move, 3)
 
         |CODE.opCOPY:
             PushAll(2);

@@ -819,6 +819,7 @@ BEGIN
             CODE.AddCmd0(CODE.opUNPK)
 
         |PROG.stCOPY:
+            CODE.pushBegEnd(begcall, endcall);
             parser.expression(parser, e);
             IF isString(e) OR isCharArray(e) THEN
                 wchar := FALSE
@@ -834,6 +835,7 @@ BEGIN
 
             PARS.checklex(parser, SCAN.lxCOMMA);
             NextPos(parser, pos);
+            CODE.setlast(begcall);
 
             IF wchar THEN
                 varparam(parser, pos, isCharArrayW, TRUE, e1)
@@ -851,6 +853,8 @@ BEGIN
                 CODE.AddCmd(CODE.opCONST, e1.type.length)
             END;
 
+            CODE.setlast(endcall.prev(CODE.COMMAND));
+
             IF e.obj = eCONST THEN
                 IF wchar THEN
                     CODE.AddCmd(CODE.opSADR, StringW(e));
@@ -858,11 +862,10 @@ BEGIN
                 ELSE
                     CODE.AddCmd(CODE.opSADR, String(e));
                     CODE.AddCmd(CODE.opCONST, strlen(e) + 1)
-                END;
-                CODE.AddCmd(CODE.opCOPYS2, e1.type.base.size)
-            ELSE
-                CODE.AddCmd(CODE.opCOPYS, e1.type.base.size)
-            END
+                END
+            END;
+            CODE.AddCmd(CODE.opCOPYS, e1.type.base.size);
+            CODE.popBegEnd(begcall, endcall)
 
         |PROG.sysGET:
             parser.expression(parser, e);
@@ -3254,11 +3257,10 @@ BEGIN
     getproc(rtl,  "_guard",     CODE._guard);
     getproc(rtl,  "_guardrec",  CODE._guardrec);
     getproc(rtl,  "_length",    CODE._length);
-    getproc(rtl,  "_strcpy",    CODE._strcpy);
-    getproc(rtl,  "_strcpy2",   CODE._strcpy2);
     getproc(rtl,  "_new",       CODE._new);
 
     IF CPU IN {cpuX86, cpuAMD64} THEN
+        getproc(rtl,  "_strcpy",    CODE._strcpy);
         getproc(rtl,  "_move2",     CODE._move2);
         getproc(rtl,  "_div2",      CODE._div2);
         getproc(rtl,  "_mod2",      CODE._mod2);

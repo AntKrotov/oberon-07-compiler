@@ -1667,11 +1667,6 @@ BEGIN
             pushc(param2);
             CallRTL(pic, CODE._strcpy)
 
-        |CODE.opCOPYS2:
-            PushAll(4);
-            pushc(param2);
-            CallRTL(pic, CODE._strcpy2)
-
         |CODE.opROT:
             PushAll(0);
             push(esp);

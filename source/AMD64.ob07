@@ -739,7 +739,7 @@ BEGIN
          CODE.opEQS .. CODE.opGES,
          CODE.opEQSW .. CODE.opGESW,
          CODE.opCOPY, CODE.opMOVE, CODE.opCOPYA,
-         CODE.opCOPYS, CODE.opCOPYS2, CODE.opROT,
+         CODE.opCOPYS, CODE.opROT,
          CODE.opNEW, CODE.opDISP, CODE.opISREC,
          CODE.opIS, CODE.opTYPEGR, CODE.opTYPEGP,
          CODE.opCASET, CODE.opDIV,
@@ -1588,11 +1588,6 @@ BEGIN
             PushAll(4);
             pushc(param2);
             CallRTL(CODE._strcpy)
-
-        |CODE.opCOPYS2:
-            PushAll(4);
-            pushc(param2);
-            CallRTL(CODE._strcpy2)
 
         |CODE.opROT:
             PushAll(0);

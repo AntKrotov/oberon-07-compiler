@@ -78,7 +78,7 @@ CONST
     opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64* = 206;
 
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
-    opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
+    opSAVE16C* = 213; opWCHR* = 214; opLENGTHW* = 216;
 
     opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
 
@@ -129,9 +129,9 @@ CONST
     _length    *=  22;
     _init      *=  23;
     _dllentry  *=  24;
-    _strcpy    *=  25;
+    _divmod    *=  25;
     _exit      *=  26;
-    _strcpy2   *=  27;
+    _strcpy    *=  27;
     _mul       *=  28;
     _set1      *=  29;
     _in        *=  30;
@@ -142,7 +142,6 @@ CONST
     _asr       *=  35;
     _ror       *=  36;
     _lsr       *=  37;
-    _divmod    *=  38;
 
 
 TYPE
@@ -209,7 +208,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 39 OF INTEGER;
+        rtl*:       ARRAY 38 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;

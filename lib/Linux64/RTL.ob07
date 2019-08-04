@@ -91,16 +91,10 @@ BEGIN
 END _arrcpy;
 
 
-PROCEDURE [stdcall64] _strcpy* (chr_size, len_dst, dst, len_src, src: INTEGER);
+PROCEDURE [stdcall64] _strcpy* (chr_size, len_src, src, len_dst, dst: INTEGER);
 BEGIN
     _move(MIN(len_dst, len_src) * chr_size, src, dst)
 END _strcpy;
-
-
-PROCEDURE [stdcall64] _strcpy2* (chr_size, len_src, src, len_dst, dst: INTEGER);
-BEGIN
-    _move(MIN(len_dst, len_src) * chr_size, src, dst)
-END _strcpy2;
 
 
 PROCEDURE [stdcall64] _rot* (VAR A: ARRAY OF INTEGER);

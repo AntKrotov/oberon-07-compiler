@@ -143,26 +143,18 @@ BEGIN
 END _move;
 
 
-PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
+PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER);
 BEGIN
     IF len_src <= len_dst THEN
-        _move(len_src * base_size, dst, src)
-    END
-
-    RETURN len_src <= len_dst
+        _move(len_src * base_size, dst, src);
+        SYSTEM.CODE(
+        4314H,         (*  MOV  #1, R4     *)
+        4130H + BP,    (*  MOV  @SP+, BP   *)
+        4130H          (*  MOV  @SP+, PC   *)
+        )
+    END;
+    SYSTEM.CODE(4304H) (*  MOV  #0, R4     *)
 END _arrcpy;
-
-
-PROCEDURE _strcpy* (len_dst, dst, len_src, src: INTEGER);
-BEGIN
-    _move(MIN(len_dst, len_src), dst, src)
-END _strcpy;
-
-
-PROCEDURE _strcpy2* (len_src, src, len_dst, dst: INTEGER);
-BEGIN
-    _move(MIN(len_dst, len_src), dst, src)
-END _strcpy2;
 
 
 PROCEDURE _rot* (VAR A: ARRAY OF INTEGER);
