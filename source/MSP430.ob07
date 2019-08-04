@@ -119,8 +119,6 @@ VAR
 
     Labels: ARRAY 30000 OF LABEL;
 
-    _new: INTEGER;
-
     IV: ARRAY LenIV OF INTEGER;
 
     IdxWords: RECORD src, dst: INTEGER END;
@@ -1168,12 +1166,6 @@ BEGIN
             CallRTL(CODE._strcmp, 5);
             GetRegA
 
-        |CODE.opEQS2 .. CODE.opGES2:
-            PushAll(4);
-            PushImm(opcode - CODE.opEQS2);
-            CallRTL(CODE._strcmp2, 5);
-            GetRegA
-
         |CODE.opLEN:
             UnOp(reg1);
             drop;
@@ -1536,8 +1528,6 @@ END translate;
 
 PROCEDURE prolog;
 BEGIN
-    _new := NewLabel();
-    CODE.codes.rtl[CODE._new] := _new;
     IV[LEN(IV) - 1] := NewLabel();
     EmitLabel(IV[LEN(IV) - 1]);
     Op2(opMOV, incr(PC), SP);
@@ -1551,52 +1541,22 @@ END prolog;
 
 PROCEDURE epilog;
 VAR
-    L1, L2, L3, L4: INTEGER;
-    i: INTEGER;
+    L1, i: INTEGER;
 
 BEGIN
     Op2(opBIS, imm(10H), SR); (* CPUOFF *)
 
     L1 := NewLabel();
-    L2 := NewLabel();
-    L3 := NewLabel();
-
-    EmitLabel(_new);
-    Push(SR);
-    Clear(SR);
-    MovRR(CG, CG);
-    MovRR(SP, R4);
-    Op2(opSUB, imm(16), R4);
-    MovRR(HP, R5);
-    Op2(opADD, src_x(6, SP), R5);
-    Op2(opCMP, R5 * 256, R4);
-    Op2(opMOV, src_x(8, SP), R4);
-    jcc(jl, L1);
-    Op2(opMOV, src_x(4, SP), dst_x(0, HP));
-    Op2(opADD, imm(2), HP);
-    Op2(opMOV, HP * 256, dst_x(0, R4));
-    EmitLabel(L3);
-    Op2(opMOV, imm(0), dst_x(0, HP));
-    Op2(opADD, imm(2), HP);
-    Op2(opCMP, R5 * 256, HP);
-    jcc(jl, L3);
-    EmitJmp(opJMP, L2);
-    EmitLabel(L1);
-    Op2(opMOV, imm(0), dst_x(0, R4));
-    EmitLabel(L2);
-    Op1(opRETI, 0, 0);
-
-    L4 := NewLabel();
     FOR i := 0 TO LEN(IV) - 2 DO
         IV[i] := NewLabel();
         EmitLabel(IV[i]);
         PushImm(i);
         IF i # LEN(IV) - 2 THEN
-            EmitJmp(opJMP, L4)
+            EmitJmp(opJMP, L1)
         END
     END;
 
-    EmitLabel(L4);
+    EmitLabel(L1);
 
     MovRR(SP, IR);
 

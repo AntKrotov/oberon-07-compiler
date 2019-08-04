@@ -370,11 +370,6 @@ BEGIN
 END _strcmp;
 
 
-PROCEDURE [stdcall] _strcmp2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
-    RETURN _strcmp(op, len2, str2, len1, str1)
-END _strcmp2;
-
-
 PROCEDURE [stdcall] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
     res:  INTEGER;
@@ -398,11 +393,6 @@ BEGIN
 
     RETURN bRes
 END _strcmpw;
-
-
-PROCEDURE [stdcall] _strcmpw2* (op, len1, str1, len2, str2: INTEGER): BOOLEAN;
-    RETURN _strcmpw(op, len2, str2, len1, str1)
-END _strcmpw2;
 
 
 PROCEDURE PCharToStr (pchar: INTEGER; VAR s: ARRAY OF CHAR);

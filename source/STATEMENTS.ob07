@@ -676,6 +676,7 @@ VAR
     wchar: BOOLEAN;
     cmd1,
     cmd2:  CODE.COMMAND;
+    comma: BOOLEAN;
 
 
     PROCEDURE varparam (parser: PARS.PARSER; pos: SCAN.POSITION; isfunc: isXXX; readOnly: BOOLEAN; VAR e: PARS.EXPR);
@@ -975,13 +976,14 @@ BEGIN
                 IF CPU # cpuMSP430 THEN
                     PARS.check(ARITH.range(code, 0, 255), parser, pos, 42)
                 END;
-                IF parser.sym = SCAN.lxCOMMA THEN
+                CODE.AddCmd(CODE.opCODE, ARITH.getInt(code));
+                comma := parser.sym = SCAN.lxCOMMA;
+                IF comma THEN
                     PARS.Next(parser)
                 ELSE
                     PARS.checklex(parser, SCAN.lxRROUND)
-                END;
-                CODE.AddCmd(CODE.opCODE, ARITH.getInt(code))
-            UNTIL parser.sym = SCAN.lxRROUND
+                END
+            UNTIL (parser.sym = SCAN.lxRROUND) & ~comma
 
         END;
 
@@ -2170,6 +2172,7 @@ VAR
     PROCEDURE cmpcode (op: INTEGER): INTEGER;
     VAR
         res: INTEGER;
+
     BEGIN
         CASE op OF
         |SCAN.lxEQ: res := 0
@@ -2182,6 +2185,24 @@ VAR
 
         RETURN res
     END cmpcode;
+
+
+    PROCEDURE invcmpcode (op: INTEGER): INTEGER;
+    VAR
+        res: INTEGER;
+
+    BEGIN
+        CASE op OF
+        |SCAN.lxEQ: res := 0
+        |SCAN.lxNE: res := 1
+        |SCAN.lxLT: res := 4
+        |SCAN.lxLE: res := 5
+        |SCAN.lxGT: res := 2
+        |SCAN.lxGE: res := 3
+        END
+
+        RETURN res
+    END invcmpcode;
 
 
     PROCEDURE BoolCmp (eq, val: BOOLEAN);
@@ -2205,17 +2226,17 @@ VAR
         IF isString(e) & isCharArray(e1) THEN
             CODE.AddCmd(CODE.opSADR, String(e));
             CODE.AddCmd(CODE.opCONST, strlen(e) + 1);
-            CODE.AddCmd0(CODE.opEQS2 + cmpcode(op))
+            CODE.AddCmd0(CODE.opEQS + invcmpcode(op))
 
         ELSIF isString(e) & isCharArrayW(e1) THEN
             CODE.AddCmd(CODE.opSADR, StringW(e));
             CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1);
-            CODE.AddCmd0(CODE.opEQSW2 + cmpcode(op))
+            CODE.AddCmd0(CODE.opEQSW + invcmpcode(op))
 
         ELSIF isStringW(e) & isCharArrayW(e1) THEN
             CODE.AddCmd(CODE.opSADR, StringW(e));
             CODE.AddCmd(CODE.opCONST, utf8strlen(e) + 1);
-            CODE.AddCmd0(CODE.opEQSW2 + cmpcode(op))
+            CODE.AddCmd0(CODE.opEQSW + invcmpcode(op))
 
         ELSIF isCharArray(e) & isString(e1) THEN
             CODE.AddCmd(CODE.opSADR, String(e1));
@@ -3235,7 +3256,7 @@ BEGIN
     getproc(rtl,  "_length",    CODE._length);
     getproc(rtl,  "_strcpy",    CODE._strcpy);
     getproc(rtl,  "_strcpy2",   CODE._strcpy2);
-    getproc(rtl,  "_strcmp2",   CODE._strcmp2);
+    getproc(rtl,  "_new",       CODE._new);
 
     IF CPU IN {cpuX86, cpuAMD64} THEN
         getproc(rtl,  "_move2",     CODE._move2);
@@ -3247,9 +3268,7 @@ BEGIN
         getproc(rtl,  "_isrec",     CODE._isrec);
         getproc(rtl,  "_lengthw",   CODE._lengthw);
         getproc(rtl,  "_strcmpw",   CODE._strcmpw);
-        getproc(rtl,  "_strcmpw2",  CODE._strcmpw2);
         getproc(rtl,  "_dllentry",  CODE._dllentry);
-        getproc(rtl,  "_new",       CODE._new);
         getproc(rtl,  "_dispose",   CODE._dispose);
         getproc(rtl,  "_exit",      CODE._exit);
         getproc(rtl,  "_init",      CODE._init)

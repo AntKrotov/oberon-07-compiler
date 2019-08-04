@@ -80,9 +80,7 @@ CONST
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
     opSAVE16C* = 213; opWCHR* = 214; opCOPYS2* = 215; opLENGTHW* = 216;
 
-    opEQS2*  = 217; opNES2* = opEQS2 + 1; opLTS2* = opEQS2 + 2; opLES2* = opEQS2 + 3; opGTS2* = opEQS2 + 4; opGES2* = opEQS2 + 5 (* 222 *);
     opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
-    opEQSW2*  = 229; opNESW2* = opEQSW2 + 1; opLTSW2* = opEQSW2 + 2; opLESW2* = opEQSW2 + 3; opGTSW2* = opEQSW2 + 4; opGESW2* = opEQSW2 + 5 (* 234 *);
 
     opCODE* = 235;
 
@@ -109,11 +107,11 @@ CONST
     _move      *=   0;
     _move2     *=   1;
     _strcmpw   *=   2;
-    _strcmpw2  *=   3;
+
     _set       *=   4;
     _set2      *=   5;
     _lengthw   *=   6;
-    _strcmp2   *=   7;
+
     _div       *=   8;
     _mod       *=   9;
     _div2      *=  10;
