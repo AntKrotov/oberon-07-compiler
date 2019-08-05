@@ -1024,7 +1024,7 @@ VAR
             ExpectSym(parser, SCAN.lxIDENT);
             getpos(parser, pos);
             endname := parser.lex.ident;
-            IF import = NIL THEN
+            IF ~codeProc & (import = NIL) THEN
                 check(endname = name, parser, pos, 60);
                 ExpectSym(parser, SCAN.lxSEMI);
                 Next(parser)
