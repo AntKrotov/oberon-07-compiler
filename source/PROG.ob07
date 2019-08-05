@@ -50,16 +50,18 @@ CONST
     default64* = 14;
     systemv*   = 16;  _systemv*   = systemv + 1;
     default16* = 18;
+    code*      = 20;  _code*      = code + 1;
 
-    noalign* = 20;
+    noalign* = 22;
 
     callee_clean_up* = {default, stdcall, _stdcall, default64, stdcall64, _stdcall64};
 
     sf_stdcall* = 0; sf_stdcall64* = 1; sf_ccall*   = 2; sf_ccall16* = 3;
     sf_win64*   = 4; sf_systemv*   = 5; sf_windows* = 6; sf_linux*   = 7;
-    sf_noalign* = 8;
+    sf_code*    = 8;
+    sf_noalign* = 9;
 
-    proc_flags* = {sf_stdcall, sf_stdcall64, sf_ccall, sf_ccall16, sf_win64, sf_systemv, sf_windows, sf_linux};
+    proc_flags* = {sf_stdcall, sf_stdcall64, sf_ccall, sf_ccall16, sf_win64, sf_systemv, sf_windows, sf_linux, sf_code};
     rec_flags*  = {sf_noalign};
 
     STACK_FRAME = 2;
@@ -637,7 +639,7 @@ BEGIN
         param1 := t1.params.first;
         param2 := t2.params.first;
 
-        res := (t1.call = t2.call) & ((param1 # NIL) = (param2 # NIL));
+        res := ((t1.call = t2.call) OR (t1.call IN {code, _code}) OR (t2.call IN {code, _code})) & ((param1 # NIL) = (param2 # NIL));
 
         WHILE res & (param1 # NIL) & (param2 # NIL) DO
             res := (param1(PARAM).vPar = param2(PARAM).vPar) & isTypeEq(param1(PARAM).type, param2(PARAM).type);
@@ -1317,7 +1319,7 @@ BEGIN
 
     |mConst.Target_iELF64:      program.target.sysflags := {sf_linux, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
 
-    |mConst.Target_iMSP430:     program.target.sysflags := {}
+    |mConst.Target_iMSP430:     program.target.sysflags := {sf_code}
     END;
 
     program.recCount := -1;

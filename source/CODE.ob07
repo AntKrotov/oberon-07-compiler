@@ -82,7 +82,7 @@ CONST
 
     opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
 
-    opCODE* = 235;
+    opENTERC* = 233; opLEAVEC* = 234; opCODE* = 235;
 
     opALIGN16* = 236; opPOPSP* = 237;
     opWIN64CALL* = 238; opWIN64CALLI* = 239; opWIN64CALLP* = 240; opLOOP* = 241; opENDLOOP* = 242;
@@ -717,6 +717,20 @@ BEGIN
 
     RETURN codes.last
 END Leave;
+
+
+PROCEDURE EnterC* (label: INTEGER): COMMAND;
+BEGIN
+    AddCmd2(opENTERC, label, 0)
+    RETURN codes.last
+END EnterC;
+
+
+PROCEDURE LeaveC* (): COMMAND;
+BEGIN
+    AddCmd0(opLEAVEC)
+    RETURN codes.last
+END LeaveC;
 
 
 PROCEDURE Call* (proc, callconv, fparams: INTEGER);

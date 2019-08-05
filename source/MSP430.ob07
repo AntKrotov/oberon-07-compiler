@@ -647,6 +647,12 @@ BEGIN
         |CODE.opERRC:
             PushImm(param2)
 
+        |CODE.opENTERC:
+            EmitLabel(param1)
+
+        |CODE.opLEAVEC:
+            Pop(PC)
+
         |CODE.opENTER:
             ASSERT(R.top = -1);
 

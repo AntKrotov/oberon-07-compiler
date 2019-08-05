@@ -1623,7 +1623,7 @@ BEGIN
     ELSIF cconv IN {PROG._systemv, PROG.systemv} THEN
         CODE.AddCmd(CODE.opCLEANUP, params + stk_par);
         CODE.AddCmd0(CODE.opPOPSP)
-    ELSIF cconv IN {PROG._ccall, PROG.ccall, PROG.default16} THEN
+    ELSIF cconv IN {PROG._ccall, PROG.ccall, PROG.default16, PROG.code, PROG._code} THEN
         CODE.AddCmd(CODE.opCLEANUP, params)
     END;
 

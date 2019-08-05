@@ -35,43 +35,33 @@ TYPE
     INTPROC = PROCEDURE (priority, ptr: INTEGER);
 
 
-PROCEDURE _lsl* (n, x: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 4,  (*  MOV  4(BP), R5; R5 <- n  *)
-    4014H + BP * 100H, 6,  (*  MOV  6(BP), R4; R4 <- x  *)
+PROCEDURE [code] _lsl* (n, x: INTEGER): INTEGER
+    4115H, 2,              (*  MOV  2(SP), R5; R5 <- n  *)
+    4114H, 4,              (*  MOV  4(SP), R4; R4 <- x  *)
     0F035H, 15,            (*  AND  #15, R5             *)
     2400H + 3,             (*  JZ   L1                  *)
                            (*  L2:                      *)
     5404H,                 (*  ADD  R4, R4              *)
     8315H,                 (*  SUB  #1, R5              *)
-    2000H + 400H - 3       (*  JNZ  L2                  *)
+    2000H + 400H - 3;      (*  JNZ  L2                  *)
                            (*  L1:                      *)
-    )
-END _lsl;
 
 
-PROCEDURE _asr* (n, x: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 4,  (*  MOV  4(BP), R5; R5 <- n  *)
-    4014H + BP * 100H, 6,  (*  MOV  6(BP), R4; R4 <- x  *)
+PROCEDURE [code] _asr* (n, x: INTEGER): INTEGER
+    4115H, 2,              (*  MOV  2(SP), R5; R5 <- n  *)
+    4114H, 4,              (*  MOV  4(SP), R4; R4 <- x  *)
     0F035H, 15,            (*  AND  #15, R5             *)
     2400H + 3,             (*  JZ   L1                  *)
                            (*  L2:                      *)
     1104H,                 (*  RRA  R4                  *)
     8315H,                 (*  SUB  #1, R5              *)
-    2000H + 400H - 3       (*  JNZ  L2                  *)
+    2000H + 400H - 3;      (*  JNZ  L2                  *)
                            (*  L1:                      *)
-    )
-END _asr;
 
 
-PROCEDURE _ror* (n, x: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 4,  (*  MOV  4(BP), R5; R5 <- n  *)
-    4014H + BP * 100H, 6,  (*  MOV  6(BP), R4; R4 <- x  *)
+PROCEDURE [code] _ror* (n, x: INTEGER): INTEGER
+    4115H, 2,              (*  MOV  2(SP), R5; R5 <- n  *)
+    4114H, 4,              (*  MOV  4(SP), R4; R4 <- x  *)
     0F035H, 15,            (*  AND  #15, R5             *)
     2400H + 5,             (*  JZ   L1                  *)
     4406H,                 (*  MOV  R4, R6              *)
@@ -79,34 +69,26 @@ BEGIN
     1006H,                 (*  RRC  R6                  *)
     1004H,                 (*  RRC  R4                  *)
     8315H,                 (*  SUB  #1, R5              *)
-    2000H + 400H - 4       (*  JNZ  L2                  *)
+    2000H + 400H - 4;      (*  JNZ  L2                  *)
                            (*  L1:                      *)
-    )
-END _ror;
 
 
-PROCEDURE _lsr* (n, x: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 4,  (*  MOV  4(BP), R5; R5 <- n  *)
-    4014H + BP * 100H, 6,  (*  MOV  6(BP), R4; R4 <- x  *)
+PROCEDURE [code] _lsr* (n, x: INTEGER): INTEGER
+    4115H, 2,              (*  MOV  2(SP), R5; R5 <- n  *)
+    4114H, 4,              (*  MOV  4(SP), R4; R4 <- x  *)
     0F035H, 15,            (*  AND  #15, R5             *)
     2400H + 4,             (*  JZ   L1                  *)
                            (*  L2:                      *)
     0C312H,                (*  BIC  #1, SR              *)
     1004H,                 (*  RRC  R4                  *)
     8315H,                 (*  SUB  #1, R5              *)
-    2000H + 400H - 4       (*  JNZ  L2                  *)
+    2000H + 400H - 4;      (*  JNZ  L2                  *)
                            (*  L1:                      *)
-    )
-END _lsr;
 
 
-PROCEDURE _mul* (a, b: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 4,  (*  MOV  4(BP), R5; R5 <- a  *)
-    4016H + BP * 100H, 6,  (*  MOV  6(BP), R6; R6 <- b  *)
+PROCEDURE [code] _mul* (a, b: INTEGER): INTEGER
+    4115H, 2,              (*  MOV  2(SP), R5; R5 <- a  *)
+    4116H, 4,              (*  MOV  4(SP), R6; R6 <- b  *)
     4304H,                 (*  MOV  #0, R4; res := 0    *)
     9306H,                 (*  CMP  #0, R6              *)
     2400H + 7,             (*  JZ   L1                  *)
@@ -118,18 +100,14 @@ BEGIN
     5505H,                 (*  ADD  R5, R5              *)
     0C312H,                (*  BIC  #1, SR              *)
     1006H,                 (*  RRC  R6                  *)
-    2000H + 400H - 7       (*  JNZ  L2                  *)
+    2000H + 400H - 7;      (*  JNZ  L2                  *)
                            (*  L1:                      *)
-    )
-END _mul;
 
 
-PROCEDURE _move* (bytes, dest, source: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4016H + BP * 100H, 4,  (*  MOV    4(BP), R6; R6 <- bytes   *)
-    4017H + BP * 100H, 6,  (*  MOV    6(BP), R7; R7 <- dest    *)
-    4015H + BP * 100H, 8,  (*  MOV    8(BP), R5; R5 <- source  *)
+PROCEDURE [code] _move* (bytes, dest, source: INTEGER)
+    4116H, 2,              (*  MOV    2(SP), R6; R6 <- bytes   *)
+    4117H, 4,              (*  MOV    4(SP), R7; R7 <- dest    *)
+    4115H, 6,              (*  MOV    6(SP), R5; R5 <- source  *)
     9306H,                 (*  CMP    #0, R6                   *)
     3800H + 6,             (*  JL     L1                       *)
     2400H + 5,             (*  JZ     L1                       *)
@@ -137,55 +115,34 @@ BEGIN
     45F7H, 0,              (*  MOV.B  @R5+, 0(R7)              *)
     5317H,                 (*  ADD    #1, R7                   *)
     8316H,                 (*  SUB    #1, R6                   *)
-    2000H + 400H - 5       (*  JNZ    L2                       *)
+    2000H + 400H - 5;      (*  JNZ    L2                       *)
                            (*  L1:                             *)
-    )
-END _move;
 
 
-PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER);
-BEGIN
-    IF len_src <= len_dst THEN
-        _move(len_src * base_size, dst, src);
-        SYSTEM.CODE(
-        4314H,         (*  MOV  #1, R4     *)
-        4130H + BP,    (*  MOV  @SP+, BP   *)
-        4130H          (*  MOV  @SP+, PC   *)
-        )
-    END;
-    SYSTEM.CODE(4304H) (*  MOV  #0, R4     *)
-END _arrcpy;
+PROCEDURE [code] _rot* (len, adr: INTEGER)
+    4114H, 2,              (*  MOV    2(SP), R4; R4 <- len   *)
+    4115H, 4,              (*  MOV    4(SP), R5; R5 <- adr   *)
+    8314H,                 (*  SUB    #1, R4                 *)
+    5404H,                 (*  ADD    R4, R4                 *)
+    1225H,                 (*  PUSH   @R5                    *)
+    4406H,                 (*  MOV    R4, R6                 *)
+                           (*  L1:                           *)
+    4595H, 2, 0,           (*  MOV    2(R5), 0(R5)           *)
+    5325H,                 (*  ADD    #2, R5                 *)
+    8326H,                 (*  SUB    #2, R6                 *)
+    2000H + 400H - 6,      (*  JNZ    L1                     *)
+    41B5H, 0;              (*  MOV    @SP+, 0(R5)            *)
 
 
-PROCEDURE _rot* (VAR A: ARRAY OF INTEGER);
-VAR
-    i, n, k: INTEGER;
-
-BEGIN
-
-    k := LEN(A) - 1;
-    n := A[0];
-    i := 0;
-    WHILE i < k DO
-        A[i] := A[i + 1];
-        INC(i)
-    END;
-    A[k] := n
-
-END _rot;
-
-
-PROCEDURE _set* (b, a: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 4,  (*  MOV  4(BP), R4; R4 <- b  *)
-    4015H + BP * 100H, 6,  (*  MOV  6(BP), R5; R5 <- a  *)
+PROCEDURE [code] _set* (b, a: INTEGER): SET
+    4114H, 2,              (*  MOV  2(SP), R4; R4 <- b  *)
+    4115H, 4,              (*  MOV  4(SP), R5; R5 <- a  *)
     9504H,                 (*  CMP  R5, R4              *)
-    3800H + 25,            (*  JL   L1                  *)
+    3800H + 24,            (*  JL   L1                  *)
     9035H, 16,             (*  CMP  #16, R5             *)
-    3400H + 22,            (*  JGE  L1                  *)
+    3400H + 21,            (*  JGE  L1                  *)
     9304H,                 (*  CMP  #0, R4              *)
-    3800H + 20,            (*  JL   L1                  *)
+    3800H + 19,            (*  JL   L1                  *)
     9034H, 16,             (*  CMP  #16, R4             *)
     3800H + 2,             (*  JL   L2                  *)
     4034H, 15,             (*  MOV  #15, R4             *)
@@ -202,108 +159,79 @@ BEGIN
     5405H,                 (*  ADD  R4, R5              *)
     5035H, bits_adr,       (*  ADD  bits_adr, R5        *)
     4524H,                 (*  MOV  @R5, R4             *)
-    4130H + BP,            (*  MOV  @SP+, BP            *)
     4130H,                 (*  MOV  @SP+, PC            *)
                            (*  L1:                      *)
-    4304H                  (*  MOV  #0, R4              *)
-    )
-END _set;
+    4304H;                 (*  MOV  #0, R4              *)
 
 
-PROCEDURE _set1* (a: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 4,  (*  MOV  4(BP), R4; R4 <- a  *)
+PROCEDURE [code] _set1* (a: INTEGER): SET
+    4114H, 2,              (*  MOV  2(SP), R4; R4 <- a  *)
     0B034H, 0FFF0H,        (*  BIT  #0FFF0H, R4         *)
-    2000H + 6,             (*  JNZ  L1                  *)
+    2000H + 5,             (*  JNZ  L1                  *)
     5404H,                 (*  ADD  R4, R4              *)
     5034H, bits_adr,       (*  ADD  bits_adr, R4        *)
     4424H,                 (*  MOV  @R4, R4             *)
-    4130H + BP,            (*  MOV  @SP+, BP            *)
     4130H,                 (*  MOV  @SP+, PC            *)
                            (*  L1:                      *)
-    4304H                  (*  MOV  #0, R4              *)
-    )
-END _set1;
+    4304H;                 (*  MOV  #0, R4              *)
 
 
-PROCEDURE _in2* (i, s: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 4,   (*  MOV  4(BP), R4; R4 <- i  *)
+PROCEDURE [code] _in2* (i, s: INTEGER): BOOLEAN
+    4114H, 2,               (*  MOV  2(SP), R4; R4 <- i  *)
     5404H,                  (*  ADD  R4, R4              *)
     5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
     4424H,                  (*  MOV  @R4, R4             *)
-    0F014H + BP * 100H, 6,  (*  AND  6(BP), R4           *)
+    0F114H, 4,              (*  AND  4(SP), R4           *)
     2400H + 1,              (*  JZ   L1                  *)
-    4314H,                  (*  MOV  #1, R4              *)
-    4130H + BP,             (*  MOV  @SP+, BP            *)
-    4130H                   (*  MOV  @SP+, PC            *)
+    4314H;                  (*  MOV  #1, R4              *)
                             (*  L1:                      *)
-    )
-END _in2;
 
 
-PROCEDURE _in* (s, i: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 6,   (*  MOV  6(BP), R4; R4 <- i  *)
+PROCEDURE [code] _in* (s, i: INTEGER): BOOLEAN
+    4114H, 4,               (*  MOV  4(SP), R4; R4 <- i  *)
     0B034H, 0FFF0H,         (*  BIT  #0FFF0H, R4         *)
-    2000H + 10,             (*  JNZ  L2                  *)
+    2000H + 9,              (*  JNZ  L2                  *)
     5404H,                  (*  ADD  R4, R4              *)
     5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
     4424H,                  (*  MOV  @R4, R4             *)
-    0F014H + BP * 100H, 4,  (*  AND  4(BP), R4           *)
-    2400H + 4,              (*  JZ   L1                  *)
+    0F114H, 2,              (*  AND  2(SP), R4           *)
+    2400H + 3,              (*  JZ   L1                  *)
     4314H,                  (*  MOV  #1, R4              *)
-    4130H + BP,             (*  MOV  @SP+, BP            *)
     4130H,                  (*  MOV  @SP+, PC            *)
                             (*  L2:                      *)
-    4304H                   (*  MOV  #0, R4              *)
+    4304H;                  (*  MOV  #0, R4              *)
                             (*  L1:                      *)
-    )
-END _in;
 
 
-PROCEDURE _incl* (VAR s: SET; i: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 6,   (*  MOV  6(BP), R4; R4 <- i  *)
-    0B034H, 0FFF0H,         (*  BIT  #0FFF0H, R4         *)
-    2000H + 8,              (*  JNZ  L1                  *)
-    5404H,                  (*  ADD  R4, R4              *)
-    5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
-    4424H,                  (*  MOV  @R4, R4             *)
-    4015H + BP * 100H, 4,   (*  MOV  4(BP), R5; R5 <- @s *)
-    0D485H, 0               (*  BIS  R4, 0(R5)           *)
-                            (*  L1:                      *)
-    )
-END _incl;
+PROCEDURE [code] _incl* (VAR s: SET; i: INTEGER)
+    4114H, 4,          (*  MOV  4(SP), R4; R4 <- i  *)
+    0B034H, 0FFF0H,    (*  BIT  #0FFF0H, R4         *)
+    2000H + 8,         (*  JNZ  L1                  *)
+    5404H,             (*  ADD  R4, R4              *)
+    5034H, bits_adr,   (*  ADD  bits_adr, R4        *)
+    4424H,             (*  MOV  @R4, R4             *)
+    4115H, 2,          (*  MOV  2(SP), R5; R5 <- @s *)
+    0D485H, 0;         (*  BIS  R4, 0(R5)           *)
+                       (*  L1:                      *)
 
 
-PROCEDURE _excl* (VAR s: SET; i: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 6,   (*  MOV  6(BP), R4; R4 <- i  *)
-    0B034H, 0FFF0H,         (*  BIT  #0FFF0H, R4         *)
-    2000H + 8,              (*  JNZ  L1                  *)
-    5404H,                  (*  ADD  R4, R4              *)
-    5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
-    4424H,                  (*  MOV  @R4, R4             *)
-    4015H + BP * 100H, 4,   (*  MOV  4(BP), R5; R5 <- @s *)
-    0C485H, 0               (*  BIC  R4, 0(R5)           *)
-                            (*  L1:                      *)
-    )
-END _excl;
+PROCEDURE [code] _excl* (VAR s: SET; i: INTEGER)
+    4114H, 4,          (*  MOV  4(SP), R4; R4 <- i  *)
+    0B034H, 0FFF0H,    (*  BIT  #0FFF0H, R4         *)
+    2000H + 8,         (*  JNZ  L1                  *)
+    5404H,             (*  ADD  R4, R4              *)
+    5034H, bits_adr,   (*  ADD  bits_adr, R4        *)
+    4424H,             (*  MOV  @R4, R4             *)
+    4115H, 2,          (*  MOV  2(SP), R5; R5 <- @s *)
+    0C485H, 0;         (*  BIC  R4, 0(R5)           *)
+                       (*  L1:                      *)
 
 
-PROCEDURE _divmod* (b, a: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4015H + BP * 100H, 6,  (*  MOV  6(BP), R5; R5 <- a  *)
+PROCEDURE [code] _divmod* (b, a: INTEGER): INTEGER (* res -> R4, mod -> R5 *)
+    4115H, 4,              (*  MOV  4(SP), R5; R5 <- a  *)
     4304H,                 (*  MOV  #0, R4              *)
                            (*  L1:                      *)
-    4016H + BP * 100H, 4,  (*  MOV  4(BP), R6; R6 <- b  *)
+    4116H, 2,              (*  MOV  2(SP), R6; R6 <- b  *)
     9605H,                 (*  CMP  R6, R5              *)
     3800H + 17,            (*  JL   L3                  *)
     4327H,                 (*  MOV  #2, R7              *)
@@ -324,15 +252,13 @@ BEGIN
     1007H,                 (*  RRC  R7                  *)
     8605H,                 (*  SUB  R6, R5              *)
     5704H,                 (*  ADD  R7, R4              *)
-    3C00H + 400H - 21      (*  JMP  L1                  *)
+    3C00H + 400H - 21,     (*  JMP  L1                  *)
                            (*  L3:                      *)
-    );
-
-    SYSTEM.CODE(
+    (*----------- (a < 0) --------------*)
                            (*  L1:                      *)
     9305H,                 (*  CMP  #0, R5              *)
     3400H + 23,            (*  JGE  L3                  *)
-    4016H + BP * 100H, 4,  (*  MOV  4(BP), R6; R6 <- b  *)
+    4116H, 2,              (*  MOV  2(SP), R6; R6 <- b  *)
     4327H,                 (*  MOV  #2, R7              *)
     5606H,                 (*  ADD  R6, R6              *)
     0E335H,                (*  XOR  #-1, R5             *)
@@ -355,17 +281,78 @@ BEGIN
     1007H,                 (*  RRC  R7                  *)
     5605H,                 (*  ADD  R6, R5              *)
     8704H,                 (*  SUB  R7, R4              *)
-    3C00H + 400H - 25      (*  JMP  L1                  *)
+    3C00H + 400H - 25;     (*  JMP  L1                  *)
                            (*  L3:                      *)
-    )
-END _divmod;
 
 
-PROCEDURE _length* (len, str: INTEGER): INTEGER;
-BEGIN
-    SYSTEM.CODE(
-    4016H + BP * 100H, 4,  (*  MOV    4(BP), R6; R6 <- len  *)
-    4017H + BP * 100H, 6,  (*  MOV    6(BP), R7; R7 <- str  *)
+PROCEDURE [code] _guardrec* (t0, t1: INTEGER): INTEGER
+    4114H, 2,              (*  MOV  2(SP), R4; R4 <- t0  *)
+    4115H, 4,              (*  MOV  4(SP), R5; R5 <- t1  *)
+    4036H, types_adr,      (*  MOV  #types_adr, R6       *)
+                           (*  L3:                       *)
+    9305H,                 (*  CMP  #0, R5               *)
+    2400H + 8,             (*  JZ   L1                   *)
+    9405H,                 (*  CMP  R4, R5               *)
+    2400H + 10,            (*  JZ   L2                   *)
+    5505H,                 (*  ADD  R5, R5               *)
+    0E335H,                (*  XOR  #-1, R5              *)
+    5315H,                 (*  ADD  #1, R5               *)
+    5605H,                 (*  ADD  R6, R5               *)
+    4525H,                 (*  MOV  @R5, R5              *)
+    3C00H + 400H - 10,     (*  JMP  L3                   *)
+                           (*  L1:                       *)
+    9405H,                 (*  CMP  R4, R5               *)
+    2400H + 2,             (*  JZ   L2                   *)
+    4304H,                 (*  MOV  #0, R4               *)
+    4130H,                 (*  MOV  @SP+, PC             *)
+                           (*  L2:                       *)
+    4314H;                 (*  MOV  #1, R4               *)
+
+
+PROCEDURE [code] _error* (module, err: INTEGER)
+    0C232H,               (*  BIC   #8, SR; DINT      *)
+    4303H,                (*  MOV   R3, R3; NOP       *)
+    4104H,                (*  MOV   SP, R4            *)
+    4211H, sp_adr,        (*  MOV   sp_adr(SR), SP    *)
+    1214H, 4,             (*  PUSH  4(R4)             *)
+    1214H, 2,             (*  PUSH  2(R4)             *)
+    4214H, trap_adr,      (*  MOV   trap_adr(SR), R4  *)
+    9304H,                (*  TST   R4                *)
+    2400H + 1,            (*  JZ    L                 *)
+    1284H,                (*  CALL  R4                *)
+                          (*  L:                      *)
+    0D032H, 10H;          (*  BIS   #10H, SR; CPUOFF  *)
+
+
+PROCEDURE [code] _new* (t, size: INTEGER; VAR ptr: INTEGER)
+    1202H,                  (*  PUSH SR            *)
+    4302H,                  (*  MOV  #0, SR        *)
+    4303H,                  (*  NOP                *)
+    4104H,                  (*  MOV  SP, R4        *)
+    8034H, 16,              (*  SUB  #16, R4       *)
+    4005H + 100H * HP,      (*  MOV  HP, R5        *)
+    5115H, 6,               (*  ADD  6(SP), R5     *)
+    9504H,                  (*  CMP  R5, R4        *)
+    4114H, 8,               (*  MOV  8(SP), R4     *)
+    3800H + 12,             (*  JL   L1            *)
+    4190H + HP, 4, 0,       (*  MOV  4(SP), 0(HP)  *)
+    5320H + HP,             (*  ADD  #2, HP        *)
+    4084H + 100H * HP, 0,   (*  MOV  HP, 0(R4)     *)
+                            (*  L3                 *)
+    4380H + HP, 0,          (*  MOV  #0, 0(HP)     *)
+    5320H + HP,             (*  ADD  #2, HP        *)
+    9500H + HP,             (*  CMP  R5, HP        *)
+    3800H + 400H - 5,       (*  JL   L3            *)
+    3C00H + 2,              (*  JMP  L2            *)
+                            (*  L1                 *)
+    4384H, 0,               (*  MOV  #0, 0(R4)     *)
+                            (*  L2                 *)
+    1300H;                  (*  RETI               *)
+
+
+PROCEDURE [code] _length* (len, str: INTEGER): INTEGER
+    4116H, 2,              (*  MOV    2(SP), R6; R6 <- len  *)
+    4117H, 4,              (*  MOV    4(SP), R7; R7 <- str  *)
     4304H,                 (*  MOV    #0, R4; res := 0      *)
                            (*  L2:                          *)
     4775H,                 (*  MOV.B  @R7+, R5              *)
@@ -373,13 +360,8 @@ BEGIN
     2400H + 3,             (*  JZ     L1                    *)
     5314H,                 (*  ADD    #1, R4                *)
     8316H,                 (*  SUB    #1, R6                *)
-    2000H + 400H - 6,      (*  JNZ    L2                    *)
+    2000H + 400H - 6;      (*  JNZ    L2                    *)
                            (*  L1:                          *)
-    4130H + BP,            (*  MOV    @SP+, BP              *)
-    4130H                  (*  MOV    @SP+, PC              *)
-    )
-    RETURN 0
-END _length;
 
 
 PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
@@ -426,33 +408,18 @@ BEGIN
 END _strcmp;
 
 
-PROCEDURE _guardrec* (t0, t1: INTEGER): INTEGER;
+PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER);
 BEGIN
-    SYSTEM.CODE(
-    4014H + BP * 100H, 4,  (*  MOV  4(BP), R4; R4 <- t0  *)
-    4015H + BP * 100H, 6,  (*  MOV  6(BP), R5; R5 <- t1  *)
-    4036H, types_adr,      (*  MOV  #types_adr, R6       *)
-                           (*  L3:                       *)
-    9305H,                 (*  CMP  #0, R5               *)
-    2400H + 8,             (*  JZ   L1                   *)
-    9405H,                 (*  CMP  R4, R5               *)
-    2400H + 6,             (*  JZ   L2                   *)
-    5505H,                 (*  ADD  R5, R5               *)
-    0E335H,                (*  XOR  #-1, R5              *)
-    5315H,                 (*  ADD  #1, R5               *)
-    5605H,                 (*  ADD  R6, R5               *)
-    4525H,                 (*  MOV  @R5, R5              *)
-    3C00H + 400H - 10,     (*  JMP  L3                   *)
-                           (*  L1:                       *)
-    9405H,                 (*  CMP  R4, R5               *)
-    2400H + 3,             (*  JZ   L2                   *)
-    4304H,                 (*  MOV  #0, R4               *)
-    4130H + BP,            (*  MOV  @SP+, BP             *)
-    4130H                  (*  MOV  @SP+, PC             *)
-                           (*  L2:                       *)
-    )
-    RETURN 1
-END _guardrec;
+    IF len_src <= len_dst THEN
+        _move(len_src * base_size, dst, src);
+        SYSTEM.CODE(
+        4314H,         (*  MOV  #1, R4     *)
+        4130H + BP,    (*  MOV  @SP+, BP   *)
+        4130H          (*  MOV  @SP+, PC   *)
+        )
+    END;
+    SYSTEM.CODE(4304H) (*  MOV  #0, R4     *)
+END _arrcpy;
 
 
 PROCEDURE _is* (t, p: INTEGER): INTEGER;
@@ -477,60 +444,6 @@ BEGIN
 
     RETURN t
 END _guard;
-
-
-PROCEDURE _error* (module, err: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    0C232H,               (*  BIC   #8, SR; DINT      *)
-    4303H,                (*  MOV   R3, R3; NOP       *)
-    4211H, sp_adr,        (*  MOV   sp_adr(SR), SP    *)
-    1210H + BP, 6,        (*  PUSH  6(BP)             *)
-    1210H + BP, 4,        (*  PUSH  4(BP)             *)
-    1210H + BP, 2,        (*  PUSH  2(BP)             *)
-    1210H + BP, 0,        (*  PUSH  0(BP)             *)
-    4100H + BP,           (*  MOV   SP, BP            *)
-    4214H, trap_adr,      (*  MOV   trap_adr(SR), R4  *)
-    9304H,                (*  TST   R4                *)
-    2400H + 5,            (*  JZ    L                 *)
-    1210H + BP, 6,        (*  PUSH  6(BP)             *)
-    1210H + BP, 4,        (*  PUSH  4(BP)             *)
-    1284H,                (*  CALL  R4                *)
-                          (*  L:                      *)
-    0D032H, 10H           (*  BIS   #10H, SR; CPUOFF  *)
-    )
-END _error;
-
-
-PROCEDURE _new* (t, size: INTEGER; VAR ptr: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-    4130H + BP,             (*  MOV  @SP+, BP     *)
-    1202H,                  (*  PUSH SR           *)
-    4302H,                  (*  MOV #0, SR        *)
-    4303H,                  (*  NOP               *)
-    4104H,                  (*  MOV SP, R4        *)
-    8034H, 16,              (*  SUB #16, R4       *)
-    4005H + 100H * HP,      (*  MOV HP, R5        *)
-    5115H, 6,               (*  ADD 6(SP), R5     *)
-    9504H,                  (*  CMP R5, R4        *)
-    4114H, 8,               (*  MOV 8(SP), R4     *)
-    3800H + 12,             (*  JL   L1           *)
-    4190H + HP, 4, 0,       (*  MOV 4(SP), 0(HP)  *)
-    5320H + HP,             (*  ADD #2, HP        *)
-    4084H + 100H * HP, 0,   (*  MOV HP, 0(R4)     *)
-                            (*  L3                *)
-    4380H + HP, 0,          (*  MOV #0, 0(HP)     *)
-    5320H + HP,             (*  ADD #2, HP        *)
-    9500H + HP,             (*  CMP R5, HP        *)
-    3800H + 400H - 5,       (*  JL   L3           *)
-    3C00H + 2,              (*  JMP  L2           *)
-                            (*  L1                *)
-    4384H, 0,               (*  MOV #0, 0(R4)     *)
-                            (*  L2                *)
-    1300H                   (*  RETI              *)
-    )
-END _new;
 
 
 PROCEDURE SetTrap* (trap: TRAPPROC);
