@@ -117,7 +117,7 @@ VAR
 
     mem: ARRAY 65536 OF BYTE;
 
-    Labels: ARRAY 30000 OF LABEL;
+    Labels: CHL.INTLIST;
 
     IV: ARRAY LenIV OF INTEGER;
 
@@ -286,6 +286,18 @@ BEGIN
 END PutWord;
 
 
+PROCEDURE NewLabel (): INTEGER;
+BEGIN
+    CHL.PushInt(Labels, 0)
+    RETURN CODE.NewLabel()
+END NewLabel;
+
+
+PROCEDURE LabelOffs (n: INTEGER): INTEGER;
+    RETURN CHL.GetInt(Labels, n)
+END LabelOffs;
+
+
 PROCEDURE Fixup (CodeAdr, IntVectorSize: INTEGER): INTEGER;
 VAR
     cmd:      ANYCODE;
@@ -304,7 +316,7 @@ BEGIN
         WHILE cmd # NIL DO
             cmd.offset := offset;
             CASE cmd OF
-            |LABEL: Labels[cmd.num] := cmd
+            |LABEL: CHL.SetInt(Labels, cmd.num, offset)
             |JMP:   INC(offset);
                     IF ~cmd.short THEN
                         INC(offset);
@@ -322,7 +334,7 @@ BEGIN
         cmd := CodeList.first(ANYCODE);
         WHILE cmd # NIL DO
             IF (cmd IS JMP) & ~cmd(JMP).short THEN
-                diff := Labels[cmd(JMP).label].offset - cmd.offset - 1;
+                diff := LabelOffs(cmd(JMP).label) - cmd.offset - 1;
                 IF ABS(diff) <= 512 THEN
                     cmd(JMP).short := TRUE;
                     shorted := TRUE
@@ -359,16 +371,16 @@ BEGIN
                     END;
 
                     PutWord(4030H, adr); (* MOV @PC+, PC *)
-                    PutWord(Labels[cmd.label].offset * 2, adr)
+                    PutWord(LabelOffs(cmd.label) * 2, adr)
                     (* L: *)
                 ELSE
-                    diff := Labels[cmd.label].offset - cmd.offset - 1;
+                    diff := LabelOffs(cmd.label) - cmd.offset - 1;
                     ASSERT((-512 <= diff) & (diff <= 511));
                     PutWord(cmd.cc + ORD(BITS(diff) * {0..9}), adr)
                 END
 
         |CALL:  PutWord(12B0H, adr); (* CALL @PC+ *)
-                PutWord(Labels[cmd.label].offset * 2, adr)
+                PutWord(LabelOffs(cmd.label) * 2, adr)
 
         |WORD:  PutWord(cmd.val, adr)
 
@@ -378,20 +390,6 @@ BEGIN
 
     RETURN adr - CodeAdr
 END Fixup;
-
-
-PROCEDURE NewLabel (): INTEGER;
-VAR
-    L: INTEGER;
-
-BEGIN
-    L := CODE.NewLabel();
-    IF L >= LEN(Labels) THEN
-        ERRORS.Error(203)
-    END
-
-    RETURN L
-END NewLabel;
 
 
 PROCEDURE Push (reg: INTEGER);
@@ -1617,22 +1615,24 @@ END WriteHexByte;
 
 PROCEDURE WriteHex (file: FILES.FILE; mem: ARRAY OF BYTE; idx, cnt: INTEGER);
 VAR
-    i: INTEGER;
+    i, len, chksum: INTEGER;
 
 BEGIN
     WHILE cnt > 0 DO
+        len := MIN(cnt, 16);
+        chksum := len + idx DIV 256 + idx MOD 256;
         WRITER.WriteByte(file, ORD(":"));
-        WriteHexByte(file, MIN(16, cnt));
+        WriteHexByte(file, len);
         WriteHexByte(file, idx DIV 256);
         WriteHexByte(file, idx MOD 256);
         WriteHexByte(file, 0);
-        i := MIN(16, cnt);
-        WHILE i > 0 DO
+        FOR i := 1 TO len DO
             WriteHexByte(file, mem[idx]);
-            INC(idx);
-            DEC(i)
+            INC(chksum, mem[idx]);
+            INC(idx)
         END;
-        DEC(cnt, MIN(16, cnt));
+        WriteHexByte(file, (-chksum) MOD 256);
+        DEC(cnt, len);
         WRITER.WriteByte(file, 0DH);
         WRITER.WriteByte(file, 0AH)
     END
@@ -1668,8 +1668,9 @@ BEGIN
         ERRORS.Error(204)
     END;
 
-    IF code.lcount >= LEN(Labels) THEN
-        ERRORS.Error(203)
+    Labels := CHL.CreateIntList();
+    FOR i := 1 TO code.lcount DO
+        CHL.PushInt(Labels, 0)
     END;
 
     FOR i := 0 TO LEN(mem) - 1 DO
@@ -1710,7 +1711,7 @@ BEGIN
     WHILE reloc # NIL DO
         adr := reloc.WordPtr.offset * 2;
         CASE reloc.section OF
-        |RCODE: PutWord(Labels[reloc.WordPtr.val].offset * 2, adr)
+        |RCODE: PutWord(LabelOffs(reloc.WordPtr.val) * 2, adr)
         |RDATA: PutWord(reloc.WordPtr.val + Data.address, adr)
         |RBSS:  PutWord(reloc.WordPtr.val + Bss.address, adr)
         END;
@@ -1746,7 +1747,7 @@ BEGIN
     PutWord(stack, adr);
 
     FOR i := 0 TO LEN(IV) - 1 DO
-        PutWord(Labels[IV[i]].offset * 2, adr)
+        PutWord(LabelOffs(IV[i]) * 2, adr)
     END;
 
     file := FILES.create(outname);
