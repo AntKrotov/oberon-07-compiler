@@ -14,6 +14,7 @@ CONST
 
     REDLED = {0};
 
+    (* регистры порта P1 *)
     P1OUT = 21H;
     P1DIR = 22H;
 

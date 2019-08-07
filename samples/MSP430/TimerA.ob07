@@ -16,29 +16,34 @@ CONST
     REDLED   = {0};
     GREENLED = {6};
 
+    (* регистры порта P1 *)
     P1OUT = 21H;
     P1DIR = 22H;
 
+
     (* регистры таймера A *)
-    TACTL   = 0160H;
-    TAR     = 0170H;
+    TACTL = 0160H;
+
+        (* биты регистра TACTL *)
+        TAIFG   = {0};
+        TAIE    = {1};
+        TACLR   = {2};
+        MC0     = {4};
+        MC1     = {5};
+        ID0     = {6};
+        ID1     = {7};
+        TASSEL0 = {8};
+        TASSEL1 = {9};
+
+    TAR = 0170H;
+
     TACCTL0 = 0162H;
-    TACCR0  = 0172H;
 
-    (* биты регистра TACTL *)
-    TAIFG   = {0};
-    TAIE    = {1};
-    TACLR   = {2};
-    MC0     = {4};
-    MC1     = {5};
-    ID0     = {6};
-    ID1     = {7};
-    TASSEL0 = {8};
-    TASSEL1 = {9};
+        (* биты регистра TACCTL0 *)
+        CCIE = {4};
+        CAP  = {8};
 
-    (* биты регистра TACCTL0 *)
-    CCIE = {4};
-    CAP  = {8};
+    TACCR0 = 0172H;
 
 
 PROCEDURE set_bits (mem: INTEGER; bits: SET);
@@ -97,7 +102,7 @@ VAR
 BEGIN
     IF priority = 24 THEN                 (* прерывание от таймера A *)
         SYSTEM.GET(TACTL, x);             (* взять регистр TACTL *)
-        IF TAIFG * x # {} THEN            (* прерывание было *)
+        IF TAIFG * x = TAIFG THEN         (* прерывание было *)
             inv_bits(P1OUT, REDLED);      (* изменить состояние светодиода *)
             inv_bits(P1OUT, GREENLED);    (* изменить состояние светодиода *)
             SYSTEM.PUT(TACTL, x - TAIFG)  (* сбросить флаг прерывания и обновить регистр TACTL *)
@@ -115,8 +120,8 @@ BEGIN
     set_bits(P1OUT, GREENLED); (* включен *)
     clr_bits(P1OUT, REDLED);   (* выключен *)
 
-    RTL.SetInt(int);     (* назначить обработчик прерываний *)
-    SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
+    RTL.SetInt(int);  (* назначить обработчик прерываний *)
+    SYSTEM.EINT;      (* разрешить прерывания *)
 
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);

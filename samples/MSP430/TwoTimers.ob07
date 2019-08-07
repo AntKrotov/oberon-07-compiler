@@ -17,55 +17,64 @@ CONST
     REDLED   = {0};
     GREENLED = {6};
 
+    (* регистры порта P1 *)
     P1OUT = 21H;
     P1DIR = 22H;
 
-    (* регистры сторожевого таймера *)
-    WDTCTL = 0120H;
-    IE1    = 0000H;
-    IFG1   = 0002H;
 
-    (* биты регистра WDTCTL *)
-    WDTIS0   = {0};
-    WDTIS1   = {1};
-    WDTSSEL  = {2};
-    WDTCNTCL = {3};
-    WDTTMSEL = {4};
-    WDTNMI   = {5};
-    WDTNMIES = {6};
-    WDTHOLD  = {7};
+    (* регистр разрешения прерываний 1 *)
+    IE1 = 00H;
 
-    (* биты регистра IE1 *)
-    WDTIE = {0};
-    NMIIE = {4};
+        (* биты регистра IE1 *)
+        WDTIE = {0};
+        NMIIE = {4};
 
-    (* биты регистра IFG1 *)
-    WDTIFG = {0};
-    NMIIFG = {4};
 
-    (* ключ защиты сторожевого таймера *)
-    WDTPW = BITS(5A00H);
+    (* регистр флагов прерываний 1 *)
+    IFG1 = 02H;
+
+        (* биты регистра IFG1 *)
+        WDTIFG = {0};
+        NMIIFG = {4};
+
+
+    WDTCTL = 0120H; (* регистр сторожевого таймера *)
+
+        (* биты регистра WDTCTL *)
+        WDTIS0   = {0};
+        WDTIS1   = {1};
+        WDTSSEL  = {2};
+        WDTCNTCL = {3};
+        WDTTMSEL = {4};
+        WDTNMI   = {5};
+        WDTNMIES = {6};
+        WDTHOLD  = {7};
+        WDTPW    = {9, 11, 12, 14};  (* ключ защиты *)
+
 
     (* регистры таймера A *)
-    TACTL   = 0160H;
-    TAR     = 0170H;
+    TACTL = 0160H;
+
+        (* биты регистра TACTL *)
+        TAIFG   = {0};
+        TAIE    = {1};
+        TACLR   = {2};
+        MC0     = {4};
+        MC1     = {5};
+        ID0     = {6};
+        ID1     = {7};
+        TASSEL0 = {8};
+        TASSEL1 = {9};
+
+    TAR = 0170H;
+
     TACCTL0 = 0162H;
-    TACCR0  = 0172H;
 
-    (* биты регистра TACTL *)
-    TAIFG   = {0};
-    TAIE    = {1};
-    TACLR   = {2};
-    MC0     = {4};
-    MC1     = {5};
-    ID0     = {6};
-    ID1     = {7};
-    TASSEL0 = {8};
-    TASSEL1 = {9};
+        (* биты регистра TACCTL0 *)
+        CCIE = {4};
+        CAP  = {8};
 
-    (* биты регистра TACCTL0 *)
-    CCIE = {4};
-    CAP  = {8};
+    TACCR0 = 0172H;
 
 
 PROCEDURE set_bits (mem: INTEGER; bits: SET);
@@ -117,7 +126,7 @@ BEGIN
         inv_bits(P1OUT, REDLED)           (* изменить состояние светодиода *)
     ELSIF priority = 24 THEN              (* прерывание от таймера A *)
         SYSTEM.GET(TACTL, x);             (* взять регистр TACTL *)
-        IF TAIFG * x # {} THEN            (* прерывание было *)
+        IF TAIFG * x = TAIFG THEN         (* прерывание было *)
             inv_bits(P1OUT, GREENLED);    (* изменить состояние светодиода *)
             SYSTEM.PUT(TACTL, x - TAIFG)  (* сбросить флаг прерывания и обновить регистр TACTL *)
         END
@@ -134,8 +143,8 @@ BEGIN
     set_bits(P1OUT, GREENLED);
     set_bits(P1OUT, REDLED);
 
-    RTL.SetInt(int);     (* назначить обработчик прерываний *)
-    SYSTEM.CODE(0D232H); (* BIS #8, SR; EINT; разрешить прерывания *)
+    RTL.SetInt(int);  (* назначить обработчик прерываний *)
+    SYSTEM.EINT;      (* разрешить прерывания *)
 
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);
