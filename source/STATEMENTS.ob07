@@ -708,9 +708,14 @@ VAR
 
 BEGIN
     ASSERT(e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC});
+    proc := e.stproc;
+
+    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN
+        PARS.checklex(parser, SCAN.lxLROUND);
+        PARS.Next(parser)
+    END;
 
     getpos(parser, pos);
-    proc := e.stproc;
 
     IF e.obj IN {eSYSPROC, eSYSFUNC} THEN
         IF parser.unit.scopeLvl > 0 THEN
@@ -988,6 +993,19 @@ BEGIN
                 END
             UNTIL (parser.sym = SCAN.lxRROUND) & ~comma
 
+        |PROG.sysNOP, PROG.sysDINT, PROG.sysEINT:
+            IF parser.sym = SCAN.lxLROUND THEN
+                PARS.Next(parser);
+                PARS.checklex(parser, SCAN.lxRROUND);
+                PARS.Next(parser)
+            END;
+            ASSERT(CPU = cpuMSP430);
+            CASE proc OF
+            |PROG.sysNOP:  CODE.AddCmd(CODE.opCODE, 4303H)
+            |PROG.sysDINT: CODE.AddCmd(CODE.opCODE, 0C232H); CODE.AddCmd(CODE.opCODE, 4303H)
+            |PROG.sysEINT: CODE.AddCmd(CODE.opCODE, 0D232H)
+            END
+
         END;
 
         e.obj := eEXPR;
@@ -1201,8 +1219,10 @@ BEGIN
 
     END;
 
-    PARS.checklex(parser, SCAN.lxRROUND);
-    PARS.Next(parser);
+    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN
+        PARS.checklex(parser, SCAN.lxRROUND);
+        PARS.Next(parser)
+    END;
 
     IF e.obj # eCONST THEN
         e.obj := eEXPR
@@ -1252,7 +1272,6 @@ BEGIN
         e.type := proc.base
 
     ELSIF e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC} THEN
-        PARS.Next(parser);
         stProc(parser, e)
     ELSE
         PARS.check1(FALSE, parser, 86)
@@ -2568,10 +2587,15 @@ BEGIN
         PARS.check((e1.type = NIL) OR ODD(e.type.call), parser, pos, 92);
         call := TRUE
     ELSE
-        PARS.check(isProc(e), parser, pos, 86);
-        PARS.check((e.type.base = NIL) OR ODD(e.type.call), parser, pos, 92);
-        PARS.check1(e.type.params.first = NIL, parser, 64);
-        call := TRUE
+        IF e.obj IN {eSYSPROC, eSTPROC} THEN
+            stProc(parser, e);
+            call := FALSE
+        ELSE
+            PARS.check(isProc(e), parser, pos, 86);
+            PARS.check((e.type.base = NIL) OR ODD(e.type.call), parser, pos, 92);
+            PARS.check1(e.type.params.first = NIL, parser, 64);
+            call := TRUE
+        END
     END;
 
     IF call THEN

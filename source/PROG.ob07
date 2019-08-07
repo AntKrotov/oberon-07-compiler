@@ -39,7 +39,8 @@ CONST
     sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*   = 29;  stMAX*    = 30;
     sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY* = 33;  sysINF*   = 34;
     sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
-    sysWSADR*  = 39;  sysPUT32*  = 40;
+    sysWSADR*  = 39;  sysPUT32*  = 40;  sysNOP*  = 41;  sysEINT*  = 42;
+    sysDINT*   = 43;
 
     default*   =  2;
     stdcall*   =  4;  _stdcall*   = stdcall + 1;
@@ -1204,6 +1205,12 @@ BEGIN
     EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
     EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
     EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
+
+    IF program.target.sys = mConst.Target_iMSP430 THEN
+        EnterProc(unit, "NOP",  idSYSPROC, sysNOP);
+        EnterProc(unit, "EINT", idSYSPROC, sysEINT);
+        EnterProc(unit, "DINT", idSYSPROC, sysDINT)
+    END;
 
     IF program.target.sys # mConst.Target_iMSP430 THEN
         EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
