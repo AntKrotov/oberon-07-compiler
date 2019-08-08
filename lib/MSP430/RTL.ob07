@@ -446,16 +446,4 @@ BEGIN
 END _guard;
 
 
-PROCEDURE SetTrap* (trap: TRAPPROC);
-BEGIN
-    SYSTEM.PUT(trap_adr, trap)
-END SetTrap;
-
-
-PROCEDURE SetInt* (int: INTPROC);
-BEGIN
-    SYSTEM.PUT(int_adr, int)
-END SetInt;
-
-
 END RTL.

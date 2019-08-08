@@ -9,7 +9,7 @@
 
 MODULE TwoTimers;
 
-IMPORT SYSTEM, RTL;
+IMPORT SYSTEM, MSP430;
 
 
 CONST
@@ -143,7 +143,7 @@ BEGIN
     set_bits(P1OUT, GREENLED);
     set_bits(P1OUT, REDLED);
 
-    RTL.SetInt(int);  (* назначить обработчик прерываний *)
+    MSP430.SetInt(int);  (* назначить обработчик прерываний *)
     SYSTEM.EINT;      (* разрешить прерывания *)
 
     (* инициализация регистров таймера A *)

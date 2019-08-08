@@ -9,7 +9,7 @@
 
 MODULE Button;
 
-IMPORT SYSTEM, RTL;
+IMPORT SYSTEM, MSP430;
 
 
 CONST
@@ -118,8 +118,8 @@ BEGIN
     set_bits(P1OUT, BUTTON);                (* подтяжка к питанию *)
     set_bits(P1IE,  BUTTON);                (* разрешить прерывания от кнопки *)
 
-    RTL.SetInt(int);  (* назначить обработчик прерываний *)
-    SYSTEM.EINT;      (* разрешить прерывания *)
+    MSP430.SetInt(int);  (* назначить обработчик прерываний *)
+    SYSTEM.EINT;         (* разрешить прерывания *)
 
     (* бесконечный цикл *)
     WHILE TRUE DO

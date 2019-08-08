@@ -1,0 +1,40 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE MSP430;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    ram_adr = 200H;
+
+    trap_adr = ram_adr;
+    int_adr  = trap_adr + 2;
+
+
+TYPE
+
+    TRAPPROC* = PROCEDURE (ModName, Line_Err: INTEGER);
+
+    INTPROC*  = PROCEDURE (priority, ptr: INTEGER);
+
+
+PROCEDURE SetTrap* (trap: TRAPPROC);
+BEGIN
+    SYSTEM.PUT(trap_adr, trap)
+END SetTrap;
+
+
+PROCEDURE SetInt* (int: INTPROC);
+BEGIN
+    SYSTEM.PUT(int_adr, int)
+END SetInt;
+
+
+END MSP430.
