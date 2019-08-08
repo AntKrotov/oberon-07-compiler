@@ -23,22 +23,32 @@ BEGIN
 END String;
 
 
-PROCEDURE Int* (n: INTEGER);
+PROCEDURE Int* (x: INTEGER);
 VAR
     s: ARRAY 32 OF CHAR;
 
 BEGIN
-    STRINGS.IntToStr(n, s);
+    STRINGS.IntToStr(x, s);
     String(s)
 END Int;
 
 
-PROCEDURE Int2* (n: INTEGER);
+PROCEDURE Hex* (x, n: INTEGER);
+VAR
+    s: ARRAY 32 OF CHAR;
+
 BEGIN
-    IF n < 10 THEN
+    STRINGS.IntToHex(x, s, n);
+    String(s)
+END Hex;
+
+
+PROCEDURE Int2* (x: INTEGER);
+BEGIN
+    IF x < 10 THEN
         String("0")
     END;
-    Int(n)
+    Int(x)
 END Int2;
 
 
@@ -55,16 +65,16 @@ BEGIN
 END StringLn;
 
 
-PROCEDURE IntLn* (n: INTEGER);
+PROCEDURE IntLn* (x: INTEGER);
 BEGIN
-    Int(n);
+    Int(x);
     Ln
 END IntLn;
 
 
-PROCEDURE Int2Ln* (n: INTEGER);
+PROCEDURE Int2Ln* (x: INTEGER);
 BEGIN
-    Int2(n);
+    Int2(x);
     Ln
 END Int2Ln;
 

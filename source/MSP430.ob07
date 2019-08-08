@@ -1546,7 +1546,8 @@ BEGIN
     Op2(opMOV, incr(PC), HP);
     EmitWord(0);
     Op2(opMOV, imm(5A80H), dst_x(0120H, SR)); (* stop WDT *)
-    Op2(opMOV, imm(empty_proc_adr), dst_x(int_adr, SR))
+    Op2(opMOV, imm(empty_proc_adr), dst_x(int_adr, SR));
+    Op2(opMOV, imm(0), dst_x(trap_adr, SR))
 END prolog;
 
 
@@ -1768,10 +1769,12 @@ BEGIN
     INC(TextSize, IntVectorSize + TypesSize);
     INC(Bss.size, minStackSize + RTLVarSize);
 
-    C.StringLn("-------------------------------");
+    C.StringLn("--------------------------------------------");
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
+    C.String(  "        "); C.Int(rom - TextSize); C.String(" bytes free (0");
+        C.Hex(Code.address + Code.size + Data.size, 4); C.String("H..0"); C.Hex(10000H - IntVectorSize - TypesSize - 1, 4); C.StringLn("H)"); C.Ln;
     C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)");
-    C.StringLn("-------------------------------")
+    C.StringLn("--------------------------------------------")
 
 END CodeGen;
 
