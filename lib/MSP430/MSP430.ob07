@@ -37,4 +37,9 @@ BEGIN
 END SetInt;
 
 
+PROCEDURE [code] Restart*
+    4302H,          (* MOV #0, SR         *)
+    4210H, 0FFFEH;  (* MOV 0FFFEH(SR), PC *)
+
+
 END MSP430.

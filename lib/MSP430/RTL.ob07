@@ -321,6 +321,7 @@ PROCEDURE [code] _error* (module, err: INTEGER)
     2400H + 1,            (*  JZ    L                 *)
     1284H,                (*  CALL  R4                *)
                           (*  L:                      *)
+    0C232H,               (*  BIC   #8, SR; DINT      *)
     0D032H, 10H;          (*  BIS   #10H, SR; CPUOFF  *)
 
 

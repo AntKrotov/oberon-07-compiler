@@ -1,0 +1,134 @@
+﻿(*
+
+Пример для LaunchPad MSP-EXP430G2 Rev1.5
+
+  При нажатии на кнопку P1.3, инкрементируется
+  переменная-счетчик перезапусков и программа
+  перезапускается.
+  В зависимости от четности счетчика перезапусков,
+  включается зеленый или красный светодиод.
+
+*)
+
+MODULE Restart;
+
+IMPORT SYSTEM, MSP430;
+
+
+CONST
+
+    REDLED   = {0};
+    GREENLED = {6};
+    BUTTON   = {3};
+
+    (* регистры порта P1 *)
+    P1OUT = 21H;
+    P1DIR = 22H;
+    P1IFG = 23H;
+    P1IE  = 25H;
+    P1REN = 27H;
+
+
+VAR
+
+    count: INTEGER; (* счетчик перезапусков *)
+
+    N: INTEGER; (* для задержки *)
+
+
+PROCEDURE delay (n: INTEGER);
+BEGIN
+    N := n;
+    WHILE N > 0 DO DEC(N) END
+END delay;
+
+
+PROCEDURE set_bits (mem: INTEGER; bits: SET);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) + bits)
+END set_bits;
+
+
+PROCEDURE clr_bits (mem: INTEGER; bits: SET);
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b);
+    SYSTEM.PUT8(mem, BITS(b) - bits)
+END clr_bits;
+
+
+PROCEDURE test_bits (mem: INTEGER; bits: SET): SET;
+VAR
+    b: BYTE;
+
+BEGIN
+    SYSTEM.GET(mem, b)
+    RETURN bits * BITS(b)
+END test_bits;
+
+
+(*
+обработчик прерываний
+
+  priority - приоритет прерывания:
+
+  адрес    приоритет
+  0FFFEH     31
+  0FFFCH     30
+  0FFFAH     29
+  ...
+  0FFC0H      0
+
+
+  ptr - указатель на структуру:
+
+  смещение    значение
+     0:     priority
+    +2:     сохраненное значение регистра SR
+    +4:     сохраненное значение регистра PC
+*)
+PROCEDURE int (priority, ptr: INTEGER);
+BEGIN
+    IF priority = 18 THEN                          (* прерывание от порта P1 *)
+        IF test_bits(P1IFG, BUTTON) = BUTTON THEN  (* нажата кнопка *)
+            INC(count);                            (* увеличить счетчик *)
+            delay(20000);                          (* задержка для отпускания кнопки *)
+            clr_bits(P1IFG, BUTTON);               (* сбросить флаг прерывания *)
+            MSP430.Restart                         (* перезапустить программу *)
+        END
+    END
+END int;
+
+
+PROCEDURE main;
+BEGIN
+    (* инициализация регистров порта P1 *)
+    SYSTEM.PUT8(P1DIR, REDLED + GREENLED);  (* выход *)
+    set_bits(P1REN, BUTTON);                (* включить подтягивающий резистор *)
+    set_bits(P1OUT, BUTTON);                (* подтяжка к питанию *)
+    set_bits(P1IE,  BUTTON);                (* разрешить прерывания от кнопки *)
+
+    (* выключить светодиоды *)
+    clr_bits(P1OUT, REDLED + GREENLED);
+
+    MSP430.SetInt(int);  (* назначить обработчик прерываний *)
+    SYSTEM.EINT;         (* разрешить прерывания *)
+
+    IF ODD(count) THEN
+        set_bits(P1OUT, GREENLED) (* нечетное - вкл. зеленый *)
+    ELSE
+        set_bits(P1OUT, REDLED)   (* четное - вкл. красный *)
+    END
+
+END main;
+
+
+BEGIN
+    main
+END Restart.
