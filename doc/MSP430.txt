@@ -426,17 +426,16 @@ MODULE MSP430
 
 TYPE
 
-    TRAPPROC = PROCEDURE (ModName, Line_Err: INTEGER);
+    TTrapProc = PROCEDURE (errno, ModName, line: INTEGER);
 
         Процедура-обработчик ошибок
 
+        errno   - номер ошибки
         ModName - адрес имени модуля
-        Line_Err - младшие четыре бита - номер ошибки, остальное - номер
-                   строки
+        line    - номер строки
 
 
-
-    INTPROC  = PROCEDURE (priority, ptr: INTEGER);
+    TIntProc = PROCEDURE (priority, ptr: INTEGER);
 
         Процедура-обработчик прерываний
 
@@ -469,10 +468,10 @@ TYPE
         т. к. PC получит значение вектора сброса, а SR очистится.
 
 
-    PROCEDURE SetTrap (trap: TRAPPROC)
+    PROCEDURE SetTrap (trap: TTrapProc)
         Назначить обработчик ошибок.
 
-    PROCEDURE SetInt (int: INTPROC)
+    PROCEDURE SetInt (int: TIntProc)
         Назначить обработчик прерываний.
 
         Нельзя вызывать эту процедуру с параметром NIL, т. к. для экономии

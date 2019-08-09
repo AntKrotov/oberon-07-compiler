@@ -99,10 +99,12 @@ END Write;
 
 (*
     обработчик ошибок
-    ModName  - адрес имени модуля
-    Line_Err - младшие 4 бита - код ошибки, остальное - номер строки
+
+    errno   - номер ошибки
+    ModName - адрес имени модуля
+    line    - номер строки
 *)
-PROCEDURE trap (ModName, Line_Err: INTEGER);
+PROCEDURE trap (errno, ModName, line: INTEGER);
 BEGIN
     set_bits(P1OUT, REDLED) (* включить красный светодиод *)
 END trap;

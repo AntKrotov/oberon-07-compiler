@@ -1101,10 +1101,12 @@ END DeclarationSequence;
 
 PROCEDURE parse (parser: PARSER);
 VAR
-    unit:    PROG.UNIT;
-    label:   INTEGER;
-    name:    INTEGER;
-    endmod:  BOOLEAN;
+    unit:      PROG.UNIT;
+    label:     INTEGER;
+    name:      INTEGER;
+    endmod:    BOOLEAN;
+    errlabel:  INTEGER;
+    errno:     INTEGER;
 
 BEGIN
     ASSERT(parser # NIL);
@@ -1139,10 +1141,17 @@ BEGIN
 
     name := CODE.putstr(unit.name.s);
 
-    CODE.SetErrLabel;
+    errlabel := CODE.NewLabel();
+    CODE.SetLabel(errlabel);
     CODE.AddCmd(CODE.opSADR, name);
     CODE.AddCmd(CODE.opPARAM, 1);
     CODE.AddCmd0(CODE.opERR);
+
+    FOR errno := 1 TO 11 DO
+        CODE.SetErrLabel(errno);
+        CODE.AddCmd(CODE.opERRC, errno);
+        CODE.AddJmpCmd(CODE.opJMP, errlabel)
+    END;
 
     endmod := DeclarationSequence(parser);
 

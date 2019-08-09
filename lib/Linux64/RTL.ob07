@@ -437,7 +437,7 @@ BEGIN
 END append;
 
 
-PROCEDURE [stdcall64] _error* (module, err: INTEGER);
+PROCEDURE [stdcall64] _error* (module, err, line: INTEGER);
 VAR
     s, temp: ARRAY 1024 OF CHAR;
 
@@ -460,8 +460,8 @@ BEGIN
 
     append(s, API.eol);
 
-    append(s, "module: ");   PCharToStr(module, temp);     append(s, temp); append(s, API.eol);
-    append(s, "line: ");     IntToStr(LSR(err, 4), temp);  append(s, temp);
+    append(s, "module: "); PCharToStr(module, temp); append(s, temp); append(s, API.eol);
+    append(s, "line: ");   IntToStr(line, temp);     append(s, temp);
 
     API.DebugMsg(SYSTEM.ADR(s[0]), name);
 

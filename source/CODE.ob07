@@ -216,7 +216,7 @@ TYPE
         fregs:      INTEGER;
         wstr:       ARRAY 4*1024 OF WCHAR;
 
-        errlabel*:  INTEGER
+        errlabels*: ARRAY 12 OF INTEGER
 
     END;
 
@@ -545,10 +545,10 @@ BEGIN
 END SetLabel;
 
 
-PROCEDURE SetErrLabel*;
+PROCEDURE SetErrLabel* (errno: INTEGER);
 BEGIN
-    codes.errlabel := NewLabel();
-    SetLabel(codes.errlabel)
+    codes.errlabels[errno] := NewLabel();
+    SetLabel(codes.errlabels[errno])
 END SetErrLabel;
 
 
@@ -630,8 +630,8 @@ END AddJmpCmd;
 
 PROCEDURE OnError* (line, error: INTEGER);
 BEGIN
-    AddCmd(opERRC, LSL(line, 4) + error);
-    AddJmpCmd(opJMP, codes.errlabel)
+    AddCmd(opERRC, line);
+    AddJmpCmd(opJMP, codes.errlabels[error])
 END OnError;
 
 
