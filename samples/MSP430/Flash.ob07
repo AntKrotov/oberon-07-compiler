@@ -97,13 +97,7 @@ BEGIN
 END Write;
 
 
-(*
-    обработчик ошибок
-
-    errno   - номер ошибки
-    ModName - адрес имени модуля
-    line    - номер строки
-*)
+(* обработчик ошибок *)
 PROCEDURE trap (errno, ModName, line: INTEGER);
 BEGIN
     set_bits(P1OUT, REDLED) (* включить красный светодиод *)

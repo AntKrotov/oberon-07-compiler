@@ -73,27 +73,8 @@ BEGIN
 END test_bits;
 
 
-(*
-обработчик прерываний
-
-  priority - приоритет прерывания:
-
-  адрес    приоритет
-  0FFFEH     31
-  0FFFCH     30
-  0FFFAH     29
-  ...
-  0FFC0H      0
-
-
-  ptr - указатель на структуру:
-
-  смещение    значение
-     0:     priority
-    +2:     сохраненное значение регистра SR
-    +4:     сохраненное значение регистра PC
-*)
-PROCEDURE int (priority, ptr: INTEGER);
+(* обработчик прерываний *)
+PROCEDURE int (priority: INTEGER; interrupt: MSP430.TInterrupt);
 BEGIN
     IF priority = 18 THEN                          (* прерывание от порта P1 *)
         IF test_bits(P1IFG, BUTTON) = BUTTON THEN  (* нажата кнопка *)
