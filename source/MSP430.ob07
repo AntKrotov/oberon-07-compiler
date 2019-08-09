@@ -18,7 +18,7 @@ CONST
     LenIV = 32;
 
     RTLVarSize  = 4;
-    RTLDataSize = 308;
+    RTLDataSize = 312;
     IntVectorSize* = LenIV * 2 + RTLDataSize;
     minStackSize = 64;
 
@@ -57,7 +57,9 @@ CONST
 
     sp_adr         = iv_adr - 2;
     empty_proc_adr = sp_adr - 2;
-    bits_adr       = empty_proc_adr - 272;
+    free_size_adr  = empty_proc_adr - 2;
+    free_adr_adr   = free_size_adr - 2;
+    bits_adr       = free_adr_adr - 272;
     bits_offs_adr  = bits_adr - 32;
     types_adr      = bits_offs_adr - 2;
 
@@ -1644,7 +1646,7 @@ PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; o
 VAR
     i, adr, heap, stack, TextSize, TypesSize, bits, n: INTEGER;
 
-    Code, Data, Bss: RECORD address, size: INTEGER END;
+    Code, Data, Bss, Free: RECORD address, size: INTEGER END;
 
     ram, rom: INTEGER;
 
@@ -1744,6 +1746,11 @@ BEGIN
         END
     END;
 
+    Free.address := Code.address + TextSize;
+    Free.size := rom - (IntVectorSize + TypesSize + TextSize);
+
+    PutWord(Free.address, adr);
+    PutWord(Free.size, adr);
     PutWord(4130H, adr); (* RET *)
     PutWord(stack, adr);
 
@@ -1771,8 +1778,11 @@ BEGIN
 
     C.StringLn("--------------------------------------------");
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
-    C.String(  "        "); C.Int(rom - TextSize); C.String(" bytes free (0");
-        C.Hex(Code.address + Code.size + Data.size, 4); C.String("H..0"); C.Hex(10000H - IntVectorSize - TypesSize - 1, 4); C.StringLn("H)"); C.Ln;
+    IF Free.size > 0 THEN
+        C.String(  "        "); C.Int(Free.size); C.String(" bytes free (0");
+            C.Hex(Free.address, 4); C.String("H..0"); C.Hex(Free.address + Free.size - 1, 4); C.StringLn("H)")
+    END;
+    C.Ln;
     C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)");
     C.StringLn("--------------------------------------------")
 

@@ -15,17 +15,21 @@ CONST
     HP = 14;
     BP = 15;
 
-    ram_adr = 200H;
-    iv_adr  = 0FFC0H;
 
-    sp_adr         = iv_adr - 2;
-    empty_proc_adr = sp_adr - 2;
-    bits_adr       = empty_proc_adr - 272;
-    bits_offs_adr  = bits_adr - 32;
-    types_adr      = bits_offs_adr - 2;
+    iv  = 0FFC0H;
 
-    trap_adr = ram_adr;
-    int_adr  = trap_adr + 2;
+    sp         = iv - 2;
+    empty_proc = sp - 2;
+    free_size  = empty_proc - 2;
+    free_adr   = free_size - 2;
+    bits       = free_adr - 272;
+    bits_offs  = bits - 32;
+    types      = bits_offs - 2;
+
+    ram = 200H;
+
+    trap = ram;
+    int  = trap + 2;
 
 
 TYPE
@@ -153,11 +157,11 @@ PROCEDURE [code] _set* (b, a: INTEGER): SET
                            (*  L3:                      *)
     8504H,                 (*  SUB  R5, R4              *)
     5404H,                 (*  ADD  R4, R4              *)
-    5034H, bits_offs_adr,  (*  ADD  bits_offs_adr, R4   *)
+    5034H, bits_offs,      (*  ADD  bits_offs, R4       *)
     4424H,                 (*  MOV  @R4, R4             *)
     5505H,                 (*  ADD  R5, R5              *)
     5405H,                 (*  ADD  R4, R5              *)
-    5035H, bits_adr,       (*  ADD  bits_adr, R5        *)
+    5035H, bits,           (*  ADD  bits, R5            *)
     4524H,                 (*  MOV  @R5, R4             *)
     4130H,                 (*  MOV  @SP+, PC            *)
                            (*  L1:                      *)
@@ -169,7 +173,7 @@ PROCEDURE [code] _set1* (a: INTEGER): SET
     0B034H, 0FFF0H,        (*  BIT  #0FFF0H, R4         *)
     2000H + 5,             (*  JNZ  L1                  *)
     5404H,                 (*  ADD  R4, R4              *)
-    5034H, bits_adr,       (*  ADD  bits_adr, R4        *)
+    5034H, bits,           (*  ADD  bits, R4            *)
     4424H,                 (*  MOV  @R4, R4             *)
     4130H,                 (*  MOV  @SP+, PC            *)
                            (*  L1:                      *)
@@ -179,7 +183,7 @@ PROCEDURE [code] _set1* (a: INTEGER): SET
 PROCEDURE [code] _in2* (i, s: INTEGER): BOOLEAN
     4114H, 2,               (*  MOV  2(SP), R4; R4 <- i  *)
     5404H,                  (*  ADD  R4, R4              *)
-    5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
+    5034H, bits,            (*  ADD  bits, R4            *)
     4424H,                  (*  MOV  @R4, R4             *)
     0F114H, 4,              (*  AND  4(SP), R4           *)
     2400H + 1,              (*  JZ   L1                  *)
@@ -192,7 +196,7 @@ PROCEDURE [code] _in* (s, i: INTEGER): BOOLEAN
     0B034H, 0FFF0H,         (*  BIT  #0FFF0H, R4         *)
     2000H + 9,              (*  JNZ  L2                  *)
     5404H,                  (*  ADD  R4, R4              *)
-    5034H, bits_adr,        (*  ADD  bits_adr, R4        *)
+    5034H, bits,            (*  ADD  bits, R4            *)
     4424H,                  (*  MOV  @R4, R4             *)
     0F114H, 2,              (*  AND  2(SP), R4           *)
     2400H + 3,              (*  JZ   L1                  *)
@@ -208,7 +212,7 @@ PROCEDURE [code] _incl* (VAR s: SET; i: INTEGER)
     0B034H, 0FFF0H,    (*  BIT  #0FFF0H, R4         *)
     2000H + 8,         (*  JNZ  L1                  *)
     5404H,             (*  ADD  R4, R4              *)
-    5034H, bits_adr,   (*  ADD  bits_adr, R4        *)
+    5034H, bits,       (*  ADD  bits, R4            *)
     4424H,             (*  MOV  @R4, R4             *)
     4115H, 2,          (*  MOV  2(SP), R5; R5 <- @s *)
     0D485H, 0;         (*  BIS  R4, 0(R5)           *)
@@ -220,7 +224,7 @@ PROCEDURE [code] _excl* (VAR s: SET; i: INTEGER)
     0B034H, 0FFF0H,    (*  BIT  #0FFF0H, R4         *)
     2000H + 8,         (*  JNZ  L1                  *)
     5404H,             (*  ADD  R4, R4              *)
-    5034H, bits_adr,   (*  ADD  bits_adr, R4        *)
+    5034H, bits,       (*  ADD  bits, R4            *)
     4424H,             (*  MOV  @R4, R4             *)
     4115H, 2,          (*  MOV  2(SP), R5; R5 <- @s *)
     0C485H, 0;         (*  BIC  R4, 0(R5)           *)
@@ -288,7 +292,7 @@ PROCEDURE [code] _divmod* (b, a: INTEGER): INTEGER (* res -> R4, mod -> R5 *)
 PROCEDURE [code] _guardrec* (t0, t1: INTEGER): INTEGER
     4114H, 2,              (*  MOV  2(SP), R4; R4 <- t0  *)
     4115H, 4,              (*  MOV  4(SP), R5; R5 <- t1  *)
-    4036H, types_adr,      (*  MOV  #types_adr, R6       *)
+    4036H, types,          (*  MOV  #types, R6           *)
                            (*  L3:                       *)
     9305H,                 (*  CMP  #0, R5               *)
     2400H + 8,             (*  JZ   L1                   *)
@@ -315,11 +319,11 @@ PROCEDURE [code] _error* (module, err, line: INTEGER)
     4114H, 2,             (*  MOV   2(SP), R4; R4 <- module  *)
     4115H, 4,             (*  MOV   4(SP), R5; R5 <- err     *)
     4116H, 6,             (*  MOV   6(SP), R6; R6 <- line    *)
-    4211H, sp_adr,        (*  MOV   sp_adr(SR), SP           *)
+    4211H, sp,            (*  MOV   sp(SR), SP               *)
     1206H,                (*  PUSH  R6                       *)
     1204H,                (*  PUSH  R4                       *)
     1205H,                (*  PUSH  R5                       *)
-    4214H, trap_adr,      (*  MOV   trap_adr(SR), R4         *)
+    4214H, trap,          (*  MOV   trap(SR), R4             *)
     9304H,                (*  TST   R4                       *)
     2400H + 1,            (*  JZ    L                        *)
     1284H,                (*  CALL  R4                       *)

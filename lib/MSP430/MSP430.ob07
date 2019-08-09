@@ -12,34 +12,78 @@ IMPORT SYSTEM;
 
 CONST
 
-    ram_adr = 200H;
+    iv  = 0FFC0H;
 
-    trap_adr = ram_adr;
-    int_adr  = trap_adr + 2;
+    sp         = iv - 2;
+    empty_proc = sp - 2;
+    free_size  = empty_proc - 2;
+    free_adr   = free_size - 2;
+    bits       = free_adr - 272;
+    bits_offs  = bits - 32;
+    types      = bits_offs - 2;
+
+    ram = 200H;
+
+    trap = ram;
+    int  = trap + 2;
 
 
 TYPE
 
+    TInterrupt* = RECORD priority*, sr*, pc*: INTEGER END;
+
     TTrapProc* = PROCEDURE (errno, ModName, line: INTEGER);
 
-    TIntProc*  = PROCEDURE (priority, ptr: INTEGER);
+    TIntProc*  = PROCEDURE (priority: INTEGER; interrupt: TInterrupt);
 
 
-PROCEDURE SetTrap* (trap: TTrapProc);
+PROCEDURE SetTrap* (TrapProc: TTrapProc);
 BEGIN
-    SYSTEM.PUT(trap_adr, trap)
+    SYSTEM.PUT(trap, TrapProc)
 END SetTrap;
 
 
-PROCEDURE SetInt* (int: TIntProc);
+PROCEDURE SetInt* (IntProc: TIntProc);
 BEGIN
-    SYSTEM.PUT(int_adr, int)
+    SYSTEM.PUT(int, IntProc)
 END SetInt;
+
+
+PROCEDURE SetIPC* (interrupt: TInterrupt; NewPC: INTEGER);
+BEGIN
+    SYSTEM.PUT(SYSTEM.ADR(interrupt.pc), NewPC)
+END SetIPC;
+
+
+PROCEDURE SetISR* (interrupt: TInterrupt; NewSR: INTEGER);
+BEGIN
+    SYSTEM.PUT(SYSTEM.ADR(interrupt.sr), NewSR)
+END SetISR;
 
 
 PROCEDURE [code] Restart*
     4302H,          (* MOV #0, SR         *)
     4210H, 0FFFEH;  (* MOV 0FFFEH(SR), PC *)
+
+
+PROCEDURE GetFreeFlashAddress* (): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    SYSTEM.GET(free_adr, res)
+    RETURN res
+END GetFreeFlashAddress;
+
+
+PROCEDURE GetFreeFlashSize* (): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    SYSTEM.GET(free_size, res)
+    RETURN res
+END GetFreeFlashSize;
 
 
 END MSP430.

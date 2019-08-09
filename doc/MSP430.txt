@@ -426,18 +426,8 @@ MODULE MSP430
 
 TYPE
 
-    TTrapProc = PROCEDURE (errno, ModName, line: INTEGER);
-
-        Процедура-обработчик ошибок
-
-        errno   - номер ошибки
-        ModName - адрес имени модуля
-        line    - номер строки
-
-
-    TIntProc = PROCEDURE (priority, ptr: INTEGER);
-
-        Процедура-обработчик прерываний
+    TInterrupt = RECORD priority, sr, pc: INTEGER END
+        структура данных прерывания
 
         priority - приоритет прерывания:
 
@@ -448,34 +438,35 @@ TYPE
         ...
         0FFC0H      0
 
-
-        ptr - указатель на структуру:
-
-        смещение    значение
-           0:     priority
-          +2:     сохраненное значение регистра SR
-          +4:     сохраненное значение регистра PC
-
-        Если изменить значения &(ptr+2) и &(ptr+4), то изменения вступят
-        в силу после возврата из прерывания.
-
-        Например:
-
-        SYSTEM.PUT(ptr + 2, 0);
-        SYSTEM.MOVE(0FFFEH, ptr + 4, 2);
-
-        После возврата из прерывания, произойдет перезапуск программы,
-        т. к. PC получит значение вектора сброса, а SR очистится.
+        sr - сохраненное значение регистра SR
+        pc - сохраненное значение регистра PC
 
 
-    PROCEDURE SetTrap (trap: TTrapProc)
+    TTrapProc = PROCEDURE (errno, ModName, line: INTEGER)
+        Процедура-обработчик ошибок.
+
+        errno   - номер ошибки
+        ModName - адрес имени модуля
+        line    - номер строки
+
+
+    TIntProc = PROCEDURE (priority: INTEGER; interrupt: TInterrupt)
+        Процедура-обработчик прерываний.
+
+        priority  - приоритет прерывания
+        interrupt - структура данных прерывания
+
+
+    PROCEDURE SetTrap (TrapProc: TTrapProc)
         Назначить обработчик ошибок.
 
-    PROCEDURE SetInt (int: TIntProc)
+
+    PROCEDURE SetInt (IntProc: TIntProc)
         Назначить обработчик прерываний.
 
         Нельзя вызывать эту процедуру с параметром NIL, т. к. для экономии
         тактов, значение адреса обработчика прерываний не проверяется на NIL.
+
 
     PROCEDURE Restart
         Перезапустить программу.
@@ -483,5 +474,24 @@ TYPE
         регистр SR очищается, назначается пустой обработчик прерываний,
         сбрасывается обработчик ошибок и выключается сторожевой таймер.
         Всё прочее состояние ОЗУ и регистров устройств сохраняется.
+
+
+    PROCEDURE SetIPC (interrupt: TInterrupt; NewPC: INTEGER)
+        interrupt.pc := NewPC
+        Изменения вступят в силу после возврата из прерывания.
+
+
+    PROCEDURE SetISR (interrupt: TInterrupt; NewSR: INTEGER)
+        interrupt.sr := NewSR
+        Изменения вступят в силу после возврата из прерывания.
+
+
+    PROCEDURE GetFreeFlashAddress (): INTEGER
+        Получить адрес начала свободной области Flash/ROM.
+
+
+    PROCEDURE GetFreeFlashSize (): INTEGER
+        Получить размер свободной области Flash/ROM.
+
 
 ==============================================================================
