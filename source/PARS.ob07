@@ -1147,7 +1147,7 @@ BEGIN
     CODE.AddCmd(CODE.opPARAM, 1);
     CODE.AddCmd0(CODE.opERR);
 
-    FOR errno := 1 TO 11 DO
+    FOR errno := 1 TO LEN(CODE.codes.errlabels) - 1 DO
         CODE.SetErrLabel(errno);
         CODE.AddCmd(CODE.opERRC, errno);
         CODE.AddJmpCmd(CODE.opJMP, errlabel)

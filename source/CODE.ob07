@@ -209,15 +209,13 @@ TYPE
         lcount*:    INTEGER;
         bss*:       INTEGER;
         rtl*:       ARRAY 38 OF INTEGER;
+        errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
 
         fregs:      INTEGER;
-        wstr:       ARRAY 4*1024 OF WCHAR;
-
-        errlabels*: ARRAY 12 OF INTEGER
-
+        wstr:       ARRAY 4*1024 OF WCHAR
     END;
 
 

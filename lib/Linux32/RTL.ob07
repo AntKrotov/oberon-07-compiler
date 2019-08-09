@@ -461,7 +461,7 @@ VAR
 BEGIN
 
     s := "";
-    CASE err MOD 16 OF
+    CASE err OF
     | 1: append(s, "assertion failure")
     | 2: append(s, "NIL dereference")
     | 3: append(s, "division by zero")
