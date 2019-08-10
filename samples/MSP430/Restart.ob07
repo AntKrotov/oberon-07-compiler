@@ -98,8 +98,8 @@ BEGIN
     (* выключить светодиоды *)
     clr_bits(P1OUT, REDLED + GREENLED);
 
-    MSP430.SetInt(int);  (* назначить обработчик прерываний *)
-    SYSTEM.EINT;         (* разрешить прерывания *)
+    MSP430.SetIntProc(int);  (* назначить обработчик прерываний *)
+    MSP430.EInt;             (* разрешить прерывания *)
 
     IF ODD(count) THEN
         set_bits(P1OUT, GREENLED) (* нечетное - вкл. зеленый *)

@@ -118,7 +118,7 @@ BEGIN
     (* выключить светодиоды *)
     clr_bits(P1OUT, REDLED + GREENLED);
 
-    MSP430.SetTrap(trap); (* назначить обработчик ошибок *)
+    MSP430.SetTrapProc(trap); (* назначить обработчик ошибок *)
 
     Write(seg_adr, 0, FERASE); (* стереть сегмент *)
 

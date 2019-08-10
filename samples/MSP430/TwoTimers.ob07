@@ -118,14 +118,13 @@ END int;
 PROCEDURE main;
 BEGIN
     (* инициализация регистра P1DIR *)
-    SYSTEM.PUT8(P1DIR, REDLED + GREENLED);
+    set_bits(P1DIR, REDLED + GREENLED);
 
     (* начальное состояние светодиодов - включены *)
-    set_bits(P1OUT, GREENLED);
-    set_bits(P1OUT, REDLED);
+    set_bits(P1OUT, REDLED + GREENLED);
 
-    MSP430.SetInt(int);  (* назначить обработчик прерываний *)
-    SYSTEM.EINT;      (* разрешить прерывания *)
+    MSP430.SetIntProc(int);  (* назначить обработчик прерываний *)
+    MSP430.EInt;             (* разрешить прерывания *)
 
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);

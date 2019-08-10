@@ -132,19 +132,6 @@ UTF-8 с BOM-сигнатурой.
                 выражения) - машинные слова, например:
                 SYSTEM.CODE(0D032H, 0010H) (* BIS #16, SR; CPUOFF *)
 
-        PROCEDURE NOP
-                Вставка машинной команды
-                    NOP; MOV R3, R3
-
-        PROCEDURE EINT
-                Вставка машинной команды
-                    BIS #8, SR; разрешить прерывания
-
-        PROCEDURE DINT
-                Вставка машинных команд
-                    BIC #8, SR; запретить прерывания
-                    NOP       ; MOV R3, R3
-
 
   Функции псевдомодуля SYSTEM нельзя использовать в константных выражениях.
 
@@ -426,7 +413,7 @@ MODULE MSP430
 
 TYPE
 
-    TInterrupt = RECORD priority, sr, pc: INTEGER END
+    TInterrupt = RECORD priority: INTEGER; sr: SET; pc: INTEGER END
         структура данных прерывания
 
         priority - приоритет прерывания:
@@ -457,11 +444,11 @@ TYPE
         interrupt - структура данных прерывания
 
 
-    PROCEDURE SetTrap (TrapProc: TTrapProc)
+    PROCEDURE SetTrapProc (TrapProc: TTrapProc)
         Назначить обработчик ошибок.
 
 
-    PROCEDURE SetInt (IntProc: TIntProc)
+    PROCEDURE SetIntProc (IntProc: TIntProc)
         Назначить обработчик прерываний.
 
         Нельзя вызывать эту процедуру с параметром NIL, т. к. для экономии
@@ -476,14 +463,34 @@ TYPE
         Всё прочее состояние ОЗУ и регистров устройств сохраняется.
 
 
-    PROCEDURE SetIPC (interrupt: TInterrupt; NewPC: INTEGER)
+    PROCEDURE SetIntPC (interrupt: TInterrupt; NewPC: INTEGER)
         interrupt.pc := NewPC
         Изменения вступят в силу после возврата из прерывания.
 
 
-    PROCEDURE SetISR (interrupt: TInterrupt; NewSR: INTEGER)
+    PROCEDURE SetIntSR (interrupt: TInterrupt; NewSR: SET)
         interrupt.sr := NewSR
         Изменения вступят в силу после возврата из прерывания.
+
+
+    PROCEDURE DInt
+        Запретить прерывания.
+
+
+    PROCEDURE EInt
+        Разрешить прерывания.
+
+
+    PROCEDURE CpuOff
+        Выключить CPU.
+
+
+    PROCEDURE SetSR (bits: SET)
+        Установить биты bits регистра SR.
+
+
+    PROCEDURE ClrSR (bits: SET)
+        Сбросить биты bits регистра SR.
 
 
     PROCEDURE GetFreeFlashAddress (): INTEGER
