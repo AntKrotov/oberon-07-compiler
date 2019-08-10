@@ -236,50 +236,6 @@ BEGIN
 END _dispose;
 
 
-PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
-VAR
-    A, B: CHAR;
-    res:  INTEGER;
-
-BEGIN
-    res := 0;
-    WHILE n > 0 DO
-        SYSTEM.GET(a, A); INC(a);
-        SYSTEM.GET(b, B); INC(b);
-        DEC(n);
-        IF A # B THEN
-            res := ORD(A) - ORD(B);
-            n := 0
-        ELSIF A = 0X THEN
-            n := 0
-        END
-    END
-    RETURN res
-END strncmp;
-
-
-PROCEDURE strncmpw (a, b, n: INTEGER): INTEGER;
-VAR
-    A, B: WCHAR;
-    res:  INTEGER;
-
-BEGIN
-    res := 0;
-    WHILE n > 0 DO
-        SYSTEM.GET(a, A); INC(a, 2);
-        SYSTEM.GET(b, B); INC(b, 2);
-        DEC(n);
-        IF A # B THEN
-            res := ORD(A) - ORD(B);
-            n := 0
-        ELSIF A = 0X THEN
-            n := 0
-        END
-    END
-    RETURN res
-END strncmpw;
-
-
 PROCEDURE [stdcall64] _length* (len, str: INTEGER): INTEGER;
 VAR
     c:   CHAR;
@@ -322,16 +278,61 @@ BEGIN
 END _lengthw;
 
 
+PROCEDURE strncmp (a, b, n: INTEGER; VAR end: BOOLEAN): INTEGER;
+VAR
+    A, B: CHAR;
+
+BEGIN
+    end := TRUE;
+    WHILE n > 0 DO
+        SYSTEM.GET(a, A); INC(a);
+        SYSTEM.GET(b, B); INC(b);
+        DEC(n);
+        IF (A # B) OR (A = 0X) THEN
+            end := FALSE;
+            n := 0
+        END
+    END
+    RETURN ORD(A) - ORD(B)
+END strncmp;
+
+
+PROCEDURE strncmpw (a, b, n: INTEGER; VAR end: BOOLEAN): INTEGER;
+VAR
+    A, B: WCHAR;
+
+BEGIN
+    end := TRUE;
+    WHILE n > 0 DO
+        SYSTEM.GET(a, A); INC(a, 2);
+        SYSTEM.GET(b, B); INC(b, 2);
+        DEC(n);
+        IF (A # B) OR (A = 0X) THEN
+            end := FALSE;
+            n := 0
+        END
+    END
+    RETURN ORD(A) - ORD(B)
+END strncmpw;
+
+
 PROCEDURE [stdcall64] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
     res:  INTEGER;
     bRes: BOOLEAN;
+    c:    CHAR;
 
 BEGIN
 
-    res := strncmp(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _length(len1, str1) - _length(len2, str2)
+    res := strncmp(str1, str2, MIN(len1, len2), bRes);
+    IF (res = 0) & bRes THEN
+        IF len1 > len2 THEN
+            SYSTEM.GET(str1 + len2, c);
+            res := ORD(c)
+        ELSIF len1 < len2 THEN
+            SYSTEM.GET(str2 + len1, c);
+            res := -ORD(c)
+        END
     END;
 
     CASE op OF
@@ -351,12 +352,19 @@ PROCEDURE [stdcall64] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
     res:  INTEGER;
     bRes: BOOLEAN;
+    c:    WCHAR;
 
 BEGIN
 
-    res := strncmpw(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _lengthw(len1, str1) - _lengthw(len2, str2)
+    res := strncmpw(str1, str2, MIN(len1, len2), bRes);
+    IF (res = 0) & bRes THEN
+        IF len1 > len2 THEN
+            SYSTEM.GET(str1 + len2 * 2, c);
+            res := ORD(c)
+        ELSIF len1 < len2 THEN
+            SYSTEM.GET(str2 + len1 * 2, c);
+            res := -ORD(c)
+        END
     END;
 
     CASE op OF
