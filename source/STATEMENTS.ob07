@@ -710,10 +710,10 @@ BEGIN
     ASSERT(e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC});
     proc := e.stproc;
 
-    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN
+(*    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN *)
         PARS.checklex(parser, SCAN.lxLROUND);
-        PARS.Next(parser)
-    END;
+        PARS.Next(parser);
+(*    END; *)
 
     getpos(parser, pos);
 
@@ -992,7 +992,7 @@ BEGIN
                     PARS.checklex(parser, SCAN.lxRROUND)
                 END
             UNTIL (parser.sym = SCAN.lxRROUND) & ~comma
-
+          (*
         |PROG.sysNOP, PROG.sysDINT, PROG.sysEINT:
             IF parser.sym = SCAN.lxLROUND THEN
                 PARS.Next(parser);
@@ -1005,7 +1005,7 @@ BEGIN
             |PROG.sysDINT: CODE.AddCmd(CODE.opCODE, 0C232H); CODE.AddCmd(CODE.opCODE, 4303H)
             |PROG.sysEINT: CODE.AddCmd(CODE.opCODE, 0D232H)
             END
-
+            *)
         END;
 
         e.obj := eEXPR;
@@ -1219,10 +1219,10 @@ BEGIN
 
     END;
 
-    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN
+(*    IF (proc # PROG.sysNOP) & (proc # PROG.sysEINT) & (proc # PROG.sysDINT) THEN *)
         PARS.checklex(parser, SCAN.lxRROUND);
-        PARS.Next(parser)
-    END;
+        PARS.Next(parser);
+(*    END; *)
 
     IF e.obj # eCONST THEN
         e.obj := eEXPR
