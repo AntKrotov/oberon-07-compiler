@@ -1152,7 +1152,7 @@ BEGIN
 
         |CODE.opEQS .. CODE.opGES:
             PushAll(4);
-            PushImm(opcode - CODE.opEQS);
+            PushImm((opcode - CODE.opEQS) * 12);
             CallRTL(RTL._strcmp, 5);
             GetRegA
 

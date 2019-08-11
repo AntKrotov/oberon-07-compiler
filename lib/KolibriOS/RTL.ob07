@@ -295,41 +295,49 @@ BEGIN
 END _lengthw;
 
 
-PROCEDURE strncmp (a, b, n: INTEGER; VAR end: BOOLEAN): INTEGER;
+PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
 VAR
     A, B: CHAR;
+    res: INTEGER;
 
 BEGIN
-    end := TRUE;
+    res := minint;
     WHILE n > 0 DO
         SYSTEM.GET(a, A); INC(a);
         SYSTEM.GET(b, B); INC(b);
         DEC(n);
-        IF (A # B) OR (A = 0X) THEN
-            end := FALSE;
+        IF A # B THEN
+            res := ORD(A) - ORD(B);
+            n := 0
+        ELSIF A = 0X THEN
+            res := 0;
             n := 0
         END
     END
-    RETURN ORD(A) - ORD(B)
+    RETURN res
 END strncmp;
 
 
-PROCEDURE strncmpw (a, b, n: INTEGER; VAR end: BOOLEAN): INTEGER;
+PROCEDURE strncmpw (a, b, n: INTEGER): INTEGER;
 VAR
     A, B: WCHAR;
+    res: INTEGER;
 
 BEGIN
-    end := TRUE;
+    res := minint;
     WHILE n > 0 DO
         SYSTEM.GET(a, A); INC(a, 2);
         SYSTEM.GET(b, B); INC(b, 2);
         DEC(n);
-        IF (A # B) OR (A = 0X) THEN
-            end := FALSE;
+        IF A # B THEN
+            res := ORD(A) - ORD(B);
+            n := 0
+        ELSIF A = 0X THEN
+            res := 0;
             n := 0
         END
     END
-    RETURN ORD(A) - ORD(B)
+    RETURN res
 END strncmpw;
 
 
@@ -341,14 +349,16 @@ VAR
 
 BEGIN
 
-    res := strncmp(str1, str2, MIN(len1, len2), bRes);
-    IF (res = 0) & bRes THEN
+    res := strncmp(str1, str2, MIN(len1, len2));
+    IF res = minint THEN
         IF len1 > len2 THEN
             SYSTEM.GET(str1 + len2, c);
             res := ORD(c)
         ELSIF len1 < len2 THEN
             SYSTEM.GET(str2 + len1, c);
             res := -ORD(c)
+        ELSE
+            res := 0
         END
     END;
 
@@ -373,14 +383,16 @@ VAR
 
 BEGIN
 
-    res := strncmpw(str1, str2, MIN(len1, len2), bRes);
-    IF (res = 0) & bRes THEN
+    res := strncmpw(str1, str2, MIN(len1, len2));
+    IF res = minint THEN
         IF len1 > len2 THEN
             SYSTEM.GET(str1 + len2 * 2, c);
             res := ORD(c)
         ELSIF len1 < len2 THEN
             SYSTEM.GET(str2 + len1 * 2, c);
             res := -ORD(c)
+        ELSE
+            res := 0
         END
     END;
 

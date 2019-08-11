@@ -584,12 +584,8 @@ BEGIN
         Word1(4304H);               (*  MOV    #0, R4                  *)
                                     (*  L6:                            *)
 
-        Word2(4115H, 2);            (*  MOV    2(SP), R5; R5 <- op     *)
-
-        Word1(5505H);               (*  ADD  R5, R5  *)
-        Word1(5505H);               (*  ADD  R5, R5  *)
-        Word1(5505H);               (*  ADD  R5, R5  *)
-        Word1(5005H);               (*  ADD  PC, R5  *)
+        Word2(4115H, 2);            (*  MOV  2(SP), R5; R5 <- op       *)
+        Word1(5500H);               (*  ADD  R5, PC  *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
         Word1(4314H);               (*  MOV  #1, R4  *)
@@ -597,8 +593,6 @@ BEGIN
         Word1(4304H);               (*  MOV  #0, R4  *)
                                     (*  L            *)
         Word1(4130H);               (*  RET          *)
-        Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
         Word1(4303H);               (*  NOP          *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
@@ -608,8 +602,6 @@ BEGIN
                                     (*  L            *)
         Word1(4130H);               (*  RET          *)
         Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
         Word1(4314H);               (*  MOV  #1, R4  *)
@@ -618,8 +610,6 @@ BEGIN
                                     (*  L            *)
         Word1(4130H);               (*  RET          *)
         Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
         Word1(4314H);               (*  MOV  #1, R4  *)
@@ -628,8 +618,6 @@ BEGIN
         Word1(4304H);               (*  MOV  #0, R4  *)
                                     (*  L            *)
         Word1(4130H);               (*  RET          *)
-        Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
         Word1(4304H);               (*  MOV  #0, R4  *)
@@ -638,8 +626,6 @@ BEGIN
         Word1(4314H);               (*  MOV  #1, R4  *)
                                     (*  L            *)
         Word1(4130H);               (*  RET          *)
-        Word1(4303H);               (*  NOP          *)
-        Word1(4303H);               (*  NOP          *)
 
         Word1(9304H);               (*  CMP  #0, R4  *)
         Word1(4314H);               (*  MOV  #1, R4  *)
