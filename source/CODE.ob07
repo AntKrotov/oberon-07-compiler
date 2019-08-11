@@ -107,11 +107,11 @@ CONST
     _move      *=   0;
     _move2     *=   1;
     _strcmpw   *=   2;
-
+    _exit      *=   3;
     _set       *=   4;
     _set2      *=   5;
     _lengthw   *=   6;
-
+    _strcpy    *=   7;
     _div       *=   8;
     _mod       *=   9;
     _div2      *=  10;
@@ -129,19 +129,6 @@ CONST
     _length    *=  22;
     _init      *=  23;
     _dllentry  *=  24;
-    _divmod    *=  25;
-    _exit      *=  26;
-    _strcpy    *=  27;
-    _mul       *=  28;
-    _set1      *=  29;
-    _in        *=  30;
-    _in2       *=  31;
-    _incl      *=  32;
-    _excl      *=  33;
-    _lsl       *=  34;
-    _asr       *=  35;
-    _ror       *=  36;
-    _lsr       *=  37;
 
 
 TYPE
@@ -208,7 +195,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 38 OF INTEGER;
+        rtl*:       ARRAY 25 OF INTEGER;
         errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;

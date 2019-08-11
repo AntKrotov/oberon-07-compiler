@@ -7,7 +7,8 @@
 
 MODULE MSP430;
 
-IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER, MACHINE, C := CONSOLE, PROG;
+IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER,
+       MACHINE, C := CONSOLE, PROG, RTL := MSP430RTL;
 
 
 CONST
@@ -15,12 +16,9 @@ CONST
     minRAM* = 128;  maxRAM* = 2048;
     minROM* = 4096; maxROM* = 49152;
 
-    LenIV = 32;
-
-    RTLVarSize  = 4;
-    RTLDataSize = 312;
-    IntVectorSize* = LenIV * 2 + RTLDataSize;
     minStackSize = 64;
+
+    IntVectorSize* = RTL.IntVectorSize;
 
     PC = 0; SP = 1; SR = 2; CG = 3;
 
@@ -50,21 +48,6 @@ CONST
     jge = 2;  jl  = jge + 1;
     jle = 4;  jg  = jle + 1;
     jb  = 6;
-
-
-    ram_adr = 200H;
-    iv_adr  = 0FFC0H;
-
-    sp_adr         = iv_adr - 2;
-    empty_proc_adr = sp_adr - 2;
-    free_size_adr  = empty_proc_adr - 2;
-    free_adr_adr   = free_size_adr - 2;
-    bits_adr       = free_adr_adr - 272;
-    bits_offs_adr  = bits_adr - 32;
-    types_adr      = bits_offs_adr - 2;
-
-    trap_adr = ram_adr;
-    int_adr  = trap_adr + 2;
 
 
 TYPE
@@ -121,7 +104,7 @@ VAR
 
     Labels: CHL.INTLIST;
 
-    IV: ARRAY LenIV OF INTEGER;
+    IV: ARRAY RTL.LenIV OF INTEGER;
 
     IdxWords: RECORD src, dst: INTEGER END;
 
@@ -448,7 +431,8 @@ END Reloc;
 
 PROCEDURE CallRTL (proc, params: INTEGER);
 BEGIN
-    EmitCall(CODE.codes.rtl[proc]);
+    EmitCall(RTL.rtl[proc].label);
+    RTL.Used(proc);
     IF params > 0 THEN
         Op2(opADD, imm(params * 2), SP)
     END
@@ -642,7 +626,7 @@ BEGIN
             Reloc(RDATA)
 
         |CODE.opERR:
-            CallRTL(CODE._error, 2)
+            CallRTL(RTL._error, 2)
 
         |CODE.opERRC:
             PushImm(param2 MOD 65536)
@@ -1005,19 +989,19 @@ BEGIN
         |CODE.opISREC:
             PushAll(2);
             PushImm(param2);
-            CallRTL(CODE._guardrec, 3);
+            CallRTL(RTL._guardrec, 3);
             GetRegA
 
         |CODE.opIS:
             PushAll(1);
             PushImm(param2);
-            CallRTL(CODE._is, 2);
+            CallRTL(RTL._is, 2);
             GetRegA
 
         |CODE.opTYPEGR:
             PushAll(1);
             PushImm(param2);
-            CallRTL(CODE._guardrec, 2);
+            CallRTL(RTL._guardrec, 2);
             GetRegA
 
         |CODE.opTYPEGP:
@@ -1025,7 +1009,7 @@ BEGIN
             PushAll(0);
             Push(reg1);
             PushImm(param2);
-            CallRTL(CODE._guard, 2);
+            CallRTL(RTL._guard, 2);
             GetRegA
 
         |CODE.opTYPEGD:
@@ -1034,7 +1018,7 @@ BEGIN
             Op1(opPUSH, reg1, sIDX);
             EmitWord(-2);
             PushImm(param2);
-            CallRTL(CODE._guardrec, 2);
+            CallRTL(RTL._guardrec, 2);
             GetRegA
 
         |CODE.opMULS:
@@ -1084,7 +1068,7 @@ BEGIN
 
         |CODE.opLENGTH:
             PushAll(2);
-            CallRTL(CODE._length, 2);
+            CallRTL(RTL._length, 2);
             GetRegA
 
         |CODE.opMIN:
@@ -1169,7 +1153,7 @@ BEGIN
         |CODE.opEQS .. CODE.opGES:
             PushAll(4);
             PushImm(opcode - CODE.opEQS);
-            CallRTL(CODE._strcmp, 5);
+            CallRTL(RTL._strcmp, 5);
             GetRegA
 
         |CODE.opLEN:
@@ -1194,10 +1178,10 @@ BEGIN
         |CODE.opLSL, CODE.opASR, CODE.opROR, CODE.opLSR:
             PushAll(2);
             CASE opcode OF
-            |CODE.opLSL: CallRTL(CODE._lsl, 2)
-            |CODE.opASR: CallRTL(CODE._asr, 2)
-            |CODE.opROR: CallRTL(CODE._ror, 2)
-            |CODE.opLSR: CallRTL(CODE._lsr, 2)
+            |CODE.opLSL: CallRTL(RTL._lsl, 2)
+            |CODE.opASR: CallRTL(RTL._asr, 2)
+            |CODE.opROR: CallRTL(RTL._ror, 2)
+            |CODE.opLSR: CallRTL(RTL._lsr, 2)
             END;
             GetRegA
 
@@ -1208,10 +1192,10 @@ BEGIN
             Push(reg1);
             drop;
             CASE opcode OF
-            |CODE.opLSL1: CallRTL(CODE._lsl, 2)
-            |CODE.opASR1: CallRTL(CODE._asr, 2)
-            |CODE.opROR1: CallRTL(CODE._ror, 2)
-            |CODE.opLSR1: CallRTL(CODE._lsr, 2)
+            |CODE.opLSL1: CallRTL(RTL._lsl, 2)
+            |CODE.opASR1: CallRTL(RTL._asr, 2)
+            |CODE.opROR1: CallRTL(RTL._ror, 2)
+            |CODE.opLSR1: CallRTL(RTL._lsr, 2)
             END;
             GetRegA
 
@@ -1224,7 +1208,7 @@ BEGIN
 
         |CODE.opMUL:
             PushAll(2);
-            CallRTL(CODE._mul, 2);
+            CallRTL(RTL._mul, 2);
             GetRegA
 
         |CODE.opMULC:
@@ -1254,14 +1238,14 @@ BEGIN
                 ELSE
                     PushAll(1);
                     PushImm(a);
-                    CallRTL(CODE._mul, 2);
+                    CallRTL(RTL._mul, 2);
                     GetRegA
                 END
             END
 
         |CODE.opDIV:
             PushAll(2);
-            CallRTL(CODE._divmod, 2);
+            CallRTL(RTL._divmod, 2);
             GetRegA
 
         |CODE.opDIVR:
@@ -1275,7 +1259,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     PushImm(param2);
-                    CallRTL(CODE._divmod, 2);
+                    CallRTL(RTL._divmod, 2);
                     GetRegA
                 END
             END
@@ -1286,12 +1270,12 @@ BEGIN
             PushImm(param2);
             Push(reg1);
             drop;
-            CallRTL(CODE._divmod, 2);
+            CallRTL(RTL._divmod, 2);
             GetRegA
 
         |CODE.opMOD:
             PushAll(2);
-            CallRTL(CODE._divmod, 2);
+            CallRTL(RTL._divmod, 2);
             ASSERT(REG.GetReg(R, R5))
 
         |CODE.opMODR:
@@ -1307,7 +1291,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     PushImm(param2);
-                    CallRTL(CODE._divmod, 2);
+                    CallRTL(RTL._divmod, 2);
                     ASSERT(REG.GetReg(R, R5))
                 END
             END
@@ -1318,7 +1302,7 @@ BEGIN
             PushImm(param2);
             Push(reg1);
             drop;
-            CallRTL(CODE._divmod, 2);
+            CallRTL(RTL._divmod, 2);
             ASSERT(REG.GetReg(R, R5))
 
         |CODE.opCOPYS:
@@ -1334,21 +1318,21 @@ BEGIN
             drop;
             drop;
             drop;
-            CallRTL(CODE._move, 3)
+            CallRTL(RTL._move, 3)
 
         |CODE.opCOPY:
             PushAll(2);
             PushImm(param2);
-            CallRTL(CODE._move, 3)
+            CallRTL(RTL._move, 3)
 
         |CODE.opMOVE:
             PushAll(3);
-            CallRTL(CODE._move, 3)
+            CallRTL(RTL._move, 3)
 
         |CODE.opCOPYA:
             PushAll(4);
             PushImm(param2);
-            CallRTL(CODE._arrcpy, 5);
+            CallRTL(RTL._arrcpy, 5);
             GetRegA
 
         |CODE.opROT:
@@ -1356,7 +1340,7 @@ BEGIN
             MovRR(SP, ACC);
             Push(ACC);
             PushImm(param2);
-            CallRTL(CODE._rot, 2)
+            CallRTL(RTL._rot, 2)
 
         |CODE.opSAVES:
             UnOp(reg1);
@@ -1367,13 +1351,13 @@ BEGIN
             Push(reg1);
             drop;
             PushImm(param1);
-            CallRTL(CODE._move, 3)
+            CallRTL(RTL._move, 3)
 
         |CODE.opCASET:
             Push(R5);
             Push(R5);
             PushImm(param2);
-            CallRTL(CODE._guardrec, 2);
+            CallRTL(RTL._guardrec, 2);
             Pop(R5);
             Test(ACC);
             jcc(jne, param1)
@@ -1450,17 +1434,17 @@ BEGIN
             ASSERT(MACHINE.Align(n, 2));
             PushImm(n);
             PushImm(param1);
-            CallRTL(CODE._new, 3)
+            CallRTL(RTL._new, 3)
 
         |CODE.opRSET:
             PushAll(2);
-            CallRTL(CODE._set, 2);
+            CallRTL(RTL._set, 2);
             GetRegA
 
         |CODE.opRSETR:
             PushAll(1);
             PushImm(param2);
-            CallRTL(CODE._set, 2);
+            CallRTL(RTL._set, 2);
             GetRegA
 
         |CODE.opRSETL:
@@ -1469,12 +1453,12 @@ BEGIN
             PushImm(param2);
             Push(reg1);
             drop;
-            CallRTL(CODE._set, 2);
+            CallRTL(RTL._set, 2);
             GetRegA
 
         |CODE.opRSET1:
             PushAll(1);
-            CallRTL(CODE._set1, 1);
+            CallRTL(RTL._set1, 1);
             GetRegA
 
         |CODE.opINCLC:
@@ -1489,28 +1473,28 @@ BEGIN
 
         |CODE.opIN:
             PushAll(2);
-            CallRTL(CODE._in, 2);
+            CallRTL(RTL._in, 2);
             GetRegA
 
         |CODE.opINR:
             PushAll(1);
             PushImm(param2);
-            CallRTL(CODE._in, 2);
+            CallRTL(RTL._in, 2);
             GetRegA
 
         |CODE.opINL:
             PushAll(1);
             PushImm(param2);
-            CallRTL(CODE._in2, 2);
+            CallRTL(RTL._in2, 2);
             GetRegA
 
         |CODE.opINCL:
             PushAll(2);
-            CallRTL(CODE._incl, 2)
+            CallRTL(RTL._incl, 2)
 
         |CODE.opEXCL:
             PushAll(2);
-            CallRTL(CODE._excl, 2)
+            CallRTL(RTL._excl, 2)
 
         |CODE.opLADR_INCL, CODE.opLADR_EXCL:
             PushAll(1);
@@ -1518,9 +1502,9 @@ BEGIN
             Op2(opADD, imm(param2 * 2), ACC);
             Push(ACC);
             IF opcode = CODE.opLADR_INCL THEN
-                CallRTL(CODE._incl, 2)
+                CallRTL(RTL._incl, 2)
             ELSIF opcode = CODE.opLADR_EXCL THEN
-                CallRTL(CODE._excl, 2)
+                CallRTL(RTL._excl, 2)
             END
 
         |CODE.opLADR_INCLC:
@@ -1540,7 +1524,15 @@ END translate;
 
 
 PROCEDURE prolog;
+VAR
+    i: INTEGER;
+
 BEGIN
+    RTL.Init(EmitLabel, EmitWord, EmitCall);
+    FOR i := 0 TO LEN(RTL.rtl) - 1 DO
+        RTL.Set(i, NewLabel())
+    END;
+
     IV[LEN(IV) - 1] := NewLabel();
     EmitLabel(IV[LEN(IV) - 1]);
     Op2(opMOV, incr(PC), SP);
@@ -1548,8 +1540,8 @@ BEGIN
     Op2(opMOV, incr(PC), HP);
     EmitWord(0);
     Op2(opMOV, imm(5A80H), dst_x(0120H, SR)); (* stop WDT *)
-    Op2(opMOV, imm(empty_proc_adr), dst_x(int_adr, SR));
-    Op2(opMOV, imm(0), dst_x(trap_adr, SR))
+    Op2(opMOV, imm(RTL.empty_proc), dst_x(RTL.int, SR));
+    Op2(opMOV, imm(0), dst_x(RTL.trap, SR))
 END prolog;
 
 
@@ -1583,7 +1575,7 @@ BEGIN
     Push(IR);
     Op1(opPUSH, IR, sINDIR);
     Op1(opCALL, SR, sIDX);
-    EmitWord(int_adr);
+    EmitWord(RTL.int);
     Op2(opADD, imm(4), SP);
 
     FOR i := 15 TO 0 BY -1 DO
@@ -1593,7 +1585,9 @@ BEGIN
     END;
 
     Op2(opADD, imm(2), SP);
-    Op1(opRETI, 0, 0)
+    Op1(opRETI, 0, 0);
+
+    RTL.Gen
 END epilog;
 
 
@@ -1667,7 +1661,7 @@ BEGIN
     ram := MIN(MAX(ram, minRAM), maxRAM);
     rom := MIN(MAX(rom, minROM), maxROM);
 
-    IF code.bss > ram - minStackSize - RTLVarSize THEN
+    IF code.bss > ram - minStackSize - RTL.VarSize THEN
         ERRORS.Error(204)
     END;
 
@@ -1700,10 +1694,10 @@ BEGIN
         ERRORS.Error(203)
     END;
 
-    Bss.address := ram_adr + RTLVarSize;
+    Bss.address := RTL.ram + RTL.VarSize;
     Bss.size := code.bss + ORD(ODD(code.bss));
     heap := Bss.address + Bss.size;
-    stack := ram_adr + ram;
+    stack := RTL.ram + ram;
     ASSERT(stack - heap >= minStackSize);
     adr := Code.address + 2;
     PutWord(stack, adr);
@@ -1774,7 +1768,7 @@ BEGIN
     FILES.close(file);
 
     INC(TextSize, IntVectorSize + TypesSize);
-    INC(Bss.size, minStackSize + RTLVarSize);
+    INC(Bss.size, minStackSize + RTL.VarSize);
 
     C.StringLn("--------------------------------------------");
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");

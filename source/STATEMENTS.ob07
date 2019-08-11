@@ -3271,25 +3271,24 @@ BEGIN
     rtl := PARS.program.rtl;
     ASSERT(rtl # NIL);
 
-    getproc(rtl,  "_move",      CODE._move);
-    getproc(rtl,  "_set",       CODE._set);
-    getproc(rtl,  "_arrcpy",    CODE._arrcpy);
-    getproc(rtl,  "_rot",       CODE._rot);
-    getproc(rtl,  "_strcmp",    CODE._strcmp);
-    getproc(rtl,  "_error",     CODE._error);
-    getproc(rtl,  "_is",        CODE._is);
-    getproc(rtl,  "_guard",     CODE._guard);
-    getproc(rtl,  "_guardrec",  CODE._guardrec);
-    getproc(rtl,  "_length",    CODE._length);
-    getproc(rtl,  "_new",       CODE._new);
-
     IF CPU IN {cpuX86, cpuAMD64} THEN
+        getproc(rtl,  "_strcmp",    CODE._strcmp);
+        getproc(rtl,  "_length",    CODE._length);
+        getproc(rtl,  "_arrcpy",    CODE._arrcpy);
+        getproc(rtl,  "_move",      CODE._move);
+        getproc(rtl,  "_is",        CODE._is);
+        getproc(rtl,  "_guard",     CODE._guard);
+        getproc(rtl,  "_guardrec",  CODE._guardrec);
+        getproc(rtl,  "_error",     CODE._error);
+        getproc(rtl,  "_new",       CODE._new);
+        getproc(rtl,  "_rot",       CODE._rot);
         getproc(rtl,  "_strcpy",    CODE._strcpy);
         getproc(rtl,  "_move2",     CODE._move2);
         getproc(rtl,  "_div2",      CODE._div2);
         getproc(rtl,  "_mod2",      CODE._mod2);
         getproc(rtl,  "_div",       CODE._div);
         getproc(rtl,  "_mod",       CODE._mod);
+        getproc(rtl,  "_set",       CODE._set);
         getproc(rtl,  "_set2",      CODE._set2);
         getproc(rtl,  "_isrec",     CODE._isrec);
         getproc(rtl,  "_lengthw",   CODE._lengthw);
@@ -3298,20 +3297,6 @@ BEGIN
         getproc(rtl,  "_dispose",   CODE._dispose);
         getproc(rtl,  "_exit",      CODE._exit);
         getproc(rtl,  "_init",      CODE._init)
-    END;
-
-    IF CPU = cpuMSP430 THEN
-        getproc(rtl,  "_mul",       CODE._mul);
-        getproc(rtl,  "_divmod",    CODE._divmod);
-        getproc(rtl,  "_lsl",       CODE._lsl);
-        getproc(rtl,  "_asr",       CODE._asr);
-        getproc(rtl,  "_ror",       CODE._ror);
-        getproc(rtl,  "_lsr",       CODE._lsr);
-        getproc(rtl,  "_in",        CODE._in);
-        getproc(rtl,  "_in2",       CODE._in2);
-        getproc(rtl,  "_set1",      CODE._set1);
-        getproc(rtl,  "_incl",      CODE._incl);
-        getproc(rtl,  "_excl",      CODE._excl)
     END
 
 END setrtl;
@@ -3348,18 +3333,20 @@ BEGIN
     |cpuMSP430:  CODE.init(0, CODE.little_endian)
     END;
 
-    parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
-    IF parser.open(parser, mConst.RTL_NAME) THEN
-        parser.parse(parser);
-        PARS.destroy(parser)
-    ELSE
-        PARS.destroy(parser);
-        parser := PARS.create(lib_path, lib_path, StatSeq, expression, designator, chkreturn);
+    IF CPU # cpuMSP430 THEN
+        parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
         IF parser.open(parser, mConst.RTL_NAME) THEN
             parser.parse(parser);
             PARS.destroy(parser)
         ELSE
-            ERRORS.FileNotFound(lib_path, mConst.RTL_NAME, mConst.FILE_EXT)
+            PARS.destroy(parser);
+            parser := PARS.create(lib_path, lib_path, StatSeq, expression, designator, chkreturn);
+            IF parser.open(parser, mConst.RTL_NAME) THEN
+                parser.parse(parser);
+                PARS.destroy(parser)
+            ELSE
+                ERRORS.FileNotFound(lib_path, mConst.RTL_NAME, mConst.FILE_EXT)
+            END
         END
     END;
 
@@ -3378,7 +3365,9 @@ BEGIN
         ERRORS.Error(204)
     END;
 
-    setrtl;
+    IF CPU # cpuMSP430 THEN
+        setrtl
+    END;
 
     PROG.DelUnused(PARS.program, CODE.DelImport);
 
