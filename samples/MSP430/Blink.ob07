@@ -7,7 +7,7 @@
 *)
 MODULE Blink;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM, MSP430;
 
 
 CONST
@@ -17,10 +17,6 @@ CONST
     (* регистры порта P1 *)
     P1OUT = 21H;
     P1DIR = 22H;
-
-VAR
-
-    n: INTEGER;
 
 
 PROCEDURE inv_bits (mem: INTEGER; bits: SET);
@@ -42,7 +38,6 @@ BEGIN
         (* изменить состояние светодиода *)
         inv_bits(P1OUT, REDLED);
         (* задержка *)
-        n := 30000;
-        WHILE n > 0 DO DEC(n) END
+        MSP430.Delay(800)
     END
 END Blink.

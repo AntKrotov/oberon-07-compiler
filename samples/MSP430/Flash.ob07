@@ -6,6 +6,8 @@
   При успешном завершении, включается зеленый светодиод,
   иначе - красный.
 
+  Параметр -rom 4096..32768 !
+
 *)
 
 MODULE Flash;
@@ -111,6 +113,8 @@ CONST
 VAR
     adr, x, i: INTEGER;
 
+    free: RECORD address, size: INTEGER END;
+
 BEGIN
     (* инициализация регистров порта P1 *)
     SYSTEM.PUT8(P1DIR, REDLED + GREENLED);  (* выход *)
@@ -119,6 +123,14 @@ BEGIN
     clr_bits(P1OUT, REDLED + GREENLED);
 
     MSP430.SetTrapProc(trap); (* назначить обработчик ошибок *)
+
+    ASSERT(seg_adr MOD 512 = 0); (* адрес сегмента должен быть кратным 512 *)
+
+    MSP430.GetFreeFlash(free.address, free.size);
+
+    (* проверить, свободен ли сегмент *)
+    ASSERT(free.address <= seg_adr);
+    ASSERT(seg_adr + 511 <= free.address + free.size);
 
     Write(seg_adr, 0, FERASE); (* стереть сегмент *)
 
@@ -133,7 +145,7 @@ BEGIN
     adr := seg_adr;
     FOR i := 0 TO 255 DO
         SYSTEM.GET(adr, x);
-        ASSERT(x = i);
+        ASSERT(x = i); (* если x # i, будет вызван обработчик ошибок *)
         INC(adr, 2)
     END;
 

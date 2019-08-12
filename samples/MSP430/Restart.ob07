@@ -33,15 +33,6 @@ VAR
 
     count: INTEGER; (* счетчик перезапусков *)
 
-    N: INTEGER; (* для задержки *)
-
-
-PROCEDURE delay (n: INTEGER);
-BEGIN
-    N := n;
-    WHILE N > 0 DO DEC(N) END
-END delay;
-
 
 PROCEDURE set_bits (mem: INTEGER; bits: SET);
 VAR
@@ -79,7 +70,7 @@ BEGIN
     IF priority = 18 THEN                          (* прерывание от порта P1 *)
         IF test_bits(P1IFG, BUTTON) = BUTTON THEN  (* нажата кнопка *)
             INC(count);                            (* увеличить счетчик *)
-            delay(20000);                          (* задержка для отпускания кнопки *)
+            MSP430.Delay(500);                     (* задержка для отпускания кнопки *)
             clr_bits(P1IFG, BUTTON);               (* сбросить флаг прерывания *)
             MSP430.Restart                         (* перезапустить программу *)
         END

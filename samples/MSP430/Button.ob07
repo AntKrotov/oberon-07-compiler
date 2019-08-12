@@ -26,18 +26,6 @@ CONST
     P1REN = 27H;
 
 
-VAR
-
-    N: INTEGER;
-
-
-PROCEDURE delay (n: INTEGER);
-BEGIN
-    N := n;
-    WHILE N > 0 DO DEC(N) END
-END delay;
-
-
 PROCEDURE test_bits (mem: INTEGER; bits: SET): SET;
 VAR
     b: BYTE;
@@ -84,7 +72,7 @@ BEGIN
     IF priority = 18 THEN                          (* прерывание от порта P1 *)
         IF test_bits(P1IFG, BUTTON) = BUTTON THEN  (* нажата кнопка *)
             inv_bits(P1OUT, REDLED);               (* изменить состояние светодиода *)
-            delay(30000);                          (* задержка для отпускания кнопки *)
+            MSP430.Delay(500);                     (* задержка для отпускания кнопки *)
             clr_bits(P1IFG, BUTTON)                (* сбросить флаг прерывания *)
         END
     END
@@ -105,7 +93,7 @@ BEGIN
     (* бесконечный цикл *)
     WHILE TRUE DO
         inv_bits(P1OUT, GREENLED); (* изменить состояние светодиода *)
-        delay(30000)               (* задержка *)
+        MSP430.Delay(800)          (* задержка *)
     END
 END main;
 

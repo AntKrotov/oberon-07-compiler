@@ -28,6 +28,13 @@ CONST
     int  = trap + 2;
 
 
+    GIE*     = {3};
+    CPUOFF*  = {4};
+    OSCOFF*  = {5};
+    SCG0*    = {6};
+    SCG1*    = {7};
+
+
 TYPE
 
     TInterrupt* = RECORD priority*: INTEGER; sr*: SET; pc*: INTEGER END;
@@ -66,44 +73,48 @@ PROCEDURE [code] DInt*
 
 
 PROCEDURE [code] EInt*
-    0D232H; (* BIS #8, SR *)
+    0D232H; (*  BIS #8, SR  *)
 
 
 PROCEDURE [code] CpuOff*
-    0D032H, 16; (* BIS #16, SR *)
+    0D032H, 16; (*  BIS #16, SR  *)
 
 
 PROCEDURE [code] Restart*
-    4302H,          (* MOV #0, SR         *)
-    4210H, 0FFFEH;  (* MOV 0FFFEH(SR), PC *)
+    4302H,          (*  MOV #0, SR          *)
+    4210H, 0FFFEH;  (*  MOV 0FFFEH(SR), PC  *)
 
 
 PROCEDURE [code] SetSR* (bits: SET)
-    0D112H, 2; (* BIS 2(SP), SR *)
+    0D112H, 2; (*  BIS 2(SP), SR  *)
 
 
 PROCEDURE [code] ClrSR* (bits: SET)
-    0C112H, 2; (* BIC 2(SP), SR *)
+    0C112H, 2; (*  BIC 2(SP), SR  *)
 
 
-PROCEDURE GetFreeFlashAddress* (): INTEGER;
-VAR
-    res: INTEGER;
-
+PROCEDURE GetFreeFlash* (VAR address, size: INTEGER);
 BEGIN
-    SYSTEM.GET(free_adr, res)
-    RETURN res
-END GetFreeFlashAddress;
+    SYSTEM.GET(free_adr, address);
+    SYSTEM.GET(free_size, size)
+END GetFreeFlash;
 
 
-PROCEDURE GetFreeFlashSize* (): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    SYSTEM.GET(free_size, res)
-    RETURN res
-END GetFreeFlashSize;
+PROCEDURE [code] Delay* (n: INTEGER)
+    4035H, 124,  (*  MOV  #124, R5   *)
+                 (*  L2:             *)
+    4114H, 2,    (*  MOV  2(SP), R4  *)
+    8324H,       (*  SUB  #2, R4     *)
+                 (*  L1:             *)
+    4303H,       (*  NOP             *)
+    4303H,       (*  NOP             *)
+    4303H,       (*  NOP             *)
+    4303H,       (*  NOP             *)
+    4303H,       (*  NOP             *)
+    8314H,       (*  SUB  #1, R4     *)
+    3800H - 7,   (*  JGE  L1         *)
+    8315H,       (*  SUB  #1, R5     *)
+    3800H - 12;  (*  JGE  L2         *)
 
 
 END MSP430.
