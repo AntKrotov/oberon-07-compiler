@@ -14,7 +14,7 @@ IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER,
 CONST
 
     minRAM* = 128;  maxRAM* = 2048;
-    minROM* = 4096; maxROM* = 49152;
+    minROM* = 2048; maxROM* = 49152;
 
     minStackSize = 64;
 
