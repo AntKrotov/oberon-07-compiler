@@ -8,7 +8,7 @@
 MODULE MSP430;
 
 IMPORT CODE, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER,
-       MACHINE, C := CONSOLE, PROG, RTL := MSP430RTL;
+       UTILS, C := CONSOLE, PROG, RTL := MSP430RTL;
 
 
 CONST
@@ -1216,9 +1216,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1252,7 +1252,7 @@ BEGIN
             ASSERT(param2 > 0);
 
             IF param2 > 1 THEN
-                n := MACHINE.Log2(param2);
+                n := UTILS.Log2(param2);
                 IF n > 0 THEN
                     UnOp(reg1);
                     Shift2(CODE.opASR2, reg1, n)
@@ -1285,7 +1285,7 @@ BEGIN
                 UnOp(reg1);
                 Clear(reg1)
             ELSE
-                IF MACHINE.Log2(param2) > 0 THEN
+                IF UTILS.Log2(param2) > 0 THEN
                     UnOp(reg1);
                     Op2(opAND, imm(param2 - 1), reg1)
                 ELSE
@@ -1431,7 +1431,7 @@ BEGIN
         |CODE.opNEW:
             PushAll(1);
             n := param2 + 2;
-            ASSERT(MACHINE.Align(n, 2));
+            ASSERT(UTILS.Align(n, 2));
             PushImm(n);
             PushImm(param1);
             CallRTL(RTL._new, 3)

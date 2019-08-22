@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, Anton Krotov
+    Copyright (c) 2018, 2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -25,7 +25,7 @@ END String;
 
 PROCEDURE Int* (x: INTEGER);
 VAR
-    s: ARRAY 32 OF CHAR;
+    s: ARRAY 24 OF CHAR;
 
 BEGIN
     STRINGS.IntToStr(x, s);
@@ -35,7 +35,7 @@ END Int;
 
 PROCEDURE Hex* (x, n: INTEGER);
 VAR
-    s: ARRAY 32 OF CHAR;
+    s: ARRAY 24 OF CHAR;
 
 BEGIN
     STRINGS.IntToHex(x, s, n);

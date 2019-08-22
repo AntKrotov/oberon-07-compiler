@@ -175,8 +175,8 @@ BEGIN
         ERRORS.OutOfMemory(list = NIL)
     END;
 
-    list.first  := NIL;
-    list.last   := NIL
+    list.first := NIL;
+    list.last  := NIL
 
     RETURN list
 END create;

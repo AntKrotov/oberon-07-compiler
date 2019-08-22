@@ -7,7 +7,7 @@
 
 MODULE AMD64;
 
-IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, MACHINE, LISTS, PATHS, PROG,
+IMPORT CODE, BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PATHS, PROG,
        REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86, ERRORS;
 
 
@@ -87,10 +87,10 @@ END OutByte3;
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    OutByte(MACHINE.Byte(n, 0));
-    OutByte(MACHINE.Byte(n, 1));
-    OutByte(MACHINE.Byte(n, 2));
-    OutByte(MACHINE.Byte(n, 3))
+    OutByte(UTILS.Byte(n, 0));
+    OutByte(UTILS.Byte(n, 1));
+    OutByte(UTILS.Byte(n, 2));
+    OutByte(UTILS.Byte(n, 3))
 END OutInt;
 
 
@@ -112,7 +112,7 @@ END long;
 PROCEDURE OutIntByte (n: INTEGER);
 BEGIN
     IF isByte(n) THEN
-        OutByte(MACHINE.Byte(n, 0))
+        OutByte(UTILS.Byte(n, 0))
     ELSE
         OutInt(n)
     END
@@ -120,7 +120,7 @@ END OutIntByte;
 
 
 PROCEDURE isLong (n: INTEGER): BOOLEAN;
-    RETURN (n > MACHINE.max32) OR (n < MACHINE.min32)
+    RETURN (n > UTILS.max32) OR (n < UTILS.min32)
 END isLong;
 
 
@@ -328,7 +328,7 @@ BEGIN
     Rex(reg, 0);
     OutByte(0B8H + reg MOD 8);  // movabs reg, n
     FOR i := 0 TO 7 DO
-        OutByte(MACHINE.Byte(n, i))
+        OutByte(UTILS.Byte(n, i))
     END
 END movabs;
 
@@ -750,9 +750,9 @@ BEGIN
         |CODE.opDIVR, CODE.opMODR:
             param2 := cur.param2;
             IF param2 >= 1 THEN
-                param2 := MACHINE.Log2(param2)
+                param2 := UTILS.Log2(param2)
             ELSIF param2 <= -1 THEN
-                param2 := MACHINE.Log2(-param2)
+                param2 := UTILS.Log2(-param2)
             ELSE
                 param2 := -1
             END;
@@ -1598,7 +1598,7 @@ BEGIN
         |CODE.opNEW:
             PushAll(1);
             n := param2 + 16;
-            ASSERT(MACHINE.Align(n, 64));
+            ASSERT(UTILS.Align(n, 64));
             pushc(n);
             pushc(param1);
             CallRTL(CODE._new)
@@ -1822,9 +1822,9 @@ BEGIN
         |CODE.opDIVR:
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1870,9 +1870,9 @@ BEGIN
         |CODE.opMODR:
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1917,9 +1917,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -2598,7 +2598,7 @@ VAR
 BEGIN
     ModName_Offs := CHL.Length(code.types) * 8 + CHL.Length(code.data);
     Numbers_Offs := ModName_Offs + LENGTH(modname) + 1;
-    ASSERT(MACHINE.Align(Numbers_Offs, 16));
+    ASSERT(UTILS.Align(Numbers_Offs, 16));
 
     entry := NewLabel();
     X86.SetLabel(entry);
@@ -2677,7 +2677,7 @@ BEGIN
     BIN.PutDataStr(prog, modname);
     BIN.PutData(prog, 0);
     n := CHL.Length(prog.data);
-    ASSERT(MACHINE.Align(n, 16));
+    ASSERT(UTILS.Align(n, 16));
     i := n - CHL.Length(prog.data);
     WHILE i > 0 DO
         BIN.PutData(prog, 0);

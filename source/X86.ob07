@@ -8,7 +8,7 @@
 MODULE X86;
 
 IMPORT CODE, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, PROG,
-       mConst := CONSTANTS, MACHINE, CHL := CHUNKLISTS, PATHS, ERRORS;
+       mConst := CONSTANTS, CHL := CHUNKLISTS, PATHS, ERRORS;
 
 
 CONST
@@ -92,12 +92,12 @@ VAR
 
 
 PROCEDURE Byte (n: INTEGER): BYTE;
-    RETURN MACHINE.Byte(n, 0)
+    RETURN UTILS.Byte(n, 0)
 END Byte;
 
 
 PROCEDURE Word (n: INTEGER): INTEGER;
-    RETURN MACHINE.Byte(n, 0) + MACHINE.Byte(n, 1) * 256
+    RETURN UTILS.Byte(n, 0) + UTILS.Byte(n, 1) * 256
 END Word;
 
 
@@ -126,10 +126,10 @@ END OutByte;
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    OutByte(MACHINE.Byte(n, 0));
-    OutByte(MACHINE.Byte(n, 1));
-    OutByte(MACHINE.Byte(n, 2));
-    OutByte(MACHINE.Byte(n, 3))
+    OutByte(UTILS.Byte(n, 0));
+    OutByte(UTILS.Byte(n, 1));
+    OutByte(UTILS.Byte(n, 2));
+    OutByte(UTILS.Byte(n, 3))
 END OutInt;
 
 
@@ -912,9 +912,9 @@ BEGIN
 
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1540,9 +1540,9 @@ BEGIN
         |CODE.opDIVR:
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1596,9 +1596,9 @@ BEGIN
         |CODE.opMODR:
             a := param2;
             IF a > 1 THEN
-                n := MACHINE.Log2(a)
+                n := UTILS.Log2(a)
             ELSIF a < -1 THEN
-                n := MACHINE.Log2(-a)
+                n := UTILS.Log2(-a)
             ELSE
                 n := -1
             END;
@@ -1676,7 +1676,7 @@ BEGIN
         |CODE.opNEW:
             PushAll(1);
             n := param2 + 8;
-            ASSERT(MACHINE.Align(n, 32));
+            ASSERT(UTILS.Align(n, 32));
             pushc(n);
             pushc(param1);
             CallRTL(pic, CODE._new)

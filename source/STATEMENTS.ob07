@@ -10,7 +10,7 @@ MODULE STATEMENTS;
 IMPORT
 
     PARS, PROG, SCAN, ARITH, STRINGS, LISTS, CODE, X86, AMD64, MSP430,
-    ERRORS, MACHINE, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
+    ERRORS, UTILS, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
 
 
 CONST
@@ -786,7 +786,7 @@ BEGIN
             CODE.setlast(endcall.prev(CODE.COMMAND));
             PARS.check(isInt(e2), parser, pos, 66);
             IF e2.obj = eCONST THEN
-                PARS.check(ARITH.range(e2.value, 0, MACHINE.target.maxSet), parser, pos, 56);
+                PARS.check(ARITH.range(e2.value, 0, UTILS.target.maxSet), parser, pos, 56);
                 CODE.AddCmd(CODE.opINCLC + ORD(proc = PROG.stEXCL), ARITH.Int(e2.value))
             ELSE
                 CODE.AddCmd0(CODE.opINCL + ORD(proc = PROG.stEXCL))
@@ -1514,7 +1514,7 @@ BEGIN
                         CODE.AddCmd(CODE.opADDR, ARITH.Int(idx.value) * e.type.base.size)
                     END
                 ELSE
-                    PARS.check(ARITH.range(idx.value, 0, MACHINE.target.maxInt), parser, pos, 83);
+                    PARS.check(ARITH.range(idx.value, 0, UTILS.target.maxInt), parser, pos, 83);
                     LoadConst(idx);
                     OpenIdx(parser, pos, e)
                 END
@@ -1701,7 +1701,7 @@ VAR
         PARS.check(isInt(e1), parser, pos, 76);
 
         IF e1.obj = eCONST THEN
-            PARS.check(ARITH.range(e1.value, 0, MACHINE.target.maxSet), parser, pos, 44)
+            PARS.check(ARITH.range(e1.value, 0, UTILS.target.maxSet), parser, pos, 44)
         END;
 
         range := parser.sym = SCAN.lxRANGE;
@@ -1712,7 +1712,7 @@ VAR
             PARS.check(isInt(e2), parser, pos, 76);
 
             IF e2.obj = eCONST THEN
-                PARS.check(ARITH.range(e2.value, 0, MACHINE.target.maxSet), parser, pos, 44)
+                PARS.check(ARITH.range(e2.value, 0, UTILS.target.maxSet), parser, pos, 44)
             END
         ELSE
             IF e1.obj = eCONST THEN
@@ -2499,7 +2499,7 @@ BEGIN
         |SCAN.lxIN:
             PARS.check(isInt(e) & isSet(e1), parser, pos, 37);
             IF e.obj = eCONST THEN
-                PARS.check(ARITH.range(e.value, 0, MACHINE.target.maxSet), parser, pos0, 56)
+                PARS.check(ARITH.range(e.value, 0, UTILS.target.maxSet), parser, pos0, 56)
             END;
             IF constant THEN
                 ARITH.relation(e.value, e1.value, operator, error)

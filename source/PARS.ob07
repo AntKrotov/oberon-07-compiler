@@ -7,7 +7,7 @@
 
 MODULE PARS;
 
-IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS;
+IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, CODE, CONSOLE, PATHS, UTILS, C := COLLECTIONS, mConst := CONSTANTS;
 
 
 CONST
@@ -731,7 +731,7 @@ BEGIN
         CODE.AddRec(t.base.num);
 
         IF ~t.noalign THEN
-            check(MACHINE.Align(t.size, t.align), parser, pos2, 104);
+            check(UTILS.Align(t.size, t.align), parser, pos2, 104);
             check(ARITH.setInt(typeSize, t.size), parser, pos2, 104)
         END;
 

@@ -7,7 +7,7 @@
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, MACHINE, C := COLLECTIONS, mConst := CONSTANTS, CODE, UTILS;
+IMPORT SCAN, LISTS, ARITH, ERRORS, C := COLLECTIONS, mConst := CONSTANTS, CODE, UTILS;
 
 
 CONST
@@ -311,7 +311,7 @@ VAR
 BEGIN
     IF varIdent.offset = -1 THEN
         IF varIdent.global THEN
-            IF MACHINE.Align(program.bss, varIdent.type.align) THEN
+            IF UTILS.Align(program.bss, varIdent.type.align) THEN
                 IF UTILS.maxint - program.bss >= varIdent.type.size THEN
                     varIdent.offset := program.bss;
                     INC(program.bss, varIdent.type.size)
@@ -320,7 +320,7 @@ BEGIN
         ELSE
             word := program.target.word;
             size := varIdent.type.size;
-            IF MACHINE.Align(size, word) THEN
+            IF UTILS.Align(size, word) THEN
                 size := size DIV word;
                 IF UTILS.maxint - program.locsize >= size THEN
                     INC(program.locsize, size);
@@ -483,19 +483,21 @@ BEGIN
 
     item := unit.idents.last(IDENT);
 
-    ASSERT(item # NIL);
+    IF item # NIL THEN
 
-    IF currentScope THEN
-        WHILE (item.name # ident) & (item.typ # idGUARD) DO
-            item := item.prev(IDENT)
-        END;
-        IF item.name # ident THEN
-            item := NIL
+        IF currentScope THEN
+            WHILE (item.name # ident) & (item.typ # idGUARD) DO
+                item := item.prev(IDENT)
+            END;
+            IF item.name # ident THEN
+                item := NIL
+            END
+        ELSE
+            WHILE (item # NIL) & (item.name # ident) DO
+                item := item.prev(IDENT)
+            END
         END
-    ELSE
-        WHILE (item # NIL) & (item.name # ident) DO
-            item := item.prev(IDENT)
-        END
+
     END
 
     RETURN item
@@ -928,7 +930,7 @@ BEGIN
     WHILE res & (item # NIL) & (item.type = NIL) DO
         item.type := type;
         IF ~self.noalign THEN
-            res := MACHINE.Align(self.size, type.align)
+            res := UTILS.Align(self.size, type.align)
         ELSE
             res := TRUE
         END;
@@ -1040,7 +1042,7 @@ VAR
 BEGIN
     ASSERT(type # NIL);
 
-    word := MACHINE.target.bit_depth DIV 8;
+    word := UTILS.target.bit_depth DIV 8;
 
     item := self.params.first;
 
@@ -1070,7 +1072,7 @@ BEGIN
                 END
             ELSE
                 size := type.size;
-                ASSERT(MACHINE.Align(size, word));
+                ASSERT(UTILS.Align(size, word));
                 size := size DIV word
             END;
             param.offset := self.params.size + Dim(type) + STACK_FRAME;
@@ -1297,7 +1299,7 @@ VAR
 BEGIN
     idents := C.create();
 
-    MACHINE.SetBitDepth(bit_depth);
+    UTILS.SetBitDepth(bit_depth);
     NEW(program);
     ERRORS.OutOfMemory(program = NIL);
     NEW(units);

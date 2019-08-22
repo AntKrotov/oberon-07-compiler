@@ -7,7 +7,7 @@
 
 MODULE ARITH;
 
-IMPORT AVLTREES, STRINGS, MACHINE, UTILS;
+IMPORT AVLTREES, STRINGS, UTILS;
 
 
 CONST
@@ -53,7 +53,7 @@ BEGIN
     ELSIF v.typ = tWCHAR THEN
         res := v.int
     ELSIF v.typ = tSET THEN
-        res := MACHINE.Long(ORD(v.set))
+        res := UTILS.Long(ORD(v.set))
     ELSIF v.typ = tBOOLEAN THEN
         res := ORD(v.bool)
     END
@@ -85,13 +85,13 @@ VAR
 BEGIN
     error := FALSE;
 
-    IF (v.typ = tINTEGER) & ((v.int < MACHINE.target.minInt) OR (v.int > MACHINE.target.maxInt)) THEN
+    IF (v.typ = tINTEGER) & ((v.int < UTILS.target.minInt) OR (v.int > UTILS.target.maxInt)) THEN
         error := TRUE
     ELSIF (v.typ = tCHAR) & ((v.int < 0) OR (v.int > 255)) THEN
         error := TRUE
     ELSIF (v.typ = tWCHAR) & ((v.int < 0) OR (v.int > 65535)) THEN
         error := TRUE
-    ELSIF (v.typ = tREAL) & ((v.float < -MACHINE.target.maxReal) OR (v.float > MACHINE.target.maxReal)) THEN
+    ELSIF (v.typ = tREAL) & ((v.float < -UTILS.target.maxReal) OR (v.float > UTILS.target.maxReal)) THEN
         error := TRUE
     END
 
@@ -169,7 +169,7 @@ BEGIN
             n := i
         END;
 
-        IF (n # -1) & (i - n + 1 > MACHINE.target.maxHex) THEN
+        IF (n # -1) & (i - n + 1 > UTILS.target.maxHex) THEN
             error := 2
         ELSE
             value := value * 16 + d;
@@ -178,7 +178,7 @@ BEGIN
 
     END;
 
-    value := MACHINE.Long(value);
+    value := UTILS.Long(value);
 
     IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
         error := 3
@@ -466,25 +466,25 @@ END mulInt;
 
 
 PROCEDURE _ASR (x, n: INTEGER): INTEGER;
-    RETURN ASR(MACHINE.Long(x), n)
+    RETURN ASR(UTILS.Long(x), n)
 END _ASR;
 
 
 PROCEDURE _LSR (x, n: INTEGER): INTEGER;
-    RETURN MACHINE.Long(LSR(MACHINE.Short(x), n))
+    RETURN UTILS.Long(LSR(UTILS.Short(x), n))
 END _LSR;
 
 
 PROCEDURE _LSL (x, n: INTEGER): INTEGER;
-    RETURN MACHINE.Long(LSL(x, n))
+    RETURN UTILS.Long(LSL(x, n))
 END _LSL;
 
 
 PROCEDURE _ROR1_32 (x: INTEGER): INTEGER;
 BEGIN
-    x := MACHINE.Short(x);
+    x := UTILS.Short(x);
     x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 31)))
-    RETURN MACHINE.Long(x)
+    RETURN UTILS.Long(x)
 END _ROR1_32;
 
 
@@ -492,14 +492,14 @@ PROCEDURE _ROR1_16 (x: INTEGER): INTEGER;
 BEGIN
     x := x MOD 65536;
     x := ORD(BITS(LSR(x, 1)) + BITS(LSL(x, 15)))
-    RETURN MACHINE.Long(x)
+    RETURN UTILS.Long(x)
 END _ROR1_16;
 
 
 PROCEDURE _ROR (x, n: INTEGER): INTEGER;
 BEGIN
 
-    CASE MACHINE.bit_diff OF
+    CASE UTILS.bit_diff OF
     |0: x := ROR(x, n)
     |16, 48:
         n := n MOD 16;
@@ -577,7 +577,7 @@ BEGIN
     CASE v.typ OF
     |tCHAR, tWCHAR:
     |tBOOLEAN: v.int := ORD(v.bool)
-    |tSET:     v.int := MACHINE.Long(ORD(v.set))
+    |tSET:     v.int := UTILS.Long(ORD(v.set))
     END;
     v.typ := tINTEGER
 END ord;
@@ -773,7 +773,7 @@ BEGIN
 
     |"I":
         IF (v.typ = tINTEGER) & (v2.typ = tSET) THEN
-            IF range(v, 0, MACHINE.target.maxSet) THEN
+            IF range(v, 0, UTILS.target.maxSet) THEN
                 res := v.int IN v2.set
             ELSE
                 error := 2
