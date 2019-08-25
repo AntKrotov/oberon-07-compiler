@@ -78,7 +78,7 @@ CONST
     opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64* = 206;
 
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
-    opSAVE16C* = 213; opWCHR* = 214; opLENGTHW* = 216;
+    opSAVE16C* = 213; opWCHR* = 214; opGETC* = 215; opLENGTHW* = 216;
 
     opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
 
@@ -792,12 +792,6 @@ BEGIN
         AddJmpCmd(opNEIP, proc(IMPORT_PROC).label)
     END
 END ProcImpCmp;
-
-
-PROCEDURE SysGet* (size: INTEGER);
-BEGIN
-    AddCmd(opGET, size)
-END SysGet;
 
 
 PROCEDURE load* (size: INTEGER);

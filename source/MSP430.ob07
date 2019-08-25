@@ -583,9 +583,9 @@ END Neg;
 
 PROCEDURE translate (code: CODE.CODES);
 VAR
-    cmd: COMMAND;
+    cmd, next: COMMAND;
 
-    opcode, param1, param2, label, L, a, n: INTEGER;
+    opcode, param1, param2, label, L, a, n, c1, c2: INTEGER;
 
     reg1, reg2: INTEGER;
 
@@ -687,7 +687,25 @@ BEGIN
             END
 
         |CODE.opCONST:
-            Op2(opMOV, imm(param2), REG.GetAnyReg(R))
+            next := cmd.next(COMMAND);
+            IF next.opcode = CODE.opCONST THEN
+                c1 := param2;
+                c2 := next.param2;
+                next := next.next(COMMAND);
+                IF (next.opcode = CODE.opSAVE) OR (next.opcode = CODE.opSAVE16) OR (next.opcode = CODE.opSAVE8) THEN
+                    Op2(opMOV + bw(next.opcode = CODE.opSAVE8), imm(c1), dst_x(c2, SR));
+                    cmd := next
+                ELSE
+                    Op2(opMOV, imm(param2), REG.GetAnyReg(R))
+                END
+            ELSIF (next.opcode = CODE.opSAVE) OR (next.opcode = CODE.opSAVE16) OR (next.opcode = CODE.opSAVE8) THEN
+                UnOp(reg1);
+                Op2(opMOV + bw(next.opcode = CODE.opSAVE8), reg1 * 256, dst_x(param2, SR));
+                drop;
+                cmd := next
+            ELSE
+                Op2(opMOV, imm(param2), REG.GetAnyReg(R))
+            END
 
         |CODE.opSADR:
             Op2(opMOV, incr(PC), REG.GetAnyReg(R));
@@ -909,6 +927,11 @@ BEGIN
             drop;
             drop;
             Op2(opMOV + bw(param2 = 1), indir(reg1), dst_x(0, reg2))
+
+        |CODE.opGETC:
+            UnOp(reg2);
+            drop;
+            Op2(opMOV + bw(param2 = 1), src_x(param1, SR), dst_x(0, reg2))
 
         |CODE.opCHKIDX:
             UnOp(reg1);

@@ -1163,8 +1163,14 @@ BEGIN
         |CODE.opCODE:
             OutByte(param2)
 
-        |CODE.opGET:
-            BinOp(reg1, reg2);
+        |CODE.opGET, CODE.opGETC:
+            IF opcode = CODE.opGET THEN
+                BinOp(reg1, reg2)
+            ELSIF opcode = CODE.opGETC THEN
+                UnOp(reg2);
+                reg1 := REG.GetAnyReg(R);
+                movrc(reg1, param1)
+            END;
             drop;
             drop;
 

@@ -21,9 +21,10 @@ END HintMsg;
 
 PROCEDURE WarningMsg* (line, col, warning: INTEGER);
 BEGIN
-    IF warning = 0 THEN
-        C.String("  warning ("); C.Int(line); C.String(":"); C.Int(col); C.String(") ");
-        C.StringLn("passing a string value as a fixed array")
+    C.String("  warning ("); C.Int(line); C.String(":"); C.Int(col); C.String(") ");
+    CASE warning OF
+    |0: C.StringLn("passing a string value as a fixed array")
+    |1: C.StringLn("endless FOR loop")
     END
 END WarningMsg;
 

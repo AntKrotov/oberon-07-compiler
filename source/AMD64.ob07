@@ -2012,8 +2012,14 @@ BEGIN
             UnOp(reg1);
             shiftrc(opcode, reg1, ORD(BITS(param2) * {0..5}))
 
-        |CODE.opGET:
-            BinOp(reg1, reg2);
+        |CODE.opGET, CODE.opGETC:
+            IF opcode = CODE.opGET THEN
+                BinOp(reg1, reg2)
+            ELSIF opcode = CODE.opGETC THEN
+                UnOp(reg2);
+                reg1 := REG.GetAnyReg(R);
+                movrc(reg1, param1)
+            END;
             drop;
             drop;
             _movrm(reg1, reg1, 0, param2 * 8, FALSE);

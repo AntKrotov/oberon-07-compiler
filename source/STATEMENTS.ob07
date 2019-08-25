@@ -875,15 +875,16 @@ BEGIN
         |PROG.sysGET:
             parser.expression(parser, e);
             PARS.check(isInt(e), parser, pos, 66);
-            IF e.obj = eCONST THEN
-                LoadConst(e)
-            END;
             PARS.checklex(parser, SCAN.lxCOMMA);
             NextPos(parser, pos);
             parser.designator(parser, e2);
             PARS.check(isVar(e2), parser, pos, 93);
             PARS.check((e2.type.typ IN PROG.BASICTYPES) OR (e2.type.typ = PROG.tPOINTER) OR (e2.type.typ = PROG.tPROCEDURE), parser, pos, 66);
-            CODE.SysGet(e2.type.size)
+            IF e.obj = eCONST THEN
+                CODE.AddCmd2(CODE.opGETC, ARITH.Int(e.value), e2.type.size)
+            ELSE
+                CODE.AddCmd(CODE.opGET, e2.type.size)
+            END
 
         |PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16, PROG.sysPUT32:
             CODE.pushBegEnd(begcall, endcall);
@@ -3065,13 +3066,13 @@ END CaseStatement;
 
 PROCEDURE ForStatement (parser: PARS.PARSER);
 VAR
-    e:       PARS.EXPR;
-    pos:     SCAN.POSITION;
-    step:    ARITH.VALUE;
-    st:      INTEGER;
-    ident:   PROG.IDENT;
-    offset:  INTEGER;
-    L1, L2:  INTEGER;
+    e:         PARS.EXPR;
+    pos, pos2: SCAN.POSITION;
+    step:      ARITH.VALUE;
+    st:        INTEGER;
+    ident:     PROG.IDENT;
+    offset:    INTEGER;
+    L1, L2:    INTEGER;
 
 BEGIN
     CODE.AddCmd0(CODE.opLOOP);
@@ -3113,9 +3114,9 @@ BEGIN
     CODE.load(ident.type.size);
 
     PARS.checklex(parser, SCAN.lxTO);
-    NextPos(parser, pos);
+    NextPos(parser, pos2);
     expression(parser, e);
-    PARS.check(isInt(e), parser, pos, 76);
+    PARS.check(isInt(e), parser, pos2, 76);
 
     IF parser.sym = SCAN.lxBY THEN
         NextPos(parser, pos);
@@ -3129,9 +3130,15 @@ BEGIN
 
     IF e.obj = eCONST THEN
         IF st > 0 THEN
-            CODE.AddCmd(CODE.opLER, ARITH.Int(e.value))
+            CODE.AddCmd(CODE.opLER, ARITH.Int(e.value));
+            IF ARITH.Int(e.value) = UTILS.target.maxInt THEN
+                ERRORS.WarningMsg(pos2.line, pos2.col, 1)
+            END
         ELSE
-            CODE.AddCmd(CODE.opGER, ARITH.Int(e.value))
+            CODE.AddCmd(CODE.opGER, ARITH.Int(e.value));
+            IF ARITH.Int(e.value) = UTILS.target.minInt THEN
+                ERRORS.WarningMsg(pos2.line, pos2.col, 1)
+            END
         END
     ELSE
         IF st > 0 THEN
