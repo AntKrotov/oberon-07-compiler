@@ -688,16 +688,16 @@ BEGIN
 END Enter;
 
 
-PROCEDURE Leave* (result, float: BOOLEAN; paramsize: INTEGER): COMMAND;
+PROCEDURE Leave* (result, float: BOOLEAN; locsize, paramsize: INTEGER): COMMAND;
 BEGIN
     IF result THEN
         IF float THEN
-            AddCmd(opLEAVEF, paramsize)
+            AddCmd2(opLEAVEF, locsize, paramsize)
         ELSE
-            AddCmd(opLEAVER, paramsize)
+            AddCmd2(opLEAVER, locsize, paramsize)
         END
     ELSE
-        AddCmd(opLEAVE, paramsize)
+        AddCmd2(opLEAVE, locsize, paramsize)
     END
 
     RETURN codes.last

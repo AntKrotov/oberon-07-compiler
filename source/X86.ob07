@@ -698,7 +698,10 @@ BEGIN
 
             ASSERT(R.top = -1);
 
-            mov(esp, ebp);
+            IF param1 > 0 THEN
+                mov(esp, ebp)
+            END;
+
             pop(ebp);
 
             n := param2;

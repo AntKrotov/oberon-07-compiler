@@ -673,7 +673,10 @@ BEGIN
 
             ASSERT(R.top = -1);
 
-            MovRR(BP, SP);
+            IF param1 > 0 THEN
+                MovRR(BP, SP)
+            END;
+
             Pop(BP);
             Pop(PC)
 

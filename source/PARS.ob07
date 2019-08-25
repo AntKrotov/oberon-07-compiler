@@ -1005,7 +1005,7 @@ VAR
             END;
 
             IF ~codeProc THEN
-                proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL),
+                proc.proc.leave := CODE.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), program.locsize,
                     t.params.size * ORD((t.call IN PROG.callee_clean_up) OR (t.call IN {PROG.systemv, PROG._systemv})));
                 enter.param2 := program.locsize;
                 IF program.target.sys = mConst.Target_iMSP430 THEN

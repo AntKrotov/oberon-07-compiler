@@ -1142,7 +1142,10 @@ BEGIN
 
             ASSERT(xmm = -1);
 
-            mov(rsp, rbp);
+            IF param1 > 0 THEN
+                mov(rsp, rbp)
+            END;
+
             pop(rbp);
             IF param2 > 0 THEN
                 OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256)  // ret param2
