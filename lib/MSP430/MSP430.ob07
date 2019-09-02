@@ -80,6 +80,10 @@ PROCEDURE [code] CpuOff*
     0D032H, 16; (*  BIS #16, SR  *)
 
 
+PROCEDURE [code] Halt*
+    4032H, 0F0H;  (*  MOV CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
+
+
 PROCEDURE [code] Restart*
     4302H,          (*  MOV #0, SR          *)
     4210H, 0FFFEH;  (*  MOV 0FFFEH(SR), PC  *)
