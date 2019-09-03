@@ -7,18 +7,19 @@
 
 MODULE MSP430RTL;
 
+
 CONST
 
-    _mul*      = 0;
-    _divmod*   = 1;
-    _lsl*      = 2;
-    _asr*      = 3;
-    _ror*      = 4;
-    _lsr*      = 5;
-    _in*       = 6;
-    _in2*      = 7;
-    _set1*     = 8;
-    _incl*     = 9;
+    _mul*      =  0;
+    _divmod*   =  1;
+    _lsl*      =  2;
+    _asr*      =  3;
+    _ror*      =  4;
+    _lsr*      =  5;
+    _in*       =  6;
+    _in2*      =  7;
+    _set1*     =  8;
+    _incl*     =  9;
     _excl*     = 10;
     _move*     = 11;
     _set*      = 12;
@@ -60,7 +61,6 @@ TYPE
     EMITPROC = PROCEDURE (n: INTEGER);
 
 
-
 VAR
 
     rtl*: ARRAY 22 OF
@@ -69,25 +69,33 @@ VAR
                   used:   BOOLEAN
               END;
 
-    Label, Word1, Call: EMITPROC;
-
-
-PROCEDURE Word2 (word1, word2: INTEGER);
-BEGIN
-    Word1(word1);
-    Word1(word2)
-END Word2;
-
-
-PROCEDURE Word3 (word1, word2, word3: INTEGER);
-BEGIN
-    Word1(word1);
-    Word1(word2);
-    Word1(word3)
-END Word3;
+    Label, pWord1, Call: EMITPROC;
 
 
 PROCEDURE Gen*;
+
+
+    PROCEDURE Word1 (word: INTEGER);
+    BEGIN
+        pWord1(word)
+    END Word1;
+
+
+    PROCEDURE Word2 (word1, word2: INTEGER);
+    BEGIN
+        Word1(word1);
+        Word1(word2)
+    END Word2;
+
+
+    PROCEDURE Word3 (word1, word2, word3: INTEGER);
+    BEGIN
+        Word1(word1);
+        Word1(word2);
+        Word1(word3)
+    END Word3;
+
+
 BEGIN
     (* _lsl (n, x: INTEGER): INTEGER *)
     IF rtl[_lsl].used THEN
@@ -380,8 +388,7 @@ BEGIN
         Word1(2400H + 1);            (*  JZ    L                            *)
         Word1(1284H);                (*  CALL  R4                           *)
                                      (*  L:                                 *)
-        Word2(04032H, 0F0H);         (*  MOV   CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
-        Word1(4130H)                 (*  RET                                *)
+        Word2(04032H, 0F0H)          (*  MOV   CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
     END;
 
     (* _new (t, size: INTEGER; VAR ptr: INTEGER) *)
@@ -628,7 +635,7 @@ BEGIN
         Word1(4304H);               (*  MOV  #0, R4  *)
                                     (*  L            *)
         Word1(4130H)                (*  RET          *)
-    END;
+    END
 
 END Gen;
 
@@ -654,9 +661,9 @@ END Used;
 
 PROCEDURE Init* (pLabel, pWord, pCall: EMITPROC);
 BEGIN
-    Label := pLabel;
-    Word1 := pWord;
-    Call  := pCall
+    Label  := pLabel;
+    pWord1 := pWord;
+    Call   := pCall
 END Init;
 
 
