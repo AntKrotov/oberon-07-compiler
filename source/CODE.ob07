@@ -20,34 +20,33 @@ CONST
     call_sysv*  = 2;
 
     opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
-    opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9;
-    opDIV* = 10; opMOD* = 11; opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15;
-    opUMINUS* = 16;
+    opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9; opDIV* = 10; opMOD* = 11;
+    opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15; opUMINUS* = 16;
     opADD* = 17; opSUB* = 18; opADDL* = 19; opSUBL* = 20; opADDR* = 21; opSUBR* = 22;
     opSAVE* = 23; opSAVEC* = 24; opSAVE8* = 25; opSAVE8C* = 26; opCHKBYTE* = 27; opDROP* = 28;
     opNOT* = 29;
 
     opEQ*  = 30; opNE* = opEQ + 1; opLT* = opEQ + 2; opLE* = opEQ + 3; opGT* = opEQ + 4; opGE* = opEQ + 5 (* 35 *);
-    opEQL* = 36; opNEL* = opEQL + 1; opLTL* = opEQL + 2; opLEL* = opEQL + 3; opGTL* = opEQL + 4; opGEL* = opEQL + 5; (* 41 *)
-    opEQR* = 42; opNER* = opEQR + 1; opLTR* = opEQR + 2; opLER* = opEQR + 3; opGTR* = opEQR + 4; opGER* = opEQR + 5; (* 47 *)
+    opEQC* = 36; opNEC* = opEQC + 1; opLTC* = opEQC + 2; opLEC* = opEQC + 3; opGTC* = opEQC + 4; opGEC* = opEQC + 5; (* 41 *)
+    opEQF* = 42; opNEF* = opEQF + 1; opLTF* = opEQF + 2; opLEF* = opEQF + 3; opGTF* = opEQF + 4; opGEF* = opEQF + 5; (* 47 *)
+    opEQS* = 48; opNES* = opEQS + 1; opLTS* = opEQS + 2; opLES* = opEQS + 3; opGTS* = opEQS + 4; opGES* = opEQS + 5; (* 53 *)
+    opEQSW* = 54; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 59 *);
 
-    opVLOAD32* = 48; opGLOAD32* = 49;
+    opVLOAD32* = 60; opGLOAD32* = 61;
 
-    opJNE* = 50; opJE* = 51;
+    opJNE* = 62; opJE* = 63;
 
-    opEQS* = 52; opNES* = opEQS + 1; opLTS* = opEQS + 2; opLES* = opEQS + 3; opGTS* = opEQS + 4; opGES* = opEQS + 5 (* 58 *);
+    opSAVE32* = 64; opLLOAD8* = 65;
 
-    opSAVE32* = 58; opLLOAD8* = 59;
+    opCONSTF* = 66; opLOADF* = 67; opSAVEF* = 68; opMULF* = 69; opDIVF* = 70; opDIVFI* = 71;
+    opUMINF* = 72; opADDFI* = 73; opSUBFI* = 74; opADDF* = 75; opSUBF* = 76;
 
-    opCONSTF* = 60; opLOADF* = 61; opSAVEF* = 62; opMULF* = 63; opDIVF* = 64; opDIVFI* = 65;
-    opUMINF* = 66; opADDFI* = 67; opSUBFI* = 68; opADDF* = 69; opSUBF* = 70;
+    opINC1B* = 77; opDEC1B* = 78; opINCCB* = 79; opDECCB* = 80; opINCB* = 81; opDECB* = 82;
 
-    opINC1B* = 71; opDEC1B* = 72; opINCCB* = 73; opDECCB* = 74; opINCB* = 75; opDECB* = 76;
+    opCASEL* = 83; opCASER* = 84; opCASELR* = 85;
 
-    opCASEL* = 77; opCASER* = 78; opCASELR* = 79;
-
-    opEQF*  = 80; opNEF* = opEQF + 1; opLTF* = opEQF + 2; opLEF* = opEQF + 3; opGTF* = opEQF + 4; opGEF* = opEQF + 5;
-    opEQFI* = opEQF + 6; opNEFI* = opEQF + 7; opLTFI* = opEQF + 8; opLEFI* = opEQF + 9; opGTFI* = opEQF + 10; opGEFI* = opEQF + 11; (* 91 *)
+    opPOPSP* = 86;
+    opWIN64CALL* = 87; opWIN64CALLI* = 88; opWIN64CALLP* = 89; opLOOP* = 90; opENDLOOP* = 91;
 
     opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
     opERRC* = 98; opSWITCH* = 99;
@@ -80,15 +79,8 @@ CONST
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
     opSAVE16C* = 213; opWCHR* = 214; opGETC* = 215; opLENGTHW* = 216;
 
-    opEQSW*  = 223; opNESW* = opEQSW + 1; opLTSW* = opEQSW + 2; opLESW* = opEQSW + 3; opGTSW* = opEQSW + 4; opGESW* = opEQSW + 5 (* 228 *);
-
-    opENTERC* = 233; opLEAVEC* = 234; opCODE* = 235;
-
-    opALIGN16* = 236; opPOPSP* = 237;
-    opWIN64CALL* = 238; opWIN64CALLI* = 239; opWIN64CALLP* = 240; opLOOP* = 241; opENDLOOP* = 242;
-    opSYSVCALL* = 243; opSYSVCALLI* = 244; opSYSVCALLP* = 245; opSYSVALIGN16* = 246; opWIN64ALIGN16* = 247;
-
-    opACC* = 248; opJG* = 249;
+    opSYSVCALL* = 217; opSYSVCALLI* = 218; opSYSVCALLP* = 219; opSYSVALIGN16* = 220; opWIN64ALIGN16* = 221;
+    opACC* = 222; opJG* = 223; opLEAVEC* = 224; opCODE* = 225; opALIGN16* = 226;
 
 
     opSADR_PARAM* = 1000; opLOAD64_PARAM* = 1001; opLLOAD64_PARAM* = 1002; opGLOAD64_PARAM* = 1003;
@@ -526,7 +518,7 @@ END NewLabel;
 
 PROCEDURE SetLabel* (label: INTEGER);
 BEGIN
-    AddCmd(opLABEL, label)
+    AddCmd2(opLABEL, label, 0)
 END SetLabel;
 
 
@@ -706,7 +698,7 @@ END Leave;
 
 PROCEDURE EnterC* (label: INTEGER): COMMAND;
 BEGIN
-    AddCmd2(opENTERC, label, 0)
+    SetLabel(label)
     RETURN codes.last
 END EnterC;
 

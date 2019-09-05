@@ -880,27 +880,27 @@ BEGIN
     reg := REG.GetAnyReg(R);
     xor(reg, reg);
     CASE op OF
-    |CODE.opEQF, CODE.opEQFI:
+    |CODE.opEQF:
         comisd(xmm - 1, xmm);
         cc := sete
 
-    |CODE.opNEF, CODE.opNEFI:
+    |CODE.opNEF:
         comisd(xmm - 1, xmm);
         cc := setne
 
-    |CODE.opLTF, CODE.opGTFI:
+    |CODE.opLTF:
         comisd(xmm - 1, xmm);
         cc := setc
 
-    |CODE.opGTF, CODE.opLTFI:
+    |CODE.opGTF:
         comisd(xmm, xmm - 1);
         cc := setc
 
-    |CODE.opLEF, CODE.opGEFI:
+    |CODE.opLEF:
         comisd(xmm, xmm - 1);
         cc := setnc
 
-    |CODE.opGEF, CODE.opLEFI:
+    |CODE.opGEF:
         comisd(xmm - 1, xmm);
         cc := setnc
     END;
@@ -976,7 +976,7 @@ BEGIN
             REG.Restore(R)
 
         |CODE.opLABEL:
-            X86.SetLabel(param2)
+            X86.SetLabel(param1)
 
         |CODE.opERR:
             CallRTL(CODE._error)
@@ -1373,9 +1373,8 @@ BEGIN
             reg1 := REG.GetAnyReg(R);
             movrc(reg1, param2)
 
-        |CODE.opEQL..CODE.opGEL,
-         CODE.opEQR..CODE.opGER,
-         CODE.opEQ..CODE.opGE:
+        |CODE.opEQ..CODE.opGE,
+         CODE.opEQC..CODE.opGEC:
 
             IF (CODE.opEQ <= opcode) & (opcode <= CODE.opGE) THEN
                 BinOp(reg1, reg2);
@@ -2243,7 +2242,7 @@ BEGIN
             addrc(rsp, 8);
             DEC(xmm)
 
-        |CODE.opEQF .. CODE.opGEFI:
+        |CODE.opEQF .. CODE.opGEF:
             fcmp(opcode, xmm);
             DEC(xmm, 2)
 

@@ -482,12 +482,12 @@ VAR
 
 BEGIN
     CASE op OF
-    |CODE.opGT, CODE.opGTR, CODE.opLTL: res := jg
-    |CODE.opGE, CODE.opGER, CODE.opLEL: res := jge
-    |CODE.opLT, CODE.opLTR, CODE.opGTL: res := jl
-    |CODE.opLE, CODE.opLER, CODE.opGEL: res := jle
-    |CODE.opEQ, CODE.opEQR, CODE.opEQL: res := je
-    |CODE.opNE, CODE.opNER, CODE.opNEL: res := jne
+    |CODE.opGT, CODE.opGTC: res := jg
+    |CODE.opGE, CODE.opGEC: res := jge
+    |CODE.opLT, CODE.opLTC: res := jl
+    |CODE.opLE, CODE.opLEC: res := jle
+    |CODE.opEQ, CODE.opEQC: res := je
+    |CODE.opNE, CODE.opNEC: res := jne
     END
 
     RETURN res
@@ -618,7 +618,7 @@ BEGIN
             PushAll(0)
 
         |CODE.opLABEL:
-            EmitLabel(param2)
+            EmitLabel(param1)
 
         |CODE.opSADR_PARAM:
             Op1(opPUSH, PC, sINCR);
@@ -630,9 +630,6 @@ BEGIN
 
         |CODE.opERRC:
             PushImm(param2 MOD 65536)
-
-        |CODE.opENTERC:
-            EmitLabel(param1)
 
         |CODE.opLEAVEC:
             Pop(PC)
@@ -838,9 +835,8 @@ BEGIN
                 PushAll(param2)
             END
 
-        |CODE.opEQL..CODE.opGEL,
-         CODE.opEQR..CODE.opGER,
-         CODE.opEQ..CODE.opGE:
+        |CODE.opEQ..CODE.opGE,
+         CODE.opEQC..CODE.opGEC:
 
             IF (CODE.opEQ <= opcode) & (opcode <= CODE.opGE) THEN
                 BinOp(reg1, reg2);

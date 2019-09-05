@@ -328,12 +328,12 @@ VAR
 
 BEGIN
     CASE op OF
-    |CODE.opGT, CODE.opGTR, CODE.opLTL: res := jg
-    |CODE.opGE, CODE.opGER, CODE.opLEL: res := jge
-    |CODE.opLT, CODE.opLTR, CODE.opGTL: res := jl
-    |CODE.opLE, CODE.opLER, CODE.opGEL: res := jle
-    |CODE.opEQ, CODE.opEQR, CODE.opEQL: res := je
-    |CODE.opNE, CODE.opNER, CODE.opNEL: res := jne
+    |CODE.opGT, CODE.opGTC: res := jg
+    |CODE.opGE, CODE.opGEC: res := jge
+    |CODE.opLT, CODE.opLTC: res := jl
+    |CODE.opLE, CODE.opLEC: res := jle
+    |CODE.opEQ, CODE.opEQC: res := je
+    |CODE.opNE, CODE.opNEC: res := jne
     END
 
     RETURN res
@@ -740,7 +740,7 @@ BEGIN
             movrc(reg1, param2)
 
         |CODE.opLABEL:
-            SetLabel(param2) // L:
+            SetLabel(param1) // L:
 
         |CODE.opNOP:
 
@@ -1043,9 +1043,8 @@ BEGIN
             UnOp(reg1);
             andrc(reg1, 1)
 
-        |CODE.opEQL..CODE.opGEL,
-         CODE.opEQR..CODE.opGER,
-         CODE.opEQ..CODE.opGE:
+        |CODE.opEQ..CODE.opGE,
+         CODE.opEQC..CODE.opGEC:
 
             IF (CODE.opEQ <= opcode) & (opcode <= CODE.opGE) THEN
                 BinOp(reg1, reg2);
@@ -1126,13 +1125,13 @@ BEGIN
             UnOp(reg1);
             test(reg1);
             jcc(jne, param1);
-            drop;
+            drop
 
         |CODE.opJNE:
             UnOp(reg1);
             test(reg1);
             jcc(je, param1);
-            drop;
+            drop
 
         |CODE.opSWITCH:
             UnOp(reg1);
@@ -1357,7 +1356,7 @@ BEGIN
 
         |CODE.opSUBSR:
             UnOp(reg1);
-            andrc(reg1, ORD(-BITS(param2)));
+            andrc(reg1, ORD(-BITS(param2)))
 
         |CODE.opUMINS:
             UnOp(reg1);
@@ -1446,14 +1445,14 @@ BEGIN
             UnOp(reg1);
             cmprc(reg1, param2);
             OutByte2(07EH, 005H);    // jle @f
-            movrc(reg1, param2);     // mov reg1, param2
+            movrc(reg1, param2)      // mov reg1, param2
                                      // @@:
 
         |CODE.opMAXC:
             UnOp(reg1);
             cmprc(reg1, param2);
             OutByte2(07DH, 005H);    // jge @f
-            movrc(reg1, param2);     // mov reg1, param2
+            movrc(reg1, param2)      // mov reg1, param2
                                      // @@:
 
         |CODE.opIN:
@@ -1653,7 +1652,7 @@ BEGIN
             UnOp(reg1);
             test(reg1);
             OutByte2(07DH, 002H); // jge @f
-            neg(reg1);            // neg reg1
+            neg(reg1)             // neg reg1
                                   // @@:
 
         |CODE.opCOPY:
@@ -1898,7 +1897,7 @@ BEGIN
             OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
             addrc(esp, 4)
 
-        |CODE.opEQF, CODE.opEQFI:
+        |CODE.opEQF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
@@ -1908,7 +1907,7 @@ BEGIN
             setcc(sete, al)
                                         // L:
 
-        |CODE.opNEF, CODE.opNEFI:
+        |CODE.opNEF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
@@ -1918,7 +1917,7 @@ BEGIN
             setcc(setne, al)
                                         // L:
 
-        |CODE.opLTF, CODE.opGTFI:
+        |CODE.opLTF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
@@ -1932,7 +1931,7 @@ BEGIN
             andrc(eax, 1)
                                         // L:
 
-        |CODE.opGTF, CODE.opLTFI:
+        |CODE.opGTF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
@@ -1946,7 +1945,7 @@ BEGIN
             andrc(eax, 1)
                                         // L:
 
-        |CODE.opLEF, CODE.opGEFI:
+        |CODE.opLEF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax
@@ -1956,7 +1955,7 @@ BEGIN
             setcc(setnc, al)
                                         // L:
 
-        |CODE.opGEF, CODE.opLEFI:
+        |CODE.opGEF:
             GetRegA;
             OutByte2(0DAH, 0E9H);       // fucompp
             OutByte3(09BH, 0DFH, 0E0H); // fstsw ax

@@ -2231,9 +2231,9 @@ VAR
     PROCEDURE BoolCmp (eq, val: BOOLEAN);
     BEGIN
        IF eq = val THEN
-           CODE.AddCmd0(CODE.opNER)
+           CODE.AddCmd0(CODE.opNEC)
        ELSE
-           CODE.AddCmd0(CODE.opEQR)
+           CODE.AddCmd0(CODE.opEQC)
        END
     END BoolCmp;
 
@@ -2339,19 +2339,19 @@ BEGIN
                     ARITH.relation(e.value, e1.value, operator, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6,  ARITH.Int(e.value))
+                        CODE.AddCmd(CODE.opEQC + cmpcode(op), ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
+                        CODE.AddCmd(CODE.opEQC + cmpcode(op), ARITH.Int(e1.value))
                     ELSE
                         CODE.AddCmd0(CODE.opEQ + cmpcode(op))
                     END
                 END
 
             ELSIF isStringW1(e) & isCharW(e1) THEN
-                CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
+                CODE.AddCmd(CODE.opEQC + cmpcode(op), StrToWChar(e.value.string(SCAN.IDENT).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
+                CODE.AddCmd(CODE.opEQC + cmpcode(op), StrToWChar(e1.value.string(SCAN.IDENT).s))
 
             ELSIF isBoolean(e) & isBoolean(e1) THEN
                 IF constant THEN
@@ -2375,14 +2375,11 @@ BEGIN
                     ARITH.relation(e.value, e1.value, operator, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        CODE.Float(ARITH.Float(e.value));
-                        CODE.fcmp(CODE.opEQF + cmpcode(op) + 6)
+                        CODE.Float(ARITH.Float(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        CODE.Float(ARITH.Float(e1.value));
-                        CODE.fcmp(CODE.opEQF + cmpcode(op))
-                    ELSE
-                        CODE.fcmp(CODE.opEQF + cmpcode(op))
-                    END
+                        CODE.Float(ARITH.Float(e1.value))
+                    END;
+                    CODE.fcmp(CODE.opEQF + cmpcode(op))
                 END
 
             ELSIF (isStringW(e) OR isCharArrayX(e)) & (isStringW(e1) OR isCharArrayX(e1)) THEN
@@ -2391,7 +2388,7 @@ BEGIN
                 END
 
             ELSIF isPtr(e) & isNil(e1) OR isNil(e) & isPtr(e1) THEN
-                CODE.AddCmd0(CODE.opEQ + cmpcode(op) + 6)
+                CODE.AddCmd0(CODE.opEQC + cmpcode(op))
 
             ELSIF isProc(e) & isNil(e1) THEN
                 IF e.obj IN {ePROC, eIMP} THEN
@@ -2400,7 +2397,7 @@ BEGIN
                     e.obj := eCONST;
                     ARITH.setbool(e.value, op = SCAN.lxNE)
                 ELSE
-                    CODE.AddCmd0(CODE.opEQ + cmpcode(op) + 6)
+                    CODE.AddCmd0(CODE.opEQC + cmpcode(op))
                 END
 
             ELSIF isNil(e) & isProc(e1) THEN
@@ -2410,7 +2407,7 @@ BEGIN
                     e.obj := eCONST;
                     ARITH.setbool(e.value, op = SCAN.lxNE)
                 ELSE
-                    CODE.AddCmd0(CODE.opEQ + cmpcode(op) + 6)
+                    CODE.AddCmd0(CODE.opEQC + cmpcode(op))
                 END
 
             ELSIF isProc(e) & isProc(e1) & PROG.isTypeEq(e.type, e1.type) THEN
@@ -2429,13 +2426,13 @@ BEGIN
                         ARITH.setbool(e.value, e.ident # e1.ident)
                     END
                 ELSIF e.obj = ePROC THEN
-                    CODE.ProcCmp(e.ident.proc.label, cmpcode(op) = 0)
+                    CODE.ProcCmp(e.ident.proc.label, op = SCAN.lxEQ)
                 ELSIF e1.obj = ePROC THEN
-                    CODE.ProcCmp(e1.ident.proc.label, cmpcode(op) = 0)
+                    CODE.ProcCmp(e1.ident.proc.label, op = SCAN.lxEQ)
                 ELSIF e.obj = eIMP THEN
-                    CODE.ProcImpCmp(e.ident.import, cmpcode(op) = 0)
+                    CODE.ProcImpCmp(e.ident.import, op = SCAN.lxEQ)
                 ELSIF e1.obj = eIMP THEN
-                    CODE.ProcImpCmp(e1.ident.import, cmpcode(op) = 0)
+                    CODE.ProcImpCmp(e1.ident.import, op = SCAN.lxEQ)
                 ELSE
                     CODE.AddCmd0(CODE.opEQ + cmpcode(op))
                 END
@@ -2459,19 +2456,19 @@ BEGIN
                     ARITH.relation(e.value, e1.value, operator, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, ARITH.Int(e.value))
+                        CODE.AddCmd(CODE.opEQC + invcmpcode(op), ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, ARITH.Int(e1.value))
+                        CODE.AddCmd(CODE.opEQC + cmpcode(op), ARITH.Int(e1.value))
                     ELSE
                         CODE.AddCmd0(CODE.opEQ + cmpcode(op))
                     END
                 END
 
             ELSIF isStringW1(e) & isCharW(e1) THEN
-                CODE.AddCmd(CODE.opEQ + cmpcode(op) + 6, StrToWChar(e.value.string(SCAN.IDENT).s))
+                CODE.AddCmd(CODE.opEQC + invcmpcode(op), StrToWChar(e.value.string(SCAN.IDENT).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                CODE.AddCmd(CODE.opEQ + cmpcode(op) + 12, StrToWChar(e1.value.string(SCAN.IDENT).s))
+                CODE.AddCmd(CODE.opEQC + cmpcode(op), StrToWChar(e1.value.string(SCAN.IDENT).s))
 
             ELSIF isReal(e) & isReal(e1) THEN
                 IF constant THEN
@@ -2479,7 +2476,7 @@ BEGIN
                 ELSE
                     IF e.obj = eCONST THEN
                         CODE.Float(ARITH.Float(e.value));
-                        CODE.fcmp(CODE.opEQF + cmpcode(op) + 6)
+                        CODE.fcmp(CODE.opEQF + invcmpcode(op))
                     ELSIF e1.obj = eCONST THEN
                         CODE.Float(ARITH.Float(e1.value));
                         CODE.fcmp(CODE.opEQF + cmpcode(op))
@@ -3130,12 +3127,12 @@ BEGIN
 
     IF e.obj = eCONST THEN
         IF st > 0 THEN
-            CODE.AddCmd(CODE.opLER, ARITH.Int(e.value));
+            CODE.AddCmd(CODE.opLEC, ARITH.Int(e.value));
             IF ARITH.Int(e.value) = UTILS.target.maxInt THEN
                 ERRORS.WarningMsg(pos2.line, pos2.col, 1)
             END
         ELSE
-            CODE.AddCmd(CODE.opGER, ARITH.Int(e.value));
+            CODE.AddCmd(CODE.opGEC, ARITH.Int(e.value));
             IF ARITH.Int(e.value) = UTILS.target.minInt THEN
                 ERRORS.WarningMsg(pos2.line, pos2.col, 1)
             END
