@@ -2601,7 +2601,7 @@ END translate;
 
 PROCEDURE prolog (code: CODE.CODES; modname: ARRAY OF CHAR; target, stack_size: INTEGER);
 VAR
-    ModName_Offs, entry: INTEGER;
+    ModName_Offs, entry, L: INTEGER;
 
 BEGIN
     ModName_Offs := CHL.Length(code.types) * 8 + CHL.Length(code.data);
@@ -2619,6 +2619,20 @@ BEGIN
         CallRTL(CODE._dllentry);
         test(rax);
         jcc(je, dllret)
+    ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64} THEN
+        L := NewLabel();
+        pushc(0);
+        mov(rax, rsp);
+        push(rax);
+        pushc(1024 * 1024 * stack_size);
+        pushc(0);
+        CallRTL(CODE._new);
+        pop(rax);
+        test(rax);
+        jcc(je, L);
+        addrc(rax, 1024 * 1024 * stack_size - 8);
+        mov(rsp, rax);
+        X86.SetLabel(L)
     END;
 
     push(rsp);
@@ -2734,7 +2748,6 @@ END rsave;
 PROCEDURE CodeGen* (code: CODE.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     path, modname, ext: PATHS.PATH;
-    opt: PROG.OPTIONS;
 
 BEGIN
     Win64RegPar[0] := rcx;
@@ -2767,17 +2780,17 @@ BEGIN
     NewNumber(LSR(ASR(ROR(1, 1), 9), 2));  (* {52..61} *)
 
     prog := BIN.create(code.lcount);
-    BIN.SetParams(prog, code.bss, opt.stack, WCHR(1), WCHR(0));
+    BIN.SetParams(prog, code.bss, options.stack, WCHR(1), WCHR(0));
 
     X86.SetProgram(prog);
 
-    prolog(code, modname, target, opt.stack);
+    prolog(code, modname, target, options.stack);
     translate(code.commands, CHL.Length(code.types) * 8);
     epilog(code, modname, target);
 
     BIN.fixup(prog);
     IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
-        PE32.write(prog, outname, opt.base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
+        PE32.write(prog, outname, options.base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
     ELSIF target = mConst.Target_iELF64 THEN
         ELF.write(prog, outname, TRUE)
     END
