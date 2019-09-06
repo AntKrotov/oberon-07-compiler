@@ -736,8 +736,7 @@ BEGIN
             pop(esp)
 
         |CODE.opCONST:
-            reg1 := REG.GetAnyReg(R);
-            movrc(reg1, param2)
+            movrc(REG.GetAnyReg(R), param2)
 
         |CODE.opLABEL:
             SetLabel(param1) // L:
@@ -755,14 +754,12 @@ BEGIN
 
         |CODE.opLADR:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
-            OutByte2(8DH, 45H + reg1 * 8 + long(n));  // lea reg1, dword[ebp + n]
+            OutByte2(8DH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // lea reg1, dword[ebp + n]
             OutIntByte(n)
 
         |CODE.opVADR:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
-            OutByte2(8BH, 45H + reg1 * 8 + long(n));  // mov reg1, dword[ebp + n]
+            OutByte2(8BH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // mov reg1, dword[ebp + n]
             OutIntByte(n)
 
         |CODE.opSADR:
@@ -808,8 +805,7 @@ BEGIN
 
         |CODE.opLLOAD32:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
-            OutByte2(8BH, 45H + reg1 * 8 + long(n));  // mov reg1, dword[ebp + n]
+            OutByte2(8BH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // mov reg1, dword[ebp + n]
             OutIntByte(n)
 
         |CODE.opLOAD32:
@@ -835,8 +831,7 @@ BEGIN
 
         |CODE.opLLOAD8:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
-            OutByte3(0FH, 0B6H, 45H + reg1 * 8 + long(n)); // movzx reg1, byte[ebp + n]
+            OutByte3(0FH, 0B6H, 45H + REG.GetAnyReg(R) * 8 + long(n)); // movzx reg1, byte[ebp + n]
             OutIntByte(n)
 
         |CODE.opLOAD8:
@@ -862,8 +857,7 @@ BEGIN
 
         |CODE.opLLOAD16:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
-            OutByte3(0FH, 0B7H, 45H + reg1 * 8 + long(n)); // movzx reg1, word[ebp + n]
+            OutByte3(0FH, 0B7H, 45H + REG.GetAnyReg(R) * 8 + long(n)); // movzx reg1, word[ebp + n]
             OutIntByte(n)
 
         |CODE.opLOAD16:
@@ -1884,7 +1878,6 @@ BEGIN
             drop
 
         |CODE.opFLOOR:
-            reg1 := REG.GetAnyReg(R);
             subrc(esp, 8);
             OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 004H);                   // fstcw word[esp+4]
             OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 006H);                   // fstcw word[esp+6]
@@ -1893,7 +1886,7 @@ BEGIN
             OutByte2(0D9H, 06CH); OutByte2(024H, 004H);                         // fldcw word[esp+4]
             OutByte2(0D9H, 0FCH);                                               // frndint
             OutByte3(0DBH, 01CH, 024H);                                         // fistp dword[esp]
-            pop(reg1);
+            pop(REG.GetAnyReg(R));
             OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
             addrc(esp, 4)
 

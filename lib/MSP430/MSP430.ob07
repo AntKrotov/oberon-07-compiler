@@ -69,7 +69,7 @@ END SetIntSR;
 
 
 PROCEDURE [code] DInt*
-    0C232H; (* BIC #8, SR *)
+    0C232H; (*  BIC #8, SR  *)
 
 
 PROCEDURE [code] EInt*

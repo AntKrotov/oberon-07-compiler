@@ -337,6 +337,8 @@ PROCEDURE movrc (reg, n: INTEGER); // mov reg, n
 BEGIN
     IF isLong(n) THEN
         movabs(reg, n)
+    ELSIF n = 0 THEN
+        xor(reg, reg)
     ELSE
         Rex(reg, 0);
         OutByte2(0C7H, 0C0H + reg MOD 8);
@@ -1161,8 +1163,7 @@ BEGIN
             CallRTL(CODE._move)
 
         |CODE.opSADR:
-            reg1 := REG.GetAnyReg(R);
-            lea(reg1, stroffs + param2, sDATA)
+            lea(REG.GetAnyReg(R), stroffs + param2, sDATA)
 
         |CODE.opLOAD8:
             UnOp(reg1);
@@ -1271,12 +1272,10 @@ BEGIN
             END
 
         |CODE.opGADR:
-            reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, sBSS)
+            lea(REG.GetAnyReg(R), param2, sBSS)
 
         |CODE.opVADR:
-            reg1 := REG.GetAnyReg(R);
-            movrm(reg1, rbp, param2 * 8)
+            movrm(REG.GetAnyReg(R), rbp, param2 * 8)
 
         |CODE.opSAVE8C:
             UnOp(reg1);
@@ -1370,8 +1369,7 @@ BEGIN
             drop
 
         |CODE.opCONST:
-            reg1 := REG.GetAnyReg(R);
-            movrc(reg1, param2)
+            movrc(REG.GetAnyReg(R), param2)
 
         |CODE.opEQ..CODE.opGE,
          CODE.opEQC..CODE.opGEC:
@@ -1521,15 +1519,16 @@ BEGIN
         |CODE.opEQB, CODE.opNEB:
             BinOp(reg1, reg2);
             drop;
-
             test(reg1);
-            OutByte2(74H, 07H); // je L1
+            label := NewLabel();
+            jcc(je, label);
             movrc(reg1, 1);
-            // L1:
+            X86.SetLabel(label);
             test(reg2);
-            OutByte2(74H, 07H); // je L2
+            label := NewLabel();
+            jcc(je, label);
             movrc(reg2, 1);
-            // L2:
+            X86.SetLabel(label);
             cmprr(reg1, reg2);
             IF opcode = CODE.opEQB THEN
                 setcc(sete, reg1)
@@ -1666,8 +1665,7 @@ BEGIN
             drop
 
         |CODE.opPUSHP:
-            reg1 := REG.GetAnyReg(R);
-            lea(reg1, param2, sCODE)
+            lea(REG.GetAnyReg(R), param2, sCODE)
 
         |CODE.opINC, CODE.opDEC:
             BinOp(reg1, reg2);
@@ -2622,8 +2620,7 @@ BEGIN
     ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64} THEN
         L := NewLabel();
         pushc(0);
-        mov(rax, rsp);
-        push(rax);
+        push(rsp);
         pushc(1024 * 1024 * stack_size);
         pushc(0);
         CallRTL(CODE._new);
@@ -2780,7 +2777,7 @@ BEGIN
     NewNumber(LSR(ASR(ROR(1, 1), 9), 2));  (* {52..61} *)
 
     prog := BIN.create(code.lcount);
-    BIN.SetParams(prog, code.bss, options.stack, WCHR(1), WCHR(0));
+    BIN.SetParams(prog, code.bss, 1, WCHR(1), WCHR(0));
 
     X86.SetProgram(prog);
 
