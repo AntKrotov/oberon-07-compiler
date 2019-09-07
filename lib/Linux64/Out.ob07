@@ -78,11 +78,10 @@ BEGIN
 END WriteInt;
 
 PROCEDURE IsNan(AValue: REAL): BOOLEAN;
-VAR h, l: SET;
+VAR s: SET;
 BEGIN
-  sys.GET(sys.ADR(AValue), l);
-  sys.GET(sys.ADR(AValue) + 4, h)
-  RETURN (h * {20..30} = {20..30}) & ((h * {0..19} # {}) OR (l * {0..31} # {}))
+  sys.GET(sys.ADR(AValue), s)
+  RETURN (s * {52..62} = {52..62}) & ((s * {32..51} # {}) OR (s * {0..31} # {}))
 END IsNan;
 
 PROCEDURE IsInf(x: REAL): BOOLEAN;

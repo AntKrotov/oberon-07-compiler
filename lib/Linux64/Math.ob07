@@ -1,0 +1,191 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE Math;
+
+IMPORT SYSTEM;
+
+
+CONST
+
+    e   *= 2.71828182845904523;
+    pi  *= 3.14159265358979324;
+    ln2 *= 0.693147180559945309;
+
+    eps = 1.0E-16;
+    MaxCosArg = 1000000.0 * pi;
+
+
+VAR
+
+    Exp: ARRAY 710 OF REAL;
+
+
+PROCEDURE sqrt* (x: REAL): REAL;
+BEGIN
+    ASSERT(x >= 0.0);
+    SYSTEM.CODE(
+    0F2H, 0FH, 51H, 45H, 10H,  (*  sqrtsd  xmm0, qword[rbp + 10h]  *)
+    05DH,                      (*  pop     rbp                     *)
+    0C2H, 08H, 00H             (*  ret     8                       *)
+    )
+
+    RETURN 0.0
+END sqrt;
+
+
+PROCEDURE exp* (x: REAL): REAL;
+VAR
+    a, s, res: REAL;
+    neg: BOOLEAN;
+    n: INTEGER;
+
+BEGIN
+    neg := x < 0.0;
+    IF neg THEN
+        x := -x
+    END;
+
+    IF x < FLT(LEN(Exp)) THEN
+        res := Exp[FLOOR(x)];
+        x := x - FLT(FLOOR(x));
+    ELSE
+        res := SYSTEM.INF();
+        x := 0.0
+    END;
+
+    n := 1;
+    a := 1.0;
+    s := 1.0;
+    REPEAT
+        a := a * x / FLT(n);
+        s := s + a;
+        INC(n)
+    UNTIL a < eps;
+
+    IF neg THEN
+        res := 1.0 / (res * s)
+    ELSE
+        res := res * s
+    END
+
+    RETURN res
+END exp;
+
+
+PROCEDURE ln* (x: REAL): REAL;
+VAR
+    a, x2, res: REAL;
+    k, n: INTEGER;
+
+BEGIN
+    ASSERT(x > 0.0);
+    UNPK(x, k);
+
+    x := (x - 1.0) / (x + 1.0);
+    x2 := x * x;
+
+    res := x;
+
+    n := 3;
+
+    REPEAT
+        x := x * x2;
+        a := x / FLT(n);
+        res := res + a;
+        INC(n, 2)
+    UNTIL a < eps
+
+    RETURN res * 2.0 + FLT(k) * ln2
+END ln;
+
+
+PROCEDURE power* (base, exponent: REAL): REAL;
+BEGIN
+    ASSERT(base > 0.0)
+    RETURN exp(exponent * ln(base))
+END power;
+
+
+PROCEDURE log* (base, x: REAL): REAL;
+BEGIN
+    ASSERT(base > 0.0);
+    ASSERT(x > 0.0)
+    RETURN ln(x) / ln(base)
+END log;
+
+
+PROCEDURE cos* (x: REAL): REAL;
+VAR
+    a, res: REAL;
+    n: INTEGER;
+
+BEGIN
+    x := ABS(x);
+    ASSERT(x <= MaxCosArg);
+    x := x - FLT( FLOOR(x / (2.0 * pi)) ) * (2.0 * pi);
+    x := x * x;
+
+    res := 0.0;
+    a := 1.0;
+    n := 1;
+    REPEAT
+        res := res + a;
+        a := -a * x / FLT(n*n + n);
+        INC(n, 2)
+    UNTIL ABS(a) < eps
+
+    RETURN res
+END cos;
+
+
+PROCEDURE sin* (x: REAL): REAL;
+BEGIN
+    ASSERT(ABS(x) <= MaxCosArg);
+    x := cos(x)
+    RETURN sqrt(1.0 - x * x)
+END sin;
+
+
+PROCEDURE tan* (x: REAL): REAL;
+BEGIN
+    ASSERT(ABS(x) <= MaxCosArg);
+    x := cos(x)
+    RETURN sqrt(1.0 - x * x) / x
+END tan;
+
+
+PROCEDURE fact* (n: INTEGER): REAL;
+VAR
+    res: REAL;
+
+BEGIN
+    res := 1.0;
+    WHILE n > 0 DO
+        res := res * FLT(n);
+        DEC(n)
+    END
+
+    RETURN res
+END fact;
+
+
+PROCEDURE init;
+VAR
+    i: INTEGER;
+
+BEGIN
+    Exp[0] := 1.0;
+    FOR i := 1 TO LEN(Exp) - 1 DO
+        Exp[i] := Exp[i - 1] * e
+    END
+END init;
+
+
+BEGIN
+    init
+END Math.
