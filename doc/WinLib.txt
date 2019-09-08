@@ -152,13 +152,13 @@ MODULE Math - математические функции
         PROCEDURE tanh(x: REAL): REAL
                 гиперболический тангенс x
 
-        PROCEDURE arcsinh(x: REAL): REAL
+        PROCEDURE arsinh(x: REAL): REAL
                 обратный гиперболический синус x
 
-        PROCEDURE arccosh(x: REAL): REAL
+        PROCEDURE arcosh(x: REAL): REAL
                 обратный гиперболический косинус x
 
-        PROCEDURE arctanh(x: REAL): REAL
+        PROCEDURE artanh(x: REAL): REAL
                 обратный гиперболический тангенс x
 
         PROCEDURE round(x: REAL): REAL
@@ -179,6 +179,9 @@ MODULE Math - математические функции
                 если x > 0 возвращает 1
                 если x < 0 возвращает -1
                 если x = 0 возвращает 0
+
+        PROCEDURE fact(n: INTEGER): REAL
+                факториал n
 
 ------------------------------------------------------------------------------
 MODULE File - работа с файловой системой
