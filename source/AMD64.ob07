@@ -2616,7 +2616,17 @@ BEGIN
         CallRTL(IL._dllentry);
         test(rax);
         jcc(je, dllret)
-    ELSIF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64} THEN
+    END;
+
+    push(rsp);
+    lea(rax, entry, sCODE);
+    push(rax);
+    pushDA(0); //TYPES
+    pushc(CHL.Length(code.types));
+    pushDA(ModName_Offs); //MODNAME
+    CallRTL(IL._init);
+
+    IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64} THEN
         L := NewLabel();
         pushc(0);
         push(rsp);
@@ -2629,15 +2639,7 @@ BEGIN
         addrc(rax, 1024 * 1024 * stack_size - 8);
         mov(rsp, rax);
         X86.SetLabel(L)
-    END;
-
-    push(rsp);
-    lea(rax, entry, sCODE);
-    push(rax);
-    pushDA(0); //TYPES
-    pushc(CHL.Length(code.types));
-    pushDA(ModName_Offs); //MODNAME
-    CallRTL(IL._init)
+    END
 END prolog;
 
 
