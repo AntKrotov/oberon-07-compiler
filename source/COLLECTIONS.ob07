@@ -7,8 +7,6 @@
 
 MODULE COLLECTIONS;
 
-IMPORT ERRORS;
-
 
 TYPE
 
@@ -52,7 +50,6 @@ VAR
 
 BEGIN
     NEW(collection);
-    ERRORS.OutOfMemory(collection = NIL);
     collection.last := NIL
 
     RETURN collection

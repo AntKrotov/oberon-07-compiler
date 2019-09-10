@@ -7,7 +7,7 @@
 
 MODULE BIN;
 
-IMPORT LISTS, CHL := CHUNKLISTS, ARITH, UTILS, ERRORS;
+IMPORT LISTS, CHL := CHUNKLISTS, ARITH, UTILS;
 
 
 CONST
@@ -77,7 +77,6 @@ VAR
 
 BEGIN
     NEW(program);
-    ERRORS.OutOfMemory(program = NIL);
 
     program.bss := 0;
 
@@ -114,7 +113,6 @@ VAR
 
 BEGIN
     NEW(cmd);
-    ERRORS.OutOfMemory(cmd = NIL);
     cmd.opcode := opcode;
     cmd.offset := CHL.Length(program.code);
     LISTS.push(program.rel_list, cmd)
@@ -233,7 +231,6 @@ BEGIN
     END;
 
     NEW(imp);
-    ERRORS.OutOfMemory(imp = NIL);
     imp.nameoffs := CHL.Length(program.import);
     imp.label := label;
     LISTS.push(program.imp_list, imp);
@@ -272,7 +269,6 @@ VAR
 
 BEGIN
     NEW(exp);
-    ERRORS.OutOfMemory(exp = NIL);
     exp.nameoffs := CHL.Length(program.export);
     exp.label := CHL.GetInt(program.labels, label);
 

@@ -7,7 +7,7 @@
 
 MODULE LISTS;
 
-IMPORT C := COLLECTIONS, ERRORS;
+IMPORT C := COLLECTIONS;
 
 
 TYPE
@@ -171,8 +171,7 @@ END count;
 PROCEDURE create* (list: LIST): LIST;
 BEGIN
     IF list = NIL THEN
-        NEW(list);
-        ERRORS.OutOfMemory(list = NIL)
+        NEW(list)
     END;
 
     list.first := NIL;

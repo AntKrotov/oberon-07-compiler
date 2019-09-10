@@ -7,7 +7,7 @@
 
 MODULE CHUNKLISTS;
 
-IMPORT LISTS, WR := WRITER, ERRORS;
+IMPORT LISTS, WR := WRITER;
 
 
 CONST
@@ -107,7 +107,6 @@ BEGIN
 
     IF chunk.count = LENOFBYTECHUNK THEN
         NEW(chunk);
-        ERRORS.OutOfMemory(chunk = NIL);
         chunk.count := 0;
         LISTS.push(list, chunk)
     END;
@@ -140,12 +139,10 @@ VAR
 
 BEGIN
     NEW(bytelist);
-    ERRORS.OutOfMemory(bytelist = NIL);
     list := LISTS.create(bytelist);
     bytelist.length := 0;
 
     NEW(chunk);
-    ERRORS.OutOfMemory(chunk = NIL);
     chunk.count := 0;
     LISTS.push(list, chunk)
 
@@ -216,7 +213,6 @@ BEGIN
 
     IF chunk.count = LENOFINTCHUNK THEN
         NEW(chunk);
-        ERRORS.OutOfMemory(chunk = NIL);
         chunk.count := 0;
         LISTS.push(list, chunk)
     END;
@@ -236,12 +232,10 @@ VAR
 
 BEGIN
     NEW(intlist);
-    ERRORS.OutOfMemory(intlist = NIL);
     list := LISTS.create(intlist);
     intlist.length := 0;
 
     NEW(chunk);
-    ERRORS.OutOfMemory(chunk = NIL);
     chunk.count := 0;
     LISTS.push(list, chunk)
 

@@ -7,7 +7,7 @@
 
 MODULE FILES;
 
-IMPORT UTILS, C := COLLECTIONS, CONSOLE, ERRORS;
+IMPORT UTILS, C := COLLECTIONS, CONSOLE;
 
 
 TYPE
@@ -63,8 +63,7 @@ VAR
 BEGIN
     citem := C.pop(files);
     IF citem = NIL THEN
-        NEW(file);
-        ERRORS.OutOfMemory(file = NIL)
+        NEW(file)
     ELSE
         file := citem(FILE)
     END

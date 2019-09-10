@@ -7,7 +7,7 @@
 
 MODULE AVLTREES;
 
-IMPORT C := COLLECTIONS, ERRORS;
+IMPORT C := COLLECTIONS;
 
 
 TYPE
@@ -42,8 +42,7 @@ VAR
 BEGIN
     citem := C.pop(nodes);
     IF citem = NIL THEN
-        NEW(node);
-        ERRORS.OutOfMemory(node = NIL)
+        NEW(node)
     ELSE
         node := citem(NODE)
     END;

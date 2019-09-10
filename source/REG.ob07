@@ -7,8 +7,6 @@
 
 MODULE REG;
 
-IMPORT ERRORS;
-
 
 CONST
 
@@ -420,7 +418,6 @@ VAR
 
 BEGIN
     NEW(R);
-    ERRORS.OutOfMemory(R = NIL);
 
     R.regs := regs;
     R.pushed := 0;

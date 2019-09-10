@@ -182,14 +182,6 @@ BEGIN
 END Error5;
 
 
-PROCEDURE OutOfMemory* (error: BOOLEAN);
-BEGIN
-    IF error THEN
-        Error1("out of memory")
-    END
-END OutOfMemory;
-
-
 PROCEDURE WrongRTL* (ProcName: ARRAY OF CHAR);
 BEGIN
     Error5("procedure ", mConst.RTL_NAME, ".", ProcName, " not found")

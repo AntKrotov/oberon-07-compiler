@@ -191,9 +191,13 @@ BEGIN
 
     UTILS.GetArg(1, inname);
 
+    C.Ln;
+    C.String("Akron Oberon Compiler v"); C.Int(mConst.vMajor); C.String("."); C.Int2(mConst.vMinor);
+        C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)");
+    C.StringLn("Copyright (c) 2018-2019, Anton Krotov");
+
     IF inname = "" THEN
-        C.String("Akron Oberon-07/16 Compiler v"); C.Int(mConst.vMajor); C.String("."); C.Int2(mConst.vMinor);
-            C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)"); C.Ln;
+        C.Ln;
         C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
         IF UTILS.bit_depth = 64 THEN
             C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfexe64 | msp430'); C.Ln;
