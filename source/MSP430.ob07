@@ -458,6 +458,11 @@ BEGIN
 END drop;
 
 
+PROCEDURE GetAnyReg (): INTEGER;
+    RETURN REG.GetAnyReg(R)
+END GetAnyReg;
+
+
 PROCEDURE PushAll (NumberOfParameters: INTEGER);
 BEGIN
     REG.PushAll(R);
@@ -546,7 +551,7 @@ BEGIN
     END;
 
     IF (op = IL.opROR2) & (n > 0) THEN
-        reg2 := REG.GetAnyReg(R);
+        reg2 := GetAnyReg();
         MovRR(reg, reg2)
     ELSE
         reg2 := -1
@@ -691,7 +696,7 @@ BEGIN
                     Op2(opMOV + bw(next.opcode = IL.opSAVE8), imm(c1), dst_x(c2, SR));
                     cmd := next
                 ELSE
-                    Op2(opMOV, imm(param2), REG.GetAnyReg(R))
+                    Op2(opMOV, imm(param2), GetAnyReg())
                 END
             ELSIF (next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVE16) OR (next.opcode = IL.opSAVE8) THEN
                 UnOp(reg1);
@@ -699,36 +704,36 @@ BEGIN
                 drop;
                 cmd := next
             ELSE
-                Op2(opMOV, imm(param2), REG.GetAnyReg(R))
+                Op2(opMOV, imm(param2), GetAnyReg())
             END
 
         |IL.opSADR:
-            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
+            Op2(opMOV, incr(PC), GetAnyReg());
             EmitWord(param2);
             Reloc(RDATA)
 
         |IL.opGADR:
-            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
+            Op2(opMOV, incr(PC), GetAnyReg());
             EmitWord(param2);
             Reloc(RBSS)
 
         |IL.opLADR:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             MovRR(BP, reg1);
             Op2(opADD, imm(param2 * 2), reg1)
 
         |IL.opLLOAD8:
-            Op2(opMOV + BW, src_x(param2 * 2, BP), REG.GetAnyReg(R))
+            Op2(opMOV + BW, src_x(param2 * 2, BP), GetAnyReg())
 
         |IL.opLLOAD16, IL.opVADR:
-            Op2(opMOV, src_x(param2 * 2, BP), REG.GetAnyReg(R))
+            Op2(opMOV, src_x(param2 * 2, BP), GetAnyReg())
 
         |IL.opGLOAD8:
-            Op2(opMOV + BW, src_x(param2, SR), REG.GetAnyReg(R));
+            Op2(opMOV + BW, src_x(param2, SR), GetAnyReg());
             Reloc(RBSS)
 
         |IL.opGLOAD16:
-            Op2(opMOV, src_x(param2, SR), REG.GetAnyReg(R));
+            Op2(opMOV, src_x(param2, SR), GetAnyReg());
             Reloc(RBSS)
 
         |IL.opLOAD8:
@@ -740,12 +745,12 @@ BEGIN
             Op2(opMOV, indir(reg1), reg1)
 
         |IL.opVLOAD8:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             Op2(opMOV, src_x(param2 * 2, BP), reg1);
             Op2(opMOV + BW, indir(reg1), reg1)
 
         |IL.opVLOAD16:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             Op2(opMOV, src_x(param2 * 2, BP), reg1);
             Op2(opMOV, indir(reg1), reg1)
 
@@ -797,7 +802,7 @@ BEGIN
                 Op2(opSUB, imm(param2), reg1)
             END;
             IF opcode = IL.opSUBL THEN
-                reg2 := REG.GetAnyReg(R);
+                reg2 := GetAnyReg();
                 Clear(reg2);
                 Op2(opSUB, reg1 * 256, reg2);
                 drop;
@@ -856,7 +861,7 @@ BEGIN
                 cmd := cmd.next(COMMAND)
 
             ELSE
-                setcc(cc, REG.GetAnyReg(R))
+                setcc(cc, GetAnyReg())
             END
 
         |IL.opNOP:
@@ -1001,7 +1006,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(reg1);
-            Op2(opMOV, src_x(-2, reg1), REG.GetAnyReg(R))
+            Op2(opMOV, src_x(-2, reg1), GetAnyReg())
 
         |IL.opISREC:
             PushAll(2);
@@ -1423,7 +1428,7 @@ BEGIN
             drop
 
         |IL.opPUSHP:
-            Op2(opMOV, incr(PC), REG.GetAnyReg(R));
+            Op2(opMOV, incr(PC), GetAnyReg());
             EmitWord(param2);
             Reloc(RCODE)
 
@@ -1433,7 +1438,7 @@ BEGIN
             EmitWord(param1);
             Reloc(RCODE);
             drop;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
 
             IF opcode = IL.opEQP THEN
                 setcc(je, reg1)

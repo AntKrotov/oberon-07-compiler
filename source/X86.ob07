@@ -41,7 +41,7 @@ TYPE
 
     END;
 
-    TCODE = POINTER TO RECORD (ANYCODE)
+    CODE = POINTER TO RECORD (ANYCODE)
 
         code:    ARRAY CODECHUNK OF BYTE;
         length:  INTEGER
@@ -103,14 +103,14 @@ END Word;
 
 PROCEDURE OutByte* (n: BYTE);
 VAR
-    c: TCODE;
+    c: CODE;
     last: ANYCODE;
 
 BEGIN
     last := CodeList.last(ANYCODE);
 
-    IF (last IS TCODE) & (last(TCODE).length < CODECHUNK) THEN
-        c := last(TCODE);
+    IF (last IS CODE) & (last(CODE).length < CODECHUNK) THEN
+        c := last(CODE);
         c.code[c.length] := n;
         INC(c.length)
     ELSE
@@ -321,6 +321,11 @@ BEGIN
 END drop;
 
 
+PROCEDURE GetAnyReg (): INTEGER;
+    RETURN REG.GetAnyReg(R)
+END GetAnyReg;
+
+
 PROCEDURE cond* (op: INTEGER): INTEGER;
 VAR
     res: INTEGER;
@@ -414,7 +419,7 @@ BEGIN
     IF label < 0 THEN
         label := -label;
         IF pic THEN
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             Pic(reg1, BIN.PICIMP, label);
             OutByte2(0FFH, 010H + reg1);  // call dword[reg1]
             drop
@@ -458,7 +463,7 @@ BEGIN
             code.offset := count;
 
             CASE code OF
-            |TCODE:  INC(count, code.length)
+            |CODE:   INC(count, code.length)
             |LABEL:  BIN.SetLabel(program, code.label, count)
             |JMP:    IF code.short THEN INC(count, 2) ELSE INC(count, 5) END; code.offset := count
             |JCC:    IF code.short THEN INC(count, 2) ELSE INC(count, 6) END; code.offset := count
@@ -491,7 +496,7 @@ BEGIN
 
         CASE code OF
 
-        |TCODE:
+        |CODE:
                 FOR i := 0 TO code.length - 1 DO
                     BIN.PutCode(program, code.code[i])
                 END
@@ -549,7 +554,7 @@ END BinOp;
 PROCEDURE PushAll (NumberOfParameters: INTEGER);
 BEGIN
     REG.PushAll(R);
-    R.pushed := R.pushed - NumberOfParameters
+    DEC(R.pushed, NumberOfParameters)
 END PushAll;
 
 
@@ -598,7 +603,7 @@ BEGIN
 
         |IL.opCALLI:
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICIMP, param1);
                 OutByte2(0FFH, 010H + reg1);  // call dword[reg1]
                 drop
@@ -730,7 +735,7 @@ BEGIN
             pop(esp)
 
         |IL.opCONST:
-            movrc(REG.GetAnyReg(R), param2)
+            movrc(GetAnyReg(), param2)
 
         |IL.opLABEL:
             SetLabel(param1) // L:
@@ -738,7 +743,7 @@ BEGIN
         |IL.opNOP:
 
         |IL.opGADR:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2)
             ELSE
@@ -748,16 +753,16 @@ BEGIN
 
         |IL.opLADR:
             n := param2 * 4;
-            OutByte2(8DH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // lea reg1, dword[ebp + n]
+            OutByte2(8DH, 45H + GetAnyReg() * 8 + long(n));  // lea reg1, dword[ebp + n]
             OutIntByte(n)
 
         |IL.opVADR:
             n := param2 * 4;
-            OutByte2(8BH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // mov reg1, dword[ebp + n]
+            OutByte2(8BH, 45H + GetAnyReg() * 8 + long(n));  // mov reg1, dword[ebp + n]
             OutIntByte(n)
 
         |IL.opSADR:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICDATA, stroffs + param2);
             ELSE
@@ -782,13 +787,13 @@ BEGIN
 
         |IL.opVLOAD32:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             OutByte2(8BH, 45H + reg1 * 8 + long(n));  // mov reg1, dword[ebp + n]
             OutIntByte(n);
             OutByte2(8BH, reg1 * 9)  // mov reg1, dword[reg1]
 
         |IL.opGLOAD32:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
                 OutByte2(8BH, reg1 * 9)       // mov reg1, dword[reg1]
@@ -799,7 +804,7 @@ BEGIN
 
         |IL.opLLOAD32:
             n := param2 * 4;
-            OutByte2(8BH, 45H + REG.GetAnyReg(R) * 8 + long(n));  // mov reg1, dword[ebp + n]
+            OutByte2(8BH, 45H + GetAnyReg() * 8 + long(n));  // mov reg1, dword[ebp + n]
             OutIntByte(n)
 
         |IL.opLOAD32:
@@ -808,13 +813,13 @@ BEGIN
 
         |IL.opVLOAD8:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             OutByte2(8BH, 45H + reg1 * 8 + long(n)); // mov reg1, dword[ebp + n]
             OutIntByte(n);
             OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
 
         |IL.opGLOAD8:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
                 OutByte3(0FH, 0B6H, reg1 * 9) // movzx reg1, byte[reg1]
@@ -825,7 +830,7 @@ BEGIN
 
         |IL.opLLOAD8:
             n := param2 * 4;
-            OutByte3(0FH, 0B6H, 45H + REG.GetAnyReg(R) * 8 + long(n)); // movzx reg1, byte[ebp + n]
+            OutByte3(0FH, 0B6H, 45H + GetAnyReg() * 8 + long(n)); // movzx reg1, byte[ebp + n]
             OutIntByte(n)
 
         |IL.opLOAD8:
@@ -834,13 +839,13 @@ BEGIN
 
         |IL.opVLOAD16:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             OutByte2(8BH, 45H + reg1 * 8 + long(n)); // mov reg1, dword[ebp + n]
             OutIntByte(n);
             OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
 
         |IL.opGLOAD16:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
                 OutByte3(0FH, 0B7H, reg1 * 9) // movzx reg1, word[reg1]
@@ -851,7 +856,7 @@ BEGIN
 
         |IL.opLLOAD16:
             n := param2 * 4;
-            OutByte3(0FH, 0B7H, 45H + REG.GetAnyReg(R) * 8 + long(n)); // movzx reg1, word[ebp + n]
+            OutByte3(0FH, 0B7H, 45H + GetAnyReg() * 8 + long(n)); // movzx reg1, word[ebp + n]
             OutIntByte(n)
 
         |IL.opLOAD16:
@@ -959,7 +964,7 @@ BEGIN
         |IL.opSAVEP:
             UnOp(reg1);
             IF pic THEN
-                reg2 := REG.GetAnyReg(R);
+                reg2 := GetAnyReg();
                 Pic(reg2, BIN.PICCODE, param2);
                 OutByte2(089H, reg2 * 8 + reg1); // mov dword[reg1], reg2
                 drop
@@ -972,7 +977,7 @@ BEGIN
         |IL.opSAVEIP:
             UnOp(reg1);
             IF pic THEN
-                reg2 := REG.GetAnyReg(R);
+                reg2 := GetAnyReg();
                 Pic(reg2, BIN.PICIMP, param2);
                 OutByte2(0FFH, 30H + reg2);   // push dword[reg2]
                 OutByte2(08FH, reg1);         // pop dword[reg1]
@@ -985,7 +990,7 @@ BEGIN
             drop
 
         |IL.opPUSHP:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICCODE, param2)
             ELSE
@@ -994,7 +999,7 @@ BEGIN
             END
 
         |IL.opPUSHIP:
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICIMP, param2);
                 OutByte2(08BH, reg1 * 9)         // mov reg1, dword[reg1]
@@ -1061,7 +1066,7 @@ BEGIN
                 cmd := cmd.next(COMMAND)
 
             ELSE
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 setcc(cc + 16, reg1);
                 andrc(reg1, 1)
             END
@@ -1158,7 +1163,7 @@ BEGIN
                 BinOp(reg1, reg2)
             ELSIF opcode = IL.opGETC THEN
                 UnOp(reg2);
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 movrc(reg1, param1)
             END;
             drop;
@@ -1390,7 +1395,7 @@ BEGIN
                 drop
             END;
 
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             movrc(reg1, param2);
             BinOp(reg1, reg2);
             ASSERT(reg1 = ecx);
@@ -1460,7 +1465,7 @@ BEGIN
         |IL.opINR:
             label := NewLabel();
             UnOp(reg1);
-            reg2 := REG.GetAnyReg(R);
+            reg2 := GetAnyReg();
             cmprc(reg1, 32);
             OutByte2(72H, 4); // jb L
             xor(reg1, reg1);
@@ -1553,7 +1558,7 @@ BEGIN
                     UnOp(reg1);
 
                     IF a < 0 THEN
-                        reg2 := REG.GetAnyReg(R);
+                        reg2 := GetAnyReg();
                         mov(reg2, reg1);
                         IF n # 1 THEN
                             OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
@@ -1698,7 +1703,7 @@ BEGIN
             CASE opcode OF
             |IL.opEQP, IL.opNEP:
                 IF pic THEN
-                    reg2 := REG.GetAnyReg(R);
+                    reg2 := GetAnyReg();
                     Pic(reg2, BIN.PICCODE, param1);
                     cmprr(reg1, reg2);
                     drop
@@ -1709,7 +1714,7 @@ BEGIN
 
             |IL.opEQIP, IL.opNEIP:
                 IF pic THEN
-                    reg2 := REG.GetAnyReg(R);
+                    reg2 := GetAnyReg();
                     Pic(reg2, BIN.PICIMP, param1);
                     OutByte2(03BH, reg1 * 8 + reg2);  //cmp reg1, dword [reg2]
                     drop
@@ -1720,7 +1725,7 @@ BEGIN
 
             END;
             drop;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
 
             CASE opcode OF
             |IL.opEQP, IL.opEQIP: setcc(sete,  reg1)
@@ -1731,7 +1736,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(reg1);
-            reg2 := REG.GetAnyReg(R);
+            reg2 := GetAnyReg();
             OutByte3(8BH, 40H + reg2 * 8 + reg1, 0FCH)  // mov reg2, dword[reg1 - 4]
 
         |IL.opISREC:
@@ -1880,7 +1885,7 @@ BEGIN
             OutByte2(0D9H, 06CH); OutByte2(024H, 004H);                         // fldcw word[esp+4]
             OutByte2(0D9H, 0FCH);                                               // frndint
             OutByte3(0DBH, 01CH, 024H);                                         // fistp dword[esp]
-            pop(REG.GetAnyReg(R));
+            pop(GetAnyReg());
             OutByte2(0D9H, 06CH); OutByte2(024H, 002H);                         // fldcw word[esp+2]
             addrc(esp, 4)
 
@@ -1965,7 +1970,7 @@ BEGIN
 
         |IL.opLADR_UNPK:
             n := param2 * 4;
-            reg1 := REG.GetAnyReg(R);
+            reg1 := GetAnyReg();
             OutByte2(8DH, 45H + reg1 * 8 + long(n));  // lea reg1, dword[ebp + n]
             OutIntByte(n);
             BinOp(reg1, reg2);
@@ -1978,7 +1983,7 @@ BEGIN
 
         |IL.opSADR_PARAM:
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICDATA, stroffs + param2);
                 push(reg1);
                 drop
@@ -1997,7 +2002,7 @@ BEGIN
 
         |IL.opGLOAD32_PARAM:
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICBSS, param2);
                 OutByte2(0FFH, 30H + reg1);   // push dword[reg1]
                 drop
@@ -2018,7 +2023,7 @@ BEGIN
 
         |IL.opGADR_SAVEC:
             IF pic THEN
-                reg1 := REG.GetAnyReg(R);
+                reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICBSS, param1);
                 OutByte2(0C7H, reg1);  // mov dword[reg1], param2
                 OutInt(param2);
@@ -2167,7 +2172,7 @@ BEGIN
     END;
 
     IF target = mConst.Target_iKolibri THEN
-        reg1 := REG.GetAnyReg(R);
+        reg1 := GetAnyReg();
         Pic(reg1, BIN.IMPTAB, 0);
         push(reg1);    // push IMPORT
         drop
@@ -2181,7 +2186,7 @@ BEGIN
     END;
 
     IF pic THEN
-        reg1 := REG.GetAnyReg(R);
+        reg1 := GetAnyReg();
         Pic(reg1, BIN.PICCODE, entry);
         push(reg1);     // push CODE
         drop
@@ -2191,7 +2196,7 @@ BEGIN
     END;
 
     IF pic THEN
-        reg1 := REG.GetAnyReg(R);
+        reg1 := GetAnyReg();
         Pic(reg1, BIN.PICDATA, 0);
         push(reg1);    // push _data
         drop
@@ -2206,7 +2211,7 @@ BEGIN
     pushc(tcount);
 
     IF pic THEN
-        reg1 := REG.GetAnyReg(R);
+        reg1 := GetAnyReg();
         Pic(reg1, BIN.PICDATA, tcount * 4 + dcount);
         push(reg1);    // push _data + tcount * 4 + dcount
         drop
