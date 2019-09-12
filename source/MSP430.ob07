@@ -1699,7 +1699,7 @@ BEGIN
     TypesSize := CHL.Length(code.types) * 2;
     CodeList := LISTS.create(NIL);
     RelList  := LISTS.create(NIL);
-    R := REG.Create(Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
+    REG.Init(R, Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
     prolog;
     translate(code);

@@ -2330,7 +2330,7 @@ BEGIN
         opt.pic := TRUE
     END;
 
-    R := REG.Create(push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
+    REG.Init(R, push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
     prolog(code, opt.pic, target, opt.stack, dllinit, dllret);
     translate(code, opt.pic, CHL.Length(code.types) * 4);

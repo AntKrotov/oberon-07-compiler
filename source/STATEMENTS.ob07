@@ -23,7 +23,7 @@ CONST
 
     errASSERT = 1;  errPTR  =  2;  errDIV  =  3;  errPROC =  4;
     errGUARD  = 5;  errIDX  =  6;  errCASE =  7;  errCOPY =  8;
-    errCHR    = 9;  errWCHR = 10;  errBYTE = 11;  errSTK  = 12;
+    errCHR    = 9;  errWCHR = 10;  errBYTE = 11;
 
     chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2; chkCHR* = 3; chkWCHR* = 4; chkBYTE* = 5;
 
@@ -91,17 +91,17 @@ END isVar;
 
 
 PROCEDURE isBoolean (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tBOOLEAN)
+    RETURN isExpr(e) & (e.type = tBOOLEAN)
 END isBoolean;
 
 
 PROCEDURE isInteger (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tINTEGER)
+    RETURN isExpr(e) & (e.type = tINTEGER)
 END isInteger;
 
 
 PROCEDURE isByte (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tBYTE)
+    RETURN isExpr(e) & (e.type = tBYTE)
 END isByte;
 
 
@@ -111,12 +111,12 @@ END isInt;
 
 
 PROCEDURE isReal (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tREAL)
+    RETURN isExpr(e) & (e.type = tREAL)
 END isReal;
 
 
 PROCEDURE isSet (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tSET)
+    RETURN isExpr(e) & (e.type = tSET)
 END isSet;
 
 
@@ -131,22 +131,22 @@ END isStringW;
 
 
 PROCEDURE isChar (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tCHAR)
+    RETURN isExpr(e) & (e.type = tCHAR)
 END isChar;
 
 
 PROCEDURE isCharArray (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ = PROG.tCHAR)
+    RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base = tCHAR)
 END isCharArray;
 
 
 PROCEDURE isCharW (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tWCHAR)
+    RETURN isExpr(e) & (e.type = tWCHAR)
 END isCharW;
 
 
 PROCEDURE isCharArrayW (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base.typ = PROG.tWCHAR)
+    RETURN isExpr(e) & (e.type.typ = PROG.tARRAY) & (e.type.base = tWCHAR)
 END isCharArrayW;
 
 
@@ -203,7 +203,7 @@ VAR
 
 BEGIN
     ASSERT(isString(e));
-    IF e.type.typ = PROG.tCHAR THEN
+    IF e.type = tCHAR THEN
         res := 1
     ELSE
         res := LENGTH(e.value.string(SCAN.IDENT).s)
@@ -277,24 +277,24 @@ BEGIN
         IF arrcomp(e.type, t) THEN
             res := TRUE
         ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
-            IF (e.obj = eCONST) & (t.typ = PROG.tBYTE) THEN
+            IF (e.obj = eCONST) & (t = tBYTE) THEN
                 res := ARITH.range(e.value, 0, 255)
             ELSE
                 res := TRUE
             END
-        ELSIF isSet(e) & (t.typ = PROG.tSET) THEN
+        ELSIF isSet(e) & (t = tSET) THEN
             res := TRUE
-        ELSIF isBoolean(e) & (t.typ = PROG.tBOOLEAN) THEN
+        ELSIF isBoolean(e) & (t = tBOOLEAN) THEN
             res := TRUE
-        ELSIF isReal(e) & (t.typ = PROG.tREAL) THEN
+        ELSIF isReal(e) & (t = tREAL) THEN
             res := TRUE
-        ELSIF isChar(e) & (t.typ = PROG.tCHAR) THEN
+        ELSIF isChar(e) & (t = tCHAR) THEN
             res := TRUE
-        ELSIF (e.obj = eCONST) & isChar(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF (e.obj = eCONST) & isChar(e) & (t = tWCHAR) THEN
             res := TRUE
-        ELSIF isStringW1(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF isStringW1(e) & (t = tWCHAR) THEN
             res := TRUE
-        ELSIF isCharW(e) & (t.typ = PROG.tWCHAR) THEN
+        ELSIF isCharW(e) & (t = tWCHAR) THEN
             res := TRUE
         ELSIF PROG.isBaseOf(t, e.type) THEN
             res := TRUE
@@ -302,9 +302,9 @@ BEGIN
             res := TRUE
         ELSIF isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
             res := TRUE
-        ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.tCHAR) & (t.length > strlen(e))) THEN
+        ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base = tCHAR) & (t.length > strlen(e))) THEN
             res := TRUE
-        ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base.typ = PROG.tWCHAR) & (t.length > utf8strlen(e))) THEN
+        ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base = tWCHAR) & (t.length > utf8strlen(e))) THEN
             res := TRUE
         ELSE
             res := FALSE
@@ -404,7 +404,7 @@ BEGIN
             IL.SetLabel(label)
 
         ELSIF isInt(e) & (VarType.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
-            IF VarType.typ = PROG.tINTEGER THEN
+            IF VarType = tINTEGER THEN
                 IF e.obj = eCONST THEN
                     IL.AddCmd(IL.opSAVEC, ARITH.Int(e.value))
                 ELSE
@@ -426,34 +426,34 @@ BEGIN
                     IL.AddCmd0(IL.opSAVE8)
                 END
             END
-        ELSIF isSet(e) & (VarType.typ = PROG.tSET) THEN
+        ELSIF isSet(e) & (VarType = tSET) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSAVEC, ARITH.Int(e.value))
             ELSE
                 IL.AddCmd0(IL.opSAVE)
             END
-        ELSIF isBoolean(e) & (VarType.typ = PROG.tBOOLEAN) THEN
+        ELSIF isBoolean(e) & (VarType = tBOOLEAN) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSBOOLC, ARITH.Int(e.value))
             ELSE
                 IL.AddCmd0(IL.opSBOOL)
             END
-        ELSIF isReal(e) & (VarType.typ = PROG.tREAL) THEN
+        ELSIF isReal(e) & (VarType = tREAL) THEN
             IF e.obj = eCONST THEN
                 IL.Float(ARITH.Float(e.value))
             END;
             IL.savef
-        ELSIF isChar(e) & (VarType.typ = PROG.tCHAR) THEN
+        ELSIF isChar(e) & (VarType = tCHAR) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSAVE8C, ARITH.Int(e.value))
             ELSE
                 IL.AddCmd0(IL.opSAVE8)
             END
-        ELSIF (e.obj = eCONST) & isChar(e) & (VarType.typ = PROG.tWCHAR) THEN
+        ELSIF (e.obj = eCONST) & isChar(e) & (VarType = tWCHAR) THEN
             IL.AddCmd(IL.opSAVE16C, ARITH.Int(e.value))
-        ELSIF isStringW1(e) & (VarType.typ = PROG.tWCHAR) THEN
+        ELSIF isStringW1(e) & (VarType = tWCHAR) THEN
             IL.AddCmd(IL.opSAVE16C, StrToWChar(e.value.string(SCAN.IDENT).s))
-        ELSIF isCharW(e) & (VarType.typ = PROG.tWCHAR) THEN
+        ELSIF isCharW(e) & (VarType = tWCHAR) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSAVE16C, ARITH.Int(e.value))
             ELSE
@@ -483,9 +483,9 @@ BEGIN
             END
         ELSIF isNil(e) & (VarType.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
             IL.AddCmd(IL.opSAVEC, 0)
-        ELSIF isString(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base.typ = PROG.tCHAR) & (VarType.length > strlen(e))) THEN
+        ELSIF isString(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base = tCHAR) & (VarType.length > strlen(e))) THEN
             IL.saves(String(e), strlen(e) + 1)
-        ELSIF isStringW(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base.typ = PROG.tWCHAR) & (VarType.length > utf8strlen(e))) THEN
+        ELSIF isStringW(e) & ((VarType.typ = PROG.tARRAY) & (VarType.base = tWCHAR) & (VarType.length > utf8strlen(e))) THEN
             IL.saves(StringW(e), (utf8strlen(e) + 1) * 2)
         ELSE
             res := FALSE
@@ -601,12 +601,12 @@ BEGIN
             IF e.type.typ = PROG.tARRAY THEN
                 PARS.check(arrcomp(e, p), parser, pos, 66);
                 OpenArray(e.type, p.type)
-            ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.tCHAR) THEN
+            ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tCHAR) THEN
                 IL.AddCmd(IL.opSADR, String(e));
                 IL.AddCmd(IL.opPARAM, 1);
                 IL.AddCmd(IL.opCONST, strlen(e) + 1);
                 IL.AddCmd(IL.opPARAM, 1)
-            ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ = PROG.tWCHAR) THEN
+            ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tWCHAR) THEN
                 IL.AddCmd(IL.opSADR, StringW(e));
                 IL.AddCmd(IL.opPARAM, 1);
                 IL.AddCmd(IL.opCONST, utf8strlen(e) + 1);
@@ -618,18 +618,18 @@ BEGIN
             PARS.check(~PROG.isOpenArray(e.type), parser, pos, 66);
             PARS.check(assigncomp(e, p.type), parser, pos, 66);
             IF e.obj = eCONST THEN
-                IF e.type.typ = PROG.tREAL THEN
+                IF e.type = tREAL THEN
                     IL.Float(ARITH.Float(e.value));
                     IL.pushf
                 ELSIF e.type.typ = PROG.tNIL THEN
                     IL.AddCmd(IL.opCONST, 0);
                     IL.AddCmd(IL.opPARAM, 1)
-                ELSIF isStringW1(e) & (p.type.typ = PROG.tWCHAR) THEN
+                ELSIF isStringW1(e) & (p.type = tWCHAR) THEN
                     IL.AddCmd(IL.opCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
                     IL.AddCmd(IL.opPARAM, 1)
                 ELSIF (e.type.typ = PROG.tSTRING) OR
                       (e.type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
-                    IF p.type.base.typ = PROG.tCHAR THEN
+                    IF p.type.base = tCHAR THEN
                         stroffs := String(e);
                         IL.AddCmd(IL.opSADR, stroffs);
                         IF (CPU = cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
@@ -652,10 +652,10 @@ BEGIN
             ELSIF e.obj = eIMP THEN
                 IL.PushImpProc(e.ident.import);
                 IL.AddCmd(IL.opPARAM, 1)
-            ELSIF isExpr(e) & (e.type.typ = PROG.tREAL) THEN
+            ELSIF isExpr(e) & (e.type = tREAL) THEN
                 IL.pushf
             ELSE
-                IF (p.type.typ = PROG.tBYTE) & (e.type.typ = PROG.tINTEGER) & (chkBYTE IN Options.checking) THEN
+                IF (p.type = tBYTE) & (e.type = tINTEGER) & (chkBYTE IN Options.checking) THEN
                     CheckRange(256, pos.line, errBYTE)
                 END;
                 IL.AddCmd(IL.opPARAM, 1)
@@ -745,7 +745,7 @@ BEGIN
         |PROG.stINC, PROG.stDEC:
             IL.pushBegEnd(begcall, endcall);
             varparam(parser, pos, isInt, TRUE, e);
-            IF e.type.typ = PROG.tINTEGER THEN
+            IF e.type = tINTEGER THEN
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
                     IL.setlast(begcall);
@@ -760,7 +760,7 @@ BEGIN
                 ELSE
                     IL.AddCmd0(IL.opINC1 + ORD(proc = PROG.stDEC))
                 END
-            ELSE  (* e.type.typ = PROG.tBYTE *)
+            ELSE  (* e.type = tBYTE *)
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
                     IL.setlast(begcall);
@@ -853,7 +853,7 @@ BEGIN
                     varparam(parser, pos, isCharArray, TRUE, e1)
                 END;
 
-                wchar := e1.type.base.typ = PROG.tWCHAR
+                wchar := e1.type.base = tWCHAR
             END;
 
             IF ~PROG.isOpenArray(e1.type) THEN
@@ -904,7 +904,7 @@ BEGIN
             IF proc = PROG.sysPUT THEN
                 PARS.check((e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}), parser, pos, 66);
                 IF e2.obj = eCONST THEN
-                    IF e2.type.typ = PROG.tREAL THEN
+                    IF e2.type = tREAL THEN
                         IL.setlast(endcall.prev(IL.COMMAND));
                         IL.Float(ARITH.Float(e2.value));
                         IL.savef
@@ -915,9 +915,9 @@ BEGIN
                     END
                 ELSE
                     IL.setlast(endcall.prev(IL.COMMAND));
-                    IF e2.type.typ = PROG.tREAL THEN
+                    IF e2.type = tREAL THEN
                         IL.savef
-                    ELSIF e2.type.typ = PROG.tBYTE THEN
+                    ELSIF e2.type = tBYTE THEN
                         IL.SysPut(tINTEGER.size)
                     ELSE
                         IL.SysPut(e2.type.size)
@@ -1799,7 +1799,7 @@ VAR
         PROCEDURE LoadVar (e: PARS.EXPR; parser: PARS.PARSER; pos: SCAN.POSITION);
         BEGIN
             IF ~(e.type.typ IN {PROG.tRECORD, PROG.tARRAY}) THEN
-                IF e.type.typ = PROG.tREAL THEN
+                IF e.type = tREAL THEN
                     PARS.check(IL.loadf(), parser, pos, 41)
                 ELSE
                     IL.load(e.type.size)
@@ -1844,7 +1844,7 @@ VAR
                 e1 := e;
                 ActualParameters(parser, e);
                 PARS.check(e.type # NIL, parser, pos, 59);
-                isfloat := e.type.typ = PROG.tREAL;
+                isfloat := e.type = tREAL;
                 IF e1.obj IN {ePROC, eIMP} THEN
                     ProcCall(e1, e1.ident.type, isfloat, fregs, parser, pos, FALSE)
                 ELSIF isExpr(e1) THEN
@@ -3079,7 +3079,7 @@ BEGIN
     ident := PROG.getIdent(parser.unit, parser.lex.ident, TRUE);
     PARS.check1(ident # NIL, parser, 48);
     PARS.check1(ident.typ = PROG.idVAR, parser, 93);
-    PARS.check1(ident.type.typ = PROG.tINTEGER, parser, 97);
+    PARS.check1(ident.type = tINTEGER, parser, 97);
     PARS.ExpectSym(parser, SCAN.lxASSIGN);
     NextPos(parser, pos);
     expression(parser, e);
@@ -3220,14 +3220,14 @@ BEGIN
     res := assigncomp(e, t);
     IF res THEN
         IF e.obj = eCONST THEN
-            IF e.type.typ = PROG.tREAL THEN
+            IF e.type = tREAL THEN
                 IL.Float(ARITH.Float(e.value))
             ELSIF e.type.typ = PROG.tNIL THEN
                 IL.AddCmd(IL.opCONST, 0)
             ELSE
                 LoadConst(e)
             END
-        ELSIF (e.type.typ = PROG.tINTEGER) & (t.typ = PROG.tBYTE) & (chkBYTE IN Options.checking) THEN
+        ELSIF (e.type = tINTEGER) & (t = tBYTE) & (chkBYTE IN Options.checking) THEN
             CheckRange(256, pos.line, errBYTE)
         ELSIF e.obj = ePROC THEN
             PARS.check(e.ident.global, parser, pos, 85);
@@ -3236,7 +3236,7 @@ BEGIN
             IL.PushImpProc(e.ident.import)
         END;
 
-        IF e.type.typ = PROG.tREAL THEN
+        IF e.type = tREAL THEN
             IL.retf
         END
     END
