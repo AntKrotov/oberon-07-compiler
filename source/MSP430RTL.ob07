@@ -50,9 +50,6 @@ CONST
 
     IntVectorSize* = LenIV * 2 + DataSize;
 
-    ram*      = 200H;
-    trap*     = ram;
-    int*      = trap + 2;
     VarSize*  = 4;
 
 
@@ -63,13 +60,15 @@ TYPE
 
 VAR
 
+    ram*, trap*, int*: INTEGER;
+
     rtl*: ARRAY 22 OF
               RECORD
                   label*: INTEGER;
                   used:   BOOLEAN
               END;
 
-    Label, pWord1, Call: EMITPROC;
+    Label, Word, Call: EMITPROC;
 
 
 PROCEDURE Gen*;
@@ -77,7 +76,7 @@ PROCEDURE Gen*;
 
     PROCEDURE Word1 (word: INTEGER);
     BEGIN
-        pWord1(word)
+        Word(word)
     END Word1;
 
 
@@ -659,11 +658,19 @@ BEGIN
 END Used;
 
 
-PROCEDURE Init* (pLabel, pWord, pCall: EMITPROC);
+PROCEDURE Init* (pLabel, pWord, pCall: EMITPROC; ramSize: INTEGER);
 BEGIN
-    Label  := pLabel;
-    pWord1 := pWord;
-    Call   := pCall
+    Label := pLabel;
+    Word  := pWord;
+    Call  := pCall;
+
+    IF ramSize > 2048 THEN
+        ram := 1100H
+    ELSE
+        ram := 200H
+    END;
+    trap := ram;
+    int  := trap + 2
 END Init;
 
 

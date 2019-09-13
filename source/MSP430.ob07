@@ -13,7 +13,7 @@ IMPORT IL, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER,
 
 CONST
 
-    minRAM* = 128;  maxRAM* = 2048;
+    minRAM* = 128;  maxRAM* = 10240;
     minROM* = 2048; maxROM* = 49152;
 
     minStackSize = 64;
@@ -1545,12 +1545,12 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog;
+PROCEDURE prolog (ramSize: INTEGER);
 VAR
     i: INTEGER;
 
 BEGIN
-    RTL.Init(EmitLabel, EmitWord, EmitCall);
+    RTL.Init(EmitLabel, EmitWord, EmitCall, ramSize);
     FOR i := 0 TO LEN(RTL.rtl) - 1 DO
         RTL.Set(i, NewLabel())
     END;
@@ -1701,7 +1701,7 @@ BEGIN
     RelList  := LISTS.create(NIL);
     REG.Init(R, Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
-    prolog;
+    prolog(ram);
     translate(code);
     epilog;
 
