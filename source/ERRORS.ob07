@@ -35,7 +35,7 @@ VAR
 
 BEGIN
     C.Ln;
-    C.String("  error ("); C.Int(line); C.String(":"); C.Int(col); C.String(") ");
+    C.String("  error  ("); C.Int(errno); C.String(") ("); C.Int(line); C.String(":"); C.Int(col); C.String(") ");
 
     CASE errno OF
     |  1: str := "missing 'H' or 'X'"

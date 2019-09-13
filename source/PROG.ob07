@@ -524,11 +524,11 @@ BEGIN
 
     NEW(newptr);
 
-    newptr.type       := type;
-    newptr.baseIdent  := baseIdent;
-    newptr.pos        := pos;
-    newptr.linked     := FALSE;
-    newptr.notRecord  := FALSE;
+    newptr.type      := type;
+    newptr.baseIdent := baseIdent;
+    newptr.pos       := pos;
+    newptr.linked    := FALSE;
+    newptr.notRecord := FALSE;
 
     LISTS.push(unit.frwPointers, newptr)
 END frwPtr;

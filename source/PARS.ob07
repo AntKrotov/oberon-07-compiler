@@ -24,6 +24,12 @@ TYPE
 
     PARSER* = POINTER TO rPARSER;
 
+    POSITION* = RECORD (SCAN.POSITION)
+
+        parser*: PARSER
+
+    END;
+
     EXPR* = RECORD
 
         obj*:         INTEGER;
@@ -37,7 +43,7 @@ TYPE
 
     STATPROC  = PROCEDURE (parser: PARSER);
     EXPRPROC  = PROCEDURE (parser: PARSER; VAR e: EXPR);
-    RETPROC   = PROCEDURE (parser: PARSER; e: EXPR; t: PROG.TYPE_; pos: SCAN.POSITION): BOOLEAN;
+    RETPROC   = PROCEDURE (parser: PARSER; e: EXPR; t: PROG.TYPE_; pos: POSITION): BOOLEAN;
 
     rPARSER = RECORD (C.ITEM)
 
@@ -83,32 +89,38 @@ BEGIN
 END destroy;
 
 
-PROCEDURE error* (parser: PARSER; pos: SCAN.POSITION; errno: INTEGER);
+PROCEDURE getpos (parser: PARSER; VAR pos: POSITION);
 BEGIN
-    ERRORS.ErrorMsg(parser.fname, pos.line, pos.col, errno)
+    pos.line   := parser.lex.pos.line;
+    pos.col    := parser.lex.pos.col;
+    pos.parser := parser
+END getpos;
+
+
+PROCEDURE error* (pos: POSITION; errno: INTEGER);
+BEGIN
+    ERRORS.ErrorMsg(pos.parser.fname, pos.line, pos.col, errno)
 END error;
 
 
-PROCEDURE check* (condition: BOOLEAN; parser: PARSER; pos: SCAN.POSITION; errno: INTEGER);
+PROCEDURE check* (condition: BOOLEAN; pos: POSITION; errno: INTEGER);
 BEGIN
     IF ~condition THEN
-        error(parser, pos, errno)
+        error(pos, errno)
     END
 END check;
 
 
 PROCEDURE check1* (condition: BOOLEAN; parser: PARSER; errno: INTEGER);
+VAR
+    pos: POSITION;
+
 BEGIN
     IF ~condition THEN
-        error(parser, parser.lex.pos, errno)
+        getpos(parser, pos);
+        error(pos, errno)
     END
 END check1;
-
-
-PROCEDURE getpos (parser: PARSER; VAR pos: SCAN.POSITION);
-BEGIN
-    pos := parser.lex.pos
-END getpos;
 
 
 PROCEDURE Next* (parser: PARSER);
@@ -133,10 +145,10 @@ BEGIN
 END Next;
 
 
-PROCEDURE NextPos* (parser: PARSER; VAR pos: SCAN.POSITION);
+PROCEDURE NextPos (parser: PARSER; VAR pos: POSITION);
 BEGIN
     Next(parser);
-    pos := parser.lex.pos
+    getpos(parser, pos)
 END NextPos;
 
 
@@ -188,7 +200,7 @@ PROCEDURE ImportList (parser: PARSER);
 VAR
     name:    SCAN.IDENT;
     parser2: PARSER;
-    pos:     SCAN.POSITION;
+    pos:     POSITION;
     alias:   BOOLEAN;
     unit:    PROG.UNIT;
     ident:   PROG.IDENT;
@@ -205,7 +217,7 @@ BEGIN
 
         IF ~alias THEN
             ident := PROG.addIdent(parser.unit, name, PROG.idMODULE);
-            check(ident # NIL, parser, pos, 30)
+            check(ident # NIL, pos, 30)
         END;
 
         Next(parser);
@@ -215,7 +227,7 @@ BEGIN
             unit := PROG.getUnit(program, name);
 
             IF unit # NIL THEN
-                check(unit.closed, parser, pos, 31)
+                check(unit.closed, pos, 31)
             ELSE
                 parser2 := parser.create(parser.path, parser.lib_path,
                     parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
@@ -225,9 +237,9 @@ BEGIN
                         destroy(parser2);
                         parser2 := parser.create(parser.lib_path, parser.lib_path,
                             parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
-                        check(parser2.open(parser2, name.s), parser, pos, 29)
+                        check(parser2.open(parser2, name.s), pos, 29)
                     ELSE
-                        check(FALSE, parser, pos, 29)
+                        error(pos, 29)
                     END
                 END;
 
@@ -323,14 +335,14 @@ END strcmp;
 PROCEDURE ConstExpression* (parser: PARSER; VAR v: ARITH.VALUE);
 VAR
     e: EXPR;
-    pos: SCAN.POSITION;
+    pos: POSITION;
 
 BEGIN
     getpos(parser, pos);
     parser.constexp := TRUE;
     parser.expression(parser, e);
     parser.constexp := FALSE;
-    check(e.obj = eCONST, parser, pos, 62);
+    check(e.obj = eCONST, pos, 62);
     v := e.value
 END ConstExpression;
 
@@ -339,7 +351,7 @@ PROCEDURE FieldList (parser: PARSER; rec: PROG.TYPE_);
 VAR
     name:   SCAN.IDENT;
     export: BOOLEAN;
-    pos:    SCAN.POSITION;
+    pos:    POSITION;
 
 BEGIN
     ASSERT(parser.sym = SCAN.lxIDENT);
@@ -359,7 +371,7 @@ BEGIN
             Next(parser)
         END;
 
-        check(PROG.addField(rec, name, export), parser, pos, 30);
+        check(PROG.addField(rec, name, export), pos, 30);
 
         IF parser.sym = SCAN.lxCOMMA THEN
             ExpectSym(parser, SCAN.lxIDENT)
@@ -541,7 +553,7 @@ PROCEDURE procflag (parser: PARSER; VAR import: IL.IMPORT_PROC; isProc: BOOLEAN)
 VAR
     call: INTEGER;
     dll, proc: SCAN.LEXSTR;
-    pos: SCAN.POSITION;
+    pos: POSITION;
 
 BEGIN
 
@@ -580,7 +592,7 @@ BEGIN
     END;
 
     IF import # NIL THEN
-        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64, mConst.Target_iMSP430}), parser, pos, 70)
+        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64, mConst.Target_iMSP430}), pos, 70)
     END
 
     RETURN call
@@ -598,7 +610,7 @@ VAR
     typeSize:   ARITH.VALUE;
     ident:      PROG.IDENT;
     unit:       PROG.UNIT;
-    pos, pos2:  SCAN.POSITION;
+    pos, pos2:  POSITION;
     fieldType:  PROG.TYPE_;
     baseIdent:  SCAN.IDENT;
     a, b:       INTEGER;
@@ -632,9 +644,9 @@ BEGIN
 
         ConstExpression(parser, arrLen);
 
-        check(arrLen.typ = ARITH.tINTEGER, parser, pos, 43);
-        check(ARITH.check(arrLen),         parser, pos, 39);
-        check(ARITH.getInt(arrLen) > 0,    parser, pos, 51);
+        check(arrLen.typ = ARITH.tINTEGER, pos, 43);
+        check(ARITH.check(arrLen),         pos, 39);
+        check(ARITH.getInt(arrLen) > 0,    pos, 51);
 
         t := PROG.enterType(program, PROG.tARRAY, -1, ARITH.getInt(arrLen), unit);
 
@@ -651,8 +663,8 @@ BEGIN
 
         a := t.length;
         b := t.base.size;
-        check(ARITH.mulInt(a, b), parser, pos2, 104);
-        check(ARITH.setInt(typeSize, a), parser, pos2, 104);
+        check(ARITH.mulInt(a, b), pos2, 104);
+        check(ARITH.setInt(typeSize, a), pos2, 104);
         t.size := a;
 
         t.closed := TRUE
@@ -680,14 +692,14 @@ BEGIN
 
             type(parser, t.base, {closed});
 
-            check(t.base.typ IN {PROG.tRECORD, PROG.tPOINTER}, parser, pos, 52);
+            check(t.base.typ IN {PROG.tRECORD, PROG.tPOINTER}, pos, 52);
 
             IF t.base.typ = PROG.tPOINTER THEN
                 t.base := t.base.base;
-                check(t.base # NIL, parser, pos, 55)
+                check(t.base # NIL, pos, 55)
             END;
 
-            check(~t.base.noalign, parser, pos, 112);
+            check(~t.base.noalign, pos, 112);
 
             checklex(parser, SCAN.lxRROUND);
             Next(parser);
@@ -707,7 +719,7 @@ BEGIN
             Next(parser);
 
             type(parser, fieldType, {closed});
-            check(PROG.setFields(t, fieldType), parser, pos2, 104);
+            check(PROG.setFields(t, fieldType), pos2, 104);
 
             IF (fieldType.align > t.align) & ~t.noalign THEN
                 t.align := fieldType.align
@@ -725,8 +737,8 @@ BEGIN
         IL.AddRec(t.base.num);
 
         IF ~t.noalign THEN
-            check(UTILS.Align(t.size, t.align), parser, pos2, 104);
-            check(ARITH.setInt(typeSize, t.size), parser, pos2, 104)
+            check(UTILS.Align(t.size, t.align), pos2, 104);
+            check(ARITH.setInt(typeSize, t.size), pos2, 104)
         END;
 
         checklex(parser, SCAN.lxEND);
@@ -748,7 +760,7 @@ BEGIN
         type(parser, t.base, {forward});
 
         IF t.base # NIL THEN
-            check(t.base.typ = PROG.tRECORD, parser, pos, 58)
+            check(t.base.typ = PROG.tRECORD, pos, 58)
         ELSE
             PROG.frwPtr(unit, t, baseIdent, pos)
         END
@@ -769,7 +781,7 @@ END type;
 PROCEDURE IdentDef (parser: PARSER; typ: INTEGER; VAR name: SCAN.IDENT): PROG.IDENT;
 VAR
     ident:  PROG.IDENT;
-    pos:    SCAN.POSITION;
+    pos:    POSITION;
 
 BEGIN
     ASSERT(parser.sym = SCAN.lxIDENT);
@@ -777,7 +789,7 @@ BEGIN
     name := parser.lex.ident;
     getpos(parser, pos);
     ident := PROG.addIdent(parser.unit, name, typ);
-    check(ident # NIL, parser, pos, 30);
+    check(ident # NIL, pos, 30);
     ident.pos := pos;
     Next(parser);
 
@@ -795,7 +807,7 @@ PROCEDURE ConstTypeDeclaration (parser: PARSER; const: BOOLEAN);
 VAR
     ident: PROG.IDENT;
     name:  SCAN.IDENT;
-    pos:   SCAN.POSITION;
+    pos:   POSITION;
 
 BEGIN
     IF const THEN
@@ -810,9 +822,9 @@ BEGIN
     IF const THEN
         ConstExpression(parser, ident.value);
         IF ident.value.typ = ARITH.tINTEGER THEN
-            check(ARITH.check(ident.value), parser, pos, 39)
+            check(ARITH.check(ident.value), pos, 39)
         ELSIF ident.value.typ = ARITH.tREAL THEN
-            check(ARITH.check(ident.value), parser, pos, 40)
+            check(ARITH.check(ident.value), pos, 40)
         END;
         ident.typ  := PROG.idCONST;
         ident.type := PROG.getType(program, ident.value.typ)
@@ -858,6 +870,7 @@ PROCEDURE DeclarationSequence (parser: PARSER): BOOLEAN;
 VAR
     ptr: PROG.FRWPTR;
     endmod: BOOLEAN;
+    pos: POSITION;
 
 
     PROCEDURE ProcDeclaration (parser: PARSER): BOOLEAN;
@@ -870,7 +883,7 @@ VAR
         ident:      PROG.IDENT;
         e:          EXPR;
         pos, pos1,
-        pos2:       SCAN.POSITION;
+        pos2:       POSITION;
         label:      INTEGER;
         enter:      IL.COMMAND;
         call:       INTEGER;
@@ -903,7 +916,7 @@ VAR
             proc := IdentDef(parser, PROG.idPROC, name)
         END;
 
-        check(PROG.openScope(unit, proc.proc), parser, pos, 116);
+        check(PROG.openScope(unit, proc.proc), pos, 116);
 
         proc.type := PROG.enterType(program, PROG.tPROCEDURE, program.target.adr, 0, unit);
         t := proc.type;
@@ -915,7 +928,7 @@ VAR
         codeProc := call IN {PROG.code, PROG._code};
 
         IF call IN {PROG.systemv, PROG._systemv} THEN
-            check(t.parSize <= PROG.MAXSYSVPARAM, parser, pos, 120)
+            check(t.parSize <= PROG.MAXSYSVPARAM, pos, 120)
         END;
 
         param := t.params.first(PROG.PARAM);
@@ -941,9 +954,9 @@ VAR
             WHILE (parser.sym # SCAN.lxSEMI) OR comma DO
                 getpos(parser, pos2);
                 ConstExpression(parser, code);
-                check(code.typ = ARITH.tINTEGER, parser, pos2, 43);
+                check(code.typ = ARITH.tINTEGER, pos2, 43);
                 IF program.target.sys # mConst.Target_iMSP430 THEN
-                    check(ARITH.range(code, 0, 255), parser, pos2, 42)
+                    check(ARITH.range(code, 0, 255), pos2, 42)
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
                 comma := parser.sym = SCAN.lxCOMMA;
@@ -962,7 +975,7 @@ VAR
 
             IF parser.main & proc.export & program.dll THEN
                 IF program.obj THEN
-                    check((proc.name.s # "lib_init") & (proc.name.s # "version"), parser, pos, 114)
+                    check((proc.name.s # "lib_init") & (proc.name.s # "version"), pos, 114)
                 END;
                 IL.AddExp(label, proc.name.s);
                 proc.proc.used := TRUE
@@ -995,7 +1008,7 @@ VAR
                 checklex(parser, SCAN.lxRETURN);
                 NextPos(parser, pos);
                 parser.expression(parser, e);
-                check(parser.chkreturn(parser, e, t.base, pos), parser, pos, 87)
+                check(parser.chkreturn(parser, e, t.base, pos), pos, 87)
             END;
 
             IF ~codeProc THEN
@@ -1008,7 +1021,7 @@ VAR
             END;
 
             IF program.target.sys = mConst.Target_iMSP430 THEN
-                check((enter.param2 * ORD(~codeProc) + proc.type.parSize) * 2 + 16 < program.target.options.ram, parser, pos1, 63)
+                check((enter.param2 * ORD(~codeProc) + proc.type.parSize) * 2 + 16 < program.target.options.ram, pos1, 63)
             END
         END;
 
@@ -1017,7 +1030,7 @@ VAR
             getpos(parser, pos);
             endname := parser.lex.ident;
             IF ~codeProc & (import = NIL) THEN
-                check(endname = name, parser, pos, 60);
+                check(endname = name, pos, 60);
                 ExpectSym(parser, SCAN.lxSEMI);
                 Next(parser)
             ELSE
@@ -1029,7 +1042,7 @@ VAR
                     ExpectSym(parser, SCAN.lxSEMI);
                     Next(parser)
                 ELSE
-                    check(FALSE, parser, pos, 60)
+                    error(pos, 60)
                 END
             END
         END;
@@ -1067,10 +1080,13 @@ BEGIN
 
     ptr := PROG.linkPtr(parser.unit);
     IF ptr # NIL THEN
+        pos.line := ptr.pos.line;
+        pos.col  := ptr.pos.col;
+        pos.parser := parser;
         IF ptr.notRecord THEN
-            error(parser, ptr.pos, 58)
+            error(pos, 58)
         ELSE
-            error(parser, ptr.pos, 48)
+            error(pos, 48)
         END
     END;
 
