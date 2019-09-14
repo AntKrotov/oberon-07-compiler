@@ -63,16 +63,16 @@ TYPE
 
     LEX* = RECORD
 
-        s*:          LEXSTR;
-        length*:     INTEGER;
-        sym*:        INTEGER;
-        pos*:        POSITION;
-        ident*:      IDENT;
-        string*:     IDENT;
-        value*:      ARITH.VALUE;
-        error*:      INTEGER;
+        s*:         LEXSTR;
+        length*:    INTEGER;
+        sym*:       INTEGER;
+        pos*:       POSITION;
+        ident*:     IDENT;
+        string*:    IDENT;
+        value*:     ARITH.VALUE;
+        error*:     INTEGER;
 
-        over:        BOOLEAN
+        over:       BOOLEAN
 
     END;
 
@@ -85,14 +85,14 @@ VAR
 
     vocabulary: RECORD
 
-        KW:          ARRAY 33 OF KEYWORD;
-
-        delimiters:  ARRAY 256 OF BOOLEAN;
-
-        idents:      AVL.NODE;
-        ident:       IDENT
+        KW:         ARRAY 33 OF KEYWORD;
+        delimiters: ARRAY 256 OF BOOLEAN;
+        idents:     AVL.NODE;
+        ident:      IDENT
 
     END;
+
+    upto: BOOLEAN;
 
 
 PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
@@ -241,7 +241,8 @@ BEGIN
                 lex.sym := lxFLOAT
             ELSE
                 lex.sym := lxINTEGER;
-                text.peak := 7FX
+                text.peak := 7FX;
+                upto := TRUE
             END;
 
             WHILE S.digit(c) DO
@@ -302,9 +303,8 @@ END number;
 
 PROCEDURE string (text: TXT.TEXT; VAR lex: LEX);
 VAR
-    c, c1: CHAR;
-    n:     INTEGER;
-    quot:  CHAR;
+    c, quot: CHAR;
+    n: INTEGER;
 
 BEGIN
     quot := text.peak;
@@ -312,7 +312,6 @@ BEGIN
     ASSERT((quot = '"') OR (quot = "'"));
 
     c  := nextc(text);
-    c1 := c;
     n  := 0;
 
     WHILE (c # quot) & (c # 0X) & ~text.eol & ~text.eof DO
@@ -330,7 +329,7 @@ BEGIN
                 lex.sym := lxSTRING
             ELSE
                 lex.sym := lxCHAR;
-                ARITH.setChar(lex.value, ORD(c1))
+                ARITH.setChar(lex.value, ORD(lex.s[0]))
             END
         END
     ELSE
@@ -383,18 +382,12 @@ BEGIN
 END comment;
 
 
-PROCEDURE delimiter (text: TXT.TEXT; VAR lex: LEX; c1: CHAR);
-VAR
-    c: CHAR;
-
+PROCEDURE delimiter (text: TXT.TEXT; VAR lex: LEX; c: CHAR);
 BEGIN
-    IF c1 # 7FX THEN
-        putchar(lex, c1)
-    END;
-
+    putchar(lex, c);
     c := nextc(text);
 
-    CASE c1 OF
+    CASE lex.s[0] OF
     |"+":
         lex.sym := lxPLUS
 
@@ -420,12 +413,6 @@ BEGIN
     |"&":
         lex.sym := lxAND
 
-    |7FX:
-        lex.sym := lxRANGE;
-        putchar(lex, ".");
-        putchar(lex, ".");
-        DEC(lex.pos.col)
-
     |".":
         lex.sym := lxPOINT;
 
@@ -449,7 +436,6 @@ BEGIN
 
         IF c = "*" THEN
             lex.sym := lxCOMMENT;
-            putchar(lex, c);
             TXT.next(text);
             comment(text)
         END
@@ -525,7 +511,6 @@ BEGIN
 
         lex.s[0]     := 0X;
         lex.length   := 0;
-        lex.sym      := lxUNDEF;
         lex.pos.line := text.line;
         lex.pos.col  := text.col;
         lex.ident    := NIL;
@@ -544,6 +529,13 @@ BEGIN
             IF text.eof THEN
                 INC(lex.pos.col)
             END
+        ELSIF (c = 7FX) & upto THEN
+            upto := FALSE;
+            lex.sym := lxRANGE;
+            putchar(lex, ".");
+            putchar(lex, ".");
+            DEC(lex.pos.col);
+            TXT.next(text)
         ELSE
             putchar(lex, c);
             TXT.next(text);
@@ -575,7 +567,7 @@ END close;
 PROCEDURE init;
 VAR
     i: INTEGER;
-    delim: ARRAY 24 OF CHAR;
+    delim: ARRAY 23 OF CHAR;
 
 
     PROCEDURE enterkw (VAR i: INTEGER; kw: KEYWORD);
@@ -586,13 +578,13 @@ VAR
 
 
 BEGIN
+    upto := FALSE;
 
     FOR i := 0 TO 255 DO
         vocabulary.delimiters[i] := FALSE
     END;
 
-    delim := "X+-*/~&.,;|([{^=#<>:)]}";
-    delim[0] := 7FX;
+    delim := "+-*/~&.,;|([{^=#<>:)]}";
 
     FOR i := 0 TO LEN(delim) - 2 DO
         vocabulary.delimiters[ORD(delim[i])] := TRUE
