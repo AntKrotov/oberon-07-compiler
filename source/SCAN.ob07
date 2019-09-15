@@ -301,16 +301,12 @@ BEGIN
 END number;
 
 
-PROCEDURE string (text: TXT.TEXT; VAR lex: LEX);
+PROCEDURE string (text: TXT.TEXT; VAR lex: LEX; quot: CHAR);
 VAR
-    c, quot: CHAR;
+    c: CHAR;
     n: INTEGER;
 
 BEGIN
-    quot := text.peak;
-
-    ASSERT((quot = '"') OR (quot = "'"));
-
     c  := nextc(text);
     n  := 0;
 
@@ -521,7 +517,7 @@ BEGIN
         ELSIF S.digit(c) THEN
             number(text, lex)
         ELSIF (c = '"') OR (c = "'") THEN
-            string(text, lex)
+            string(text, lex, c)
         ELSIF vocabulary.delimiters[ORD(c)] THEN
             delimiter(text, lex, c)
         ELSIF c = 0X THEN

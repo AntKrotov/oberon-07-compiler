@@ -245,6 +245,7 @@ END MovRR;
 
 PROCEDURE PushImm (imm: INTEGER);
 BEGIN
+    imm := UTILS.Long(imm MOD 65536);
     CASE imm OF
     | 0: Op1(opPUSH, CG, sREG)
     | 1: Op1(opPUSH, CG, sIDX)
@@ -628,8 +629,8 @@ BEGIN
         |IL.opERR:
             CallRTL(RTL._error, 2)
 
-        |IL.opERRC:
-            PushImm(param2 MOD 65536)
+        |IL.opPUSHC:
+            PushImm(param2)
 
         |IL.opLEAVEC:
             Pop(PC)
@@ -950,24 +951,14 @@ BEGIN
                 R.stk[R.top] := reg2
             END
 
-        |IL.opINC1, IL.opINC1B:
-            UnOp(reg1);
-            Op2(opADD + bw(opcode = IL.opINC1B), imm(1), dst_x(0, reg1));
-            drop
-
-        |IL.opDEC1, IL.opDEC1B:
-            UnOp(reg1);
-            Op2(opSUB + bw(opcode = IL.opDEC1B), imm(1), dst_x(0, reg1));
-            drop
-
         |IL.opINCC, IL.opINCCB:
             UnOp(reg1);
             Op2(opADD + bw(opcode = IL.opINCCB), imm(param2), dst_x(0, reg1));
             drop
 
-        |IL.opDECC, IL.opDECCB:
+        |IL.opDECCB:
             UnOp(reg1);
-            Op2(opSUB + bw(opcode = IL.opDECCB), imm(param2), dst_x(0, reg1));
+            Op2(opSUB + BW, imm(param2), dst_x(0, reg1));
             drop
 
         |IL.opINC, IL.opINCB:
@@ -982,17 +973,11 @@ BEGIN
             drop;
             drop
 
-        |IL.opLADR_INC1, IL.opLADR_INC1B:
-            Op2(opADD + bw(opcode = IL.opLADR_INC1B), imm(1), dst_x(param2 * 2, BP))
-
-        |IL.opLADR_DEC1, IL.opLADR_DEC1B:
-            Op2(opSUB + bw(opcode = IL.opLADR_DEC1B), imm(1), dst_x(param2 * 2, BP))
-
         |IL.opLADR_INCC, IL.opLADR_INCCB:
             Op2(opADD + bw(opcode = IL.opLADR_INCCB), imm(param2), dst_x(param1 * 2, BP))
 
-        |IL.opLADR_DECC, IL.opLADR_DECCB:
-            Op2(opSUB + bw(opcode = IL.opLADR_DECCB), imm(param2), dst_x(param1 * 2, BP))
+        |IL.opLADR_DECCB:
+            Op2(opSUB + BW, imm(param2), dst_x(param1 * 2, BP))
 
         |IL.opLADR_INC, IL.opLADR_INCB:
             UnOp(reg1);

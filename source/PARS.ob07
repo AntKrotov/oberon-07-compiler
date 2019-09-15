@@ -1151,13 +1151,13 @@ BEGIN
 
     errlabel := IL.NewLabel();
     IL.SetLabel(errlabel);
-    IL.AddCmd(IL.opSADR, name);
-    IL.AddCmd(IL.opPARAM, 1);
+    IL.StrAdr(name);
+    IL.Param1;
     IL.AddCmd0(IL.opERR);
 
     FOR errno := 1 TO LEN(IL.codes.errlabels) - 1 DO
         IL.SetErrLabel(errno);
-        IL.AddCmd(IL.opERRC, errno);
+        IL.AddCmd(IL.opPUSHC, errno);
         IL.AddJmpCmd(IL.opJMP, errlabel)
     END;
 

@@ -711,7 +711,7 @@ BEGIN
                 OutByte(0C3H) // ret
             END
 
-        |IL.opERRC:
+        |IL.opPUSHC:
             pushc(param2)
 
         |IL.opPARAM:
@@ -1246,65 +1246,25 @@ BEGIN
             INCL(R.regs, reg1);
             ASSERT(REG.GetReg(R, reg1))
 
-        |IL.opINC1:
-            UnOp(reg1);
-            OutByte2(0FFH, reg1); // inc dword[reg1]
-            drop
-
-        |IL.opDEC1:
-            UnOp(reg1);
-            OutByte2(0FFH, 8 + reg1); // dec dword[reg1]
-            drop
-
         |IL.opINCC:
             UnOp(reg1);
             OutByte2(81H + short(param2), reg1); OutIntByte(param2); // add dword[reg1], param2
             drop
 
-        |IL.opDECC:
-            UnOp(reg1);
-            OutByte2(81H + short(param2), 28H + reg1); OutIntByte(param2); // sub dword[reg1], param2
-            drop
-
-        |IL.opINC:
+        |IL.opINC, IL.opDEC:
             BinOp(reg1, reg2);
-            OutByte2(01H, reg1 * 8 + reg2); // add dword[reg2], reg1
+            OutByte2(01H + 28H * ORD(opcode = IL.opDEC), reg1 * 8 + reg2); // add/sub dword[reg2], reg1
             drop;
             drop
 
-        |IL.opDEC:
-            BinOp(reg1, reg2);
-            OutByte2(29H, reg1 * 8 + reg2); // sub dword[reg2], reg1
-            drop;
-            drop
-
-        |IL.opINC1B:
+        |IL.opINCCB, IL.opDECCB:
             UnOp(reg1);
-            OutByte2(0FEH, reg1); // inc byte[reg1]
-            drop
-
-        |IL.opDEC1B:
-            UnOp(reg1);
-            OutByte2(0FEH, 08H + reg1); // dec byte[reg1]
-            drop
-
-        |IL.opINCCB:
-            UnOp(reg1);
-            OutByte3(80H, reg1, Byte(param2)); // add byte[reg1], n
-            drop
-
-        |IL.opDECCB:
-            UnOp(reg1);
-            OutByte3(80H, 28H + reg1, Byte(param2)); // sub byte[reg1], n
+            OutByte3(80H, 28H * ORD(opcode = IL.opDECCB) + reg1, Byte(param2)); // add/sub byte[reg1], n
             drop
 
         |IL.opINCB, IL.opDECB:
             BinOp(reg1, reg2);
-            IF opcode = IL.opINCB THEN
-                OutByte2(00H, reg1 * 8 + reg2) // add byte[reg2], reg1
-            ELSE
-                OutByte2(28H, reg1 * 8 + reg2) // sub byte[reg2], reg1
-            END;
+            OutByte2(28H * ORD(opcode = IL.opDECB), reg1 * 8 + reg2); // add/sub byte[reg2], reg1
             drop;
             drop
 
@@ -2047,75 +2007,39 @@ BEGIN
             OutIntByte(n);
             drop
 
-        |IL.opLADR_INC1:
-            n := param2 * 4;
-            OutByte2(0FFH, 45H + long(n));  // inc dword[ebp + n]
-            OutIntByte(n)
-
-        |IL.opLADR_DEC1:
-            n := param2 * 4;
-            OutByte2(0FFH, 4DH + long(n));  // dec dword[ebp + n]
-            OutIntByte(n)
-
         |IL.opLADR_INCC:
             n := param1 * 4;
-            OutByte2(81H + short(param2), 45H + long(n)); // add dword[ebp + n], param2
-            OutIntByte(n);
-            OutIntByte(param2)
+            IF ABS(param2) = 1 THEN
+                OutByte2(0FFH, 45H + 8 * ORD(param2 = -1) + long(n));  // inc/dec dword[ebp + n]
+                OutIntByte(n)
+            ELSE
+                OutByte2(81H + short(param2), 45H + long(n)); // add dword[ebp + n], param2
+                OutIntByte(n);
+                OutIntByte(param2)
+            END
 
-        |IL.opLADR_DECC:
+        |IL.opLADR_INCCB, IL.opLADR_DECCB:
             n := param1 * 4;
-            OutByte2(81H + short(param2), 6DH + long(n)); // sub dword[ebp + n], param2
-            OutIntByte(n);
-            OutIntByte(param2)
+            IF param2 = 1 THEN
+                OutByte2(0FEH, 45H + 8 * ORD(opcode = IL.opLADR_DECCB) + long(n));  // inc/dec byte[ebp + n]
+                OutIntByte(n)
+            ELSE
+                OutByte2(80H, 45H + 28H * ORD(opcode = IL.opLADR_DECCB) + long(n)); // add/sub byte[ebp + n], param2
+                OutIntByte(n);
+                OutByte(param2 MOD 256)
+            END
 
-        |IL.opLADR_INC1B:
-            n := param2 * 4;
-            OutByte2(0FEH, 45H + long(n));  // inc byte[ebp + n]
-            OutIntByte(n)
-
-        |IL.opLADR_DEC1B:
-            n := param2 * 4;
-            OutByte2(0FEH, 4DH + long(n));  // dec byte[ebp + n]
-            OutIntByte(n)
-
-        |IL.opLADR_INCCB:
-            n := param1 * 4;
-            OutByte2(80H, 45H + long(n)); // add byte[ebp + n], param2
-            OutIntByte(n);
-            OutByte(param2 MOD 256)
-
-        |IL.opLADR_DECCB:
-            n := param1 * 4;
-            OutByte2(80H, 6DH + long(n)); // sub byte[ebp + n], param2
-            OutIntByte(n);
-            OutByte(param2 MOD 256)
-
-        |IL.opLADR_INC:
+        |IL.opLADR_INC, IL.opLADR_DEC:
             n := param2 * 4;
             UnOp(reg1);
-            OutByte2(01H, 45H + long(n) + reg1 * 8); // add dword[ebp + n], reg1
+            OutByte2(01H + 28H * ORD(opcode = IL.opLADR_DEC), 45H + long(n) + reg1 * 8); // add/sub dword[ebp + n], reg1
             OutIntByte(n);
             drop
 
-        |IL.opLADR_DEC:
+        |IL.opLADR_INCB, IL.opLADR_DECB:
             n := param2 * 4;
             UnOp(reg1);
-            OutByte2(29H, 45H + long(n) + reg1 * 8); // sub dword[ebp + n], reg1
-            OutIntByte(n);
-            drop
-
-        |IL.opLADR_INCB:
-            n := param2 * 4;
-            UnOp(reg1);
-            OutByte2(00H, 45H + long(n) + reg1 * 8); // add byte[ebp + n], reg1
-            OutIntByte(n);
-            drop
-
-        |IL.opLADR_DECB:
-            n := param2 * 4;
-            UnOp(reg1);
-            OutByte2(28H, 45H + long(n) + reg1 * 8); // sub byte[ebp + n], reg1
+            OutByte2(28H * ORD(opcode = IL.opLADR_DECB), 45H + long(n) + reg1 * 8); // add/sub byte[ebp + n], reg1
             OutIntByte(n);
             drop
 

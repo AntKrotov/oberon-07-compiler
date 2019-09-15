@@ -41,7 +41,8 @@ CONST
     opCONSTF* = 66; opLOADF* = 67; opSAVEF* = 68; opMULF* = 69; opDIVF* = 70; opDIVFI* = 71;
     opUMINF* = 72; opADDFI* = 73; opSUBFI* = 74; opADDF* = 75; opSUBF* = 76;
 
-    opINC1B* = 77; opDEC1B* = 78; opINCCB* = 79; opDECCB* = 80; opINCB* = 81; opDECB* = 82;
+    opACC* = 77; opJG* = 78;
+    opINCCB* = 79; opDECCB* = 80; opINCB* = 81; opDECB* = 82;
 
     opCASEL* = 83; opCASER* = 84; opCASELR* = 85;
 
@@ -49,7 +50,7 @@ CONST
     opWIN64CALL* = 87; opWIN64CALLI* = 88; opWIN64CALLP* = 89; opLOOP* = 90; opENDLOOP* = 91;
 
     opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
-    opERRC* = 98; opSWITCH* = 99;
+    opPUSHC* = 98; opSWITCH* = 99;
 
     opSBOOL* = 100; opSBOOLC* = 101; opNOP* = 102;
 
@@ -58,7 +59,8 @@ CONST
     opUMINS* = 113; opIN* = 114; opINL* = 115; opINR* = 116;
     opRSET* = 117; opRSETL* = 118; opRSETR* = 119; opRSET1* = 120; opLENGTH* = 121;
 
-    opINC1* = 122; opDEC1* = 123; opINCC* = 124; opDECC* = 125; opINC* = 126; opDEC* = 127;
+    opLEAVEC* = 122; opCODE* = 123; opALIGN16* = 124;
+    opINCC* = 125; opINC* = 126; opDEC* = 127;
     opINCL* = 128; opEXCL* = 129; opINCLC* = 130; opEXCLC* = 131; opNEW* = 132; opDISP* = 133;
     opPACK* = 134; opPACKC* = 135; opUNPK* = 136; opCOPY* = 137; opENTER* = 138; opLEAVE* = 139;
     opCALL* = 140; opSAVEP* = 141; opCALLP* = 142; opEQP* = 143; opNEP* = 144; opLEAVER* = 145;
@@ -80,7 +82,6 @@ CONST
     opSAVE16C* = 213; opWCHR* = 214; opGETC* = 215; opLENGTHW* = 216;
 
     opSYSVCALL* = 217; opSYSVCALLI* = 218; opSYSVCALLP* = 219; opSYSVALIGN16* = 220; opWIN64ALIGN16* = 221;
-    opACC* = 222; opJG* = 223; opLEAVEC* = 224; opCODE* = 225; opALIGN16* = 226;
 
 
     opSADR_PARAM* = 1000; opLOAD64_PARAM* = 1001; opLLOAD64_PARAM* = 1002; opGLOAD64_PARAM* = 1003;
@@ -89,8 +90,7 @@ CONST
 
     opLADR_SAVEC* = 1009; opGADR_SAVEC* = 1010; opLADR_SAVE* = 1011;
 
-    opLADR_INC1* = 1012; opLADR_DEC1* = 1013; opLADR_INCC* = 1014; opLADR_DECC* = 1015;
-    opLADR_INC1B* = 1016; opLADR_DEC1B* = 1017; opLADR_INCCB* = 1018; opLADR_DECCB* = 1019;
+    opLADR_INCC* = 1014; opLADR_INCCB* = 1018; opLADR_DECCB* = 1019;
     opLADR_INC* = 1020; opLADR_DEC* = 1021; opLADR_INCB* = 1022; opLADR_DECB* = 1023;
     opLADR_INCL* = 1024; opLADR_EXCL* = 1025; opLADR_INCLC* = 1026; opLADR_EXCLC* = 1027;
     opLADR_UNPK* = 1028;
@@ -442,19 +442,14 @@ BEGIN
         CASE nov.opcode OF
         |opSAVEC: set(cur, opLADR_SAVEC, param2)
         |opSAVE:  cur.opcode := opLADR_SAVE
-        |opINC1:  cur.opcode := opLADR_INC1
-        |opDEC1:  cur.opcode := opLADR_DEC1
         |opINC:   cur.opcode := opLADR_INC
         |opDEC:   cur.opcode := opLADR_DEC
-        |opINC1B: cur.opcode := opLADR_INC1B
-        |opDEC1B: cur.opcode := opLADR_DEC1B
         |opINCB:  cur.opcode := opLADR_INCB
         |opDECB:  cur.opcode := opLADR_DECB
         |opINCL:  cur.opcode := opLADR_INCL
         |opEXCL:  cur.opcode := opLADR_EXCL
         |opUNPK:  cur.opcode := opLADR_UNPK
         |opINCC:  set(cur, opLADR_INCC, param2)
-        |opDECC:  set(cur, opLADR_DECC, param2)
         |opINCCB: set(cur, opLADR_INCCB, param2)
         |opDECCB: set(cur, opLADR_DECCB, param2)
         |opINCLC: set(cur, opLADR_INCLC, param2)
@@ -505,6 +500,24 @@ BEGIN
     cmd.param2 := param2;
     insert(codes.last, cmd)
 END AddCmd2;
+
+
+PROCEDURE Const* (val: INTEGER);
+BEGIN
+    AddCmd(opCONST, val)
+END Const;
+
+
+PROCEDURE StrAdr* (adr: INTEGER);
+BEGIN
+    AddCmd(opSADR, adr)
+END StrAdr;
+
+
+PROCEDURE Param1*;
+BEGIN
+    AddCmd(opPARAM, 1)
+END Param1;
 
 
 PROCEDURE NewLabel* (): INTEGER;
@@ -605,7 +618,7 @@ END AddJmpCmd;
 
 PROCEDURE OnError* (line, error: INTEGER);
 BEGIN
-    AddCmd(opERRC, line);
+    AddCmd(opPUSHC, line);
     AddJmpCmd(opJMP, codes.errlabels[error])
 END OnError;
 

@@ -398,7 +398,7 @@ BEGIN
         IF arrcomp(e.type, VarType) THEN
 
             IF ~PROG.isOpenArray(VarType) THEN
-                IL.AddCmd(IL.opCONST, VarType.length)
+                IL.Const(VarType.length)
             END;
             IL.AddCmd(IL.opCOPYA, VarType.base.size);
             label := IL.NewLabel();
@@ -502,7 +502,7 @@ END assign;
 
 PROCEDURE LoadConst (e: PARS.EXPR);
 BEGIN
-    IL.AddCmd(IL.opCONST, ARITH.Int(e.value))
+    IL.Const(ARITH.Int(e.value))
 END LoadConst;
 
 
@@ -546,11 +546,11 @@ VAR
         d1, d2: INTEGER;
     BEGIN
         IF t.length # 0 THEN
-            IL.AddCmd(IL.opPARAM, 1);
+            IL.Param1;
             n := PROG.Dim(t2) - 1;
             WHILE n >= 0 DO
-                IL.AddCmd(IL.opCONST, ArrLen(t, n));
-                IL.AddCmd(IL.opPARAM, 1);
+                IL.Const(ArrLen(t, n));
+                IL.Param1;
                 DEC(n)
             END
         ELSE
@@ -559,7 +559,7 @@ VAR
             IF d1 # d2 THEN
                 n := d2 - d1;
                 WHILE d2 > d1 DO
-                    IL.AddCmd(IL.opCONST, ArrLen(t, d2 - 1));
+                    IL.Const(ArrLen(t, d2 - 1));
                     DEC(d2)
                 END;
                 d2 := PROG.Dim(t2);
@@ -586,7 +586,7 @@ BEGIN
                     IL.AddCmd0(IL.opPUSHT)
                 END
             ELSE
-                IL.AddCmd(IL.opCONST, e.type.num)
+                IL.Const(e.type.num)
             END;
             IL.AddCmd(IL.opPARAM, 2)
         ELSIF PROG.isOpenArray(p.type) THEN
@@ -594,7 +594,7 @@ BEGIN
             OpenArray(e.type, p.type)
         ELSE
             PARS.check(PROG.isTypeEq(e.type, p.type), pos, 66);
-            IL.AddCmd(IL.opPARAM, 1)
+            IL.Param1
         END;
         PARS.check(~e.readOnly, pos, 94)
 
@@ -605,15 +605,15 @@ BEGIN
                 PARS.check(arrcomp(e, p), pos, 66);
                 OpenArray(e.type, p.type)
             ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tCHAR) THEN
-                IL.AddCmd(IL.opSADR, String(e));
-                IL.AddCmd(IL.opPARAM, 1);
-                IL.AddCmd(IL.opCONST, strlen(e) + 1);
-                IL.AddCmd(IL.opPARAM, 1)
+                IL.StrAdr(String(e));
+                IL.Param1;
+                IL.Const(strlen(e) + 1);
+                IL.Param1
             ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tWCHAR) THEN
-                IL.AddCmd(IL.opSADR, StringW(e));
-                IL.AddCmd(IL.opPARAM, 1);
-                IL.AddCmd(IL.opCONST, utf8strlen(e) + 1);
-                IL.AddCmd(IL.opPARAM, 1)
+                IL.StrAdr(StringW(e));
+                IL.Param1;
+                IL.Const(utf8strlen(e) + 1);
+                IL.Param1
             ELSE
                 PARS.error(pos, 66)
             END
@@ -625,43 +625,43 @@ BEGIN
                     IL.Float(ARITH.Float(e.value));
                     IL.pushf
                 ELSIF e.type.typ = PROG.tNIL THEN
-                    IL.AddCmd(IL.opCONST, 0);
-                    IL.AddCmd(IL.opPARAM, 1)
+                    IL.Const(0);
+                    IL.Param1
                 ELSIF isStringW1(e) & (p.type = tWCHAR) THEN
-                    IL.AddCmd(IL.opCONST, StrToWChar(e.value.string(SCAN.IDENT).s));
-                    IL.AddCmd(IL.opPARAM, 1)
+                    IL.Const(StrToWChar(e.value.string(SCAN.IDENT).s));
+                    IL.Param1
                 ELSIF (e.type.typ = PROG.tSTRING) OR
                       (e.type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
                     IF p.type.base = tCHAR THEN
                         stroffs := String(e);
-                        IL.AddCmd(IL.opSADR, stroffs);
+                        IL.StrAdr(stroffs);
                         IF (CPU = cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
                             ERRORS.WarningMsg(pos.line, pos.col, 0)
                         END
                     ELSE (* WCHAR *)
                         stroffs := StringW(e);
-                        IL.AddCmd(IL.opSADR, stroffs)
+                        IL.StrAdr(stroffs)
                     END;
                     IL.codes.dmin := stroffs + p.type.size;
-                    IL.AddCmd(IL.opPARAM, 1)
+                    IL.Param1
                 ELSE
                     LoadConst(e);
-                    IL.AddCmd(IL.opPARAM, 1)
+                    IL.Param1
                 END
             ELSIF e.obj = ePROC THEN
                 PARS.check(e.ident.global, pos, 85);
                 IL.PushProc(e.ident.proc.label);
-                IL.AddCmd(IL.opPARAM, 1)
+                IL.Param1
             ELSIF e.obj = eIMP THEN
                 IL.PushImpProc(e.ident.import);
-                IL.AddCmd(IL.opPARAM, 1)
+                IL.Param1
             ELSIF isExpr(e) & (e.type = tREAL) THEN
                 IL.pushf
             ELSE
                 IF (p.type = tBYTE) & (e.type = tINTEGER) & (chkBYTE IN Options.checking) THEN
                     CheckRange(256, pos.line, errBYTE)
                 END;
-                IL.AddCmd(IL.opPARAM, 1)
+                IL.Param1
             END
         END
 
@@ -762,12 +762,12 @@ BEGIN
                     IL.setlast(endcall.prev(IL.COMMAND));
                     PARS.check(isInt(e2), pos, 66);
                     IF e2.obj = eCONST THEN
-                        IL.AddCmd(IL.opINCC + ORD(proc = PROG.stDEC), ARITH.Int(e2.value))
+                        IL.AddCmd(IL.opINCC, ARITH.Int(e2.value) * (ORD(proc = PROG.stINC) * 2 - 1))
                     ELSE
                         IL.AddCmd0(IL.opINC + ORD(proc = PROG.stDEC))
                     END
                 ELSE
-                    IL.AddCmd0(IL.opINC1 + ORD(proc = PROG.stDEC))
+                    IL.AddCmd(IL.opINCC, ORD(proc = PROG.stINC) * 2 - 1)
                 END
             ELSE  (* e.type = tBYTE *)
                 IF parser.sym = SCAN.lxCOMMA THEN
@@ -782,7 +782,7 @@ BEGIN
                         IL.AddCmd0(IL.opINCB + ORD(proc = PROG.stDEC))
                     END
                 ELSE
-                    IL.AddCmd0(IL.opINC1B + ORD(proc = PROG.stDEC))
+                    IL.AddCmd(IL.opINCCB + ORD(proc = PROG.stDEC), 1)
                 END
             END;
             IL.popBegEnd(begcall, endcall)
@@ -846,7 +846,7 @@ BEGIN
             END;
 
             IF isCharArrayX(e) & ~PROG.isOpenArray(e.type) THEN
-                IL.AddCmd(IL.opCONST, e.type.length)
+                IL.Const(e.type.length)
             END;
 
             PARS.checklex(parser, SCAN.lxCOMMA);
@@ -866,18 +866,18 @@ BEGIN
             END;
 
             IF ~PROG.isOpenArray(e1.type) THEN
-                IL.AddCmd(IL.opCONST, e1.type.length)
+                IL.Const(e1.type.length)
             END;
 
             IL.setlast(endcall.prev(IL.COMMAND));
 
             IF e.obj = eCONST THEN
                 IF wchar THEN
-                    IL.AddCmd(IL.opSADR, StringW(e));
-                    IL.AddCmd(IL.opCONST, utf8strlen(e) + 1)
+                    IL.StrAdr(StringW(e));
+                    IL.Const(utf8strlen(e) + 1)
                 ELSE
-                    IL.AddCmd(IL.opSADR, String(e));
-                    IL.AddCmd(IL.opCONST, strlen(e) + 1)
+                    IL.StrAdr(String(e));
+                    IL.Const(strlen(e) + 1)
                 END
             END;
             IL.AddCmd(IL.opCOPYS, e1.type.base.size);
@@ -1122,12 +1122,12 @@ BEGIN
             PExpression(parser, e);
             IF isCharArray(e) THEN
                 IF e.type.length > 0 THEN
-                    IL.AddCmd(IL.opCONST, e.type.length)
+                    IL.Const(e.type.length)
                 END;
                 IL.AddCmd0(IL.opLENGTH)
             ELSIF isCharArrayW(e) THEN
                 IF e.type.length > 0 THEN
-                    IL.AddCmd(IL.opCONST, e.type.length)
+                    IL.Const(e.type.length)
                 END;
                 IL.AddCmd0(IL.opLENGTHW)
             ELSE
@@ -1189,14 +1189,14 @@ BEGIN
         |PROG.sysSADR:
             PExpression(parser, e);
             PARS.check(isString(e), pos, 66);
-            IL.AddCmd(IL.opSADR, String(e));
+            IL.StrAdr(String(e));
             e.type := tINTEGER;
             e.obj := eEXPR
 
         |PROG.sysWSADR:
             PExpression(parser, e);
             PARS.check(isStringW(e), pos, 66);
-            IL.AddCmd(IL.opSADR, StringW(e));
+            IL.StrAdr(StringW(e));
             e.type := tINTEGER;
             e.obj := eEXPR
 
@@ -1914,7 +1914,7 @@ VAR
                     END;
 
                     IF e.obj = eCONST THEN
-                        IL.AddCmd(IL.opCONST, ORD(ARITH.getBool(e.value)))
+                        IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
                     IL.AddCmd0(IL.opACC);
                     IL.AddJmpCmd(IL.opJZ, label);
@@ -2045,7 +2045,7 @@ VAR
                 ELSE
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
-                        IL.AddCmd(IL.opCONST, ORD(ARITH.getBool(e1.value)))
+                        IL.Const(ORD(ARITH.getBool(e1.value)))
                     END;
                     IL.AddCmd0(IL.opACC)
                 END
@@ -2118,7 +2118,7 @@ VAR
                     END;
 
                     IF e.obj = eCONST THEN
-                        IL.AddCmd(IL.opCONST, ORD(ARITH.getBool(e.value)))
+                        IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
                     IL.AddCmd0(IL.opACC);
                     IL.AddJmpCmd(IL.opJNZ, label);
@@ -2186,7 +2186,7 @@ VAR
                 ELSE
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
-                        IL.AddCmd(IL.opCONST, ORD(ARITH.getBool(e1.value)))
+                        IL.Const(ORD(ARITH.getBool(e1.value)))
                     END;
                     IL.AddCmd0(IL.opACC)
                 END
@@ -2256,33 +2256,33 @@ VAR
         res := TRUE;
 
         IF isString(e) & isCharArray(e1) THEN
-            IL.AddCmd(IL.opSADR, String(e));
-            IL.AddCmd(IL.opCONST, strlen(e) + 1);
+            IL.StrAdr(String(e));
+            IL.Const(strlen(e) + 1);
             IL.AddCmd0(IL.opEQS + invcmpcode(op))
 
         ELSIF isString(e) & isCharArrayW(e1) THEN
-            IL.AddCmd(IL.opSADR, StringW(e));
-            IL.AddCmd(IL.opCONST, utf8strlen(e) + 1);
+            IL.StrAdr(StringW(e));
+            IL.Const(utf8strlen(e) + 1);
             IL.AddCmd0(IL.opEQSW + invcmpcode(op))
 
         ELSIF isStringW(e) & isCharArrayW(e1) THEN
-            IL.AddCmd(IL.opSADR, StringW(e));
-            IL.AddCmd(IL.opCONST, utf8strlen(e) + 1);
+            IL.StrAdr(StringW(e));
+            IL.Const(utf8strlen(e) + 1);
             IL.AddCmd0(IL.opEQSW + invcmpcode(op))
 
         ELSIF isCharArray(e) & isString(e1) THEN
-            IL.AddCmd(IL.opSADR, String(e1));
-            IL.AddCmd(IL.opCONST, strlen(e1) + 1);
+            IL.StrAdr(String(e1));
+            IL.Const(strlen(e1) + 1);
             IL.AddCmd0(IL.opEQS + cmpcode(op))
 
         ELSIF isCharArrayW(e) & isString(e1) THEN
-            IL.AddCmd(IL.opSADR, StringW(e1));
-            IL.AddCmd(IL.opCONST, utf8strlen(e1) + 1);
+            IL.StrAdr(StringW(e1));
+            IL.Const(utf8strlen(e1) + 1);
             IL.AddCmd0(IL.opEQSW + cmpcode(op))
 
         ELSIF isCharArrayW(e) & isStringW(e1) THEN
-            IL.AddCmd(IL.opSADR, StringW(e1));
-            IL.AddCmd(IL.opCONST, utf8strlen(e1) + 1);
+            IL.StrAdr(StringW(e1));
+            IL.Const(utf8strlen(e1) + 1);
             IL.AddCmd0(IL.opEQSW + cmpcode(op))
 
         ELSIF isCharArrayW(e) & isCharArrayW(e1) THEN
@@ -2308,7 +2308,7 @@ BEGIN
     SimpleExpression(parser, e);
     IF relation(parser.sym) THEN
         IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
-            IL.AddCmd(IL.opCONST, e.type.length)
+            IL.Const(e.type.length)
         END;
         op  := parser.sym;
         getpos(parser, pos);
@@ -2318,7 +2318,7 @@ BEGIN
         SimpleExpression(parser, e1);
 
         IF (isCharArray(e1) OR isCharArrayW(e1)) & (e1.type.length # 0) THEN
-            IL.AddCmd(IL.opCONST, e1.type.length)
+            IL.Const(e1.type.length)
         END;
 
         constant := (e.obj = eCONST) & (e1.obj = eCONST);
@@ -3164,17 +3164,7 @@ BEGIN
         IL.AddCmd(IL.opLADR, -offset)
     END;
 
-    IF st = 1 THEN
-        IL.AddCmd0(IL.opINC1)
-    ELSIF st = -1 THEN
-        IL.AddCmd0(IL.opDEC1)
-    ELSE
-        IF st > 0 THEN
-            IL.AddCmd(IL.opINCC, st)
-        ELSE
-            IL.AddCmd(IL.opDECC, -st)
-        END
-    END;
+    IL.AddCmd(IL.opINCC, st);
 
     IL.AddJmpCmd(IL.opJMP, L1);
 
@@ -3232,7 +3222,7 @@ BEGIN
             IF e.type = tREAL THEN
                 IL.Float(ARITH.Float(e.value))
             ELSIF e.type.typ = PROG.tNIL THEN
-                IL.AddCmd(IL.opCONST, 0)
+                IL.Const(0)
             ELSE
                 LoadConst(e)
             END
