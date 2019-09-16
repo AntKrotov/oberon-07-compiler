@@ -2011,7 +2011,7 @@ BEGIN
 
         |IL.opASR2, IL.opROR2, IL.opLSL2, IL.opLSR2:
             UnOp(reg1);
-            shiftrc(opcode, reg1, ORD(BITS(param2) * {0..5}))
+            shiftrc(opcode, reg1, param2 MOD 64)
 
         |IL.opGET, IL.opGETC:
             IF opcode = IL.opGET THEN

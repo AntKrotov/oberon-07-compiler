@@ -1367,7 +1367,7 @@ BEGIN
 
         |IL.opASR2, IL.opROR2, IL.opLSL2, IL.opLSR2:
             UnOp(reg1);
-            n := ORD(BITS(param2) * {0..4});
+            n := param2 MOD 32;
             IF n # 1 THEN
                 OutByte(0C1H)
             ELSE

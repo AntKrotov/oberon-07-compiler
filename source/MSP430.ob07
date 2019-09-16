@@ -127,7 +127,7 @@ VAR
 BEGIN
     IF val < 0 THEN
         ASSERT(val >= -32768);
-        val := ORD(BITS(val) * {0..15})
+        val := val MOD 65536
     ELSE
         ASSERT(val <= 65535)
     END;
@@ -245,7 +245,7 @@ END MovRR;
 
 PROCEDURE PushImm (imm: INTEGER);
 BEGIN
-    imm := UTILS.Long(imm MOD 65536);
+    imm := UTILS.Long(imm);
     CASE imm OF
     | 0: Op1(opPUSH, CG, sREG)
     | 1: Op1(opPUSH, CG, sIDX)
@@ -358,7 +358,7 @@ BEGIN
                 ELSE
                     diff := LabelOffs(cmd.label) - cmd.offset - 1;
                     ASSERT((-512 <= diff) & (diff <= 511));
-                    PutWord(cmd.cc + ORD(BITS(diff) * {0..9}), adr)
+                    PutWord(cmd.cc + diff MOD 1024, adr)
                 END
 
         |CALL:  PutWord(12B0H, adr); (* CALL @PC+ *)
@@ -1207,7 +1207,7 @@ BEGIN
             GetRegA
 
         |IL.opASR2, IL.opROR2, IL.opLSL2, IL.opLSR2:
-            param2 := ORD(BITS(param2) * {0..3});
+            param2 := param2 MOD 16;
             IF param2 # 0 THEN
                 UnOp(reg1);
                 Shift2(opcode, reg1, param2)
