@@ -27,6 +27,7 @@ CONST
 TYPE
 
     DLL_ENTRY* = PROCEDURE (hinstDLL, fdwReason, lpvReserved: INTEGER);
+    PROC       = PROCEDURE;
 
 
 VAR
@@ -39,6 +40,8 @@ VAR
         thread_detach,
         thread_attach: DLL_ENTRY
     END;
+
+    fini: PROC;
 
 
 PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
@@ -628,7 +631,23 @@ BEGIN
     dll.process_detach := NIL;
     dll.thread_detach  := NIL;
     dll.thread_attach  := NIL;
+
+    fini := NIL
 END _init;
+
+
+PROCEDURE [stdcall] _sofinit*;
+BEGIN
+    IF fini # NIL THEN
+        fini
+    END
+END _sofinit;
+
+
+PROCEDURE SetFini* (ProcFini: PROC);
+BEGIN
+    fini := ProcFini
+END SetFini;
 
 
 END RTL.

@@ -168,6 +168,24 @@ BEGIN
 END count;
 
 
+PROCEDURE getidx* (list: LIST; idx: INTEGER): ITEM;
+VAR
+    item: ITEM;
+
+BEGIN
+    ASSERT(list # NIL);
+    ASSERT(idx >= 0);
+
+    item := list.first;
+    WHILE (item # NIL) & (idx > 0) DO
+        item := item.next;
+        DEC(idx)
+    END
+
+    RETURN item
+END getidx;
+
+
 PROCEDURE create* (list: LIST): LIST;
 BEGIN
     IF list = NIL THEN

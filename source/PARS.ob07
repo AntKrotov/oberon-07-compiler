@@ -536,9 +536,9 @@ BEGIN
             res := PROG.win64
         END
     |PROG.sf_linux:
-        IF program.target.sys = mConst.Target_iELF32 THEN
+        IF program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELFSO32} THEN
             res := PROG.ccall16
-        ELSIF program.target.sys = mConst.Target_iELF64 THEN
+        ELSIF program.target.sys IN {mConst.Target_iELF64, mConst.Target_iELFSO64} THEN
             res := PROG.systemv
         END
     |PROG.sf_noalign:
@@ -592,7 +592,8 @@ BEGIN
     END;
 
     IF import # NIL THEN
-        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64, mConst.Target_iMSP430}), pos, 70)
+        check(~(program.target.sys IN {mConst.Target_iELF32, mConst.Target_iELF64, mConst.Target_iELFSO32,
+            mConst.Target_iELFSO64, mConst.Target_iMSP430}), pos, 70)
     END
 
     RETURN call

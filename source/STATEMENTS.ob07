@@ -3297,7 +3297,8 @@ BEGIN
         getproc(rtl,  "_dllentry",  IL._dllentry);
         getproc(rtl,  "_dispose",   IL._dispose);
         getproc(rtl,  "_exit",      IL._exit);
-        getproc(rtl,  "_init",      IL._init)
+        getproc(rtl,  "_init",      IL._init);
+        getproc(rtl,  "_sofinit",   IL._sofinit)
     END
 
 END setrtl;
@@ -3320,10 +3321,11 @@ BEGIN
     Options := options;
 
     CASE target OF
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64:
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64, mConst.Target_iELFSO64:
         CPU := cpuAMD64
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
+     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32,
+     mConst.Target_iELFSO32:
         CPU := cpuX86
     |mConst.Target_iMSP430:
         CPU := cpuMSP430

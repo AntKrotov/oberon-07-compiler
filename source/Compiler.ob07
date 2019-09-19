@@ -33,8 +33,12 @@ BEGIN
         res := mConst.Target_iDLL64
     ELSIF s = mConst.Target_sELF32 THEN
         res := mConst.Target_iELF32
+    ELSIF s = mConst.Target_sELFSO32 THEN
+        res := mConst.Target_iELFSO32
     ELSIF s = mConst.Target_sELF64 THEN
         res := mConst.Target_iELF64
+    ELSIF s = mConst.Target_sELFSO64 THEN
+        res := mConst.Target_iELFSO64
     ELSIF s = mConst.Target_sMSP430 THEN
         res := mConst.Target_iMSP430
     ELSE
@@ -200,9 +204,9 @@ BEGIN
         C.Ln;
         C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
         IF UTILS.bit_depth = 64 THEN
-            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfexe64 | msp430'); C.Ln;
+            C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfso | elfexe64 | elfso64 | msp430'); C.Ln;
         ELSIF UTILS.bit_depth = 32 THEN
-            C.StringLn('target = console | gui | dll | kos | obj | elfexe | msp430'); C.Ln;
+            C.StringLn('target = console | gui | dll | kos | obj | elfexe | elfso | msp430'); C.Ln;
         END;
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
@@ -247,10 +251,10 @@ BEGIN
     END;
 
     CASE target OF
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64:
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64, mConst.Target_iELFSO64:
         bit_depth := 64
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32:
+     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32, mConst.Target_iELFSO32:
         bit_depth := 32
     |mConst.Target_iMSP430:
         bit_depth := 16;
@@ -277,10 +281,10 @@ BEGIN
     |mConst.Target_iKolibri, mConst.Target_iObject:
         STRINGS.append(lib_path, "KolibriOS")
 
-    |mConst.Target_iELF32:
+    |mConst.Target_iELF32, mConst.Target_iELFSO32:
         STRINGS.append(lib_path, "Linux32")
 
-    |mConst.Target_iELF64:
+    |mConst.Target_iELF64, mConst.Target_iELFSO64:
         STRINGS.append(lib_path, "Linux64")
 
     |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64:
@@ -297,7 +301,7 @@ BEGIN
 
     PARS.init(bit_depth, target, options);
 
-    PARS.program.dll := target IN {mConst.Target_iDLL, mConst.Target_iObject, mConst.Target_iDLL64};
+    PARS.program.dll := target IN {mConst.Target_iELFSO32, mConst.Target_iELFSO64, mConst.Target_iDLL, mConst.Target_iDLL64, mConst.Target_iObject};
     PARS.program.obj := target = mConst.Target_iObject;
 
     ST.compile(path, lib_path, modname, outname, target, options);

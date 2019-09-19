@@ -2148,7 +2148,7 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog (code: IL.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret: INTEGER);
+PROCEDURE epilog (code: IL.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret, sofinit: INTEGER);
 VAR
     exp:  IL.EXPORT_PROC;
     path, name, ext: PATHS.PATH;
@@ -2190,6 +2190,11 @@ BEGIN
     ELSIF target = mConst.Target_iObject THEN
         movrc(eax, 1);
         OutByte(0C3H)  // ret
+    ELSIF target = mConst.Target_iELFSO32 THEN
+        OutByte(0C3H);  // ret
+        SetLabel(sofinit);
+        CallRTL(pic, IL._sofinit);
+        OutByte(0C3H)   // ret
     END;
 
     fixup;
@@ -2233,7 +2238,7 @@ END epilog;
 
 PROCEDURE CodeGen* (code: IL.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
-    dllret, dllinit: INTEGER;
+    dllret, dllinit, sofinit: INTEGER;
     opt: PROG.OPTIONS;
 
 BEGIN
@@ -2245,12 +2250,13 @@ BEGIN
 
     dllinit := NewLabel();
     dllret  := NewLabel();
+    sofinit := NewLabel();
 
     IF target = mConst.Target_iObject THEN
         opt.pic := FALSE
     END;
 
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL, mConst.Target_iELF32} THEN
+    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL, mConst.Target_iELF32, mConst.Target_iELFSO32} THEN
         opt.pic := TRUE
     END;
 
@@ -2258,7 +2264,7 @@ BEGIN
 
     prolog(code, opt.pic, target, opt.stack, dllinit, dllret);
     translate(code, opt.pic, CHL.Length(code.types) * 4);
-    epilog(code, opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret);
+    epilog(code, opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
 
     BIN.fixup(program);
 
@@ -2268,8 +2274,8 @@ BEGIN
         KOS.write(program, outname)
     ELSIF target = mConst.Target_iObject THEN
         MSCOFF.write(program, outname, opt.version)
-    ELSIF target = mConst.Target_iELF32 THEN
-        ELF.write(program, outname, FALSE)
+    ELSIF target IN {mConst.Target_iELF32, mConst.Target_iELFSO32} THEN
+        ELF.write(program, outname, sofinit, target = mConst.Target_iELFSO32, FALSE)
     END
 
 END CodeGen;

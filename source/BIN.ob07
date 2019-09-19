@@ -220,7 +220,6 @@ END SetLabel;
 PROCEDURE Import* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
     imp: IMPRT;
-    i:   INTEGER;
 
 BEGIN
     CHL.PushByte(program.import, 0);
@@ -231,16 +230,9 @@ BEGIN
     END;
 
     NEW(imp);
-    imp.nameoffs := CHL.Length(program.import);
+    imp.nameoffs := CHL.PushStr(program.import, name);
     imp.label := label;
-    LISTS.push(program.imp_list, imp);
-
-    i := 0;
-    WHILE name[i] # 0X DO
-        CHL.PushByte(program.import, ORD(name[i]));
-        INC(i)
-    END;
-    CHL.PushByte(program.import, 0)
+    LISTS.push(program.imp_list, imp)
 END Import;
 
 
@@ -265,19 +257,11 @@ END less;
 PROCEDURE Export* (program: PROGRAM; name: ARRAY OF CHAR; label: INTEGER);
 VAR
     exp, cur: EXPRT;
-    i: INTEGER;
 
 BEGIN
     NEW(exp);
-    exp.nameoffs := CHL.Length(program.export);
     exp.label := CHL.GetInt(program.labels, label);
-
-    i := 0;
-    WHILE name[i] # 0X DO
-        CHL.PushByte(program.export, ORD(name[i]));
-        INC(i)
-    END;
-    CHL.PushByte(program.export, 0);
+    exp.nameoffs := CHL.PushStr(program.export, name);
 
     cur := program.exp_list.first(EXPRT);
     WHILE (cur # NIL) & less(program.export, cur, exp) DO
