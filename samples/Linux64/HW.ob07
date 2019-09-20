@@ -1,6 +1,6 @@
 ﻿MODULE HW;
 
-IMPORT SYSTEM, LINAPI;
+IMPORT SYSTEM, LINAPI, Libdl;
 
 
 VAR
@@ -44,7 +44,7 @@ END main;
 
 
 BEGIN
-    SYSTEM.PUT(SYSTEM.ADR(puts), LINAPI.dlsym(LINAPI.libc, "puts"));
+    SYSTEM.PUT(SYSTEM.ADR(puts), Libdl.sym(LINAPI.libc, "puts"));
     ASSERT(puts # NIL);
     main
 END HW.
