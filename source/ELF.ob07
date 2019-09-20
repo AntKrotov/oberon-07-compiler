@@ -94,7 +94,7 @@ VAR
     strtab:  CHL.BYTELIST;
     symtab:  LISTS.LIST;
 
-    hashtab, bucket, chain: ARRAY 1000 OF INTEGER;
+    hashtab, bucket, chain: CHL.INTLIST;
 
 
 PROCEDURE align (n, _align: INTEGER): INTEGER;
@@ -210,23 +210,22 @@ BEGIN
 END HashStr;
 
 
-PROCEDURE MakeHash (VAR bucket, chain: ARRAY OF INTEGER; symCount: INTEGER);
+PROCEDURE MakeHash (bucket, chain: CHL.INTLIST; symCount: INTEGER);
 VAR
-    nbucket, symi, hi, k: INTEGER;
+    symi, hi, k: INTEGER;
 
 BEGIN
-    nbucket := symCount;
     FOR symi := 0 TO symCount - 1 DO
-        chain[symi] := 0;
-        hi := hashtab[symi] MOD nbucket;
-        IF bucket[hi] # 0 THEN
+        CHL.SetInt(chain, symi, 0);
+        hi := CHL.GetInt(hashtab, symi) MOD symCount;
+        IF CHL.GetInt(bucket, hi) # 0 THEN
             k := symi;
-            WHILE chain[k] # 0 DO
-                k := chain[k]
+            WHILE CHL.GetInt(chain, k) # 0 DO
+                k := CHL.GetInt(chain, k)
             END;
-            chain[k] := bucket[hi]
+            CHL.SetInt(chain, k, CHL.GetInt(bucket, hi))
         END;
-        bucket[hi] := symi
+        CHL.SetInt(bucket, hi, symi)
     END
 END MakeHash;
 
@@ -364,20 +363,20 @@ BEGIN
     phdr[dyn].p_vaddr := BaseAdr + phdr[dyn].p_offset;
     phdr[dyn].p_paddr := phdr[dyn].p_vaddr;
 
-    hashtab[0] := HashStr("");
+    hashtab := CHL.CreateIntList();
+
+    CHL.PushInt(hashtab, HashStr(""));
     NewSym(CHL.PushStr(strtab, ""), 0, 0, 0X, 0X, 0X);
-    hashtab[1] := HashStr("dlopen");
+    CHL.PushInt(hashtab, HashStr("dlopen"));
     NewSym(CHL.PushStr(strtab, "dlopen"), 0, 0, 12X, 0X, 0X);
-    hashtab[2] := HashStr("dlsym");
+    CHL.PushInt(hashtab, HashStr("dlsym"));
     NewSym(CHL.PushStr(strtab, "dlsym"), 0, 0, 12X, 0X, 0X);
 
     IF so THEN
-        i := 3;
         item := program.exp_list.first;
         WHILE item # NIL DO
             ASSERT(CHL.GetStr(program.export, item(BIN.EXPRT).nameoffs, Name));
-            hashtab[i] := HashStr(Name);
-            INC(i);
+            CHL.PushInt(hashtab, HashStr(Name));
             NewSym(CHL.PushStr(strtab, Name), item(BIN.EXPRT).label, 0, 12X, 0X, 0X);
             item := item.next
         END;
@@ -385,6 +384,14 @@ BEGIN
     END;
 
     symCount := LISTS.count(symtab);
+
+    bucket  := CHL.CreateIntList();
+    chain   := CHL.CreateIntList();
+
+    FOR i := 1 TO symCount DO
+        CHL.PushInt(bucket, 0);
+        CHL.PushInt(chain, 0)
+    END;
 
     MakeHash(bucket, chain, symCount);
 
@@ -579,11 +586,11 @@ BEGIN
         WR.Write32LE(File, symCount);
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, bucket[i])
+            WR.Write32LE(File, CHL.GetInt(bucket, i))
         END;
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, chain[i])
+            WR.Write32LE(File, CHL.GetInt(chain, i))
         END;
 
         CHL.WriteToFile(File, strtab);
@@ -618,11 +625,11 @@ BEGIN
         WR.Write32LE(File, symCount);
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, bucket[i])
+            WR.Write32LE(File, CHL.GetInt(bucket, i))
         END;
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, chain[i])
+            WR.Write32LE(File, CHL.GetInt(chain, i))
         END;
 
         CHL.WriteToFile(File, strtab);
