@@ -90,6 +90,8 @@ VAR
 
     CodeList: LISTS.LIST;
 
+    tcount: INTEGER;
+
 
 PROCEDURE Byte (n: INTEGER): BYTE;
     RETURN UTILS.Byte(n, 0)
@@ -1701,19 +1703,19 @@ BEGIN
 
         |IL.opISREC:
             PushAll(2);
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._isrec);
             GetRegA
 
         |IL.opIS:
             PushAll(1);
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._is);
             GetRegA
 
         |IL.opTYPEGR:
             PushAll(1);
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._guardrec);
             GetRegA
 
@@ -1721,7 +1723,7 @@ BEGIN
             UnOp(reg1);
             PushAll(0);
             push(reg1);
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._guard);
             GetRegA
 
@@ -1729,14 +1731,14 @@ BEGIN
             UnOp(reg1);
             PushAll(0);
             OutByte3(0FFH, 070H + reg1, 0FCH);  // push dword[reg1 - 4]
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._guardrec);
             GetRegA
 
         |IL.opCASET:
             push(ecx);
             push(ecx);
-            pushc(param2);
+            pushc(param2 * tcount);
             CallRTL(pic, IL._guardrec);
             pop(ecx);
             test(eax);
@@ -2075,7 +2077,7 @@ END translate;
 
 PROCEDURE prolog (code: IL.CODES; pic: BOOLEAN; target, stack, dllinit, dllret: INTEGER);
 VAR
-    reg1, entry, tcount, dcount: INTEGER;
+    reg1, entry, dcount: INTEGER;
 
 BEGIN
 
@@ -2129,7 +2131,6 @@ BEGIN
         Reloc(BIN.RDATA, 0)
     END;
 
-    tcount := CHL.Length(code.types);
     dcount := CHL.Length(code.data);
 
     pushc(tcount);
@@ -2153,7 +2154,7 @@ VAR
     exp:  IL.EXPORT_PROC;
     path, name, ext: PATHS.PATH;
 
-    tcount, dcount, i: INTEGER;
+    dcount, i: INTEGER;
 
 
     PROCEDURE import (imp: LISTS.LIST);
@@ -2199,7 +2200,6 @@ BEGIN
 
     fixup;
 
-    tcount := CHL.Length(code.types);
     dcount := CHL.Length(code.data);
 
     FOR i := 0 TO tcount - 1 DO
@@ -2242,6 +2242,7 @@ VAR
     opt: PROG.OPTIONS;
 
 BEGIN
+    tcount := CHL.Length(code.types);
 
     opt := options;
     CodeList := LISTS.create(NIL);
@@ -2263,7 +2264,7 @@ BEGIN
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
     prolog(code, opt.pic, target, opt.stack, dllinit, dllret);
-    translate(code, opt.pic, CHL.Length(code.types) * 4);
+    translate(code, opt.pic, tcount * 4);
     epilog(code, opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
 
     BIN.fixup(program);

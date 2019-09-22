@@ -22,6 +22,7 @@ CONST
     DLL_PROCESS_DETACH  = 0;
 
     SIZE_OF_QWORD = 8;
+    MAX_SET = 63;
 
 
 TYPE
@@ -34,6 +35,7 @@ VAR
 
     name:  INTEGER;
     types: INTEGER;
+    sets:  INTEGER;
 
     dll: RECORD
         process_detach,
@@ -45,36 +47,56 @@ VAR
 
 
 PROCEDURE [stdcall64] _move* (bytes, source, dest: INTEGER);
-VAR
-    qwords: INTEGER;
-    qword:  INTEGER;
-    byte:   BYTE;
-
 BEGIN
-    qwords := bytes DIV 8;
-    bytes  := bytes MOD 8;
+    SYSTEM.CODE(
 
-    WHILE qwords > 0 DO
-        SYSTEM.GET(source, qword);
-        SYSTEM.PUT(dest, qword);
-        INC(source, 8);
-        INC(dest, 8);
-        DEC(qwords)
-    END;
-
-    WHILE bytes > 0 DO
-        SYSTEM.GET(source, byte);
-        SYSTEM.PUT8(dest, byte);
-        INC(source);
-        INC(dest);
-        DEC(bytes)
-    END
+    048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
+    048H, 085H, 0C0H,          (*  test    rax, rax               *)
+    07EH, 020H,                (*  jle     L                      *)
+    0FCH,                      (*  cld                            *)
+    057H,                      (*  push    rdi                    *)
+    056H,                      (*  push    rsi                    *)
+    048H, 08BH, 075H, 018H,    (*  mov     rsi, qword [rbp + 24]  *)
+    048H, 08BH, 07DH, 020H,    (*  mov     rdi, qword [rbp + 32]  *)
+    048H, 089H, 0C1H,          (*  mov     rcx, rax               *)
+    048H, 0C1H, 0E9H, 003H,    (*  shr     rcx, 3                 *)
+    0F3H, 048H, 0A5H,          (*  rep     movsd                  *)
+    048H, 089H, 0C1H,          (*  mov     rcx, rax               *)
+    048H, 083H, 0E1H, 007H,    (*  and     rcx, 7                 *)
+    0F3H, 0A4H,                (*  rep     movsb                  *)
+    05EH,                      (*  pop     rsi                    *)
+    05FH,                      (*  pop     rdi                    *)
+                               (*  L:                             *)
+    05DH,                      (*  pop     rbp                    *)
+    0C2H, 018H, 000H           (*  ret     24                     *)
+                )
 END _move;
 
 
 PROCEDURE [stdcall64] _move2* (bytes, dest, source: INTEGER);
 BEGIN
-    _move(bytes, source, dest)
+    SYSTEM.CODE(
+
+    048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
+    048H, 085H, 0C0H,          (*  test    rax, rax               *)
+    07EH, 020H,                (*  jle     L                      *)
+    0FCH,                      (*  cld                            *)
+    057H,                      (*  push    rdi                    *)
+    056H,                      (*  push    rsi                    *)
+    048H, 08BH, 075H, 020H,    (*  mov     rsi, qword [rbp + 32]  *)
+    048H, 08BH, 07DH, 018H,    (*  mov     rdi, qword [rbp + 24]  *)
+    048H, 089H, 0C1H,          (*  mov     rcx, rax               *)
+    048H, 0C1H, 0E9H, 003H,    (*  shr     rcx, 3                 *)
+    0F3H, 048H, 0A5H,          (*  rep     movsd                  *)
+    048H, 089H, 0C1H,          (*  mov     rcx, rax               *)
+    048H, 083H, 0E1H, 007H,    (*  and     rcx, 7                 *)
+    0F3H, 0A4H,                (*  rep     movsb                  *)
+    05EH,                      (*  pop     rsi                    *)
+    05FH,                      (*  pop     rdi                    *)
+                               (*  L:                             *)
+    05DH,                      (*  pop     rbp                    *)
+    0C2H, 018H, 000H           (*  ret     24                     *)
+                )
 END _move2;
 
 
@@ -119,23 +141,21 @@ END _rot;
 
 
 PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
-VAR
-    res: INTEGER;
-
 BEGIN
-    IF (a <= b) & (a <= 63) & (b >= 0) THEN
-        IF b > 63 THEN
-            b := 63
+    IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
+        IF b > MAX_SET THEN
+            b := MAX_SET
         END;
         IF a < 0 THEN
             a := 0
         END;
-        res := LSR(ASR(ROR(1, 1), b - a), 63 - b)
+
+        SYSTEM.GET((b * (MAX_SET + 1) + a) * SIZE_OF_QWORD + sets, a)
     ELSE
-        res := 0
+        a := 0
     END
 
-    RETURN res
+    RETURN a
 END _set;
 
 
@@ -147,10 +167,6 @@ END _set2;
 PROCEDURE [stdcall64] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-
-    049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
-    049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
-
     048H, 08BH, 045H, 010H,    (*  mov     rax, qword [rbp + 16]  *)
     048H, 08BH, 04DH, 018H,    (*  mov     rcx, qword [rbp + 24]  *)
     048H, 031H, 0D2H,          (*  xor     rdx, rdx               *)
@@ -163,17 +179,13 @@ BEGIN
     048H, 089H, 011H,          (*  mov     qword [rcx], rdx       *)
     048H, 089H, 0ECH,          (*  mov     rsp, rbp               *)
     05DH,                      (*  pop     rbp                    *)
-
-    049H, 087H, 0CAH,          (*  xchg    r10, rcx               *)
-    049H, 087H, 0D3H,          (*  xchg    r11, rdx               *)
-
     0C2H, 018H, 000H           (*  ret     24                     *)
                )
     RETURN 0
 END divmod;
 
 
-PROCEDURE div_ (x, y: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _div2* (x, y: INTEGER): INTEGER;
 VAR
     div, mod: INTEGER;
 
@@ -184,10 +196,10 @@ BEGIN
     END
 
     RETURN div
-END div_;
+END _div2;
 
 
-PROCEDURE mod_ (x, y: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _mod2* (x, y: INTEGER): INTEGER;
 VAR
     div, mod: INTEGER;
 
@@ -198,27 +210,17 @@ BEGIN
     END
 
     RETURN mod
-END mod_;
+END _mod2;
 
 
 PROCEDURE [stdcall64] _div* (b, a: INTEGER): INTEGER;
-    RETURN div_(a, b)
+    RETURN _div2(a, b)
 END _div;
 
 
-PROCEDURE [stdcall64] _div2* (a, b: INTEGER): INTEGER;
-    RETURN div_(a, b)
-END _div2;
-
-
 PROCEDURE [stdcall64] _mod* (b, a: INTEGER): INTEGER;
-    RETURN mod_(a, b)
+    RETURN _mod2(a, b)
 END _mod;
-
-
-PROCEDURE [stdcall64] _mod2* (a, b: INTEGER): INTEGER;
-    RETURN mod_(a, b)
-END _mod2;
 
 
 PROCEDURE [stdcall64] _new* (t, size: INTEGER; VAR ptr: INTEGER);
@@ -240,44 +242,49 @@ END _dispose;
 
 
 PROCEDURE [stdcall64] _length* (len, str: INTEGER): INTEGER;
-VAR
-    c:   CHAR;
-    res: INTEGER;
-
 BEGIN
-    res := 0;
-    REPEAT
-        SYSTEM.GET(str, c); INC(str);
-        DEC(len);
-        INC(res)
-    UNTIL (c = 0X) OR (len = 0);
+    SYSTEM.CODE(
 
-    IF c = 0X THEN
-        DEC(res)
-    END
+    048H, 08BH, 045H, 018H,     (*  mov     rax, qword [rbp + 24]  *)
+    048H, 08BH, 04DH, 010H,     (*  mov     rcx, qword [rbp + 16]  *)
+    048H, 0FFH, 0C8H,           (*  dec     rax                    *)
+                                (*  L1:                            *)
+    048H, 0FFH, 0C0H,           (*  inc     rax                    *)
+    080H, 038H, 000H,           (*  cmp     byte [rax], 0          *)
+    074H, 005H,                 (*  jz      L2                     *)
+    0E2H, 0F6H,                 (*  loop    L1                     *)
+    048H, 0FFH, 0C0H,           (*  inc     rax                    *)
+                                (*  L2:                            *)
+    048H, 02BH, 045H, 018H,     (*  sub     rax, qword [rbp + 24]  *)
+    05DH,                       (*  pop     rbp                    *)
+    0C2H, 010H, 000H            (*  ret     10h                    *)
+               )
 
-    RETURN res
+    RETURN 0
 END _length;
 
 
 PROCEDURE [stdcall64] _lengthw* (len, str: INTEGER): INTEGER;
-VAR
-    c:   WCHAR;
-    res: INTEGER;
-
 BEGIN
-    res := 0;
-    REPEAT
-        SYSTEM.GET(str, c); INC(str, 2);
-        DEC(len);
-        INC(res)
-    UNTIL (c = 0X) OR (len = 0);
+    SYSTEM.CODE(
 
-    IF c = 0X THEN
-        DEC(res)
-    END
+    048H, 08BH, 045H, 018H,     (*  mov     rax, qword [rbp + 24]  *)
+    048H, 08BH, 04DH, 010H,     (*  mov     rcx, qword [rbp + 16]  *)
+    048H, 083H, 0E8H, 002H,     (*  sub     rax, 2                 *)
+                                (*  L1:                            *)
+    048H, 083H, 0C0H, 002H,     (*  add     rax, 2                 *)
+    066H, 083H, 038H, 000H,     (*  cmp     word [rax], 0          *)
+    074H, 006H,                 (*  jz      L2                     *)
+    0E2H, 0F4H,                 (*  loop    L1                     *)
+    048H, 083H, 0C0H, 002H,     (*  add     rax, 2                 *)
+                                (*  L2:                            *)
+    048H, 02BH, 045H, 018H,     (*  sub     rax, qword [rbp + 24]  *)
+    048H, 0D1H, 0E8H,           (*  shr     rax, 1                 *)
+    05DH,                       (*  pop     rbp                    *)
+    0C2H, 010H, 000H            (*  ret     10h                    *)
+               )
 
-    RETURN res
+    RETURN 0
 END _lengthw;
 
 
@@ -492,69 +499,42 @@ BEGIN
 END _error;
 
 
-PROCEDURE [stdcall64] _isrec* (t0, t1, r: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _isrec* (t0, t1, r: INTEGER): INTEGER;
 BEGIN
-    (* r IS t0 *)
-
-    WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
-    END
-
-    RETURN t1 = t0
+    SYSTEM.GET(t0 + t1 + types, t0)
+    RETURN t0 MOD 2
 END _isrec;
 
 
-PROCEDURE [stdcall64] _is* (t0, p: INTEGER): BOOLEAN;
-VAR
-    t1: INTEGER;
-
+PROCEDURE [stdcall64] _is* (t0, p: INTEGER): INTEGER;
 BEGIN
-    (* p IS t0 *)
-
     IF p # 0 THEN
-        DEC(p, SIZE_OF_QWORD);
-        SYSTEM.GET(p, t1);
-        WHILE (t1 # 0) & (t1 # t0) DO
-            SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
-        END
-    ELSE
-        t1 := -1
+        SYSTEM.GET(p - SIZE_OF_QWORD, p);
+        SYSTEM.GET(t0 + p + types, p)
     END
 
-    RETURN t1 = t0
+    RETURN p MOD 2
 END _is;
 
 
-PROCEDURE [stdcall64] _guardrec* (t0, t1: INTEGER): BOOLEAN;
+PROCEDURE [stdcall64] _guardrec* (t0, t1: INTEGER): INTEGER;
 BEGIN
-    (* r:t1 IS t0 *)
-
-    WHILE (t1 # 0) & (t1 # t0) DO
-        SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
-    END
-
-    RETURN t1 = t0
+    SYSTEM.GET(t0 + t1 + types, t0)
+    RETURN t0 MOD 2
 END _guardrec;
 
 
-PROCEDURE [stdcall64] _guard* (t0, p: INTEGER): BOOLEAN;
-VAR
-    t1:  INTEGER;
-
+PROCEDURE [stdcall64] _guard* (t0, p: INTEGER): INTEGER;
 BEGIN
-    (* p IS t0 *)
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        DEC(p, SIZE_OF_QWORD);
-        SYSTEM.GET(p, t1);
-        WHILE (t1 # t0) & (t1 # 0) DO
-            SYSTEM.GET(types + t1 * SIZE_OF_QWORD, t1)
-        END
+        SYSTEM.GET(p - SIZE_OF_QWORD, p);
+        SYSTEM.GET(t0 + p + types, p)
     ELSE
-        t1 := t0
+        p := 1
     END
 
-    RETURN t1 = t0
+    RETURN p MOD 2
 END _guard;
 
 
@@ -603,11 +583,35 @@ BEGIN
 END _exit;
 
 
-PROCEDURE [stdcall64] _init* (modname: INTEGER; typesc, _types: INTEGER; code, param: INTEGER);
+PROCEDURE [stdcall64] _init* (modname: INTEGER; tcount, _types: INTEGER; code, param: INTEGER);
+VAR
+    t0, t1, i, j: INTEGER;
+
 BEGIN
     API.init(param, code);
 
-    types := _types;
+    types := API._NEW(tcount * tcount + SYSTEM.SIZE(INTEGER));
+    ASSERT(types # 0);
+    FOR i := 0 TO tcount - 1 DO
+        FOR j := 0 TO tcount - 1 DO
+            t0 := i; t1 := j;
+
+            WHILE (t1 # 0) & (t1 # t0) DO
+                SYSTEM.GET(_types + t1 * SIZE_OF_QWORD, t1)
+            END;
+
+            SYSTEM.PUT8(i * tcount + j + types, ORD(t0 = t1))
+        END
+    END;
+
+    sets := API._NEW((MAX_SET + 1) * (MAX_SET + 1) * SIZE_OF_QWORD);
+    ASSERT(sets # 0);
+    FOR i := 0 TO MAX_SET DO
+        FOR j := 0 TO i DO
+            SYSTEM.PUT((i * (MAX_SET + 1) + j) * SIZE_OF_QWORD + sets, LSR(ASR(minint, i - j), MAX_SET - i))
+        END
+    END;
+
     name  := modname;
 
     dll.process_detach := NIL;
