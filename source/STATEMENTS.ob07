@@ -3291,6 +3291,7 @@ BEGIN
         getproc(rtl,  "_mod",       IL._mod);
         getproc(rtl,  "_set",       IL._set);
         getproc(rtl,  "_set2",      IL._set2);
+        getproc(rtl,  "_set1",      IL._set1);
         getproc(rtl,  "_isrec",     IL._isrec);
         getproc(rtl,  "_lengthw",   IL._lengthw);
         getproc(rtl,  "_strcmpw",   IL._strcmpw);

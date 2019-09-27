@@ -122,6 +122,7 @@ CONST
     _init      *=  23;
     _dllentry  *=  24;
     _sofinit   *=  25;
+    _set1      *=  26;
 
 
 TYPE
@@ -188,7 +189,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 26 OF INTEGER;
+        rtl*:       ARRAY 27 OF INTEGER;
         errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;

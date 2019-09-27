@@ -1333,10 +1333,8 @@ BEGIN
             GetRegA
 
         |IL.opRSET1:
-            UnOp(reg1);
             PushAll(1);
-            push(reg1);
-            CallRTL(IL._set);
+            CallRTL(IL._set1);
             GetRegA
 
         |IL.opINCL, IL.opEXCL:
