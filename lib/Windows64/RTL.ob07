@@ -16,13 +16,13 @@ CONST
     maxint* = 7FFFFFFFFFFFFFFFH;
     minint* = 8000000000000000H;
 
-    DLL_PROCESS_ATTACH  = 1;
-    DLL_THREAD_ATTACH   = 2;
-    DLL_THREAD_DETACH   = 3;
-    DLL_PROCESS_DETACH  = 0;
+    DLL_PROCESS_ATTACH = 1;
+    DLL_THREAD_ATTACH  = 2;
+    DLL_THREAD_DETACH  = 3;
+    DLL_PROCESS_DETACH = 0;
 
-    SIZE_OF_QWORD = 8;
-    MAX_SET = 63;
+    WORD = bit_depth DIV 8;
+    MAX_SET = bit_depth - 1;
 
 
 TYPE
@@ -151,7 +151,7 @@ BEGIN
             a := 0
         END;
 
-        SYSTEM.GET((b * (MAX_SET + 1) + a) * SIZE_OF_QWORD + sets, a)
+        SYSTEM.GET((b * (MAX_SET + 1) + a) * WORD + sets, a)
     ELSE
         a := 0
     END
@@ -160,15 +160,10 @@ BEGIN
 END _set;
 
 
-PROCEDURE [stdcall64] _set2* (a, b: INTEGER): INTEGER;
-    RETURN _set(b, a)
-END _set2;
-
-
 PROCEDURE [stdcall64] _set1* (a: INTEGER): INTEGER;
 BEGIN
     IF ASR(a, 6) = 0 THEN
-        SYSTEM.GET(bits + a * SIZE_OF_QWORD, a)
+        SYSTEM.GET(bits + a * WORD, a)
     ELSE
         a := 0
     END
@@ -197,7 +192,7 @@ BEGIN
 END divmod;
 
 
-PROCEDURE [stdcall64] _div2* (x, y: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _div* (y, x: INTEGER): INTEGER;
 VAR
     div, mod: INTEGER;
 
@@ -208,10 +203,10 @@ BEGIN
     END
 
     RETURN div
-END _div2;
+END _div;
 
 
-PROCEDURE [stdcall64] _mod2* (x, y: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _mod* (y, x: INTEGER): INTEGER;
 VAR
     div, mod: INTEGER;
 
@@ -222,16 +217,6 @@ BEGIN
     END
 
     RETURN mod
-END _mod2;
-
-
-PROCEDURE [stdcall64] _div* (b, a: INTEGER): INTEGER;
-    RETURN _div2(a, b)
-END _div;
-
-
-PROCEDURE [stdcall64] _mod* (b, a: INTEGER): INTEGER;
-    RETURN _mod2(a, b)
 END _mod;
 
 
@@ -240,7 +225,7 @@ BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
         SYSTEM.PUT(ptr, t);
-        INC(ptr, SIZE_OF_QWORD)
+        INC(ptr, WORD)
     END
 END _new;
 
@@ -248,7 +233,7 @@ END _new;
 PROCEDURE [stdcall64] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
-        ptr := API._DISPOSE(ptr - SIZE_OF_QWORD)
+        ptr := API._DISPOSE(ptr - WORD)
     END
 END _dispose;
 
@@ -549,7 +534,7 @@ END _isrec;
 PROCEDURE [stdcall64] _is* (t0, p: INTEGER): INTEGER;
 BEGIN
     IF p # 0 THEN
-        SYSTEM.GET(p - SIZE_OF_QWORD, p);
+        SYSTEM.GET(p - WORD, p);
         SYSTEM.GET(t0 + p + types, p)
     END
 
@@ -568,7 +553,7 @@ PROCEDURE [stdcall64] _guard* (t0, p: INTEGER): INTEGER;
 BEGIN
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        SYSTEM.GET(p - SIZE_OF_QWORD, p);
+        SYSTEM.GET(p - WORD, p);
         SYSTEM.GET(t0 + p + types, p)
     ELSE
         p := 1
@@ -617,7 +602,7 @@ END _exit;
 
 PROCEDURE [stdcall64] _init* (modname: INTEGER; tcount, _types: INTEGER; code, param: INTEGER);
 VAR
-    t0, t1, i, j: INTEGER;
+    t0, t1, i, j, k: INTEGER;
 
 BEGIN
     API.init(param, code);
@@ -629,27 +614,23 @@ BEGIN
             t0 := i; t1 := j;
 
             WHILE (t1 # 0) & (t1 # t0) DO
-                SYSTEM.GET(_types + t1 * SIZE_OF_QWORD, t1)
+                SYSTEM.GET(_types + t1 * WORD, t1)
             END;
 
             SYSTEM.PUT8(i * tcount + j + types, ORD(t0 = t1))
         END
     END;
 
-    sets := API._NEW((MAX_SET + 1) * (MAX_SET + 1) * SIZE_OF_QWORD);
-    ASSERT(sets # 0);
+    bits := API._NEW((MAX_SET + 1) * (MAX_SET + 1) * WORD + (MAX_SET + 1) * WORD);
+    ASSERT(bits # 0);
+    sets := bits + (MAX_SET + 1) * WORD;
+    k := 1;
     FOR i := 0 TO MAX_SET DO
         FOR j := 0 TO i DO
-            SYSTEM.PUT((i * (MAX_SET + 1) + j) * SIZE_OF_QWORD + sets, LSR(ASR(minint, i - j), MAX_SET - i))
-        END
-    END;
-
-    bits := API._NEW((MAX_SET + 1) * SIZE_OF_QWORD);
-    ASSERT(bits # 0);
-    j := 1;
-    FOR i := 0 TO MAX_SET DO
-        SYSTEM.PUT(bits + i * SIZE_OF_QWORD, j);
-        j := j * 2
+            SYSTEM.PUT((i * (MAX_SET + 1) + j) * WORD + sets, LSR(ASR(minint, i - j), MAX_SET - i))
+        END;
+        SYSTEM.PUT(bits + i * WORD, k);
+        k := LSL(k, 1)
     END;
 
     name := modname;

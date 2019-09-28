@@ -101,13 +101,13 @@ CONST
     _strcmpw   *=   2;
     _exit      *=   3;
     _set       *=   4;
-    _set2      *=   5;
+    _set1      *=   5;
     _lengthw   *=   6;
     _strcpy    *=   7;
     _div       *=   8;
     _mod       *=   9;
-    _div2      *=  10;
-    _mod2      *=  11;
+    _dllentry  *=  10;
+    _sofinit   *=  11;
     _arrcpy    *=  12;
     _rot       *=  13;
     _new       *=  14;
@@ -120,9 +120,6 @@ CONST
     _guardrec  *=  21;
     _length    *=  22;
     _init      *=  23;
-    _dllentry  *=  24;
-    _sofinit   *=  25;
-    _set1      *=  26;
 
 
 TYPE
@@ -189,7 +186,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 27 OF INTEGER;
+        rtl*:       ARRAY 24 OF INTEGER;
         errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;

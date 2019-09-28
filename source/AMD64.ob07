@@ -1327,9 +1327,12 @@ BEGIN
             GetRegA
 
         |IL.opRSETL:
-            PushAll(1);
+            UnOp(reg1);
+            REG.PushAll_1(R);
             pushc(param2);
-            CallRTL(IL._set2);
+            push(reg1);
+            drop;
+            CallRTL(IL._set);
             GetRegA
 
         |IL.opRSET1:
@@ -1858,9 +1861,12 @@ BEGIN
             END
 
         |IL.opDIVL:
-            PushAll(1);
+            UnOp(reg1);
+            REG.PushAll_1(R);
             pushc(param2);
-            CallRTL(IL._div2);
+            push(reg1);
+            drop;
+            CallRTL(IL._div);
             GetRegA
 
         |IL.opMOD:
@@ -1903,9 +1909,12 @@ BEGIN
             END
 
         |IL.opMODL:
-            PushAll(1);
+            UnOp(reg1);
+            REG.PushAll_1(R);
             pushc(param2);
-            CallRTL(IL._mod2);
+            push(reg1);
+            drop;
+            CallRTL(IL._mod);
             GetRegA
 
         |IL.opMUL:
