@@ -1186,27 +1186,29 @@ BEGIN
 
             |8:
                 PushAll(0);
-                push(reg2);
                 push(reg1);
+                push(reg2);
                 pushc(8);
                 CallRTL(pic, IL._move)
 
             END
 
         |IL.opSAVES:
-            UnOp(reg1);
-            drop;
-            PushAll(0);
-            push(reg1);
+            UnOp(reg2);
+            REG.PushAll_1(R);
 
             IF pic THEN
+                reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICDATA, stroffs + param2);
-                push(reg1)
+                push(reg1);
+                drop
             ELSE
                 OutByte(068H);  // push _data + stroffs + param2
                 Reloc(BIN.RDATA, stroffs + param2);
             END;
 
+            push(reg2);
+            drop;
             pushc(param1);
             CallRTL(pic, IL._move)
 
@@ -1620,11 +1622,11 @@ BEGIN
         |IL.opCOPY:
             PushAll(2);
             pushc(param2);
-            CallRTL(pic, IL._move2)
+            CallRTL(pic, IL._move)
 
         |IL.opMOVE:
             PushAll(3);
-            CallRTL(pic, IL._move2)
+            CallRTL(pic, IL._move)
 
         |IL.opCOPYA:
             PushAll(4);

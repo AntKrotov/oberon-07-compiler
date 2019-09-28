@@ -35,7 +35,7 @@ VAR
 
     name:  INTEGER;
     types: INTEGER;
-    bits:  INTEGER;
+    bits:  ARRAY MAX_SET + 1 OF INTEGER;
 
     dll: RECORD
         process_detach,
@@ -46,35 +46,9 @@ VAR
     fini: PROC;
 
 
-PROCEDURE [stdcall] _move* (bytes, source, dest: INTEGER);
+PROCEDURE [stdcall] _move* (bytes, dest, source: INTEGER);
 BEGIN
     SYSTEM.CODE(
-
-    08BH, 045H, 008H,    (*  mov eax, dword [ebp + 8]   *)
-    085H, 0C0H,          (*  test eax, eax              *)
-    07EH, 019H,          (*  jle L                      *)
-    0FCH,                (*  cld                        *)
-    057H,                (*  push edi                   *)
-    056H,                (*  push esi                   *)
-    08BH, 075H, 00CH,    (*  mov esi, dword [ebp + 12]  *)
-    08BH, 07DH, 010H,    (*  mov edi, dword [ebp + 16]  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    0C1H, 0E9H, 002H,    (*  shr ecx, 2                 *)
-    0F3H, 0A5H,          (*  rep movsd                  *)
-    089H, 0C1H,          (*  mov ecx, eax               *)
-    083H, 0E1H, 003H,    (*  and ecx, 3                 *)
-    0F3H, 0A4H,          (*  rep movsb                  *)
-    05EH,                (*  pop esi                    *)
-    05FH                 (*  pop edi                    *)
-                         (*  L:                         *)
-                )
-END _move;
-
-
-PROCEDURE [stdcall] _move2* (bytes, dest, source: INTEGER);
-BEGIN
-    SYSTEM.CODE(
-
     08BH, 045H, 008H,    (*  mov eax, dword [ebp + 8]   *)
     085H, 0C0H,          (*  test eax, eax              *)
     07EH, 019H,          (*  jle L                      *)
@@ -93,7 +67,7 @@ BEGIN
     05FH                 (*  pop edi                    *)
                          (*  L:                         *)
                 )
-END _move2;
+END _move;
 
 
 PROCEDURE [stdcall] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
@@ -104,7 +78,7 @@ BEGIN
     IF len_src > len_dst THEN
         res := FALSE
     ELSE
-        _move(len_src * base_size, src, dst);
+        _move(len_src * base_size, dst, src);
         res := TRUE
     END
 
@@ -114,7 +88,7 @@ END _arrcpy;
 
 PROCEDURE [stdcall] _strcpy* (chr_size, len_src, src, len_dst, dst: INTEGER);
 BEGIN
-    _move(MIN(len_dst, len_src) * chr_size, src, dst)
+    _move(MIN(len_dst, len_src) * chr_size, dst, src)
 END _strcpy;
 
 
@@ -145,7 +119,7 @@ BEGIN
         IF a < 0 THEN
             a := 0
         END;
-        a := LSR(ASR(ROR(1, 1), b - a), MAX_SET - b)
+        a := LSR(ASR(minint, b - a), MAX_SET - b)
     ELSE
         a := 0
     END
@@ -157,7 +131,7 @@ END _set;
 PROCEDURE [stdcall] _set1* (a: INTEGER): INTEGER;
 BEGIN
     IF ASR(a, 5) = 0 THEN
-        SYSTEM.GET(bits + a * WORD, a)
+        SYSTEM.GET(SYSTEM.ADR(bits[0]) + a * WORD, a)
     ELSE
         a := 0
     END
@@ -168,7 +142,6 @@ END _set1;
 PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-
     08BH, 045H, 008H,    (*  mov     eax, dword [ebp +  8]  *)
     08BH, 04DH, 00CH,    (*  mov     ecx, dword [ebp + 12]  *)
     031H, 0D2H,          (*  xor     edx, edx               *)
@@ -179,10 +152,9 @@ BEGIN
     0F7H, 0F9H,          (*  idiv    ecx                    *)
     08BH, 04DH, 010H,    (*  mov     ecx, dword [ebp + 16]  *)
     089H, 011H,          (*  mov     dword [ecx], edx       *)
-    0C9H,                (*  leave                          *)
+    05DH,                (*  pop     ebp                    *)
     0C2H, 00CH, 000H     (*  ret     12                     *)
                )
-
     RETURN 0
 END divmod;
 
@@ -236,7 +208,6 @@ END _dispose;
 PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-
     08BH, 045H, 00CH,    (*  mov     eax, dword [ebp + 0Ch]  *)
     08BH, 04DH, 008H,    (*  mov     ecx, dword [ebp + 08h]  *)
     048H,                (*  dec     eax                     *)
@@ -248,10 +219,9 @@ BEGIN
     040H,                (*  inc     eax                     *)
                          (*  L2:                             *)
     02BH, 045H, 00CH,    (*  sub     eax, dword [ebp + 0Ch]  *)
-    0C9H,                (*  leave                           *)
+    05DH,                (*  pop     ebp                     *)
     0C2H, 008H, 000H     (*  ret     08h                     *)
                )
-
     RETURN 0
 END _length;
 
@@ -259,7 +229,6 @@ END _length;
 PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
 BEGIN
     SYSTEM.CODE(
-
     08BH, 045H, 00CH,         (*  mov     eax, dword [ebp + 0Ch]  *)
     08BH, 04DH, 008H,         (*  mov     ecx, dword [ebp + 08h]  *)
     048H,                     (*  dec     eax                     *)
@@ -275,10 +244,9 @@ BEGIN
                               (*  L2:                             *)
     02BH, 045H, 00CH,         (*  sub     eax, dword [ebp + 0Ch]  *)
     0D1H, 0E8H,               (*  shr     eax, 1                  *)
-    0C9H,                     (*  leave                           *)
+    05DH,                     (*  pop     ebp                     *)
     0C2H, 008H, 000H          (*  ret     08h                     *)
                )
-
     RETURN 0
 END _lengthw;
 
@@ -320,7 +288,6 @@ BEGIN
     05DH,                    (*  pop     ebp                            *)
     0C2H, 00CH, 000H         (*  ret     12                             *)
     )
-
     RETURN 0
 END strncmp;
 
@@ -364,7 +331,6 @@ BEGIN
     05DH,                    (*  pop     ebp                            *)
     0C2H, 00CH, 000H         (*  ret     12                             *)
     )
-
     RETURN 0
 END strncmpw;
 
@@ -618,9 +584,8 @@ BEGIN
     SYSTEM.CODE(09BH, 0DBH, 0E3H); (* finit *)
     API.init(param, code);
 
-    bits := API._NEW(tcount * tcount + SYSTEM.SIZE(INTEGER) + (MAX_SET + 1) * WORD);
-    ASSERT(bits # 0);
-    types := bits + (MAX_SET + 1) * WORD;
+    types := API._NEW(tcount * tcount + SYSTEM.SIZE(INTEGER));
+    ASSERT(types # 0);
     FOR i := 0 TO tcount - 1 DO
         FOR j := 0 TO tcount - 1 DO
             t0 := i; t1 := j;
@@ -635,7 +600,7 @@ BEGIN
 
     j := 1;
     FOR i := 0 TO MAX_SET DO
-        SYSTEM.PUT(bits + i * WORD, j);
+        bits[i] := j;
         j := LSL(j, 1)
     END;
 

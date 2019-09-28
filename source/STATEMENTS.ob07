@@ -3276,7 +3276,6 @@ BEGIN
         getproc(rtl,  "_strcmp",    IL._strcmp);
         getproc(rtl,  "_length",    IL._length);
         getproc(rtl,  "_arrcpy",    IL._arrcpy);
-        getproc(rtl,  "_move",      IL._move);
         getproc(rtl,  "_is",        IL._is);
         getproc(rtl,  "_guard",     IL._guard);
         getproc(rtl,  "_guardrec",  IL._guardrec);
@@ -3284,7 +3283,7 @@ BEGIN
         getproc(rtl,  "_new",       IL._new);
         getproc(rtl,  "_rot",       IL._rot);
         getproc(rtl,  "_strcpy",    IL._strcpy);
-        getproc(rtl,  "_move2",     IL._move2);
+        getproc(rtl,  "_move",      IL._move);
         getproc(rtl,  "_div",       IL._div);
         getproc(rtl,  "_mod",       IL._mod);
         getproc(rtl,  "_set",       IL._set);

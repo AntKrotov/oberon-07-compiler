@@ -750,7 +750,7 @@ BEGIN
          IL.opCOPYS, IL.opROT,
          IL.opNEW, IL.opDISP, IL.opISREC,
          IL.opIS, IL.opTYPEGR, IL.opTYPEGP,
-         IL.opCASET, IL.opDIV,
+         IL.opTYPEGD, IL.opCASET, IL.opDIV,
          IL.opDIVL, IL.opMOD,
          IL.opMODL, IL.opLENGTH, IL.opLENGTHW:
             leaf := FALSE
@@ -1163,8 +1163,11 @@ BEGIN
             REG.Reset(R)
 
         |IL.opSAVES:
-            PushAll(1);
+            UnOp(reg1);
+            REG.PushAll_1(R);
             pushDA(stroffs + param2);
+            push(reg1);
+            drop;
             pushc(param1);
             CallRTL(IL._move)
 
@@ -1574,11 +1577,11 @@ BEGIN
         |IL.opCOPY:
             PushAll(2);
             pushc(param2);
-            CallRTL(IL._move2)
+            CallRTL(IL._move)
 
         |IL.opMOVE:
             PushAll(3);
-            CallRTL(IL._move2)
+            CallRTL(IL._move)
 
         |IL.opCOPYA:
             PushAll(4);
