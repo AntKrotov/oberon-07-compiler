@@ -470,8 +470,6 @@ BEGIN
             END
         ELSIF (e.type.typ = PROG.tCARD32) & (VarType.typ = PROG.tCARD32) THEN
             IL.AddCmd0(IL.opSAVE32)
-        ELSIF (e.type.typ = PROG.tCARD16) & (VarType.typ = PROG.tCARD16) THEN
-            IL.AddCmd0(IL.opSAVE16)
         ELSIF ~PROG.isOpenArray(VarType) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(VarType, e.type) THEN
             IF e.obj = ePROC THEN
                 IL.AssignProc(e.ident.proc.label)
@@ -934,7 +932,7 @@ BEGIN
                 END
 
             ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
-                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD16, PROG.tCARD32}, pos, 66);
+                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
                 END;

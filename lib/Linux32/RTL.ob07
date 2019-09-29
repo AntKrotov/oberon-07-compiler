@@ -184,7 +184,7 @@ BEGIN
 END _dispose;
 
 
-PROCEDURE [stdcall] _length* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall] _length* (len, str: INTEGER);
 BEGIN
     SYSTEM.CODE(
     08BH, 045H, 00CH,    (*  mov     eax, dword [ebp + 0Ch]  *)
@@ -197,15 +197,12 @@ BEGIN
     0E2H, 0F8H,          (*  loop    L1                      *)
     040H,                (*  inc     eax                     *)
                          (*  L2:                             *)
-    02BH, 045H, 00CH,    (*  sub     eax, dword [ebp + 0Ch]  *)
-    05DH,                (*  pop     ebp                     *)
-    0C2H, 008H, 000H     (*  ret     08h                     *)
+    02BH, 045H, 00CH     (*  sub     eax, dword [ebp + 0Ch]  *)
                )
-    RETURN 0
 END _length;
 
 
-PROCEDURE [stdcall] _lengthw* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall] _lengthw* (len, str: INTEGER);
 BEGIN
     SYSTEM.CODE(
     08BH, 045H, 00CH,         (*  mov     eax, dword [ebp + 0Ch]  *)
@@ -222,11 +219,8 @@ BEGIN
     040H,                     (*  inc     eax                     *)
                               (*  L2:                             *)
     02BH, 045H, 00CH,         (*  sub     eax, dword [ebp + 0Ch]  *)
-    0D1H, 0E8H,               (*  shr     eax, 1                  *)
-    05DH,                     (*  pop     ebp                     *)
-    0C2H, 008H, 000H          (*  ret     08h                     *)
+    0D1H, 0E8H                (*  shr     eax, 1                  *)
                )
-    RETURN 0
 END _lengthw;
 
 

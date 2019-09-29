@@ -65,10 +65,8 @@ BEGIN
     048H, 083H, 0E1H, 007H,    (*  and     rcx, 7                 *)
     0F3H, 0A4H,                (*  rep     movsb                  *)
     05EH,                      (*  pop     rsi                    *)
-    05FH,                      (*  pop     rdi                    *)
+    05FH                       (*  pop     rdi                    *)
                                (*  L:                             *)
-    05DH,                      (*  pop     rbp                    *)
-    0C2H, 018H, 000H           (*  ret     24                     *)
                 )
 END _move;
 
@@ -186,7 +184,7 @@ BEGIN
 END _dispose;
 
 
-PROCEDURE [stdcall64] _length* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _length* (len, str: INTEGER);
 BEGIN
     SYSTEM.CODE(
     048H, 08BH, 045H, 018H,     (*  mov     rax, qword [rbp + 24]  *)
@@ -199,15 +197,12 @@ BEGIN
     0E2H, 0F6H,                 (*  loop    L1                     *)
     048H, 0FFH, 0C0H,           (*  inc     rax                    *)
                                 (*  L2:                            *)
-    048H, 02BH, 045H, 018H,     (*  sub     rax, qword [rbp + 24]  *)
-    05DH,                       (*  pop     rbp                    *)
-    0C2H, 010H, 000H            (*  ret     10h                    *)
+    048H, 02BH, 045H, 018H      (*  sub     rax, qword [rbp + 24]  *)
                )
-    RETURN 0
 END _length;
 
 
-PROCEDURE [stdcall64] _lengthw* (len, str: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _lengthw* (len, str: INTEGER);
 BEGIN
     SYSTEM.CODE(
     048H, 08BH, 045H, 018H,     (*  mov     rax, qword [rbp + 24]  *)
@@ -221,11 +216,8 @@ BEGIN
     048H, 083H, 0C0H, 002H,     (*  add     rax, 2                 *)
                                 (*  L2:                            *)
     048H, 02BH, 045H, 018H,     (*  sub     rax, qword [rbp + 24]  *)
-    048H, 0D1H, 0E8H,           (*  shr     rax, 1                 *)
-    05DH,                       (*  pop     rbp                    *)
-    0C2H, 010H, 000H            (*  ret     10h                    *)
+    048H, 0D1H, 0E8H            (*  shr     rax, 1                 *)
                )
-    RETURN 0
 END _lengthw;
 
 

@@ -166,24 +166,6 @@ UTF-8 с BOM-сигнатурой.
                 например:
                 SYSTEM.CODE(08BH, 045H, 008H) (* mov eax, dword [ebp + 08h] *)
 
-  Также в модуле SYSTEM определен тип CARD16 (2 байта). Для типа CARD16 не
-допускаются никакие явные операции, за исключением присваивания.
-Преобразования CARD16 -> INTEGER и INTEGER -> CARD16 могут быть реализованы
-так:
-
-        PROCEDURE Card16ToInt (w: SYSTEM.CARD16): INTEGER;
-        VAR i: INTEGER;
-        BEGIN
-            SYSTEM.PUT(SYSTEM.ADR(i), w)
-            RETURN i
-        END Card16ToInt;
-
-        PROCEDURE IntToCard16 (i: INTEGER): SYSTEM.CARD16;
-        VAR w: SYSTEM.CARD16;
-        BEGIN
-            SYSTEM.GET(SYSTEM.ADR(i), w)
-            RETURN w
-        END IntToCard16;
 
   Функции псевдомодуля SYSTEM нельзя использовать в константных выражениях.
 

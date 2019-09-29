@@ -42,9 +42,9 @@ TYPE
 
         cBytes:         CHAR;
         fFixedDisk:     CHAR;
-        nErrCode:       SYSTEM.CARD16;
-        Reserved1:      SYSTEM.CARD16;
-        Reserved2:      SYSTEM.CARD16;
+        nErrCode:       WCHAR;
+        Reserved1:      WCHAR;
+        Reserved2:      WCHAR;
         szPathName:     ARRAY OFS_MAXPATHNAME OF CHAR
 
     END;
