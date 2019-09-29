@@ -104,8 +104,8 @@ CONST
     _set1      *=   5;
     _lengthw   *=   6;
     _strcpy    *=   7;
-    _div       *=   8;
-    _mod       *=   9;
+    _length    *=   8;
+    _divmod    *=   9;
     _dllentry  *=  10;
     _sofinit   *=  11;
     _arrcpy    *=  12;
@@ -118,7 +118,6 @@ CONST
     _isrec     *=  19;
     _guard     *=  20;
     _guardrec  *=  21;
-    _length    *=  22;
 
 
 TYPE
@@ -185,7 +184,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 23 OF INTEGER;
+        rtl*:       ARRAY 22 OF INTEGER;
         errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;

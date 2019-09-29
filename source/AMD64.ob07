@@ -1823,7 +1823,7 @@ BEGIN
 
         |IL.opDIV:
             PushAll(2);
-            CallRTL(IL._div);
+            CallRTL(IL._divmod);
             GetRegA
 
         |IL.opDIVR:
@@ -1858,7 +1858,7 @@ BEGIN
                 ELSE
                     PushAll(1);
                     pushc(param2);
-                    CallRTL(IL._div);
+                    CallRTL(IL._divmod);
                     GetRegA
                 END
             END
@@ -1869,12 +1869,13 @@ BEGIN
             pushc(param2);
             push(reg1);
             drop;
-            CallRTL(IL._div);
+            CallRTL(IL._divmod);
             GetRegA
 
         |IL.opMOD:
             PushAll(2);
-            CallRTL(IL._mod);
+            CallRTL(IL._divmod);
+            mov(rax, rdx);
             GetRegA
 
         |IL.opMODR:
@@ -1906,7 +1907,8 @@ BEGIN
                 ELSE
                     PushAll(1);
                     pushc(param2);
-                    CallRTL(IL._mod);
+                    CallRTL(IL._divmod);
+                    mov(rax, rdx);
                     GetRegA
                 END
             END
@@ -1917,7 +1919,8 @@ BEGIN
             pushc(param2);
             push(reg1);
             drop;
-            CallRTL(IL._mod);
+            CallRTL(IL._divmod);
+            mov(rax, rdx);
             GetRegA
 
         |IL.opMUL:

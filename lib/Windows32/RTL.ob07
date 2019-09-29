@@ -139,52 +139,31 @@ BEGIN
 END _set1;
 
 
-PROCEDURE [stdcall] divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
+PROCEDURE [stdcall] _divmod* (y, x: INTEGER); (* (x div y) -> eax; (x mod y) -> edx *)
 BEGIN
     SYSTEM.CODE(
-    08BH, 045H, 008H,    (*  mov     eax, dword [ebp +  8]  *)
-    08BH, 04DH, 00CH,    (*  mov     ecx, dword [ebp + 12]  *)
+    053H,                (*  push    ebx                    *)
+    08BH, 045H, 00CH,    (*  mov     eax, dword [ebp + 12]  *)  (* eax <- x *)
     031H, 0D2H,          (*  xor     edx, edx               *)
     085H, 0C0H,          (*  test    eax, eax               *)
-    07DH, 002H,          (*  jge     L1                     *)
+    074H, 018H,          (*  je      L2                     *)
+    07FH, 002H,          (*  jg      L1                     *)
     0F7H, 0D2H,          (*  not     edx                    *)
                          (*  L1:                            *)
+    089H, 0C3H,          (*  mov     ebx, eax               *)
+    08BH, 04DH, 008H,    (*  mov     ecx, dword [ebp + 8]   *)  (* ecx <- y *)
     0F7H, 0F9H,          (*  idiv    ecx                    *)
-    08BH, 04DH, 010H,    (*  mov     ecx, dword [ebp + 16]  *)
-    089H, 011H,          (*  mov     dword [ecx], edx       *)
-    05DH,                (*  pop     ebp                    *)
-    0C2H, 00CH, 000H     (*  ret     12                     *)
+    085H, 0D2H,          (*  test    edx, edx               *)
+    074H, 009H,          (*  je      L2                     *)
+    031H, 0CBH,          (*  xor     ebx, ecx               *)
+    085H, 0DBH,          (*  test    ebx, ebx               *)
+    07DH, 003H,          (*  jge     L2                     *)
+    048H,                (*  dec     eax                    *)
+    001H, 0CAH,          (*  add     edx, ecx               *)
+                         (*  L2:                            *)
+    05BH                 (*  pop     ebx                    *)
                )
-    RETURN 0
-END divmod;
-
-
-PROCEDURE [stdcall] _div* (y, x: INTEGER): INTEGER;
-VAR
-    div, mod: INTEGER;
-
-BEGIN
-    div := divmod(x, y, mod);
-    IF (mod # 0) & ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) THEN
-        DEC(div)
-    END
-
-    RETURN div
-END _div;
-
-
-PROCEDURE [stdcall] _mod* (y, x: INTEGER): INTEGER;
-VAR
-    div, mod: INTEGER;
-
-BEGIN
-    div := divmod(x, y, mod);
-    IF (mod # 0) & ((x < 0) & (y > 0) OR (x > 0) & (y < 0)) THEN
-        INC(mod, y)
-    END
-
-    RETURN mod
-END _mod;
+END _divmod;
 
 
 PROCEDURE [stdcall] _new* (t, size: INTEGER; VAR ptr: INTEGER);
