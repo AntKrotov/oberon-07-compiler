@@ -631,6 +631,13 @@ PROCEDURE isOpenArray* (t: TYPE_): BOOLEAN;
 END isOpenArray;
 
 
+PROCEDURE arrcomp* (src, dst: TYPE_): BOOLEAN;
+    RETURN (dst.typ = tARRAY) & isOpenArray(src) &
+            ~isOpenArray(src.base) & ~isOpenArray(dst.base) &
+            isTypeEq(src.base, dst.base)
+END arrcomp;
+
+
 PROCEDURE getUnit* (program: PROGRAM; name: SCAN.IDENT): UNIT;
 VAR
     item: UNIT;
@@ -1059,25 +1066,15 @@ VAR
 
 BEGIN
 
-    IF typ = ARITH.tINTEGER THEN
-        res := program.stTypes.tINTEGER
-    ELSIF typ = ARITH.tREAL THEN
-        res := program.stTypes.tREAL
-    ELSIF typ = ARITH.tSET THEN
-        res := program.stTypes.tSET
-    ELSIF typ = ARITH.tBOOLEAN THEN
-        res := program.stTypes.tBOOLEAN
-    ELSIF typ = ARITH.tCHAR THEN
-        res := program.stTypes.tCHAR
-    ELSIF typ = ARITH.tWCHAR THEN
-        res := program.stTypes.tWCHAR
-    ELSIF typ = ARITH.tSTRING THEN
-        res := program.stTypes.tSTRING
-    ELSE
-        res := NIL
-    END;
-
-    ASSERT(res # NIL)
+    CASE typ OF
+    |ARITH.tINTEGER: res := program.stTypes.tINTEGER
+    |ARITH.tREAL:    res := program.stTypes.tREAL
+    |ARITH.tSET:     res := program.stTypes.tSET
+    |ARITH.tBOOLEAN: res := program.stTypes.tBOOLEAN
+    |ARITH.tCHAR:    res := program.stTypes.tCHAR
+    |ARITH.tWCHAR:   res := program.stTypes.tWCHAR
+    |ARITH.tSTRING:  res := program.stTypes.tSTRING
+    END
 
     RETURN res
 END getType;

@@ -267,17 +267,10 @@ PROCEDURE assigncomp (e: PARS.EXPR; t: PROG.TYPE_): BOOLEAN;
 VAR
     res: BOOLEAN;
 
-
-    PROCEDURE arrcomp (src, dst: PROG.TYPE_): BOOLEAN;
-        RETURN (dst.typ = PROG.tARRAY) & PROG.isOpenArray(src) &
-                ~PROG.isOpenArray(src.base) & ~PROG.isOpenArray(dst.base) &
-                PROG.isTypeEq(src.base, dst.base)
-    END arrcomp;
-
-
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
-        IF arrcomp(e.type, t) THEN
+
+        IF t = e.type THEN
             res := TRUE
         ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
             IF (e.obj = eCONST) & (t = tBYTE) THEN
@@ -285,29 +278,16 @@ BEGIN
             ELSE
                 res := TRUE
             END
-        ELSIF isSet(e) & (t = tSET) THEN
-            res := TRUE
-        ELSIF isBoolean(e) & (t = tBOOLEAN) THEN
-            res := TRUE
-        ELSIF isReal(e) & (t = tREAL) THEN
-            res := TRUE
-        ELSIF isChar(e) & (t = tCHAR) THEN
-            res := TRUE
-        ELSIF (e.obj = eCONST) & isChar(e) & (t = tWCHAR) THEN
-            res := TRUE
-        ELSIF isStringW1(e) & (t = tWCHAR) THEN
-            res := TRUE
-        ELSIF isCharW(e) & (t = tWCHAR) THEN
-            res := TRUE
-        ELSIF PROG.isBaseOf(t, e.type) THEN
-            res := TRUE
-        ELSIF ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type) THEN
-            res := TRUE
-        ELSIF isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE}) THEN
-            res := TRUE
-        ELSIF isString(e) & ((t.typ = PROG.tARRAY) & (t.base = tCHAR) & (t.length > strlen(e))) THEN
-            res := TRUE
-        ELSIF isStringW(e) & ((t.typ = PROG.tARRAY) & (t.base = tWCHAR) & (t.length > utf8strlen(e))) THEN
+        ELSIF
+            (e.obj = eCONST) & isChar(e) & (t = tWCHAR)
+            OR isStringW1(e) & (t = tWCHAR)
+            OR PROG.isBaseOf(t, e.type)
+            OR ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type)
+            OR isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE})
+            OR PROG.arrcomp(e.type, t)
+            OR isString(e) & (t.typ = PROG.tARRAY) & (t.base = tCHAR) & (t.length > strlen(e))
+            OR isStringW(e) & (t.typ = PROG.tARRAY) & (t.base = tWCHAR) & (t.length > utf8strlen(e))
+        THEN
             res := TRUE
         ELSE
             res := FALSE
@@ -315,6 +295,7 @@ BEGIN
     ELSE
         res := FALSE
     END
+
     RETURN res
 END assigncomp;
 
@@ -384,18 +365,10 @@ VAR
     res:    BOOLEAN;
     label:  INTEGER;
 
-
-    PROCEDURE arrcomp (src, dst: PROG.TYPE_): BOOLEAN;
-        RETURN (dst.typ = PROG.tARRAY) & PROG.isOpenArray(src) &
-                ~PROG.isOpenArray(src.base) & ~PROG.isOpenArray(dst.base) &
-                PROG.isTypeEq(src.base, dst.base)
-    END arrcomp;
-
-
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
         res := TRUE;
-        IF arrcomp(e.type, VarType) THEN
+        IF PROG.arrcomp(e.type, VarType) THEN
 
             IF ~PROG.isOpenArray(VarType) THEN
                 IL.Const(VarType.length)
