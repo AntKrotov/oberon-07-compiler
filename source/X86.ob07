@@ -2089,7 +2089,7 @@ END translate;
 
 PROCEDURE prolog (code: IL.CODES; pic: BOOLEAN; target, stack, dllinit, dllret: INTEGER);
 VAR
-    reg1, entry, dcount: INTEGER;
+    reg1, entry, L, dcount: INTEGER;
 
 BEGIN
 
@@ -2157,7 +2157,22 @@ BEGIN
         Reloc(BIN.RDATA, tcount * 4 + dcount)
     END;
 
-    CallRTL(pic, IL._init)
+    CallRTL(pic, IL._init);
+
+    IF target = mConst.Target_iELF32 THEN
+        L := NewLabel();
+        pushc(0);
+        push(esp);
+        pushc(1024 * 1024 * stack);
+        pushc(0);
+        CallRTL(pic, IL._new);
+        pop(eax);
+        test(eax);
+        jcc(je, L);
+        addrc(eax, 1024 * 1024 * stack - 4);
+        mov(esp, eax);
+        SetLabel(L)
+    END
 END prolog;
 
 

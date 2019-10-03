@@ -210,12 +210,12 @@ BEGIN
         END;
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
-        C.StringLn("  -base <address>        set base address of image in kilobytes"); C.Ln;
-        C.StringLn('  -ver <major.minor>     set version of program'); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
-        C.StringLn("  -ram <size>            set size of RAM in bytes (MSP430)"); C.Ln;
-        C.StringLn("  -rom <size>            set size of ROM in bytes (MSP430)"); C.Ln;
+        C.StringLn("  -base <address>        set base address of image in kilobytes ('kos' target)"); C.Ln;
+        C.StringLn("  -ver <major.minor>     set version of program ('obj' target)"); C.Ln;
+        C.StringLn("  -ram <size>            set size of RAM in bytes ('msp430' target)"); C.Ln;
+        C.StringLn("  -rom <size>            set size of ROM in bytes ('msp430' target)"); C.Ln;
         UTILS.Exit(0)
     END;
 
