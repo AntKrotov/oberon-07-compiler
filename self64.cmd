@@ -1,2 +1,2 @@
-Compiler.exe source\Compiler.ob07 source\Compiler.exe console64 -stk 2
+Compiler.exe source\Compiler.ob07 console64 -out source\Compiler.exe -stk 2
 @pause

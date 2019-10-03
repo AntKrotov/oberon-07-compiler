@@ -49,7 +49,7 @@ BEGIN
 END Target;
 
 
-PROCEDURE keys (VAR options: PROG.OPTIONS);
+PROCEDURE keys (VAR options: PROG.OPTIONS; VAR out: PARS.PATH);
 VAR
     param: PARS.PATH;
     i, j:  INTEGER;
@@ -60,9 +60,10 @@ VAR
     checking: SET;
 
 BEGIN
+    out := "";
     checking := options.checking;
     end := FALSE;
-    i := 4;
+    i := 3;
     REPEAT
         UTILS.GetArg(i, param);
 
@@ -74,6 +75,15 @@ BEGIN
             END;
             IF param[0] = "-" THEN
                 DEC(i)
+            END
+
+        ELSIF param = "-out" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            IF param[0] = "-" THEN
+                DEC(i)
+            ELSE
+                out := param
             END
 
         ELSIF param = "-ram" THEN
@@ -192,13 +202,14 @@ BEGIN
 
     IF inname = "" THEN
         C.Ln;
-        C.StringLn("Usage: Compiler <main module> <output> <target> [optional settings]"); C.Ln;
+        C.StringLn("Usage: Compiler <main module> <target> [optional settings]"); C.Ln;
         IF UTILS.bit_depth = 64 THEN
             C.StringLn('target = console | gui | dll | console64 | gui64 | dll64 | kos | obj | elfexe | elfso | elfexe64 | elfso64 | msp430'); C.Ln;
         ELSIF UTILS.bit_depth = 32 THEN
             C.StringLn('target = console | gui | dll | kos | obj | elfexe | elfso | msp430'); C.Ln;
         END;
         C.StringLn("optional settings:"); C.Ln;
+        C.StringLn("  -out <file name>       output"); C.Ln;
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
@@ -219,16 +230,7 @@ BEGIN
         path := temp
     END;
 
-    UTILS.GetArg(2, outname);
-    IF outname = "" THEN
-        ERRORS.Error(205)
-    END;
-    IF PATHS.isRelative(outname) THEN
-        PATHS.RelPath(app_path, outname, temp);
-        outname := temp
-    END;
-
-    UTILS.GetArg(3, param);
+    UTILS.GetArg(2, param);
     IF param = "" THEN
         ERRORS.Error(205)
     END;
@@ -281,7 +283,35 @@ BEGIN
 
     STRINGS.append(lib_path, UTILS.slash);
 
-    keys(options);
+    keys(options, outname);
+    IF outname = "" THEN
+        outname := path;
+        STRINGS.append(outname, modname);
+        CASE target OF
+        |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iConsole64, mConst.Target_iGUI64:
+            STRINGS.append(outname, ".exe")
+
+        |mConst.Target_iObject:
+            STRINGS.append(outname, ".obj")
+
+        |mConst.Target_iKolibri, mConst.Target_iELF32, mConst.Target_iELF64:
+
+        |mConst.Target_iELFSO32, mConst.Target_iELFSO64:
+            STRINGS.append(outname, ".so")
+
+        |mConst.Target_iDLL, mConst.Target_iDLL64:
+            STRINGS.append(outname, ".dll")
+
+        |mConst.Target_iMSP430:
+            STRINGS.append(outname, ".hex")
+        END
+    ELSE
+        IF PATHS.isRelative(outname) THEN
+            PATHS.RelPath(app_path, outname, temp);
+            outname := temp
+        END
+    END;
+
 
     PARS.init(bit_depth, target, options);
 

@@ -1,2 +1,2 @@
-Compiler.exe source\Compiler.ob07 source\Compiler.kex kos -stk 1
+Compiler.exe source\Compiler.ob07 kos -out source\Compiler.kex -stk 2
 @pause
