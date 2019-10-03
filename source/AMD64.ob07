@@ -2779,7 +2779,7 @@ BEGIN
 
     BIN.fixup(prog);
     IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
-        PE32.write(prog, outname, options.base, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
+        PE32.write(prog, outname, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
     ELSIF target IN {mConst.Target_iELF64, mConst.Target_iELFSO64} THEN
         ELF.write(prog, outname, sofinit, target = mConst.Target_iELFSO64, TRUE)
     END

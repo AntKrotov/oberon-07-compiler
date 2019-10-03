@@ -372,7 +372,7 @@ BEGIN
 END WriteFileHeader;
 
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; BaseAddress: INTEGER; console, dll, amd64: BOOLEAN);
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll, amd64: BOOLEAN);
 VAR
     i, n: INTEGER;
 
@@ -381,6 +381,8 @@ VAR
         Code, Data, Bss, Stack, Import, Reloc, Export: INTEGER
 
     END;
+
+    BaseAddress: INTEGER;
 
     Address: VIRTUAL_ADDR;
 
@@ -503,6 +505,12 @@ BEGIN
     Size.Data  := CHL.Length(program.data);
     Size.Bss   := program.bss;
     Size.Stack := program.stack;
+
+    IF dll THEN
+        BaseAddress := 10000000H
+    ELSE
+        BaseAddress := 400000H
+    END;
 
     PEHeader.Signature[0] := 50H;
     PEHeader.Signature[1] := 45H;

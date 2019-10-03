@@ -2297,7 +2297,7 @@ BEGIN
     BIN.fixup(program);
 
     IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
-        PE32.write(program, outname, opt.base, target = mConst.Target_iConsole, target = mConst.Target_iDLL, FALSE)
+        PE32.write(program, outname, target = mConst.Target_iConsole, target = mConst.Target_iDLL, FALSE)
     ELSIF target = mConst.Target_iKolibri THEN
         KOS.write(program, outname)
     ELSIF target = mConst.Target_iObject THEN

@@ -76,16 +76,6 @@ BEGIN
                 DEC(i)
             END
 
-        ELSIF param = "-base" THEN
-            INC(i);
-            UTILS.GetArg(i, param);
-            IF STRINGS.StrToInt(param, value) THEN
-                options.base := ((value DIV 64) * 64) * 1024
-            END;
-            IF param[0] = "-" THEN
-                DEC(i)
-            END
-
         ELSIF param = "-ram" THEN
             INC(i);
             UTILS.GetArg(i, param);
@@ -212,7 +202,6 @@ BEGIN
         C.StringLn("  -stk <size>            set size of stack in megabytes"); C.Ln;
         C.StringLn('  -nochk <"ptibcwra">    disable runtime checking (pointers, types, indexes,');
         C.StringLn('                         BYTE, CHR, WCHR)'); C.Ln;
-        C.StringLn("  -base <address>        set base address of image in kilobytes ('kos' target)"); C.Ln;
         C.StringLn("  -ver <major.minor>     set version of program ('obj' target)"); C.Ln;
         C.StringLn("  -ram <size>            set size of RAM in bytes ('msp430' target)"); C.Ln;
         C.StringLn("  -rom <size>            set size of ROM in bytes ('msp430' target)"); C.Ln;
@@ -271,11 +260,6 @@ BEGIN
 
     CASE target OF
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL:
-        IF target = mConst.Target_iDLL THEN
-            options.base := 10000000H
-        ELSE
-            options.base := 400000H
-        END;
         STRINGS.append(lib_path, "Windows32")
 
     |mConst.Target_iKolibri, mConst.Target_iObject:
