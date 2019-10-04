@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019, Anton Krotov
+    Copyright (c) 2018-2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -613,7 +613,7 @@ BEGIN
                         stroffs := StringW(e);
                         IL.StrAdr(stroffs)
                     END;
-                    IL.codes.dmin := stroffs + p.type.size;
+                    IL.set_dmin(stroffs + p.type.size);
                     IL.Param1
                 ELSE
                     LoadConst(e);
@@ -1113,7 +1113,7 @@ BEGIN
             IF e.obj = eCONST THEN
                 ARITH.odd(e.value)
             ELSE
-                IL.odd
+                IL.AddCmd0(IL.opODD)
             END
 
         |PROG.stORD:
@@ -1127,7 +1127,7 @@ BEGIN
                 END
             ELSE
                 IF isBoolean(e) THEN
-                    IL.ord
+                    IL.AddCmd0(IL.opORD)
                 END
             END;
             e.type := tINTEGER
@@ -3228,10 +3228,10 @@ VAR
         id := PROG.getIdent(rtl, SCAN.enterid(name), FALSE);
 
         IF (id # NIL) & (id.import # NIL) THEN
-            IL.codes.rtl[idx] := -id.import(IL.IMPORT_PROC).label;
+            IL.set_rtl(idx, -id.import(IL.IMPORT_PROC).label);
             id.proc.used := TRUE
         ELSIF (id # NIL) & (id.proc # NIL) THEN
-            IL.codes.rtl[idx] := id.proc.label;
+            IL.set_rtl(idx, id.proc.label);
             id.proc.used := TRUE
         ELSE
             ERRORS.WrongRTL(name)
@@ -3349,12 +3349,12 @@ BEGIN
 
     PROG.DelUnused(PARS.program, IL.DelImport);
 
-    IL.codes.bss := PARS.program.bss;
+    IL.set_bss(PARS.program.bss);
 
     CASE CPU OF
-    | cpuAMD64:   AMD64.CodeGen(IL.codes, outname, target, options)
-    |   cpuX86:     X86.CodeGen(IL.codes, outname, target, options)
-    |cpuMSP430:  MSP430.CodeGen(IL.codes, outname, target, options)
+    | cpuAMD64:   AMD64.CodeGen(outname, target, options)
+    |   cpuX86:     X86.CodeGen(outname, target, options)
+    |cpuMSP430:  MSP430.CodeGen(outname, target, options)
     END
 
 END compile;

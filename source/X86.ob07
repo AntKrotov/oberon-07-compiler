@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2019, Anton Krotov
+    Copyright (c) 2018-2019, Anton Krotov
     All rights reserved.
 *)
 
@@ -573,7 +573,7 @@ BEGIN
 END GetRegA;
 
 
-PROCEDURE translate (code: IL.CODES; pic: BOOLEAN; stroffs: INTEGER);
+PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
 VAR
     cmd: COMMAND;
 
@@ -586,7 +586,7 @@ VAR
     float: REAL;
 
 BEGIN
-    cmd := code.commands.first(COMMAND);
+    cmd := IL.codes.commands.first(COMMAND);
 
     WHILE cmd # NIL DO
 
@@ -2087,7 +2087,7 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (code: IL.CODES; pic: BOOLEAN; target, stack, dllinit, dllret: INTEGER);
+PROCEDURE prolog (pic: BOOLEAN; target, stack, dllinit, dllret: INTEGER);
 VAR
     reg1, entry, L, dcount: INTEGER;
 
@@ -2143,7 +2143,7 @@ BEGIN
         Reloc(BIN.RDATA, 0)
     END;
 
-    dcount := CHL.Length(code.data);
+    dcount := CHL.Length(IL.codes.data);
 
     pushc(tcount);
 
@@ -2176,7 +2176,7 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog (code: IL.CODES; pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret, sofinit: INTEGER);
+PROCEDURE epilog (pic: BOOLEAN; modname: ARRAY OF CHAR; target, stack, ver, dllinit, dllret, sofinit: INTEGER);
 VAR
     exp:  IL.EXPORT_PROC;
     path, name, ext: PATHS.PATH;
@@ -2227,14 +2227,14 @@ BEGIN
 
     fixup;
 
-    dcount := CHL.Length(code.data);
+    dcount := CHL.Length(IL.codes.data);
 
     FOR i := 0 TO tcount - 1 DO
-        BIN.PutData32LE(program, CHL.GetInt(code.types, i))
+        BIN.PutData32LE(program, CHL.GetInt(IL.codes.types, i))
     END;
 
     FOR i := 0 TO dcount - 1 DO
-        BIN.PutData(program, CHL.GetByte(code.data, i))
+        BIN.PutData(program, CHL.GetByte(IL.codes.data, i))
     END;
 
     program.modname := CHL.Length(program.data);
@@ -2248,33 +2248,33 @@ BEGIN
         BIN.Export(program, "lib_init", dllinit);
     END;
 
-    exp := code.export.first(IL.EXPORT_PROC);
+    exp := IL.codes.export.first(IL.EXPORT_PROC);
     WHILE exp # NIL DO
         BIN.Export(program, exp.name, exp.label);
         exp := exp.next(IL.EXPORT_PROC)
     END;
 
-    import(code.import);
+    import(IL.codes.import);
 
-    code.bss := MAX(code.bss, MAX(code.dmin - CHL.Length(code.data), 4));
+    IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
 
-    BIN.SetParams(program, code.bss, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
+    BIN.SetParams(program, IL.codes.bss, stack * (1024 * 1024), WCHR(ver DIV 65536), WCHR(ver MOD 65536));
 
 END epilog;
 
 
-PROCEDURE CodeGen* (code: IL.CODES; outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
+PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     dllret, dllinit, sofinit: INTEGER;
     opt: PROG.OPTIONS;
 
 BEGIN
-    tcount := CHL.Length(code.types);
+    tcount := CHL.Length(IL.codes.types);
 
     opt := options;
     CodeList := LISTS.create(NIL);
 
-    program := BIN.create(code.lcount);
+    program := BIN.create(IL.codes.lcount);
 
     dllinit := NewLabel();
     dllret  := NewLabel();
@@ -2290,9 +2290,9 @@ BEGIN
 
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
 
-    prolog(code, opt.pic, target, opt.stack, dllinit, dllret);
-    translate(code, opt.pic, tcount * 4);
-    epilog(code, opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
+    prolog(opt.pic, target, opt.stack, dllinit, dllret);
+    translate(opt.pic, tcount * 4);
+    epilog(opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
 
     BIN.fixup(program);
 
