@@ -312,7 +312,6 @@ BEGIN
         END
     END;
 
-
     PARS.init(bit_depth, target, options);
 
     PARS.program.dll := target IN {mConst.Target_iELFSO32, mConst.Target_iELFSO64, mConst.Target_iDLL, mConst.Target_iDLL64, mConst.Target_iObject};
@@ -322,6 +321,7 @@ BEGIN
 
     time := UTILS.GetTickCount() - UTILS.time;
 
+    C.Int(PARS.lines); C.String(" lines, ");
     C.Int(time DIV 100); C.String("."); C.Int2(time MOD 100); C.String(" sec, ");
     C.Int(WRITER.counter); C.StringLn(" bytes");
 

@@ -77,6 +77,8 @@ VAR
 
     parsers: C.COLLECTION;
 
+    lines*: INTEGER;
+
 
 PROCEDURE destroy* (VAR parser: PARSER);
 BEGIN
@@ -1037,6 +1039,7 @@ VAR
             ELSE
                 IF endname = parser.unit.name THEN
                     ExpectSym(parser, SCAN.lxPOINT);
+                    lines := lines + parser.lex.pos.line;
                     Next(parser);
                     endmod := TRUE
                 ELSIF endname = name THEN
@@ -1177,7 +1180,8 @@ BEGIN
 
         ExpectSym(parser, SCAN.lxIDENT);
         check1(parser.lex.s = unit.name.s, parser, 25);
-        ExpectSym(parser, SCAN.lxPOINT)
+        ExpectSym(parser, SCAN.lxPOINT);
+        lines := lines + parser.lex.pos.line
 
     END;
 
@@ -1248,7 +1252,8 @@ END create;
 PROCEDURE init* (bit_depth, target: INTEGER; options: PROG.OPTIONS);
 BEGIN
     program := PROG.create(bit_depth, target, options);
-    parsers := C.create()
+    parsers := C.create();
+    lines   := 0
 END init;
 
 
