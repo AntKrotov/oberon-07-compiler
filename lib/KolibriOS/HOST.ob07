@@ -205,7 +205,7 @@ BEGIN
 END Create;
 
 
-PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
 VAR
     n: INTEGER;
     fs: FS;

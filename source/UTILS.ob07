@@ -56,7 +56,7 @@ VAR
     days: DAYS;
 
 
-PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
     RETURN HOST.FileRead(F, Buffer, bytes)
 END FileRead;
 

@@ -134,7 +134,7 @@ BEGIN
 END close;
 
 
-PROCEDURE read* (file: FILE; VAR chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
+PROCEDURE read* (file: FILE; VAR chunk: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
 VAR
     res: INTEGER;
 
