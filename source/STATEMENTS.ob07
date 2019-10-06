@@ -3306,9 +3306,9 @@ BEGIN
     LISTS.push(CaseVariants, NewVariant(0, NIL));
 
     CASE CPU OF
-    |cpuAMD64:   IL.init(6, IL.little_endian)
-    |cpuX86:     IL.init(8, IL.little_endian)
-    |cpuMSP430:  IL.init(0, IL.little_endian)
+    |cpuAMD64:  IL.init(6, IL.little_endian)
+    |cpuX86:    IL.init(8, IL.little_endian)
+    |cpuMSP430: IL.init(0, IL.little_endian)
     END;
 
     IF CPU # cpuMSP430 THEN
@@ -3352,9 +3352,9 @@ BEGIN
     IL.set_bss(PARS.program.bss);
 
     CASE CPU OF
-    | cpuAMD64:   AMD64.CodeGen(outname, target, options)
-    |   cpuX86:     X86.CodeGen(outname, target, options)
-    |cpuMSP430:  MSP430.CodeGen(outname, target, options)
+    | cpuAMD64:  AMD64.CodeGen(outname, target, options)
+    |   cpuX86:    X86.CodeGen(outname, target, options)
+    |cpuMSP430: MSP430.CodeGen(outname, target, options)
     END
 
 END compile;

@@ -1039,7 +1039,6 @@ VAR
             ELSE
                 IF endname = parser.unit.name THEN
                     ExpectSym(parser, SCAN.lxPOINT);
-                    lines := lines + parser.lex.pos.line;
                     Next(parser);
                     endmod := TRUE
                 ELSIF endname = name THEN
@@ -1180,11 +1179,10 @@ BEGIN
 
         ExpectSym(parser, SCAN.lxIDENT);
         check1(parser.lex.s = unit.name.s, parser, 25);
-        ExpectSym(parser, SCAN.lxPOINT);
-        lines := lines + parser.lex.pos.line
-
+        ExpectSym(parser, SCAN.lxPOINT)
     END;
 
+    INC(lines, parser.lex.pos.line);
     PROG.closeUnit(unit)
 END parse;
 

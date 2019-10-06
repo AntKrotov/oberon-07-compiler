@@ -293,10 +293,8 @@ PROCEDURE Lock* (VAR R: REGS; reg, offs, size: INTEGER);
 BEGIN
     ASSERT(reg IN R.vregs);
     ASSERT(offs # 0);
+    ASSERT(size IN {1, 2, 4, 8});
     R.offs[reg] := offs;
-    IF size = 0 THEN
-        size := 8
-    END;
     R.size[reg] := size
 END Lock;
 

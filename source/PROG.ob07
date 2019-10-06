@@ -254,23 +254,27 @@ VAR
 
 BEGIN
     IF varIdent.offset = -1 THEN
+        size := varIdent.type.size;
         IF varIdent.global THEN
             IF UTILS.Align(program.bss, varIdent.type.align) THEN
-                IF UTILS.maxint - program.bss >= varIdent.type.size THEN
+                IF UTILS.maxint - program.bss >= size THEN
                     varIdent.offset := program.bss;
-                    INC(program.bss, varIdent.type.size)
+                    INC(program.bss, size)
                 END
             END
         ELSE
             word := program.target.word;
-            size := varIdent.type.size;
             IF UTILS.Align(size, word) THEN
                 size := size DIV word;
                 IF UTILS.maxint - program.locsize >= size THEN
                     INC(program.locsize, size);
-                    varIdent.offset := program.locsize;
+                    varIdent.offset := program.locsize
                 END
             END
+        END;
+
+        IF varIdent.offset = -1 THEN
+            ERRORS.Error(204)
         END
     END
 
@@ -509,7 +513,6 @@ BEGIN
     END;
 
     DEC(unit.scopeLvl)
-
 END closeScope;
 
 
