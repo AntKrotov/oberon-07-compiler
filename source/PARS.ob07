@@ -577,6 +577,7 @@ BEGIN
         IF parser.sym = SCAN.lxCOMMA THEN
             ExpectSym(parser, SCAN.lxSTRING);
             dll := parser.lex.s;
+            STRINGS.UpCase(dll);
             ExpectSym(parser, SCAN.lxCOMMA);
             ExpectSym(parser, SCAN.lxSTRING);
             proc := parser.lex.s;

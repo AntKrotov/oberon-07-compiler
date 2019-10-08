@@ -172,6 +172,27 @@ PROCEDURE space* (c: CHAR): BOOLEAN;
 END space;
 
 
+PROCEDURE cap (VAR c: CHAR);
+BEGIN
+    IF ("a" <= c) & (c <= "z") THEN
+        c := CHR(ORD(c) - 32)
+    END
+END cap;
+
+
+PROCEDURE UpCase* (VAR str: ARRAY OF CHAR);
+VAR
+    i: INTEGER;
+
+BEGIN
+    i := 0;
+    WHILE (i < LEN(str)) & (str[i] # 0X) DO
+        cap(str[i]);
+        INC(i)
+    END;
+END UpCase;
+
+
 PROCEDURE StrToInt* (str: ARRAY OF CHAR; VAR x: INTEGER): BOOLEAN;
 VAR
     i, k: INTEGER;
