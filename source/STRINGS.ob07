@@ -13,6 +13,7 @@ IMPORT UTILS;
 PROCEDURE append* (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
 VAR
     n1, n2, i, j: INTEGER;
+
 BEGIN
     n1 := LENGTH(s1);
     n2 := LENGTH(s2);
@@ -38,7 +39,6 @@ VAR
     a, b: CHAR;
 
 BEGIN
-
     i := 0;
     j := LENGTH(s) - 1;
 
@@ -189,7 +189,7 @@ BEGIN
     WHILE (i < LEN(str)) & (str[i] # 0X) DO
         cap(str[i]);
         INC(i)
-    END;
+    END
 END UpCase;
 
 

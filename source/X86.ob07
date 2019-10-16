@@ -906,37 +906,44 @@ BEGIN
             END
 
         |IL.opMULC:
-            UnOp(reg1);
-
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
+            IF (cmd.next(COMMAND).opcode = IL.opADD) & ((param2 = 2) OR (param2 = 4) OR (param2 = 8)) THEN
+                BinOp(reg1, reg2);
+                OutByte3(8DH, 04H + reg1 * 8, reg1 + reg2 * 8 + 40H * UTILS.Log2(param2));  // lea reg1, [reg1 + reg2 * param2]
+                drop;
+                cmd := cmd.next(COMMAND)
             ELSE
-                n := -1
-            END;
+                UnOp(reg1);
 
-            IF a = 1 THEN
-
-            ELSIF a = -1 THEN
-                neg(reg1)
-            ELSIF a = 0 THEN
-                xor(reg1, reg1)
-            ELSE
-                IF n > 0 THEN
-                    IF a < 0 THEN
-                        neg(reg1)
-                    END;
-
-                    IF n # 1 THEN
-                        OutByte3(0C1H, 0E0H + reg1, n)   // shl reg1, n
-                    ELSE
-                        OutByte2(0D1H, 0E0H + reg1)      // shl reg1, 1
-                    END
+                a := param2;
+                IF a > 1 THEN
+                    n := UTILS.Log2(a)
+                ELSIF a < -1 THEN
+                    n := UTILS.Log2(-a)
                 ELSE
-                    OutByte2(69H + short(a), 0C0H + reg1 * 9); // imul reg1, a
-                    OutIntByte(a)
+                    n := -1
+                END;
+
+                IF a = 1 THEN
+
+                ELSIF a = -1 THEN
+                    neg(reg1)
+                ELSIF a = 0 THEN
+                    xor(reg1, reg1)
+                ELSE
+                    IF n > 0 THEN
+                        IF a < 0 THEN
+                            neg(reg1)
+                        END;
+
+                        IF n # 1 THEN
+                            OutByte3(0C1H, 0E0H + reg1, n)   // shl reg1, n
+                        ELSE
+                            OutByte2(0D1H, 0E0H + reg1)      // shl reg1, 1
+                        END
+                    ELSE
+                        OutByte2(69H + short(a), 0C0H + reg1 * 9); // imul reg1, a
+                        OutIntByte(a)
+                    END
                 END
             END
 

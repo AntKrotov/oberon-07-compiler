@@ -1929,34 +1929,44 @@ BEGIN
             drop
 
         |IL.opMULC:
-            UnOp(reg1);
-
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
+            IF (cmd.next(COMMAND).opcode = IL.opADD) & ((param2 = 2) OR (param2 = 4) OR (param2 = 8)) THEN
+                BinOp(reg1, reg2);
+                OutByte2(48H + 5 * (reg1 DIV 8) + 2 * (reg2 DIV 8), 8DH);  // lea reg1, [reg1 + reg2 * param2]
+                reg1 := reg1 MOD 8;
+                reg2 := reg2 MOD 8;
+                OutByte2(04H + reg1 * 8, reg1 + reg2 * 8 + 40H * UTILS.Log2(param2));
+                drop;
+                cmd := cmd.next(COMMAND)
             ELSE
-                n := -1
-            END;
+                UnOp(reg1);
 
-            IF a = 1 THEN
-
-            ELSIF a = -1 THEN
-                neg(reg1)
-            ELSIF a = 0 THEN
-                xor(reg1, reg1)
-            ELSE
-                IF n > 0 THEN
-                    IF a < 0 THEN
-                        neg(reg1)
-                    END;
-                    shiftrc(shl, reg1, n)
+                a := param2;
+                IF a > 1 THEN
+                    n := UTILS.Log2(a)
+                ELSIF a < -1 THEN
+                    n := UTILS.Log2(-a)
                 ELSE
-                    // imul reg1, a
-                    Rex(reg1, reg1);
-                    OutByte2(69H + short(a), 0C0H + (reg1 MOD 8) * 9);
-                    OutIntByte(a)
+                    n := -1
+                END;
+
+                IF a = 1 THEN
+
+                ELSIF a = -1 THEN
+                    neg(reg1)
+                ELSIF a = 0 THEN
+                    xor(reg1, reg1)
+                ELSE
+                    IF n > 0 THEN
+                        IF a < 0 THEN
+                            neg(reg1)
+                        END;
+                        shiftrc(shl, reg1, n)
+                    ELSE
+                        // imul reg1, a
+                        Rex(reg1, reg1);
+                        OutByte2(69H + short(a), 0C0H + (reg1 MOD 8) * 9);
+                        OutIntByte(a)
+                    END
                 END
             END
 

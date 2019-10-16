@@ -362,8 +362,8 @@ END CheckRange;
 
 PROCEDURE assign (e: PARS.EXPR; VarType: PROG.TYPE_; line: INTEGER): BOOLEAN;
 VAR
-    res:    BOOLEAN;
-    label:  INTEGER;
+    res:   BOOLEAN;
+    label: INTEGER;
 
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
@@ -500,6 +500,7 @@ VAR
     PROCEDURE ArrLen (t: PROG.TYPE_; n: INTEGER): INTEGER;
     VAR
         res: INTEGER;
+
     BEGIN
         REPEAT
             res := t.length;
@@ -513,8 +514,8 @@ VAR
 
     PROCEDURE OpenArray (t, t2: PROG.TYPE_);
     VAR
-        n: INTEGER;
-        d1, d2: INTEGER;
+        n, d1, d2: INTEGER;
+
     BEGIN
         IF t.length # 0 THEN
             IL.Param1;
@@ -648,17 +649,16 @@ END PExpression;
 
 PROCEDURE stProc (parser: PARS.PARSER; VAR e: PARS.EXPR);
 VAR
-    e2:    PARS.EXPR;
-    pos:   PARS.POSITION;
-    proc:  INTEGER;
-    label: INTEGER;
-    n, i:  INTEGER;
-    code:  ARITH.VALUE;
-    e1:    PARS.EXPR;
-    wchar: BOOLEAN;
+    e1, e2: PARS.EXPR;
+    pos:    PARS.POSITION;
+    proc,
+    label,
+    n, i:   INTEGER;
+    code:   ARITH.VALUE;
+    wchar,
+    comma:  BOOLEAN;
     cmd1,
-    cmd2:  IL.COMMAND;
-    comma: BOOLEAN;
+    cmd2:   IL.COMMAND;
 
 
     PROCEDURE varparam (parser: PARS.PARSER; pos: PARS.POSITION; isfunc: isXXX; readOnly: BOOLEAN; VAR e: PARS.EXPR);
@@ -675,6 +675,7 @@ VAR
     PROCEDURE shift_minmax (proc: INTEGER): CHAR;
     VAR
         res: CHAR;
+
     BEGIN
         CASE proc OF
         |PROG.stASR: res := "A"
@@ -1340,7 +1341,7 @@ END qualident;
 
 PROCEDURE deref (pos: PARS.POSITION; e: PARS.EXPR; load: BOOLEAN; error: INTEGER);
 VAR
-    label:  INTEGER;
+    label: INTEGER;
 
 BEGIN
     IF load THEN
@@ -1409,9 +1410,8 @@ VAR
 
     PROCEDURE OpenIdx (parser: PARS.PARSER; pos: PARS.POSITION; e: PARS.EXPR);
     VAR
-        label:  INTEGER;
-        type:   PROG.TYPE_;
-        n, offset, k: INTEGER;
+        label, offset, n, k: INTEGER;
+        type: PROG.TYPE_;
 
     BEGIN
 
@@ -1571,12 +1571,12 @@ END designator;
 
 PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG.TYPE_; isfloat: BOOLEAN; VAR fregs: INTEGER; parser: PARS.PARSER; pos: PARS.POSITION; CallStat: BOOLEAN);
 VAR
-    cconv:     INTEGER;
-    parSize:   INTEGER;
-    callconv:  INTEGER;
-    fparSize:  INTEGER;
-    int, flt:  INTEGER;
-    stk_par:   INTEGER;
+    cconv,
+    parSize,
+    callconv,
+    fparSize,
+    int, flt,
+    stk_par:  INTEGER;
 
 BEGIN
     cconv := procType.call;
@@ -1862,11 +1862,8 @@ VAR
     PROCEDURE term (parser: PARS.PARSER; VAR e: PARS.EXPR);
     VAR
         pos: PARS.POSITION;
-        op:  INTEGER;
         e1:  PARS.EXPR;
-
-        label:  INTEGER;
-        label1: INTEGER;
+        op, label, label1: INTEGER;
 
     BEGIN
         factor(parser, e);
@@ -2223,7 +2220,6 @@ VAR
         res: BOOLEAN;
 
     BEGIN
-
         res := TRUE;
 
         IF isString(e) & isCharArray(e1) THEN
@@ -2527,11 +2523,11 @@ END expression;
 
 PROCEDURE ElementaryStatement (parser: PARS.PARSER);
 VAR
-    e, e1:    PARS.EXPR;
-    pos:      PARS.POSITION;
-    line:     INTEGER;
-    call:     BOOLEAN;
-    fregs:    INTEGER;
+    e, e1: PARS.EXPR;
+    pos:   PARS.POSITION;
+    line:  INTEGER;
+    call:  BOOLEAN;
+    fregs: INTEGER;
 
 BEGIN
     getpos(parser, pos);
@@ -2590,8 +2586,8 @@ END ElementaryStatement;
 
 PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
 VAR
-    e:     PARS.EXPR;
-    pos:   PARS.POSITION;
+    e:   PARS.EXPR;
+    pos: PARS.POSITION;
 
     label, L: INTEGER;
 
@@ -2731,16 +2727,16 @@ END NewVariant;
 
 PROCEDURE CaseStatement (parser: PARS.PARSER);
 VAR
-    e:      PARS.EXPR;
-    pos:    PARS.POSITION;
+    e:   PARS.EXPR;
+    pos: PARS.POSITION;
 
 
     PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR type: PROG.TYPE_): INTEGER;
     VAR
-        a:      INTEGER;
-        label:  PARS.EXPR;
-        pos:    PARS.POSITION;
-        value:  ARITH.VALUE;
+        a:     INTEGER;
+        label: PARS.EXPR;
+        pos:   PARS.POSITION;
+        value: ARITH.VALUE;
 
     BEGIN
         getpos(parser, pos);
@@ -2856,11 +2852,11 @@ VAR
 
     PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; end: INTEGER);
     VAR
-        sym:      INTEGER;
-        t:        PROG.TYPE_;
-        variant:  INTEGER;
-        node:     AVL.NODE;
-        last:     IL.COMMAND;
+        sym:     INTEGER;
+        t:       PROG.TYPE_;
+        variant: INTEGER;
+        node:    AVL.NODE;
+        last:    IL.COMMAND;
 
     BEGIN
         sym := parser.sym;
@@ -2958,7 +2954,7 @@ VAR
     VAR
         table, end, else: INTEGER;
         tree: AVL.NODE;
-        item:  LISTS.ITEM;
+        item: LISTS.ITEM;
 
     BEGIN
         LISTS.push(CaseVariants, NewVariant(0, NIL));
@@ -3222,7 +3218,7 @@ VAR
 
     PROCEDURE getproc (rtl: PROG.UNIT; name: SCAN.LEXSTR; idx: INTEGER);
     VAR
-        id:    PROG.IDENT;
+        id: PROG.IDENT;
 
     BEGIN
         id := PROG.getIdent(rtl, SCAN.enterid(name), FALSE);
@@ -3244,28 +3240,28 @@ BEGIN
     ASSERT(rtl # NIL);
 
     IF CPU IN {cpuX86, cpuAMD64} THEN
-        getproc(rtl,  "_strcmp",    IL._strcmp);
-        getproc(rtl,  "_length",    IL._length);
-        getproc(rtl,  "_arrcpy",    IL._arrcpy);
-        getproc(rtl,  "_is",        IL._is);
-        getproc(rtl,  "_guard",     IL._guard);
-        getproc(rtl,  "_guardrec",  IL._guardrec);
-        getproc(rtl,  "_error",     IL._error);
-        getproc(rtl,  "_new",       IL._new);
-        getproc(rtl,  "_rot",       IL._rot);
-        getproc(rtl,  "_strcpy",    IL._strcpy);
-        getproc(rtl,  "_move",      IL._move);
-        getproc(rtl,  "_divmod",    IL._divmod);
-        getproc(rtl,  "_set",       IL._set);
-        getproc(rtl,  "_set1",      IL._set1);
-        getproc(rtl,  "_isrec",     IL._isrec);
-        getproc(rtl,  "_lengthw",   IL._lengthw);
-        getproc(rtl,  "_strcmpw",   IL._strcmpw);
-        getproc(rtl,  "_dllentry",  IL._dllentry);
-        getproc(rtl,  "_dispose",   IL._dispose);
-        getproc(rtl,  "_exit",      IL._exit);
-        getproc(rtl,  "_init",      IL._init);
-        getproc(rtl,  "_sofinit",   IL._sofinit)
+        getproc(rtl, "_strcmp",   IL._strcmp);
+        getproc(rtl, "_length",   IL._length);
+        getproc(rtl, "_arrcpy",   IL._arrcpy);
+        getproc(rtl, "_is",       IL._is);
+        getproc(rtl, "_guard",    IL._guard);
+        getproc(rtl, "_guardrec", IL._guardrec);
+        getproc(rtl, "_error",    IL._error);
+        getproc(rtl, "_new",      IL._new);
+        getproc(rtl, "_rot",      IL._rot);
+        getproc(rtl, "_strcpy",   IL._strcpy);
+        getproc(rtl, "_move",     IL._move);
+        getproc(rtl, "_divmod",   IL._divmod);
+        getproc(rtl, "_set",      IL._set);
+        getproc(rtl, "_set1",     IL._set1);
+        getproc(rtl, "_isrec",    IL._isrec);
+        getproc(rtl, "_lengthw",  IL._lengthw);
+        getproc(rtl, "_strcmpw",  IL._strcmpw);
+        getproc(rtl, "_dllentry", IL._dllentry);
+        getproc(rtl, "_dispose",  IL._dispose);
+        getproc(rtl, "_exit",     IL._exit);
+        getproc(rtl, "_init",     IL._init);
+        getproc(rtl, "_sofinit",  IL._sofinit)
     END
 
 END setrtl;
@@ -3288,7 +3284,8 @@ BEGIN
     Options := options;
 
     CASE target OF
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64, mConst.Target_iELFSO64:
+    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64,
+     mConst.Target_iELF64, mConst.Target_iELFSO64:
         CPU := cpuAMD64
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
      mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32,
