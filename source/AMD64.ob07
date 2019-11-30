@@ -1962,10 +1962,17 @@ BEGIN
                         END;
                         shiftrc(shl, reg1, n)
                     ELSE
-                        // imul reg1, a
-                        Rex(reg1, reg1);
-                        OutByte2(69H + short(a), 0C0H + (reg1 MOD 8) * 9);
-                        OutIntByte(a)
+                        IF isLong(a) THEN
+                            reg2 := GetAnyReg();
+                            movabs(reg2, a);
+                            oprr2(0FH, 0AFH, reg2, reg1); // imul reg1, reg2
+                            drop
+                        ELSE
+                            // imul reg1, a
+                            Rex(reg1, reg1);
+                            OutByte2(69H + short(a), 0C0H + (reg1 MOD 8) * 9);
+                            OutIntByte(a)
+                        END
                     END
                 END
             END
