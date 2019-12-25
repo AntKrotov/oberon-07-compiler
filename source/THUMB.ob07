@@ -1,0 +1,11 @@
+﻿MODULE THUMB;
+
+IMPORT PROG;
+
+
+PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
+BEGIN
+END CodeGen;
+
+
+END THUMB.

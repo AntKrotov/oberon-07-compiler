@@ -41,6 +41,8 @@ BEGIN
         res := mConst.Target_iELFSO64
     ELSIF s = mConst.Target_sMSP430 THEN
         res := mConst.Target_iMSP430
+    ELSIF s = mConst.Target_sThumb THEN
+        res := mConst.Target_iThumb
     ELSE
         res := 0
     END
@@ -245,7 +247,7 @@ BEGIN
     |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64, mConst.Target_iELFSO64:
         bit_depth := 64
     |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32, mConst.Target_iELFSO32:
+     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32, mConst.Target_iELFSO32, mConst.Target_iThumb:
         bit_depth := 32
     |mConst.Target_iMSP430:
         bit_depth := 16;
@@ -279,6 +281,9 @@ BEGIN
     |mConst.Target_iMSP430:
         STRINGS.append(lib_path, "MSP430")
 
+    |mConst.Target_iThumb:
+        STRINGS.append(lib_path, "Thumb")
+
     END;
 
     STRINGS.append(lib_path, UTILS.slash);
@@ -304,6 +309,9 @@ BEGIN
 
         |mConst.Target_iMSP430:
             STRINGS.append(outname, ".hex")
+
+        |mConst.Target_iThumb:
+            STRINGS.append(outname, ".bin")
         END
     ELSE
         IF PATHS.isRelative(outname) THEN

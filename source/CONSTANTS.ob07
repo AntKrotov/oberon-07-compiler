@@ -30,6 +30,7 @@ CONST
     Target_iELF64*     = 11;
     Target_iELFSO64*   = 12;
     Target_iMSP430*    = 13;
+    Target_iThumb*     = 14;
 
     Target_sConsole*   = "console";
     Target_sGUI*       = "gui";
@@ -44,6 +45,7 @@ CONST
     Target_sELF64*     = "elfexe64";
     Target_sELFSO64*   = "elfso64";
     Target_sMSP430*    = "msp430";
+    Target_sThumb*     = "thumb";
 
 
 END CONSTANTS.

@@ -143,7 +143,7 @@ BEGIN
 END UnixTime;
 
 
-PROCEDURE SetBitDepth* (BitDepth: INTEGER);
+PROCEDURE SetBitDepth* (BitDepth: INTEGER; Double: BOOLEAN);
 BEGIN
     ASSERT((BitDepth = 16) OR (BitDepth = 32) OR (BitDepth = 64));
     bit_diff := bit_depth - BitDepth;
@@ -155,7 +155,11 @@ BEGIN
     target.minInt    := ASR(minint, bit_diff);
     target.maxInt    := ASR(maxint, bit_diff);
     target.maxReal   := 1.9;
-    PACK(target.maxReal, 1023);
+    IF Double THEN
+        PACK(target.maxReal, 1023)
+    ELSE
+        PACK(target.maxReal, 127)
+    END
 END SetBitDepth;
 
 

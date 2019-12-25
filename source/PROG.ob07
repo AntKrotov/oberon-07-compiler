@@ -1198,7 +1198,7 @@ VAR
 BEGIN
     idents := C.create();
 
-    UTILS.SetBitDepth(bit_depth);
+    UTILS.SetBitDepth(bit_depth, target # mConst.Target_iThumb);
     NEW(program);
 
     program.target.bit_depth := bit_depth;
@@ -1225,7 +1225,9 @@ BEGIN
     |mConst.Target_iELF64,
      mConst.Target_iELFSO64:    program.target.sysflags := {sf_linux, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
 
-    |mConst.Target_iMSP430:     program.target.sysflags := {sf_code}
+    |mConst.Target_iMSP430,
+     mConst.Target_iThumb:
+                                program.target.sysflags := {sf_code}
     END;
 
     program.recCount := -1;
@@ -1243,7 +1245,11 @@ BEGIN
 
     IF target # mConst.Target_iMSP430 THEN
         program.stTypes.tWCHAR   := enterType(program, tWCHAR,  2, 0, NIL);
-        program.stTypes.tREAL    := enterType(program, tREAL,   8, 0, NIL);
+        IF target # mConst.Target_iThumb THEN
+            program.stTypes.tREAL := enterType(program, tREAL, 8, 0, NIL);
+        ELSE
+            program.stTypes.tREAL := enterType(program, tREAL, 4, 0, NIL);
+        END;
         program.stTypes.tCARD32  := enterType(program, tCARD32, 4, 0, NIL)
     END;
 

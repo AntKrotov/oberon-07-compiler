@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, IL, X86, AMD64, MSP430,
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, IL, X86, AMD64, MSP430, THUMB,
     ERRORS, UTILS, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
 
 
@@ -29,7 +29,7 @@ CONST
 
     chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
 
-    cpuX86 = 1; cpuAMD64 = 2; cpuMSP430 = 3;
+    cpuX86 = 1; cpuAMD64 = 2; cpuMSP430 = 3; cpuTHUMB = 4;
 
 
 TYPE
@@ -963,8 +963,10 @@ BEGIN
                 getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, pos, 43);
-                IF CPU # cpuMSP430 THEN
+                IF CPU IN {cpuX86, cpuAMD64} THEN
                     PARS.check(ARITH.range(code, 0, 255), pos, 42)
+                ELSIF CPU = cpuTHUMB THEN
+                    PARS.check(ARITH.range(code, 0, 65535), pos, 110)
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
                 comma := parser.sym = SCAN.lxCOMMA;
@@ -1970,7 +1972,7 @@ VAR
                 PARS.check(isInt(e) & isInt(e1), pos, 37);
                 IF e1.obj = eCONST THEN
                     PARS.check(~ARITH.isZero(e1.value), pos, 46);
-                    IF CPU = cpuMSP430 THEN
+                    IF CPU IN {cpuMSP430, cpuTHUMB} THEN
                         PARS.check(ARITH.Int(e1.value) > 0, pos, 122)
                     END
                 END;
@@ -1985,7 +1987,7 @@ VAR
                 ELSE
                     IF e1.obj # eCONST THEN
                         label1 := IL.NewLabel();
-                        IF CPU = cpuMSP430 THEN
+                        IF CPU IN {cpuMSP430, cpuTHUMB} THEN
                             IL.AddJmpCmd(IL.opJG, label1)
                         ELSE
                             IL.AddJmpCmd(IL.opJNZ, label1)
@@ -3262,6 +3264,8 @@ BEGIN
         getproc(rtl, "_exit",     IL._exit);
         getproc(rtl, "_init",     IL._init);
         getproc(rtl, "_sofinit",  IL._sofinit)
+    ELSIF CPU = cpuTHUMB THEN
+
     END
 
 END setrtl;
@@ -3293,6 +3297,8 @@ BEGIN
         CPU := cpuX86
     |mConst.Target_iMSP430:
         CPU := cpuMSP430
+    |mConst.Target_iThumb:
+        CPU := cpuTHUMB
     END;
 
     ext := mConst.FILE_EXT;
@@ -3306,6 +3312,7 @@ BEGIN
     |cpuAMD64:  IL.init(6, IL.little_endian)
     |cpuX86:    IL.init(8, IL.little_endian)
     |cpuMSP430: IL.init(0, IL.little_endian)
+    |cpuTHUMB:  IL.init(0, IL.little_endian)
     END;
 
     IF CPU # cpuMSP430 THEN
@@ -3352,6 +3359,7 @@ BEGIN
     | cpuAMD64:  AMD64.CodeGen(outname, target, options)
     |   cpuX86:    X86.CodeGen(outname, target, options)
     |cpuMSP430: MSP430.CodeGen(outname, target, options)
+    |cpuTHUMB:   THUMB.CodeGen(outname, target, options)
     END
 
 END compile;

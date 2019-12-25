@@ -137,7 +137,7 @@ BEGIN
     |107: str := "too large parameter of CHR"
     |108: str := "a variable or a procedure expected"
     |109: str := "expression should be constant"
-
+    |110: str := "out of range 0..65535"
     |111: str := "record [noalign] cannot have a base type"
     |112: str := "record [noalign] cannot be a base type"
     |113: str := "result type of procedure should not be REAL"
