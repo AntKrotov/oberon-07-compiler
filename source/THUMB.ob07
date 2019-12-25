@@ -1,10 +1,159 @@
-﻿MODULE THUMB;
+﻿(*
+    BSD 2-Clause License
 
-IMPORT PROG;
+    Copyright (c) 2019, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE THUMB;
+
+IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE;
+
+
+CONST
+
+    R0 = 0; R1 = 1; R2 = 2; R3 = 3;
+
+    SP = 13; LR = 14; PC = 15;
+
+
+TYPE
+
+    COMMAND = IL.COMMAND;
+
+    ANYCODE = POINTER TO RECORD (LISTS.ITEM)
+
+        offset: INTEGER
+
+    END;
+
+    CODE = POINTER TO RECORD (ANYCODE)
+
+        code: INTEGER
+
+    END;
+
+    LABEL = POINTER TO RECORD (ANYCODE)
+
+        label: INTEGER
+
+    END;
+
+    JUMP = POINTER TO RECORD (ANYCODE)
+
+        label, diff: INTEGER;
+        short: BOOLEAN
+
+    END;
+
+    JMP = POINTER TO RECORD (JUMP)
+
+    END;
+
+    JCC = POINTER TO RECORD (JUMP)
+
+        cond:   INTEGER;
+        short2: BOOLEAN
+
+    END;
+
+    CALL = POINTER TO RECORD (JUMP)
+
+    END;
+
+    RELOC = POINTER TO RECORD (ANYCODE)
+
+        reg, rel, value: INTEGER
+
+    END;
+
+
+VAR
+
+    R: REG.REGS;
+
+    tcount: INTEGER;
+
+    CodeList: LISTS.LIST;
+
+
+PROCEDURE push (r: INTEGER);
+BEGIN
+END push;
+
+
+PROCEDURE pop (r: INTEGER);
+BEGIN
+END pop;
+
+
+PROCEDURE mov (r1, r2: INTEGER);
+BEGIN
+END mov;
+
+
+PROCEDURE xchg (r1, r2: INTEGER);
+BEGIN
+END xchg;
+
+
+PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
+VAR
+    cmd: COMMAND;
+    opcode, param1, param2: INTEGER;
+
+BEGIN
+    cmd := IL.codes.commands.first(COMMAND);
+
+    WHILE cmd # NIL DO
+
+        param1 := cmd.param1;
+        param2 := cmd.param2;
+
+        opcode := cmd.opcode;
+
+        CASE opcode OF
+
+        |IL.opJMP:
+
+        |IL.opLABEL:
+
+        |IL.opPUSHC:
+
+        |IL.opERR:
+
+        |IL.opNOP:
+
+        |IL.opSADR_PARAM:
+
+        ELSE
+            C.IntLn(opcode)
+        END;
+
+        cmd := cmd.next(COMMAND)
+    END;
+
+    ASSERT(R.pushed = 0);
+    ASSERT(R.top = -1)
+
+END translate;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
+VAR
+    opt: PROG.OPTIONS;
+
 BEGIN
+    tcount := CHL.Length(IL.codes.types);
+
+    opt := options;
+    CodeList := LISTS.create(NIL);
+
+    opt.pic := FALSE;
+
+    REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
+
+    translate(opt.pic, tcount * 4)
 END CodeGen;
 
 
