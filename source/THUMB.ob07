@@ -16,6 +16,8 @@ CONST
 
     SP = 13; LR = 14; PC = 15;
 
+    je = 0; jne = 1; jge = 10; jl = 11; jg = 12; jle = 13;
+
 
 TYPE
 
@@ -76,6 +78,424 @@ VAR
 
     CodeList: LISTS.LIST;
 
+    program: BIN.PROGRAM;
+
+
+PROCEDURE Emit (code: INTEGER);
+VAR
+    c: CODE;
+
+BEGIN
+    NEW(c);
+    c.code := code;
+    LISTS.push(CodeList, c)
+END Emit;
+
+
+PROCEDURE EmitLabel (label: INTEGER);
+VAR
+    L: LABEL;
+
+BEGIN
+    NEW(L);
+    L.label := label;
+    LISTS.push(CodeList, L)
+END EmitLabel;
+
+
+PROCEDURE jcc (cond, label: INTEGER);
+VAR
+    j: JCC;
+
+BEGIN
+    NEW(j);
+    j.label  := label;
+    j.cond   := cond;
+    j.short  := FALSE;
+    j.short2 := FALSE;
+    LISTS.push(CodeList, j)
+END jcc;
+
+
+PROCEDURE jmp (label: INTEGER);
+VAR
+    j: JMP;
+
+BEGIN
+    NEW(j);
+    j.label := label;
+    j.short := FALSE;
+    LISTS.push(CodeList, j)
+END jmp;
+
+
+PROCEDURE call (label: INTEGER);
+VAR
+    c: CALL;
+
+BEGIN
+    NEW(c);
+    c.label := label;
+    c.short := TRUE;
+    LISTS.push(CodeList, c)
+END call;
+
+
+PROCEDURE reloc (reg, rel, value: INTEGER);
+VAR
+    r: RELOC;
+
+BEGIN
+    NEW(r);
+    r.reg := reg;
+    r.rel := rel;
+    r.value := value;
+    LISTS.push(CodeList, r)
+END reloc;
+
+
+PROCEDURE range (x, n: INTEGER): BOOLEAN;
+    RETURN (0 <= x) & (x < LSL(1, n))
+END range;
+
+
+PROCEDURE srange (x, n: INTEGER): BOOLEAN;
+    RETURN (-LSL(1, n - 1) <= x) & (x < LSL(1, n - 1))
+END srange;
+
+
+PROCEDURE genjcc (cond, offset: INTEGER): INTEGER;
+BEGIN
+    ASSERT(range(cond, 4));
+    ASSERT(srange(offset, 8))
+    RETURN 0D000H + LSL(cond, 8) + offset MOD 256
+END genjcc;
+
+
+PROCEDURE genjmp (offset: INTEGER): INTEGER;
+BEGIN
+    ASSERT(srange(offset, 11))
+    RETURN 0E000H + offset MOD 2048
+END genjmp;
+
+
+PROCEDURE genlongjmp (offset: INTEGER; VAR first, second: INTEGER);
+BEGIN
+    ASSERT(srange(offset, 22));
+    first  := 0F000H + ASR(offset, 11) MOD 2048;
+    second := 0F800H + offset MOD 2048
+END genlongjmp;
+
+
+PROCEDURE inv0 (cond: INTEGER): INTEGER;
+    RETURN ORD(BITS(cond) / {0})
+END inv0;
+
+
+PROCEDURE fixup (DataSize, BssSize: INTEGER);
+VAR
+    code:    ANYCODE;
+    count:   INTEGER;
+    shorted: BOOLEAN;
+    jump:    JUMP;
+
+    first, second: INTEGER;
+
+BEGIN
+
+    REPEAT
+
+        shorted := FALSE;
+        count := 0;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+            code.offset := count;
+
+            CASE code OF
+            |CODE:   INC(count)
+            |LABEL:  BIN.SetLabel(program, code.label, count)
+            |JMP:    INC(count, ORD(~code.short) + 1); code.offset := count + ORD(code.short)
+            |JCC:    INC(count, ORD(~code.short) + ORD(~code.short2) + 1); code.offset := count + ORD(code.short OR code.short2)
+            |CALL:   INC(count, 2); code.offset := count
+            |RELOC:  INC(count, 7 + ORD(code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS}))
+            END;
+
+            code := code.next(ANYCODE)
+        END;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+
+            IF code IS JUMP THEN
+                jump := code(JUMP);
+                jump.diff := BIN.GetLabel(program, jump.label) - code.offset;
+                CASE jump OF
+                |JMP:
+                    IF ~jump.short & srange(jump.diff, 11) THEN
+                        jump.short := TRUE;
+                        shorted := TRUE
+                    END
+
+                |JCC:
+                    IF ~jump.short & srange(jump.diff, 11) THEN
+                        jump.short := TRUE;
+                        shorted := TRUE
+                    END;
+                    IF ~jump.short2 & srange(jump.diff, 8) THEN
+                        jump.short2 := TRUE;
+                        shorted := TRUE
+                    END
+
+                |CALL:
+
+                END
+            END;
+
+            code := code.next(ANYCODE)
+        END
+
+    UNTIL ~shorted;
+
+    code := CodeList.first(ANYCODE);
+    WHILE code # NIL DO
+
+        CASE code OF
+
+        |CODE:  BIN.PutCode16LE(program, code.code)
+
+        |LABEL:
+
+        |JMP:
+                IF code.short THEN
+                    BIN.PutCode16LE(program, genjmp(code.diff))
+                ELSE
+                    genlongjmp(code.diff, first, second);
+                    BIN.PutCode16LE(program, first);
+                    BIN.PutCode16LE(program, second)
+                END
+
+        |JCC:
+                IF code.short2 THEN
+                    BIN.PutCode16LE(program, genjcc(code.cond, code.diff))
+                ELSIF code.short THEN
+                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 0));
+                    BIN.PutCode16LE(program, genjmp(code.diff))
+                ELSE
+                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 1));
+                    genlongjmp(code.diff, first, second);
+                    BIN.PutCode16LE(program, first);
+                    BIN.PutCode16LE(program, second)
+                END
+
+        |CALL:
+                genlongjmp(code.diff, first, second);
+                BIN.PutCode16LE(program, first);
+                BIN.PutCode16LE(program, second)
+
+        |RELOC:
+
+        END;
+
+        code := code.next(ANYCODE)
+    END
+
+END fixup;
+
+
+PROCEDURE gen1 (op, imm, rs, rd: INTEGER);
+BEGIN
+    ASSERT(op IN {0..2});
+    ASSERT(range(imm, 5));
+    ASSERT(range(rs, 3));
+    ASSERT(range(rd, 3));
+    Emit(LSL(op, 11) + LSL(imm, 6) + LSL(rs, 3) + rd)
+END gen1;
+
+
+PROCEDURE gen2 (i, op: BOOLEAN; imm, rs, rd: INTEGER);
+BEGIN
+    ASSERT(range(imm, 3));
+    ASSERT(range(rs, 3));
+    ASSERT(range(rd, 3));
+    Emit(1800H + LSL(ORD(i), 10) + LSL(ORD(op), 9) + LSL(imm, 6) + LSL(rs, 3) + rd)
+END gen2;
+
+
+PROCEDURE gen3 (op, rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(op, 2));
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Emit(2000H + LSL(op, 11) + LSL(rd, 8) + imm)
+END gen3;
+
+
+PROCEDURE gen4 (op, rs, rd: INTEGER);
+BEGIN
+    ASSERT(range(op, 4));
+    ASSERT(range(rs, 3));
+    ASSERT(range(rd, 3));
+    Emit(4000H + LSL(op, 6) + LSL(rs, 3) + rd)
+END gen4;
+
+
+PROCEDURE gen5 (op: INTEGER; h1, h2: BOOLEAN; rs, rd: INTEGER);
+BEGIN
+    ASSERT(range(op, 2));
+    ASSERT(range(rs, 3));
+    ASSERT(range(rd, 3));
+    Emit(4400H + LSL(op, 8) + LSL(ORD(h1), 7) + LSL(ORD(h2), 6) + LSL(rs, 3) + rd)
+END gen5;
+
+
+PROCEDURE gen6 (rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Emit(4800H + LSL(rd, 8) + imm)
+END gen6;
+
+
+PROCEDURE gen7 (l, b: BOOLEAN; ro, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(ro, 3));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Emit(5000H + LSL(ORD(l), 11) + LSL(ORD(b), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+END gen7;
+
+
+PROCEDURE gen8 (h, s: BOOLEAN; ro, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(ro, 3));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Emit(5200H + LSL(ORD(h), 11) + LSL(ORD(s), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+END gen8;
+
+
+PROCEDURE gen9 (b, l: BOOLEAN; imm, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(imm, 5));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Emit(6000H + LSL(ORD(b), 12) + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
+END gen9;
+
+
+PROCEDURE gen10 (l: BOOLEAN; imm, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(imm, 5));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Emit(8000H + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
+END gen10;
+
+
+PROCEDURE gen11 (l: BOOLEAN; rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Emit(9000H + LSL(ORD(l), 11) + LSL(rd, 8) + imm)
+END gen11;
+
+
+PROCEDURE gen12 (sp: BOOLEAN; rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Emit(0A000H + LSL(ORD(sp), 11) + LSL(rd, 8) + imm)
+END gen12;
+
+
+PROCEDURE gen13 (imm: INTEGER);
+BEGIN
+    ASSERT(range(imm, 7));
+    Emit(0B000H + imm)
+END gen13;
+
+
+PROCEDURE gen14 (l, r: BOOLEAN; rlist: SET);
+BEGIN
+    ASSERT(range(ORD(rlist), 8));
+    Emit(0B400H + LSL(ORD(l), 11) + LSL(ORD(r), 8) + ORD(rlist))
+END gen14;
+
+
+PROCEDURE gen15 (l: BOOLEAN; rb: INTEGER; rlist: SET);
+BEGIN
+    ASSERT(range(rb, 3));
+    ASSERT(range(ORD(rlist), 8));
+    Emit(0C000H + LSL(ORD(l), 11) + LSL(rb, 8) + ORD(rlist))
+END gen15;
+
+
+PROCEDURE LslImm (rd, rs, imm5: INTEGER);
+BEGIN
+    gen1(0, imm5, rs, rd)
+END LslImm;
+
+
+PROCEDURE LsrImm (rd, rs, imm5: INTEGER);
+BEGIN
+    gen1(1, imm5, rs, rd)
+END LsrImm;
+
+
+PROCEDURE AsrImm (rd, rs, imm5: INTEGER);
+BEGIN
+    gen1(2, imm5, rs, rd)
+END AsrImm;
+
+
+PROCEDURE AddImm (rd, rs, imm3: INTEGER);
+BEGIN
+    gen2(TRUE, FALSE, imm3, rs, rd)
+END AddImm;
+
+
+PROCEDURE SubImm (rd, rs, imm3: INTEGER);
+BEGIN
+    gen2(TRUE, TRUE, imm3, rs, rd)
+END SubImm;
+
+
+PROCEDURE AddReg (rd, rs, rn: INTEGER);
+BEGIN
+    gen2(FALSE, FALSE, rn, rs, rd)
+END AddReg;
+
+
+PROCEDURE SubReg (rd, rs, rn: INTEGER);
+BEGIN
+    gen2(FALSE, TRUE, rn, rs, rd)
+END SubReg;
+
+
+PROCEDURE AddImm8 (rd, imm8: INTEGER);
+BEGIN
+    gen3(2, rd, imm8)
+END AddImm8;
+
+
+PROCEDURE SubImm8 (rd, imm8: INTEGER);
+BEGIN
+    gen3(3, rd, imm8)
+END SubImm8;
+
+
+PROCEDURE MovImm8 (rd, imm8: INTEGER);
+BEGIN
+    gen3(0, rd, imm8)
+END MovImm8;
+
+
+PROCEDURE CmpImm8 (rd, imm8: INTEGER);
+BEGIN
+    gen3(1, rd, imm8)
+END CmpImm8;
+
 
 PROCEDURE push (r: INTEGER);
 BEGIN
@@ -115,8 +535,10 @@ BEGIN
         CASE opcode OF
 
         |IL.opJMP:
+            jmp(param1)
 
         |IL.opLABEL:
+            EmitLabel(param1)
 
         |IL.opPUSHC:
 
@@ -143,17 +565,36 @@ PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIO
 VAR
     opt: PROG.OPTIONS;
 
+    dcount, i: INTEGER;
+
 BEGIN
     tcount := CHL.Length(IL.codes.types);
 
     opt := options;
     CodeList := LISTS.create(NIL);
 
+    program := BIN.create(IL.codes.lcount);
+
     opt.pic := FALSE;
 
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
 
-    translate(opt.pic, tcount * 4)
+    translate(opt.pic, tcount * 4);
+
+    dcount := CHL.Length(IL.codes.data);
+
+    FOR i := 0 TO tcount - 1 DO
+        BIN.PutData32LE(program, CHL.GetInt(IL.codes.types, i))
+    END;
+
+    FOR i := 0 TO dcount - 1 DO
+        BIN.PutData(program, CHL.GetByte(IL.codes.data, i))
+    END;
+
+    IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
+
+    fixup(CHL.Length(program.data), IL.codes.bss);
+
 END CodeGen;
 
 

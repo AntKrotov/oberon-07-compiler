@@ -8,7 +8,7 @@
 MODULE X86;
 
 IMPORT IL, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, PROG,
-       mConst := CONSTANTS, CHL := CHUNKLISTS, PATHS;
+       CHL := CHUNKLISTS, PATHS, TARGETS;
 
 
 CONST
@@ -504,7 +504,6 @@ BEGIN
                 END
 
         |LABEL:
-                BIN.SetLabel(program, code.label, code.offset)
 
         |JMP:
                 IF code.short THEN
@@ -2103,7 +2102,7 @@ BEGIN
     entry := NewLabel();
     SetLabel(entry);
 
-    IF target = mConst.Target_iDLL THEN
+    IF target = TARGETS.Win32DLL THEN
         push(ebp);
         mov(ebp, esp);
         OutByte3(0FFH, 75H, 16);  // push dword[ebp+16]
@@ -2112,19 +2111,19 @@ BEGIN
         CallRTL(pic, IL._dllentry);
         test(eax);
         jcc(je, dllret)
-    ELSIF target = mConst.Target_iObject THEN
+    ELSIF target = TARGETS.KolibriOSDLL THEN
         SetLabel(dllinit)
     END;
 
-    IF target = mConst.Target_iKolibri THEN
+    IF target = TARGETS.KolibriOS THEN
         reg1 := GetAnyReg();
         Pic(reg1, BIN.IMPTAB, 0);
         push(reg1);    // push IMPORT
         drop
-    ELSIF target = mConst.Target_iObject THEN
+    ELSIF target = TARGETS.KolibriOSDLL THEN
         OutByte(68H);  // push IMPORT
         Reloc(BIN.IMPTAB, 0)
-    ELSIF target = mConst.Target_iELF32 THEN
+    ELSIF target = TARGETS.Linux32 THEN
         push(esp)
     ELSE
         pushc(0)
@@ -2166,7 +2165,7 @@ BEGIN
 
     CallRTL(pic, IL._init);
 
-    IF target = mConst.Target_iELF32 THEN
+    IF target = TARGETS.Linux32 THEN
         L := NewLabel();
         pushc(0);
         push(esp);
@@ -2214,18 +2213,18 @@ VAR
 
 BEGIN
 
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iKolibri, mConst.Target_iELF32} THEN
+    IF target IN {TARGETS.Win32C, TARGETS.Win32GUI, TARGETS.KolibriOS, TARGETS.Linux32} THEN
         pushc(0);
         CallRTL(pic, IL._exit);
-    ELSIF target = mConst.Target_iDLL THEN
+    ELSIF target = TARGETS.Win32DLL THEN
         SetLabel(dllret);
         movrc(eax, 1);
         OutByte(0C9H); // leave
         OutByte3(0C2H, 0CH, 0) // ret 12
-    ELSIF target = mConst.Target_iObject THEN
+    ELSIF target = TARGETS.KolibriOSDLL THEN
         movrc(eax, 1);
         OutByte(0C3H)  // ret
-    ELSIF target = mConst.Target_iELFSO32 THEN
+    ELSIF target = TARGETS.Linux32SO THEN
         OutByte(0C3H);  // ret
         SetLabel(sofinit);
         CallRTL(pic, IL._sofinit);
@@ -2251,7 +2250,7 @@ BEGIN
     BIN.PutDataStr(program, ext);
     BIN.PutData(program, 0);
 
-    IF target = mConst.Target_iObject THEN
+    IF target = TARGETS.KolibriOSDLL THEN
         BIN.Export(program, "lib_init", dllinit);
     END;
 
@@ -2287,11 +2286,11 @@ BEGIN
     dllret  := NewLabel();
     sofinit := NewLabel();
 
-    IF target = mConst.Target_iObject THEN
+    IF target = TARGETS.KolibriOSDLL THEN
         opt.pic := FALSE
     END;
 
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL, mConst.Target_iELF32, mConst.Target_iELFSO32} THEN
+    IF TARGETS.OS IN {TARGETS.osWIN32, TARGETS.osLINUX32} THEN
         opt.pic := TRUE
     END;
 
@@ -2303,14 +2302,14 @@ BEGIN
 
     BIN.fixup(program);
 
-    IF target IN {mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL} THEN
-        PE32.write(program, outname, target = mConst.Target_iConsole, target = mConst.Target_iDLL, FALSE)
-    ELSIF target = mConst.Target_iKolibri THEN
+    IF TARGETS.OS = TARGETS.osWIN32 THEN
+        PE32.write(program, outname, target = TARGETS.Win32C, target = TARGETS.Win32DLL, FALSE)
+    ELSIF target = TARGETS.KolibriOS THEN
         KOS.write(program, outname)
-    ELSIF target = mConst.Target_iObject THEN
+    ELSIF target = TARGETS.KolibriOSDLL THEN
         MSCOFF.write(program, outname, opt.version)
-    ELSIF target IN {mConst.Target_iELF32, mConst.Target_iELFSO32} THEN
-        ELF.write(program, outname, sofinit, target = mConst.Target_iELFSO32, FALSE)
+    ELSIF TARGETS.OS = TARGETS.osLINUX32 THEN
+        ELF.write(program, outname, sofinit, target = TARGETS.Linux32SO, FALSE)
     END
 
 END CodeGen;

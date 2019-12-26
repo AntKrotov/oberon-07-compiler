@@ -211,6 +211,13 @@ BEGIN
 END PutCode32LE;
 
 
+PROCEDURE PutCode16LE* (program: PROGRAM; x: INTEGER);
+BEGIN
+    CHL.PushByte(program.code, UTILS.Byte(x, 0));
+    CHL.PushByte(program.code, UTILS.Byte(x, 1))
+END PutCode16LE;
+
+
 PROCEDURE SetLabel* (program: PROGRAM; label, offset: INTEGER);
 BEGIN
     CHL.SetInt(program.labels, label, offset)

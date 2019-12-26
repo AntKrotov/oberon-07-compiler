@@ -10,7 +10,7 @@ MODULE STATEMENTS;
 IMPORT
 
     PARS, PROG, SCAN, ARITH, STRINGS, LISTS, IL, X86, AMD64, MSP430, THUMB,
-    ERRORS, UTILS, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, mConst := CONSTANTS;
+    ERRORS, UTILS, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, TARGETS;
 
 
 CONST
@@ -28,8 +28,6 @@ CONST
     chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2; chkCHR* = 3; chkWCHR* = 4; chkBYTE* = 5;
 
     chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
-
-    cpuX86 = 1; cpuAMD64 = 2; cpuMSP430 = 3; cpuTHUMB = 4;
 
 
 TYPE
@@ -607,7 +605,7 @@ BEGIN
                     IF p.type.base = tCHAR THEN
                         stroffs := String(e);
                         IL.StrAdr(stroffs);
-                        IF (CPU = cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
+                        IF (CPU = TARGETS.cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
                             ERRORS.WarningMsg(pos.line, pos.col, 0)
                         END
                     ELSE (* WCHAR *)
@@ -778,7 +776,7 @@ BEGIN
 
         |PROG.stNEW:
             varparam(parser, pos, isPtr, TRUE, e);
-            IF CPU = cpuMSP430 THEN
+            IF CPU = TARGETS.cpuMSP430 THEN
                 PARS.check(e.type.base.size + 16 < Options.ram, pos, 63)
             END;
             IL.New(e.type.base.size, e.type.base.num)
@@ -963,9 +961,9 @@ BEGIN
                 getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, pos, 43);
-                IF CPU IN {cpuX86, cpuAMD64} THEN
+                IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
                     PARS.check(ARITH.range(code, 0, 255), pos, 42)
-                ELSIF CPU = cpuTHUMB THEN
+                ELSIF CPU = TARGETS.cpuTHUMB THEN
                     PARS.check(ARITH.range(code, 0, 65535), pos, 110)
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
@@ -1972,7 +1970,7 @@ VAR
                 PARS.check(isInt(e) & isInt(e1), pos, 37);
                 IF e1.obj = eCONST THEN
                     PARS.check(~ARITH.isZero(e1.value), pos, 46);
-                    IF CPU IN {cpuMSP430, cpuTHUMB} THEN
+                    IF CPU IN {TARGETS.cpuMSP430, TARGETS.cpuTHUMB} THEN
                         PARS.check(ARITH.Int(e1.value) > 0, pos, 122)
                     END
                 END;
@@ -1987,7 +1985,7 @@ VAR
                 ELSE
                     IF e1.obj # eCONST THEN
                         label1 := IL.NewLabel();
-                        IF CPU IN {cpuMSP430, cpuTHUMB} THEN
+                        IF CPU IN {TARGETS.cpuMSP430, TARGETS.cpuTHUMB} THEN
                             IL.AddJmpCmd(IL.opJG, label1)
                         ELSE
                             IL.AddJmpCmd(IL.opJNZ, label1)
@@ -3024,11 +3022,11 @@ BEGIN
     ELSIF isRec(e) THEN
         IL.drop;
         IL.AddCmd(IL.opLADR, e.ident.offset - 1);
-        IL.load(PARS.program.target.word)
+        IL.load(TARGETS.WordSize)
     ELSIF isPtr(e) THEN
         deref(pos, e, FALSE, errPTR);
-        IL.AddCmd(IL.opSUBR, PARS.program.target.word);
-        IL.load(PARS.program.target.word)
+        IL.AddCmd(IL.opSUBR, TARGETS.WordSize);
+        IL.load(TARGETS.WordSize)
     END;
 
     PARS.checklex(parser, SCAN.lxOF);
@@ -3241,7 +3239,7 @@ BEGIN
     rtl := PARS.program.rtl;
     ASSERT(rtl # NIL);
 
-    IF CPU IN {cpuX86, cpuAMD64} THEN
+    IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
         getproc(rtl, "_strcmp",   IL._strcmp);
         getproc(rtl, "_length",   IL._length);
         getproc(rtl, "_arrcpy",   IL._arrcpy);
@@ -3264,7 +3262,7 @@ BEGIN
         getproc(rtl, "_exit",     IL._exit);
         getproc(rtl, "_init",     IL._init);
         getproc(rtl, "_sofinit",  IL._sofinit)
-    ELSIF CPU = cpuTHUMB THEN
+    ELSIF CPU = TARGETS.cpuTHUMB THEN
 
     END
 
@@ -3286,22 +3284,9 @@ BEGIN
     tREAL    := PARS.program.stTypes.tREAL;
 
     Options := options;
+    CPU := TARGETS.CPU;
 
-    CASE target OF
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64,
-     mConst.Target_iELF64, mConst.Target_iELFSO64:
-        CPU := cpuAMD64
-    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32,
-     mConst.Target_iELFSO32:
-        CPU := cpuX86
-    |mConst.Target_iMSP430:
-        CPU := cpuMSP430
-    |mConst.Target_iThumb:
-        CPU := cpuTHUMB
-    END;
-
-    ext := mConst.FILE_EXT;
+    ext := UTILS.FILE_EXT;
     CaseLabels := C.create();
     CaseVar := C.create();
 
@@ -3309,25 +3294,25 @@ BEGIN
     LISTS.push(CaseVariants, NewVariant(0, NIL));
 
     CASE CPU OF
-    |cpuAMD64:  IL.init(6, IL.little_endian)
-    |cpuX86:    IL.init(8, IL.little_endian)
-    |cpuMSP430: IL.init(0, IL.little_endian)
-    |cpuTHUMB:  IL.init(0, IL.little_endian)
+    |TARGETS.cpuAMD64:  IL.init(6, IL.little_endian)
+    |TARGETS.cpuX86:    IL.init(8, IL.little_endian)
+    |TARGETS.cpuMSP430: IL.init(0, IL.little_endian)
+    |TARGETS.cpuTHUMB:  IL.init(0, IL.little_endian)
     END;
 
-    IF CPU # cpuMSP430 THEN
+    IF CPU # TARGETS.cpuMSP430 THEN
         parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
-        IF parser.open(parser, mConst.RTL_NAME) THEN
+        IF parser.open(parser, UTILS.RTL_NAME) THEN
             parser.parse(parser);
             PARS.destroy(parser)
         ELSE
             PARS.destroy(parser);
             parser := PARS.create(lib_path, lib_path, StatSeq, expression, designator, chkreturn);
-            IF parser.open(parser, mConst.RTL_NAME) THEN
+            IF parser.open(parser, UTILS.RTL_NAME) THEN
                 parser.parse(parser);
                 PARS.destroy(parser)
             ELSE
-                ERRORS.FileNotFound(lib_path, mConst.RTL_NAME, mConst.FILE_EXT)
+                ERRORS.FileNotFound(lib_path, UTILS.RTL_NAME, UTILS.FILE_EXT)
             END
         END
     END;
@@ -3338,16 +3323,16 @@ BEGIN
     IF parser.open(parser, modname) THEN
         parser.parse(parser)
     ELSE
-        ERRORS.FileNotFound(path, modname, mConst.FILE_EXT)
+        ERRORS.FileNotFound(path, modname, UTILS.FILE_EXT)
     END;
 
     PARS.destroy(parser);
 
-    IF PARS.program.bss > mConst.MAX_GLOBAL_SIZE THEN
+    IF PARS.program.bss > UTILS.MAX_GLOBAL_SIZE THEN
         ERRORS.Error(204)
     END;
 
-    IF CPU # cpuMSP430 THEN
+    IF CPU # TARGETS.cpuMSP430 THEN
         setrtl
     END;
 
@@ -3356,10 +3341,10 @@ BEGIN
     IL.set_bss(PARS.program.bss);
 
     CASE CPU OF
-    | cpuAMD64:  AMD64.CodeGen(outname, target, options)
-    |   cpuX86:    X86.CodeGen(outname, target, options)
-    |cpuMSP430: MSP430.CodeGen(outname, target, options)
-    |cpuTHUMB:   THUMB.CodeGen(outname, target, options)
+    |TARGETS.cpuAMD64:   AMD64.CodeGen(outname, target, options)
+    |TARGETS.cpuX86:       X86.CodeGen(outname, target, options)
+    |TARGETS.cpuMSP430: MSP430.CodeGen(outname, target, options)
+    |TARGETS.cpuTHUMB:   THUMB.CodeGen(outname, target, options)
     END
 
 END compile;

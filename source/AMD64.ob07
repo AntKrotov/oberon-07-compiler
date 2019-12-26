@@ -7,8 +7,8 @@
 
 MODULE AMD64;
 
-IMPORT IL, BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PATHS, PROG,
-       REG, C := CONSOLE, UTILS, mConst := CONSTANTS, S := STRINGS, PE32, ELF, X86;
+IMPORT IL, BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PATHS, PROG, TARGETS,
+       REG, C := CONSOLE, UTILS, S := STRINGS, PE32, ELF, X86;
 
 
 CONST
@@ -2603,7 +2603,7 @@ BEGIN
     entry := NewLabel();
     X86.SetLabel(entry);
 
-    IF target = mConst.Target_iDLL64 THEN
+    IF target = TARGETS.Win64DLL THEN
         dllret := NewLabel();
         push(r8);
         push(rdx);
@@ -2613,7 +2613,7 @@ BEGIN
         jcc(je, dllret)
     END;
 
-    IF target = mConst.Target_iELF64 THEN
+    IF target = TARGETS.Linux64 THEN
         push(rsp)
     ELSE
         pushc(0)
@@ -2626,7 +2626,7 @@ BEGIN
     pushDA(ModName_Offs); //MODNAME
     CallRTL(IL._init);
 
-    IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iELF64} THEN
+    IF target IN {TARGETS.Win64C, TARGETS.Win64GUI, TARGETS.Linux64} THEN
         L := NewLabel();
         pushc(0);
         push(rsp);
@@ -2672,10 +2672,10 @@ VAR
 
 
 BEGIN
-    IF target = mConst.Target_iDLL64 THEN
+    IF target = TARGETS.Win64DLL THEN
         X86.SetLabel(dllret);
         OutByte(0C3H) // ret
-    ELSIF target = mConst.Target_iELFSO64 THEN
+    ELSIF target = TARGETS.Linux64SO THEN
         sofinit := NewLabel();
         OutByte(0C3H);  // ret
         X86.SetLabel(sofinit);
@@ -2795,10 +2795,10 @@ BEGIN
     epilog(modname, target);
 
     BIN.fixup(prog);
-    IF target IN {mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64} THEN
-        PE32.write(prog, outname, target = mConst.Target_iConsole64, target = mConst.Target_iDLL64, TRUE)
-    ELSIF target IN {mConst.Target_iELF64, mConst.Target_iELFSO64} THEN
-        ELF.write(prog, outname, sofinit, target = mConst.Target_iELFSO64, TRUE)
+    IF TARGETS.OS = TARGETS.osWIN64 THEN
+        PE32.write(prog, outname, target = TARGETS.Win64C, target = TARGETS.Win64DLL, TRUE)
+    ELSIF TARGETS.OS = TARGETS.osLINUX64 THEN
+        ELF.write(prog, outname, sofinit, target = TARGETS.Linux64SO, TRUE)
     END
 END CodeGen;
 

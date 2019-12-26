@@ -7,48 +7,7 @@
 
 MODULE Compiler;
 
-IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE, ERRORS, STRINGS, mConst := CONSTANTS, WRITER, MSP430;
-
-
-PROCEDURE Target (s: ARRAY OF CHAR): INTEGER;
-VAR
-    res: INTEGER;
-
-BEGIN
-    IF s = mConst.Target_sConsole THEN
-        res := mConst.Target_iConsole
-    ELSIF s = mConst.Target_sGUI THEN
-        res := mConst.Target_iGUI
-    ELSIF s = mConst.Target_sDLL THEN
-        res := mConst.Target_iDLL
-    ELSIF s = mConst.Target_sKolibri THEN
-        res := mConst.Target_iKolibri
-    ELSIF s = mConst.Target_sObject THEN
-        res := mConst.Target_iObject
-    ELSIF s = mConst.Target_sConsole64 THEN
-        res := mConst.Target_iConsole64
-    ELSIF s = mConst.Target_sGUI64 THEN
-        res := mConst.Target_iGUI64
-    ELSIF s = mConst.Target_sDLL64 THEN
-        res := mConst.Target_iDLL64
-    ELSIF s = mConst.Target_sELF32 THEN
-        res := mConst.Target_iELF32
-    ELSIF s = mConst.Target_sELFSO32 THEN
-        res := mConst.Target_iELFSO32
-    ELSIF s = mConst.Target_sELF64 THEN
-        res := mConst.Target_iELF64
-    ELSIF s = mConst.Target_sELFSO64 THEN
-        res := mConst.Target_iELFSO64
-    ELSIF s = mConst.Target_sMSP430 THEN
-        res := mConst.Target_iMSP430
-    ELSIF s = mConst.Target_sThumb THEN
-        res := mConst.Target_iThumb
-    ELSE
-        res := 0
-    END
-
-    RETURN res
-END Target;
+IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE, ERRORS, STRINGS, WRITER, MSP430, TARGETS;
 
 
 PROCEDURE keys (VAR options: PROG.OPTIONS; VAR out: PARS.PATH);
@@ -182,7 +141,6 @@ VAR
     param:      PARS.PATH;
     temp:       PARS.PATH;
     target:     INTEGER;
-    bit_depth:  INTEGER;
     time:       INTEGER;
     options:    PROG.OPTIONS;
 
@@ -198,7 +156,7 @@ BEGIN
     UTILS.GetArg(1, inname);
 
     C.Ln;
-    C.String("Akron Oberon Compiler v"); C.Int(mConst.vMajor); C.String("."); C.Int2(mConst.vMinor);
+    C.String("Akron Oberon Compiler v"); C.Int(UTILS.vMajor); C.String("."); C.Int2(UTILS.vMinor);
         C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)");
     C.StringLn("Copyright (c) 2018-2019, Anton Krotov");
 
@@ -223,7 +181,7 @@ BEGIN
 
     PATHS.split(inname, path, modname, ext);
 
-    IF ext # mConst.FILE_EXT THEN
+    IF ext # UTILS.FILE_EXT THEN
         ERRORS.Error(207)
     END;
 
@@ -237,82 +195,31 @@ BEGIN
         ERRORS.Error(205)
     END;
 
-    target := Target(param);
-
-    IF target = 0 THEN
+    IF TARGETS.Select(param) THEN
+        target := TARGETS.target
+    ELSE
         ERRORS.Error(206)
     END;
 
-    CASE target OF
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64, mConst.Target_iELF64, mConst.Target_iELFSO64:
-        bit_depth := 64
-    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL,
-     mConst.Target_iKolibri, mConst.Target_iObject, mConst.Target_iELF32, mConst.Target_iELFSO32, mConst.Target_iThumb:
-        bit_depth := 32
-    |mConst.Target_iMSP430:
-        bit_depth := 16;
+    IF target = TARGETS.MSP430 THEN
         options.ram := MSP430.minRAM;
         options.rom := MSP430.minROM
     END;
 
-    IF UTILS.bit_depth < bit_depth THEN
+    IF UTILS.bit_depth < TARGETS.BitDepth THEN
         ERRORS.Error(206)
     END;
 
     STRINGS.append(lib_path, "lib");
     STRINGS.append(lib_path, UTILS.slash);
-
-    CASE target OF
-    |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iDLL:
-        STRINGS.append(lib_path, "Windows32")
-
-    |mConst.Target_iKolibri, mConst.Target_iObject:
-        STRINGS.append(lib_path, "KolibriOS")
-
-    |mConst.Target_iELF32, mConst.Target_iELFSO32:
-        STRINGS.append(lib_path, "Linux32")
-
-    |mConst.Target_iELF64, mConst.Target_iELFSO64:
-        STRINGS.append(lib_path, "Linux64")
-
-    |mConst.Target_iConsole64, mConst.Target_iGUI64, mConst.Target_iDLL64:
-        STRINGS.append(lib_path, "Windows64")
-
-    |mConst.Target_iMSP430:
-        STRINGS.append(lib_path, "MSP430")
-
-    |mConst.Target_iThumb:
-        STRINGS.append(lib_path, "Thumb")
-
-    END;
-
+    STRINGS.append(lib_path, TARGETS.LibDir);
     STRINGS.append(lib_path, UTILS.slash);
 
     keys(options, outname);
     IF outname = "" THEN
         outname := path;
         STRINGS.append(outname, modname);
-        CASE target OF
-        |mConst.Target_iConsole, mConst.Target_iGUI, mConst.Target_iConsole64, mConst.Target_iGUI64:
-            STRINGS.append(outname, ".exe")
-
-        |mConst.Target_iObject:
-            STRINGS.append(outname, ".obj")
-
-        |mConst.Target_iKolibri, mConst.Target_iELF32, mConst.Target_iELF64:
-
-        |mConst.Target_iELFSO32, mConst.Target_iELFSO64:
-            STRINGS.append(outname, ".so")
-
-        |mConst.Target_iDLL, mConst.Target_iDLL64:
-            STRINGS.append(outname, ".dll")
-
-        |mConst.Target_iMSP430:
-            STRINGS.append(outname, ".hex")
-
-        |mConst.Target_iThumb:
-            STRINGS.append(outname, ".bin")
-        END
+        STRINGS.append(outname, TARGETS.FileExt)
     ELSE
         IF PATHS.isRelative(outname) THEN
             PATHS.RelPath(app_path, outname, temp);
@@ -320,10 +227,7 @@ BEGIN
         END
     END;
 
-    PARS.init(bit_depth, target, options);
-
-    PARS.program.dll := target IN {mConst.Target_iELFSO32, mConst.Target_iELFSO64, mConst.Target_iDLL, mConst.Target_iDLL64, mConst.Target_iObject};
-    PARS.program.obj := target = mConst.Target_iObject;
+    PARS.init(options);
 
     ST.compile(path, lib_path, modname, outname, target, options);
 

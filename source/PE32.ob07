@@ -7,7 +7,7 @@
 
 MODULE PE32;
 
-IMPORT BIN, LISTS, UTILS, WR := WRITER, mConst := CONSTANTS, CHL := CHUNKLISTS;
+IMPORT BIN, LISTS, UTILS, WR := WRITER, CHL := CHUNKLISTS;
 
 
 CONST
@@ -529,8 +529,8 @@ BEGIN
     PEHeader.FileHeader.Characteristics       :=  WCHR(010EH + (20H - 100H) * ORD(amd64) + 2000H * ORD(dll));
 
     PEHeader.OptionalHeader.Magic                        :=  WCHR(010BH + 100H * ORD(amd64));
-    PEHeader.OptionalHeader.MajorLinkerVersion           :=  mConst.vMajor;
-    PEHeader.OptionalHeader.MinorLinkerVersion           :=  mConst.vMinor;
+    PEHeader.OptionalHeader.MajorLinkerVersion           :=  UTILS.vMajor;
+    PEHeader.OptionalHeader.MinorLinkerVersion           :=  UTILS.vMinor;
     PEHeader.OptionalHeader.SizeOfCode                   :=  align(Size.Code, FileAlignment);
     PEHeader.OptionalHeader.SizeOfInitializedData        :=  0;
     PEHeader.OptionalHeader.SizeOfUninitializedData      :=  0;
