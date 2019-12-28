@@ -7,7 +7,7 @@
 
 MODULE THUMB;
 
-IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE;
+IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER;
 
 
 CONST
@@ -17,6 +17,8 @@ CONST
     SP = 13; LR = 14; PC = 15;
 
     je = 0; jne = 1; jge = 10; jl = 11; jg = 12; jle = 13;
+
+    FileAlignment = 1000H;
 
 
 TYPE
@@ -68,6 +70,8 @@ TYPE
         reg, rel, value: INTEGER
 
     END;
+
+    RELOCCODE = ARRAY 7 OF INTEGER;
 
 
 VAR
@@ -162,145 +166,6 @@ END range;
 PROCEDURE srange (x, n: INTEGER): BOOLEAN;
     RETURN (-LSL(1, n - 1) <= x) & (x < LSL(1, n - 1))
 END srange;
-
-
-PROCEDURE genjcc (cond, offset: INTEGER): INTEGER;
-BEGIN
-    ASSERT(range(cond, 4));
-    ASSERT(srange(offset, 8))
-    RETURN 0D000H + LSL(cond, 8) + offset MOD 256
-END genjcc;
-
-
-PROCEDURE genjmp (offset: INTEGER): INTEGER;
-BEGIN
-    ASSERT(srange(offset, 11))
-    RETURN 0E000H + offset MOD 2048
-END genjmp;
-
-
-PROCEDURE genlongjmp (offset: INTEGER; VAR first, second: INTEGER);
-BEGIN
-    ASSERT(srange(offset, 22));
-    first  := 0F000H + ASR(offset, 11) MOD 2048;
-    second := 0F800H + offset MOD 2048
-END genlongjmp;
-
-
-PROCEDURE inv0 (cond: INTEGER): INTEGER;
-    RETURN ORD(BITS(cond) / {0})
-END inv0;
-
-
-PROCEDURE fixup (DataSize, BssSize: INTEGER);
-VAR
-    code:    ANYCODE;
-    count:   INTEGER;
-    shorted: BOOLEAN;
-    jump:    JUMP;
-
-    first, second: INTEGER;
-
-BEGIN
-
-    REPEAT
-
-        shorted := FALSE;
-        count := 0;
-
-        code := CodeList.first(ANYCODE);
-        WHILE code # NIL DO
-            code.offset := count;
-
-            CASE code OF
-            |CODE:   INC(count)
-            |LABEL:  BIN.SetLabel(program, code.label, count)
-            |JMP:    INC(count, ORD(~code.short) + 1); code.offset := count + ORD(code.short)
-            |JCC:    INC(count, ORD(~code.short) + ORD(~code.short2) + 1); code.offset := count + ORD(code.short OR code.short2)
-            |CALL:   INC(count, 2); code.offset := count
-            |RELOC:  INC(count, 7 + ORD(code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS}))
-            END;
-
-            code := code.next(ANYCODE)
-        END;
-
-        code := CodeList.first(ANYCODE);
-        WHILE code # NIL DO
-
-            IF code IS JUMP THEN
-                jump := code(JUMP);
-                jump.diff := BIN.GetLabel(program, jump.label) - code.offset;
-                CASE jump OF
-                |JMP:
-                    IF ~jump.short & srange(jump.diff, 11) THEN
-                        jump.short := TRUE;
-                        shorted := TRUE
-                    END
-
-                |JCC:
-                    IF ~jump.short & srange(jump.diff, 11) THEN
-                        jump.short := TRUE;
-                        shorted := TRUE
-                    END;
-                    IF ~jump.short2 & srange(jump.diff, 8) THEN
-                        jump.short2 := TRUE;
-                        shorted := TRUE
-                    END
-
-                |CALL:
-
-                END
-            END;
-
-            code := code.next(ANYCODE)
-        END
-
-    UNTIL ~shorted;
-
-    code := CodeList.first(ANYCODE);
-    WHILE code # NIL DO
-
-        CASE code OF
-
-        |CODE:  BIN.PutCode16LE(program, code.code)
-
-        |LABEL:
-
-        |JMP:
-                IF code.short THEN
-                    BIN.PutCode16LE(program, genjmp(code.diff))
-                ELSE
-                    genlongjmp(code.diff, first, second);
-                    BIN.PutCode16LE(program, first);
-                    BIN.PutCode16LE(program, second)
-                END
-
-        |JCC:
-                IF code.short2 THEN
-                    BIN.PutCode16LE(program, genjcc(code.cond, code.diff))
-                ELSIF code.short THEN
-                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 0));
-                    BIN.PutCode16LE(program, genjmp(code.diff))
-                ELSE
-                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 1));
-                    genlongjmp(code.diff, first, second);
-                    BIN.PutCode16LE(program, first);
-                    BIN.PutCode16LE(program, second)
-                END
-
-        |CALL:
-                genlongjmp(code.diff, first, second);
-                BIN.PutCode16LE(program, first);
-                BIN.PutCode16LE(program, second)
-
-        |RELOC:
-
-        END;
-
-        code := code.next(ANYCODE)
-    END
-
-END fixup;
 
 
 PROCEDURE gen1 (op, imm, rs, rd: INTEGER);
@@ -497,30 +362,363 @@ BEGIN
 END CmpImm8;
 
 
+PROCEDURE Str32 (rs, rb: INTEGER);
+BEGIN
+    gen9(FALSE, FALSE, 0, rb, rs)
+END Str32;
+
+
+PROCEDURE Ldr32 (rd, rb: INTEGER);
+BEGIN
+    gen9(FALSE, TRUE, 0, rb, rd)
+END Ldr32;
+
+
+PROCEDURE Str8 (rs, rb: INTEGER);
+BEGIN
+    gen9(TRUE, FALSE, 0, rb, rs)
+END Str8;
+
+
+PROCEDURE Ldr8 (rd, rb: INTEGER);
+BEGIN
+    gen9(TRUE, TRUE, 0, rb, rd)
+END Ldr8;
+
+
+PROCEDURE Cmp (r1, r2: INTEGER);
+BEGIN
+    gen4(10, r2, r1)
+END Cmp;
+
+
+PROCEDURE Tst (r: INTEGER);
+BEGIN
+    gen4(8, r, r)
+END Tst;
+
+
+PROCEDURE MovImm32 (rd, imm32: INTEGER);
+BEGIN
+    MovImm8(rd, LSR(imm32, 24) MOD 256);
+    LslImm(rd, rd, 8);
+    AddImm8(rd, LSR(imm32, 16) MOD 256);
+    LslImm(rd, rd, 8);
+    AddImm8(rd, LSR(imm32, 8) MOD 256);
+    LslImm(rd, rd, 8);
+    AddImm8(rd, imm32 MOD 256)
+END MovImm32;
+
+
+PROCEDURE inv0 (cond: INTEGER): INTEGER;
+    RETURN ORD(BITS(cond) / {0})
+END inv0;
+
+
+PROCEDURE fixup (DataSize, BssSize: INTEGER);
+VAR
+    code:    ANYCODE;
+    count:   INTEGER;
+    shorted: BOOLEAN;
+    jump:    JUMP;
+
+    first, second: INTEGER;
+
+    CodeAdr, DataAdr, BssAdr: INTEGER;
+    reloc, i: INTEGER;
+
+    RelocCode: RELOCCODE;
+
+
+    PROCEDURE genjcc (cond, offset: INTEGER): INTEGER;
+    BEGIN
+        ASSERT(range(cond, 4));
+        ASSERT(srange(offset, 8))
+        RETURN 0D000H + cond * 256 + offset MOD 256
+    END genjcc;
+
+
+    PROCEDURE genjmp (offset: INTEGER): INTEGER;
+    BEGIN
+        ASSERT(srange(offset, 11))
+        RETURN 0E000H + offset MOD 2048
+    END genjmp;
+
+
+    PROCEDURE genlongjmp (offset: INTEGER; VAR first, second: INTEGER);
+    BEGIN
+        ASSERT(srange(offset, 22));
+        first  := 0F000H + ASR(offset, 11) MOD 2048;
+        second := 0F800H + offset MOD 2048
+    END genlongjmp;
+
+
+    PROCEDURE genmovimm32 (r, value: INTEGER; VAR code: RELOCCODE);
+    BEGIN
+        code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* mov r, #imm8 *)
+        code[1] := 0200H + r * 9;                           (* lsl r, r, #8 *)
+        code[2] := 3000H + r * 256 + UTILS.Byte(value, 2);  (* add r, #imm8 *)
+        code[3] := code[1];                                 (* lsl r, r, #8 *)
+        code[4] := 3000H + r * 256 + UTILS.Byte(value, 1);  (* add r, #imm8 *)
+        code[5] := code[1];                                 (* lsl r, r, #8 *)
+        code[6] := 3000H + r * 256 + UTILS.Byte(value, 0)   (* add r, #imm8 *)
+    END genmovimm32;
+
+
+BEGIN
+
+    REPEAT
+
+        shorted := FALSE;
+        count := 0;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+            code.offset := count;
+
+            CASE code OF
+            |CODE:   INC(count)
+            |LABEL:  BIN.SetLabel(program, code.label, count)
+            |JMP:    INC(count, ORD(~code.short) + 1); code.offset := count + ORD(code.short)
+            |JCC:    INC(count, ORD(~code.short) + ORD(~code.short2) + 1); code.offset := count + ORD(code.short OR code.short2)
+            |CALL:   INC(count, 2); code.offset := count
+            |RELOC:  INC(count, 7 + ORD(ODD(code.rel)))
+            END;
+
+            code := code.next(ANYCODE)
+        END;
+
+        code := CodeList.first(ANYCODE);
+        WHILE code # NIL DO
+
+            IF code IS JUMP THEN
+                jump := code(JUMP);
+                jump.diff := BIN.GetLabel(program, jump.label) - code.offset;
+                CASE jump OF
+                |JMP:
+                    IF ~jump.short & srange(jump.diff, 11) THEN
+                        jump.short := TRUE;
+                        shorted := TRUE
+                    END
+
+                |JCC:
+                    IF ~jump.short & srange(jump.diff, 11) THEN
+                        jump.short := TRUE;
+                        shorted := TRUE
+                    END;
+                    IF ~jump.short2 & srange(jump.diff, 8) THEN
+                        jump.short2 := TRUE;
+                        shorted := TRUE
+                    END
+
+                |CALL:
+
+                END
+            END;
+
+            code := code.next(ANYCODE)
+        END
+
+    UNTIL ~shorted;
+
+    CodeAdr := 0;
+    DataAdr := CodeAdr + count * 2;
+    ASSERT(UTILS.Align(DataAdr, FileAlignment));
+    BssAdr := DataAdr + DataSize;
+    ASSERT(UTILS.Align(BssAdr, FileAlignment));
+
+    code := CodeList.first(ANYCODE);
+    WHILE code # NIL DO
+
+        CASE code OF
+
+        |CODE:  BIN.PutCode16LE(program, code.code)
+
+        |LABEL:
+
+        |JMP:
+                IF code.short THEN
+                    BIN.PutCode16LE(program, genjmp(code.diff))
+                ELSE
+                    genlongjmp(code.diff, first, second);
+                    BIN.PutCode16LE(program, first);
+                    BIN.PutCode16LE(program, second)
+                END
+
+        |JCC:
+                IF code.short2 THEN
+                    BIN.PutCode16LE(program, genjcc(code.cond, code.diff))
+                ELSIF code.short THEN
+                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 0));
+                    BIN.PutCode16LE(program, genjmp(code.diff))
+                ELSE
+                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 1));
+                    genlongjmp(code.diff, first, second);
+                    BIN.PutCode16LE(program, first);
+                    BIN.PutCode16LE(program, second)
+                END
+
+        |CALL:
+                genlongjmp(code.diff, first, second);
+                BIN.PutCode16LE(program, first);
+                BIN.PutCode16LE(program, second)
+
+        |RELOC:
+                CASE code.rel OF
+                |BIN.RCODE: reloc := BIN.GetLabel(program, code.value) * 2 + CodeAdr
+                |BIN.RDATA: reloc := code.value + DataAdr;
+                |BIN.RBSS:  reloc := code.value + BssAdr
+                END;
+                genmovimm32(code.reg, reloc, RelocCode);
+                FOR i := 0 TO LEN(RelocCode) - 1 DO
+                    BIN.PutCode16LE(program, RelocCode[i])
+                END
+        END;
+
+        code := code.next(ANYCODE)
+    END
+
+END fixup;
+
+
 PROCEDURE push (r: INTEGER);
 BEGIN
+    gen14(FALSE, FALSE, {r})
 END push;
 
 
 PROCEDURE pop (r: INTEGER);
 BEGIN
+    gen14(TRUE, FALSE, {r})
 END pop;
 
 
 PROCEDURE mov (r1, r2: INTEGER);
 BEGIN
+    IF (r1 < 8) & (r2 < 8) THEN
+        LslImm(r1, r2, 0)
+    ELSE
+        gen5(2, r1 >= 8, r2 >= 8, r2 MOD 8, r1 MOD 8)
+    END
 END mov;
 
 
 PROCEDURE xchg (r1, r2: INTEGER);
 BEGIN
+    push(r1); push(r2);
+    pop(r1); pop(r2)
 END xchg;
 
 
-PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
+PROCEDURE drop;
+BEGIN
+    REG.Drop(R)
+END drop;
+
+
+PROCEDURE GetAnyReg (): INTEGER;
+    RETURN REG.GetAnyReg(R)
+END GetAnyReg;
+
+
+PROCEDURE UnOp (VAR r: INTEGER);
+BEGIN
+    REG.UnOp(R, r)
+END UnOp;
+
+
+PROCEDURE BinOp (VAR r1, r2: INTEGER);
+BEGIN
+    REG.BinOp(R, r1, r2)
+END BinOp;
+
+
+PROCEDURE PushAll (NumberOfParameters: INTEGER);
+BEGIN
+    REG.PushAll(R);
+    DEC(R.pushed, NumberOfParameters)
+END PushAll;
+
+
+PROCEDURE NewLabel (): INTEGER;
+BEGIN
+    BIN.NewLabel(program)
+    RETURN IL.NewLabel()
+END NewLabel;
+
+
+PROCEDURE cond (op: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    CASE op OF
+    |IL.opGT, IL.opGTC: res := jg
+    |IL.opGE, IL.opGEC: res := jge
+    |IL.opLT, IL.opLTC: res := jl
+    |IL.opLE, IL.opLEC: res := jle
+    |IL.opEQ, IL.opEQC: res := je
+    |IL.opNE, IL.opNEC: res := jne
+    END
+
+    RETURN res
+END cond;
+
+
+PROCEDURE GetRegA;
+BEGIN
+    ASSERT(REG.GetReg(R, R0))
+END GetRegA;
+
+
+PROCEDURE CallRTL (n: INTEGER);
+BEGIN
+    MovImm8(R0, n);
+    Emit(0DF00H)
+END CallRTL;
+
+
+PROCEDURE MovConst (r, c: INTEGER);
+BEGIN
+    MovImm32(r, c)
+END MovConst;
+
+
+PROCEDURE CmpConst (r, c: INTEGER);
+VAR
+    r2: INTEGER;
+
+BEGIN
+    r2 := GetAnyReg();
+    ASSERT(r2 # r);
+    MovConst(r2, c);
+    Cmp(r, r2);
+    drop
+END CmpConst;
+
+
+PROCEDURE SetCC (cc, r: INTEGER);
+VAR
+    L1, L2: INTEGER;
+
+BEGIN
+    L1 := NewLabel();
+    L2 := NewLabel();
+    jcc(cc, L1);
+    MovImm8(r, 0);
+    jmp(L2);
+    EmitLabel(L1);
+    MovImm8(r, 1);
+    EmitLabel(L2);
+END SetCC;
+
+
+PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
     cmd: COMMAND;
-    opcode, param1, param2: INTEGER;
+    opcode, param1, param2, cc, label: INTEGER;
+
+    r1, r2, r3: INTEGER;
 
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
@@ -541,15 +739,146 @@ BEGIN
             EmitLabel(param1)
 
         |IL.opPUSHC:
+            r1 := GetAnyReg();
+            MovConst(r1, param2);
+            push(r1);
+            drop
 
         |IL.opERR:
+            CallRTL(1)
 
         |IL.opNOP:
 
         |IL.opSADR_PARAM:
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RDATA + pic, stroffs + param2);
+            push(r1);
+            drop
+
+        |IL.opGADR_SAVEC:
+            r1 := GetAnyReg();
+            r2 := GetAnyReg();
+            reloc(r1, BIN.RBSS + pic, param1);
+            MovConst(r2, param2);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opGADR:
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RBSS + pic, param2)
+
+        |IL.opGLOAD32:
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RBSS + pic, param2);
+            Ldr32(r1, r1)
+
+        |IL.opGLOAD8:
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RBSS + pic, param2);
+            Ldr8(r1, r1)
+
+        |IL.opSBOOL:
+            BinOp(r2, r1);
+            Tst(r2);
+            SetCC(jne, r2);
+            Str8(r2, r1);
+            drop;
+            drop
+
+        |IL.opSBOOLC:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovImm8(r2, ORD(param2 # 0));
+            Str8(r2, r1);
+            drop;
+            drop
+
+        |IL.opDROP:
+            UnOp(r1);
+            drop
+
+        |IL.opJNZ:
+            UnOp(r1);
+            Tst(r1);
+            jcc(jne, param1)
+
+        |IL.opJZ:
+            UnOp(r1);
+            Tst(r1);
+            jcc(je, param1)
+
+        |IL.opJE:
+            UnOp(r1);
+            Tst(r1);
+            jcc(jne, param1);
+            drop
+
+        |IL.opJNE:
+            UnOp(r1);
+            Tst(r1);
+            jcc(je, param1);
+            drop
+
+        |IL.opEQ..IL.opGE,
+         IL.opEQC..IL.opGEC:
+
+            IF (IL.opEQ <= opcode) & (opcode <= IL.opGE) THEN
+                BinOp(r1, r2);
+                Cmp(r1, r2);
+                drop
+            ELSE
+                UnOp(r1);
+                IF param2 = 0 THEN
+                    Tst(r1)
+                ELSE
+                    CmpConst(r1, param2)
+                END
+            END;
+
+            drop;
+            cc := cond(opcode);
+
+            IF cmd.next(COMMAND).opcode = IL.opJE THEN
+                label := cmd.next(COMMAND).param1;
+                jcc(cc, label);
+                cmd := cmd.next(COMMAND)
+
+            ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
+                label := cmd.next(COMMAND).param1;
+                jcc(inv0(cc), label);
+                cmd := cmd.next(COMMAND)
+
+            ELSE
+                r1 := GetAnyReg();
+                SetCC(cc, r1)
+            END
+
+        |IL.opINCC:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            Ldr32(r2, r1);
+            IF ABS(param2) <= 255 THEN
+                IF param2 >= 0 THEN
+                    AddImm8(r2, param2)
+                ELSE
+                    SubImm8(r2, -param2)
+                END
+            ELSE
+                r3 := GetAnyReg();
+                MovConst(r3, param2);
+                AddReg(r2, r2, r3);
+                drop
+            END;
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opLOOP, IL.opENDLOOP:
 
         ELSE
-            C.IntLn(opcode)
+            C.IntLn(opcode);
+            ASSERT(FALSE)
         END;
 
         cmd := cmd.next(COMMAND)
@@ -567,6 +896,8 @@ VAR
 
     dcount, i: INTEGER;
 
+    File: WR.FILE;
+
 BEGIN
     tcount := CHL.Length(IL.codes.types);
 
@@ -579,7 +910,7 @@ BEGIN
 
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
 
-    translate(opt.pic, tcount * 4);
+    translate(ORD(opt.pic), tcount * 4);
 
     dcount := CHL.Length(IL.codes.data);
 
@@ -595,6 +926,13 @@ BEGIN
 
     fixup(CHL.Length(program.data), IL.codes.bss);
 
+    File := WR.Create(outname);
+
+    CHL.WriteToFile(File, program.code);
+    WR.Padding(File, FileAlignment);
+    CHL.WriteToFile(File, program.data);
+
+    WR.Close(File)
 END CodeGen;
 
 

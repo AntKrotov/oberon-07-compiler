@@ -1118,11 +1118,14 @@ BEGIN
         EnterProc(unit, "INF",    idSYSFUNC, sysINF);
     END;
 
+    IF TARGETS.CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
+        EnterProc(unit, "COPY",   idSYSPROC, sysCOPY)
+    END;
+
     IF TARGETS.BitDepth >= 32 THEN
         EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
         EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
         EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
-        EnterProc(unit, "COPY",   idSYSPROC, sysCOPY);
 
         ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
         ident.type := program.stTypes.tCARD32;

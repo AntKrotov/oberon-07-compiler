@@ -1258,7 +1258,13 @@ BEGIN
 
         |IL.opINCC:
             UnOp(reg1);
-            OutByte2(81H + short(param2), reg1); OutIntByte(param2); // add dword[reg1], param2
+            IF param2 = 1 THEN
+                OutByte2(0FFH, reg1) // inc dword[reg1]
+            ELSIF param2 = -1 THEN
+                OutByte2(0FFH, reg1 + 8) // dec dword[reg1]
+            ELSE
+                OutByte2(81H + short(param2), reg1); OutIntByte(param2) // add dword[reg1], param2
+            END;
             drop
 
         |IL.opINC, IL.opDEC:

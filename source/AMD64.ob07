@@ -370,6 +370,7 @@ VAR
 
 BEGIN
     reg2 := GetAnyReg();
+    ASSERT(reg2 # reg);
     movabs(reg2, n);
     oprr(reg, reg2);
     drop
@@ -1965,6 +1966,7 @@ BEGIN
                         IF isLong(a) THEN
                             reg2 := GetAnyReg();
                             movabs(reg2, a);
+                            ASSERT(reg1 # reg2);
                             oprr2(0FH, 0AFH, reg2, reg1); // imul reg1, reg2
                             drop
                         ELSE
