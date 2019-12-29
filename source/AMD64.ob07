@@ -74,25 +74,25 @@ END OutByte;
 
 PROCEDURE OutByte2 (a, b: BYTE);
 BEGIN
-    OutByte(a);
-    OutByte(b)
+    X86.OutByte(a);
+    X86.OutByte(b)
 END OutByte2;
 
 
 PROCEDURE OutByte3 (a, b, c: BYTE);
 BEGIN
-    OutByte(a);
-    OutByte(b);
-    OutByte(c)
+    X86.OutByte(a);
+    X86.OutByte(b);
+    X86.OutByte(c)
 END OutByte3;
 
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    OutByte(UTILS.Byte(n, 0));
-    OutByte(UTILS.Byte(n, 1));
-    OutByte(UTILS.Byte(n, 2));
-    OutByte(UTILS.Byte(n, 3))
+    X86.OutByte(n MOD 256);
+    X86.OutByte(UTILS.Byte(n, 1));
+    X86.OutByte(UTILS.Byte(n, 2));
+    X86.OutByte(UTILS.Byte(n, 3))
 END OutInt;
 
 
@@ -114,7 +114,7 @@ END long;
 PROCEDURE OutIntByte (n: INTEGER);
 BEGIN
     IF isByte(n) THEN
-        OutByte(UTILS.Byte(n, 0))
+        OutByte(n MOD 256)
     ELSE
         OutInt(n)
     END
@@ -2009,17 +2009,23 @@ BEGIN
         |IL.opENDSW:
 
         |IL.opCASEL:
-            cmprc(rax, param1);
-            jcc(jl, param2)
-
-        |IL.opCASER:
-            cmprc(rax, param1);
-            jcc(jg, param2)
-
-        |IL.opCASELR:
+            GetRegA;
             cmprc(rax, param1);
             jcc(jl, param2);
-            jcc(jg, cmd.param3)
+            drop
+
+        |IL.opCASER:
+            GetRegA;
+            cmprc(rax, param1);
+            jcc(jg, param2);
+            drop
+
+        |IL.opCASELR:
+            GetRegA;
+            cmprc(rax, param1);
+            jcc(jl, param2);
+            jcc(jg, cmd.param3);
+            drop
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             BinOp(reg1, reg2);
@@ -2638,7 +2644,9 @@ BEGIN
         pop(rax);
         test(rax);
         jcc(je, L);
+        GetRegA;
         addrc(rax, 1024 * 1024 * stack_size - 8);
+        drop;
         mov(rsp, rax);
         X86.SetLabel(L)
     END

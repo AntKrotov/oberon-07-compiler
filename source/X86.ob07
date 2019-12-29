@@ -93,16 +93,6 @@ VAR
     tcount: INTEGER;
 
 
-PROCEDURE Byte (n: INTEGER): BYTE;
-    RETURN UTILS.Byte(n, 0)
-END Byte;
-
-
-PROCEDURE Word (n: INTEGER): INTEGER;
-    RETURN UTILS.Byte(n, 0) + UTILS.Byte(n, 1) * 256
-END Word;
-
-
 PROCEDURE OutByte* (n: BYTE);
 VAR
     c: CODE;
@@ -127,7 +117,7 @@ END OutByte;
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    OutByte(UTILS.Byte(n, 0));
+    OutByte(n MOD 256);
     OutByte(UTILS.Byte(n, 1));
     OutByte(UTILS.Byte(n, 2));
     OutByte(UTILS.Byte(n, 3))
@@ -174,7 +164,7 @@ END long;
 PROCEDURE OutIntByte (n: INTEGER);
 BEGIN
     IF isByte(n) THEN
-        OutByte(Byte(n))
+        OutByte(n MOD 256)
     ELSE
         OutInt(n)
     END
@@ -508,7 +498,7 @@ BEGIN
         |JMP:
                 IF code.short THEN
                     BIN.PutCode(program, 0EBH);
-                    BIN.PutCode(program, Byte(code.diff))
+                    BIN.PutCode(program, code.diff MOD 256)
                 ELSE
                     BIN.PutCode(program, 0E9H);
                     BIN.PutCode32LE(program, code.diff)
@@ -517,7 +507,7 @@ BEGIN
         |JCC:
                 IF code.short THEN
                     BIN.PutCode(program, code.jmp - 16);
-                    BIN.PutCode(program, Byte(code.diff))
+                    BIN.PutCode(program, code.diff MOD 256)
                 ELSE
                     BIN.PutCode(program, 0FH);
                     BIN.PutCode(program, code.jmp);
@@ -707,7 +697,7 @@ BEGIN
             n := param2;
             IF n > 0 THEN
                 n := n * 4;
-                OutByte(0C2H); OutWord(Word(n)) // ret n
+                OutByte(0C2H); OutWord(n MOD 65536) // ret n
             ELSE
                 OutByte(0C3H) // ret
             END
@@ -778,12 +768,12 @@ BEGIN
 
         |IL.opSAVE8C:
             UnOp(reg1);
-            OutByte3(0C6H, reg1, Byte(param2));  // mov byte[reg1], param2
+            OutByte3(0C6H, reg1, param2 MOD 256);  // mov byte[reg1], param2
             drop
 
         |IL.opSAVE16C:
             UnOp(reg1);
-            OutByte3(66H, 0C7H, reg1); OutWord(Word(param2));  // mov word[reg1], param2
+            OutByte3(66H, 0C7H, reg1); OutWord(param2 MOD 65536);  // mov word[reg1], param2
             drop
 
         |IL.opVLOAD32:
@@ -1275,7 +1265,7 @@ BEGIN
 
         |IL.opINCCB, IL.opDECCB:
             UnOp(reg1);
-            OutByte3(80H, 28H * ORD(opcode = IL.opDECCB) + reg1, Byte(param2)); // add/sub byte[reg1], n
+            OutByte3(80H, 28H * ORD(opcode = IL.opDECCB) + reg1, param2 MOD 256); // add/sub byte[reg1], n
             drop
 
         |IL.opINCB, IL.opDECB:

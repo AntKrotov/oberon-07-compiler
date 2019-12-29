@@ -16,7 +16,9 @@ CONST
 
     SP = 13; LR = 14; PC = 15;
 
-    je = 0; jne = 1; jge = 10; jl = 11; jg = 12; jle = 13;
+    ACC = R0;
+
+    je = 0; jne = 1; jnb = 2; jb = 3; jge = 10; jl = 11; jg = 12; jle = 13;
 
     FileAlignment = 1000H;
 
@@ -362,6 +364,18 @@ BEGIN
 END CmpImm8;
 
 
+PROCEDURE Neg (r: INTEGER);
+BEGIN
+    gen4(9, r, r)
+END Neg;
+
+
+PROCEDURE Mul (rd, rs: INTEGER);
+BEGIN
+    gen4(13, rs, rd)
+END Mul;
+
+
 PROCEDURE Str32 (rs, rb: INTEGER);
 BEGIN
     gen9(FALSE, FALSE, 0, rb, rs)
@@ -372,6 +386,18 @@ PROCEDURE Ldr32 (rd, rb: INTEGER);
 BEGIN
     gen9(FALSE, TRUE, 0, rb, rd)
 END Ldr32;
+
+
+PROCEDURE Str16 (rs, rb: INTEGER);
+BEGIN
+    gen10(FALSE, 0, rb, rs)
+END Str16;
+
+
+PROCEDURE Ldr16 (rd, rb: INTEGER);
+BEGIN
+    gen10(TRUE, 0, rb, rd)
+END Ldr16;
 
 
 PROCEDURE Str8 (rs, rb: INTEGER);
@@ -667,13 +693,13 @@ END cond;
 
 PROCEDURE GetRegA;
 BEGIN
-    ASSERT(REG.GetReg(R, R0))
+    ASSERT(REG.GetReg(R, ACC))
 END GetRegA;
 
 
 PROCEDURE CallRTL (n: INTEGER);
 BEGIN
-    MovImm8(R0, n);
+    MovImm8(ACC, n);
     Emit(0DF00H)
 END CallRTL;
 
@@ -716,9 +742,11 @@ END SetCC;
 PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
     cmd: COMMAND;
-    opcode, param1, param2, cc, label: INTEGER;
+    opcode, param1, param2: INTEGER;
 
     r1, r2, r3: INTEGER;
+
+    a, n, cc, label: INTEGER;
 
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
@@ -773,9 +801,26 @@ BEGIN
             reloc(r1, BIN.RBSS + pic, param2);
             Ldr32(r1, r1)
 
+        |IL.opGLOAD16:
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RBSS + pic, param2);
+            Ldr16(r1, r1)
+
         |IL.opGLOAD8:
             r1 := GetAnyReg();
             reloc(r1, BIN.RBSS + pic, param2);
+            Ldr8(r1, r1)
+
+        |IL.opLOAD32:
+            UnOp(r1);
+            Ldr32(r1, r1)
+
+        |IL.opLOAD16:
+            UnOp(r1);
+            Ldr16(r1, r1)
+
+        |IL.opLOAD8:
+            UnOp(r1);
             Ldr8(r1, r1)
 
         |IL.opSBOOL:
@@ -793,6 +838,56 @@ BEGIN
             Str8(r2, r1);
             drop;
             drop
+
+        |IL.opSAVEC:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, param2);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVE16C:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, param2 MOD 65536);
+            Str16(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVE8C:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, param2 MOD 256);
+            Str8(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVE, IL.opSAVE32:
+            BinOp(r2, r1);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVE16:
+            BinOp(r2, r1);
+            Str16(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVE8:
+            BinOp(r2, r1);
+            Str8(r2, r1);
+            drop;
+            drop
+
+        |IL.opACC:
+            IF (R.top # 0) OR (R.stk[0] # ACC) THEN
+                PushAll(0);
+                GetRegA;
+                pop(ACC);
+                DEC(R.pushed)
+            END
 
         |IL.opDROP:
             UnOp(r1);
@@ -820,9 +915,46 @@ BEGIN
             jcc(je, param1);
             drop
 
+        |IL.opSWITCH:
+            UnOp(r1);
+            IF param2 = 0 THEN
+                r2 := ACC
+            ELSE
+                r2 := R1
+            END;
+            IF r1 # r2 THEN
+                ASSERT(REG.GetReg(R, r2));
+                ASSERT(REG.Exchange(R, r1, r2));
+                drop
+            END;
+            drop
+
+        |IL.opENDSW:
+
+        |IL.opCASEL:
+            GetRegA;
+            CmpConst(ACC, param1);
+            jcc(jl, param2);
+            drop
+
+        |IL.opCASER:
+            GetRegA;
+            CmpConst(ACC, param1);
+            jcc(jg, param2);
+            drop
+
+        |IL.opCASELR:
+            GetRegA;
+            CmpConst(ACC, param1);
+            jcc(jl, param2);
+            jcc(jg, cmd.param3);
+            drop
+
+        |IL.opCODE:
+            Emit(param2)
+
         |IL.opEQ..IL.opGE,
          IL.opEQC..IL.opGEC:
-
             IF (IL.opEQ <= opcode) & (opcode <= IL.opGE) THEN
                 BinOp(r1, r2);
                 Cmp(r1, r2);
@@ -873,6 +1005,103 @@ BEGIN
             Str32(r2, r1);
             drop;
             drop
+
+        |IL.opUMINUS:
+            UnOp(r1);
+            Neg(r1)
+
+        |IL.opADD:
+            BinOp(r1, r2);
+            AddReg(r1, r1, r2);
+            drop
+
+        |IL.opADDL, IL.opADDR:
+            IF param2 # 0 THEN
+                UnOp(r1);
+                IF ABS(param2) <= 255 THEN
+                    IF param2 > 0 THEN
+                        AddImm8(r1, param2)
+                    ELSE
+                        SubImm8(r1, -param2)
+                    END
+                ELSE
+                    r2 := GetAnyReg();
+                    MovConst(r2, param2);
+                    AddReg(r1, r1, r2);
+                    drop
+                END
+            END
+
+        |IL.opSUB:
+            BinOp(r1, r2);
+            SubReg(r1, r1, r2);
+            drop
+
+        |IL.opSUBL, IL.opSUBR:
+            IF param2 # 0 THEN
+                UnOp(r1);
+                IF ABS(param2) <= 255 THEN
+                    IF param2 > 0 THEN
+                        SubImm8(r1, param2)
+                    ELSE
+                        AddImm8(r1, -param2)
+                    END;
+                    IF opcode = IL.opSUBL THEN
+                        Neg(r1)
+                    END
+                ELSE
+                    r2 := GetAnyReg();
+                    MovConst(r2, param2);
+                    IF opcode = IL.opSUBL THEN
+                        SubReg(r1, r2, r1)
+                    ELSE
+                        SubReg(r1, r1, r2)
+                    END;
+                    drop
+                END
+            END
+
+        |IL.opMUL:
+            BinOp(r1, r2);
+            Mul(r1, r2);
+            drop
+
+        |IL.opMULC:
+            UnOp(r1);
+
+            a := param2;
+            IF a > 1 THEN
+                n := UTILS.Log2(a)
+            ELSIF a < -1 THEN
+                n := UTILS.Log2(-a)
+            ELSE
+                n := -1
+            END;
+
+            IF a = 1 THEN
+
+            ELSIF a = -1 THEN
+                Neg(r1)
+            ELSIF a = 0 THEN
+                MovImm8(r1, 0)
+            ELSE
+                IF n > 0 THEN
+                    IF a < 0 THEN
+                        Neg(r1)
+                    END;
+                    LslImm(r1, r1, n)
+                ELSE
+                    r2 := GetAnyReg();
+                    MovConst(r2, a);
+                    Mul(r1, r2);
+                    drop
+                END
+            END
+
+        |IL.opCHKIDX:
+            UnOp(r1);
+            CmpConst(r1, param2);
+            jcc(jb, param1)
 
         |IL.opLOOP, IL.opENDLOOP:
 
