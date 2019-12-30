@@ -632,6 +632,10 @@ BEGIN
         |IL.opPUSHC:
             PushImm(param2)
 
+        |IL.opONERR:
+            PushImm(param2);
+            EmitJmp(opJMP, param1)
+
         |IL.opLEAVEC:
             Pop(PC)
 

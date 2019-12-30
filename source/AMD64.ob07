@@ -391,7 +391,11 @@ END oprc;
 
 PROCEDURE cmprc (reg, n: INTEGER); // cmp reg, n
 BEGIN
-    oprc(0F8H, reg, n, cmprr)
+    IF n = 0 THEN
+        test(reg)
+    ELSE
+        oprc(0F8H, reg, n, cmprr)
+    END
 END cmprc;
 
 
@@ -990,6 +994,10 @@ BEGIN
         |IL.opERR:
             CallRTL(IL._error)
 
+        |IL.opONERR:
+            pushc(param2);
+            jmp(param1)
+
         |IL.opPUSHC:
             pushc(param2)
 
@@ -1385,11 +1393,7 @@ BEGIN
                 drop
             ELSE
                 UnOp(reg1);
-                IF param2 = 0 THEN
-                    test(reg1)
-                ELSE
-                    cmprc(reg1, param2)
-                END
+                cmprc(reg1, param2)
             END;
 
             drop;

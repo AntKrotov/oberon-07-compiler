@@ -589,7 +589,11 @@ BEGIN
     ELSE
         CASE TARGETS.BitDepth OF
         |16: call := PROG.default16
-        |32: call := PROG.default32
+        |32: IF TARGETS.target = TARGETS.Thumb THEN
+                 call := PROG.ccall
+             ELSE
+                 call := PROG.default32
+             END
         |64: call := PROG.default64
         END
     END;

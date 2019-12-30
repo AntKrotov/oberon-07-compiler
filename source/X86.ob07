@@ -290,8 +290,12 @@ END cmprr;
 
 PROCEDURE cmprc (reg, n: INTEGER);
 BEGIN
-    OutByte2(81H + short(n), 0F8H + reg);  // cmp reg, n
-    OutIntByte(n)
+    IF n = 0 THEN
+        test(reg)
+    ELSE
+        OutByte2(81H + short(n), 0F8H + reg);  // cmp reg, n
+        OutIntByte(n)
+    END
 END cmprc;
 
 
@@ -705,6 +709,10 @@ BEGIN
         |IL.opPUSHC:
             pushc(param2)
 
+        |IL.opONERR:
+            pushc(param2);
+            jmp(param1)
+
         |IL.opPARAM:
             n := param2;
             IF n = 1 THEN
@@ -1043,11 +1051,7 @@ BEGIN
                 drop
             ELSE
                 UnOp(reg1);
-                IF param2 = 0 THEN
-                    test(reg1)
-                ELSE
-                    cmprc(reg1, param2)
-                END
+                cmprc(reg1, param2)
             END;
 
             drop;

@@ -86,8 +86,10 @@ VAR
 
     program: BIN.PROGRAM;
 
+    StkCount: INTEGER;
 
-PROCEDURE Emit (code: INTEGER);
+
+PROCEDURE Code (code: INTEGER);
 VAR
     c: CODE;
 
@@ -95,10 +97,10 @@ BEGIN
     NEW(c);
     c.code := code;
     LISTS.push(CodeList, c)
-END Emit;
+END Code;
 
 
-PROCEDURE EmitLabel (label: INTEGER);
+PROCEDURE Label (label: INTEGER);
 VAR
     L: LABEL;
 
@@ -106,7 +108,7 @@ BEGIN
     NEW(L);
     L.label := label;
     LISTS.push(CodeList, L)
-END EmitLabel;
+END Label;
 
 
 PROCEDURE jcc (cond, label: INTEGER);
@@ -176,7 +178,7 @@ BEGIN
     ASSERT(range(imm, 5));
     ASSERT(range(rs, 3));
     ASSERT(range(rd, 3));
-    Emit(LSL(op, 11) + LSL(imm, 6) + LSL(rs, 3) + rd)
+    Code(LSL(op, 11) + LSL(imm, 6) + LSL(rs, 3) + rd)
 END gen1;
 
 
@@ -185,7 +187,7 @@ BEGIN
     ASSERT(range(imm, 3));
     ASSERT(range(rs, 3));
     ASSERT(range(rd, 3));
-    Emit(1800H + LSL(ORD(i), 10) + LSL(ORD(op), 9) + LSL(imm, 6) + LSL(rs, 3) + rd)
+    Code(1800H + LSL(ORD(i), 10) + LSL(ORD(op), 9) + LSL(imm, 6) + LSL(rs, 3) + rd)
 END gen2;
 
 
@@ -194,7 +196,7 @@ BEGIN
     ASSERT(range(op, 2));
     ASSERT(range(rd, 3));
     ASSERT(range(imm, 8));
-    Emit(2000H + LSL(op, 11) + LSL(rd, 8) + imm)
+    Code(2000H + LSL(op, 11) + LSL(rd, 8) + imm)
 END gen3;
 
 
@@ -203,7 +205,7 @@ BEGIN
     ASSERT(range(op, 4));
     ASSERT(range(rs, 3));
     ASSERT(range(rd, 3));
-    Emit(4000H + LSL(op, 6) + LSL(rs, 3) + rd)
+    Code(4000H + LSL(op, 6) + LSL(rs, 3) + rd)
 END gen4;
 
 
@@ -212,7 +214,7 @@ BEGIN
     ASSERT(range(op, 2));
     ASSERT(range(rs, 3));
     ASSERT(range(rd, 3));
-    Emit(4400H + LSL(op, 8) + LSL(ORD(h1), 7) + LSL(ORD(h2), 6) + LSL(rs, 3) + rd)
+    Code(4400H + LSL(op, 8) + LSL(ORD(h1), 7) + LSL(ORD(h2), 6) + LSL(rs, 3) + rd)
 END gen5;
 
 
@@ -220,7 +222,7 @@ PROCEDURE gen6 (rd, imm: INTEGER);
 BEGIN
     ASSERT(range(rd, 3));
     ASSERT(range(imm, 8));
-    Emit(4800H + LSL(rd, 8) + imm)
+    Code(4800H + LSL(rd, 8) + imm)
 END gen6;
 
 
@@ -229,7 +231,7 @@ BEGIN
     ASSERT(range(ro, 3));
     ASSERT(range(rb, 3));
     ASSERT(range(rd, 3));
-    Emit(5000H + LSL(ORD(l), 11) + LSL(ORD(b), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+    Code(5000H + LSL(ORD(l), 11) + LSL(ORD(b), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
 END gen7;
 
 
@@ -238,7 +240,7 @@ BEGIN
     ASSERT(range(ro, 3));
     ASSERT(range(rb, 3));
     ASSERT(range(rd, 3));
-    Emit(5200H + LSL(ORD(h), 11) + LSL(ORD(s), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+    Code(5200H + LSL(ORD(h), 11) + LSL(ORD(s), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
 END gen8;
 
 
@@ -247,7 +249,7 @@ BEGIN
     ASSERT(range(imm, 5));
     ASSERT(range(rb, 3));
     ASSERT(range(rd, 3));
-    Emit(6000H + LSL(ORD(b), 12) + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
+    Code(6000H + LSL(ORD(b), 12) + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
 END gen9;
 
 
@@ -256,7 +258,7 @@ BEGIN
     ASSERT(range(imm, 5));
     ASSERT(range(rb, 3));
     ASSERT(range(rd, 3));
-    Emit(8000H + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
+    Code(8000H + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
 END gen10;
 
 
@@ -264,7 +266,7 @@ PROCEDURE gen11 (l: BOOLEAN; rd, imm: INTEGER);
 BEGIN
     ASSERT(range(rd, 3));
     ASSERT(range(imm, 8));
-    Emit(9000H + LSL(ORD(l), 11) + LSL(rd, 8) + imm)
+    Code(9000H + LSL(ORD(l), 11) + LSL(rd, 8) + imm)
 END gen11;
 
 
@@ -272,21 +274,38 @@ PROCEDURE gen12 (sp: BOOLEAN; rd, imm: INTEGER);
 BEGIN
     ASSERT(range(rd, 3));
     ASSERT(range(imm, 8));
-    Emit(0A000H + LSL(ORD(sp), 11) + LSL(rd, 8) + imm)
+    Code(0A000H + LSL(ORD(sp), 11) + LSL(rd, 8) + imm)
 END gen12;
 
 
 PROCEDURE gen13 (imm: INTEGER);
 BEGIN
     ASSERT(range(imm, 7));
-    Emit(0B000H + imm)
+    Code(0B000H + imm)
 END gen13;
 
 
 PROCEDURE gen14 (l, r: BOOLEAN; rlist: SET);
+VAR
+    i, n: INTEGER;
+
 BEGIN
     ASSERT(range(ORD(rlist), 8));
-    Emit(0B400H + LSL(ORD(l), 11) + LSL(ORD(r), 8) + ORD(rlist))
+
+    n := ORD(r);
+    FOR i := 0 TO 7 DO
+        IF i IN rlist THEN
+            INC(n)
+        END
+    END;
+
+    IF l THEN
+        n := -n
+    END;
+
+    INC(StkCount, n);
+
+    Code(0B400H + LSL(ORD(l), 11) + LSL(ORD(r), 8) + ORD(rlist))
 END gen14;
 
 
@@ -294,7 +313,7 @@ PROCEDURE gen15 (l: BOOLEAN; rb: INTEGER; rlist: SET);
 BEGIN
     ASSERT(range(rb, 3));
     ASSERT(range(ORD(rlist), 8));
-    Emit(0C000H + LSL(ORD(l), 11) + LSL(rb, 8) + ORD(rlist))
+    Code(0C000H + LSL(ORD(l), 11) + LSL(rb, 8) + ORD(rlist))
 END gen15;
 
 
@@ -491,6 +510,12 @@ VAR
     END genmovimm32;
 
 
+    PROCEDURE PutCode (code: INTEGER);
+    BEGIN
+        BIN.PutCode16LE(program, code)
+    END PutCode;
+
+
 BEGIN
 
     REPEAT
@@ -564,30 +589,30 @@ BEGIN
 
         |JMP:
                 IF code.short THEN
-                    BIN.PutCode16LE(program, genjmp(code.diff))
+                    PutCode(genjmp(code.diff))
                 ELSE
                     genlongjmp(code.diff, first, second);
-                    BIN.PutCode16LE(program, first);
-                    BIN.PutCode16LE(program, second)
+                    PutCode(first);
+                    PutCode(second)
                 END
 
         |JCC:
                 IF code.short2 THEN
-                    BIN.PutCode16LE(program, genjcc(code.cond, code.diff))
+                    PutCode(genjcc(code.cond, code.diff))
                 ELSIF code.short THEN
-                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 0));
-                    BIN.PutCode16LE(program, genjmp(code.diff))
+                    PutCode(genjcc(inv0(code.cond), 0));
+                    PutCode(genjmp(code.diff))
                 ELSE
-                    BIN.PutCode16LE(program, genjcc(inv0(code.cond), 1));
+                    PutCode(genjcc(inv0(code.cond), 1));
                     genlongjmp(code.diff, first, second);
-                    BIN.PutCode16LE(program, first);
-                    BIN.PutCode16LE(program, second)
+                    PutCode(first);
+                    PutCode(second)
                 END
 
         |CALL:
                 genlongjmp(code.diff, first, second);
-                BIN.PutCode16LE(program, first);
-                BIN.PutCode16LE(program, second)
+                PutCode(first);
+                PutCode(second)
 
         |RELOC:
                 CASE code.rel OF
@@ -597,7 +622,7 @@ BEGIN
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
                 FOR i := 0 TO LEN(RelocCode) - 1 DO
-                    BIN.PutCode16LE(program, RelocCode[i])
+                    PutCode(RelocCode[i])
                 END
         END;
 
@@ -700,13 +725,17 @@ END GetRegA;
 PROCEDURE CallRTL (n: INTEGER);
 BEGIN
     MovImm8(ACC, n);
-    Emit(0DF00H)
+    Code(0DF00H)
 END CallRTL;
 
 
 PROCEDURE MovConst (r, c: INTEGER);
 BEGIN
-    MovImm32(r, c)
+    IF range(c, 8) THEN
+        MovImm8(r, c)
+    ELSE
+        MovImm32(r, c)
+    END
 END MovConst;
 
 
@@ -715,12 +744,21 @@ VAR
     r2: INTEGER;
 
 BEGIN
-    r2 := GetAnyReg();
-    ASSERT(r2 # r);
-    MovConst(r2, c);
-    Cmp(r, r2);
-    drop
+    IF c = 0 THEN
+        Tst(r)
+    ELSE
+        r2 := GetAnyReg();
+        ASSERT(r2 # r);
+        MovConst(r2, c);
+        Cmp(r, r2);
+        drop
+    END
 END CmpConst;
+
+
+PROCEDURE LocalOffset (offset: INTEGER): INTEGER;
+    RETURN (offset + StkCount - ORD(offset > 0)) * 4
+END LocalOffset;
 
 
 PROCEDURE SetCC (cc, r: INTEGER);
@@ -731,12 +769,76 @@ BEGIN
     L1 := NewLabel();
     L2 := NewLabel();
     jcc(cc, L1);
-    MovImm8(r, 0);
+    MovConst(r, 0);
     jmp(L2);
-    EmitLabel(L1);
-    MovImm8(r, 1);
-    EmitLabel(L2);
+    Label(L1);
+    MovConst(r, 1);
+    Label(L2);
 END SetCC;
+
+
+PROCEDURE PushConst (n: INTEGER);
+VAR
+    r: INTEGER;
+
+BEGIN
+    r := GetAnyReg();
+    MovConst(r, n);
+    push(r);
+    drop
+END PushConst;
+
+
+PROCEDURE AddConst (r, n: INTEGER);
+VAR
+    r2: INTEGER;
+
+BEGIN
+    IF n # 0 THEN
+        IF ABS(n) <= 255 THEN
+            IF n >= 0 THEN
+                AddImm8(r, n)
+            ELSE
+                SubImm8(r, -n)
+            END
+        ELSE
+            r2 := GetAnyReg();
+            ASSERT(r2 # r);
+            MovConst(r2, n);
+            AddReg(r, r, r2);
+            drop
+        END
+    END
+END AddConst;
+
+
+PROCEDURE AddHH (r1, r2: INTEGER);
+BEGIN
+    ASSERT((r1 >= 8) OR (r2 >= 8));
+    gen5(0, r1 >= 8, r2 >= 8, r2 MOD 8, r1 MOD 8)
+END AddHH;
+
+
+PROCEDURE AddSP (n: INTEGER);
+BEGIN
+    IF n > 0 THEN
+        ASSERT(R1 IN R.regs);
+        MovConst(R1, n * 4);
+        AddHH(SP, R1);
+        DEC(StkCount, n)
+    END
+END AddSP;
+
+
+PROCEDURE LocAdr (offs: INTEGER);
+VAR
+    r1: INTEGER;
+
+BEGIN
+    r1 := GetAnyReg();
+    MovConst(r1, LocalOffset(offs));
+    AddHH(r1, SP)
+END LocAdr;
 
 
 PROCEDURE translate (pic, stroffs: INTEGER);
@@ -744,9 +846,9 @@ VAR
     cmd: COMMAND;
     opcode, param1, param2: INTEGER;
 
-    r1, r2, r3: INTEGER;
+    r1, r2: INTEGER;
 
-    a, n, cc, label: INTEGER;
+    a, n, cc, L: INTEGER;
 
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
@@ -755,7 +857,6 @@ BEGIN
 
         param1 := cmd.param1;
         param2 := cmd.param2;
-
         opcode := cmd.opcode;
 
         CASE opcode OF
@@ -764,13 +865,82 @@ BEGIN
             jmp(param1)
 
         |IL.opLABEL:
-            EmitLabel(param1)
+            Label(param1)
 
-        |IL.opPUSHC:
-            r1 := GetAnyReg();
-            MovConst(r1, param2);
-            push(r1);
-            drop
+        |IL.opCALL:
+            call(param1)
+
+        |IL.opENTER:
+            ASSERT(R.top = -1);
+
+            Label(param1);
+
+            gen14(FALSE, TRUE, {}); (* push LR *)
+
+            n := param2;
+            IF n >= 5 THEN
+                MovConst(ACC, 0);
+                MovConst(R1, n);
+                L := NewLabel();
+                Label(L);
+                push(ACC);
+                SubImm8(R1, 1);
+                Tst(R1);
+                jcc(jne, L)
+            ELSIF n > 0 THEN
+                MovConst(ACC, 0);
+                WHILE n > 0 DO
+                    push(ACC);
+                    DEC(n)
+                END
+            END;
+            StkCount := param2
+
+        |IL.opLEAVE, IL.opLEAVER, IL.opLEAVEF:
+            IF opcode # IL.opLEAVE THEN
+                UnOp(r1);
+                IF r1 # ACC THEN
+                    GetRegA;
+                    ASSERT(REG.Exchange(R, r1, ACC));
+                    drop
+                END;
+                drop
+            END;
+
+            ASSERT(R.top = -1);
+
+            AddSP(StkCount);
+            pop(R1);
+            mov(PC, R1)
+
+        |IL.opPRECALL:
+            PushAll(0)
+
+        |IL.opPARAM:
+            n := param2;
+            IF n = 1 THEN
+                UnOp(r1);
+                push(r1);
+                drop
+            ELSE
+                ASSERT(R.top + 1 <= n);
+                PushAll(n)
+            END
+
+        |IL.opCLEANUP:
+            AddSP(param2)
+
+        |IL.opRES:
+            ASSERT(R.top = -1);
+            GetRegA
+
+        |IL.opPUSHC, IL.opCONST_PARAM:
+            PushConst(param2)
+
+        |IL.opONERR:
+            PushConst(param2);
+            DEC(StkCount);
+            jmp(param1)
 
         |IL.opERR:
             CallRTL(1)
@@ -785,8 +955,8 @@ BEGIN
 
         |IL.opGADR_SAVEC:
             r1 := GetAnyReg();
-            r2 := GetAnyReg();
             reloc(r1, BIN.RBSS + pic, param1);
+            r2 := GetAnyReg();
             MovConst(r2, param2);
             Str32(r2, r1);
             drop;
@@ -811,6 +981,18 @@ BEGIN
             reloc(r1, BIN.RBSS + pic, param2);
             Ldr8(r1, r1)
 
+        |IL.opLLOAD32:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr32(r1, r1)
+
+        |IL.opLLOAD32_PARAM:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr32(r1, r1);
+            push(r1);
+            drop
+
         |IL.opLOAD32:
             UnOp(r1);
             Ldr32(r1, r1)
@@ -834,7 +1016,7 @@ BEGIN
         |IL.opSBOOLC:
             UnOp(r1);
             r2 := GetAnyReg();
-            MovImm8(r2, ORD(param2 # 0));
+            MovConst(r2, ORD(param2 # 0));
             Str8(r2, r1);
             drop;
             drop
@@ -951,7 +1133,7 @@ BEGIN
             drop
 
         |IL.opCODE:
-            Emit(param2)
+            Code(param2)
 
         |IL.opEQ..IL.opGE,
          IL.opEQC..IL.opGEC:
@@ -961,24 +1143,18 @@ BEGIN
                 drop
             ELSE
                 UnOp(r1);
-                IF param2 = 0 THEN
-                    Tst(r1)
-                ELSE
-                    CmpConst(r1, param2)
-                END
+                CmpConst(r1, param2)
             END;
 
             drop;
             cc := cond(opcode);
 
             IF cmd.next(COMMAND).opcode = IL.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
+                jcc(cc, cmd.next(COMMAND).param1);
                 cmd := cmd.next(COMMAND)
 
             ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(inv0(cc), label);
+                jcc(inv0(cc), cmd.next(COMMAND).param1);
                 cmd := cmd.next(COMMAND)
 
             ELSE
@@ -990,18 +1166,7 @@ BEGIN
             UnOp(r1);
             r2 := GetAnyReg();
             Ldr32(r2, r1);
-            IF ABS(param2) <= 255 THEN
-                IF param2 >= 0 THEN
-                    AddImm8(r2, param2)
-                ELSE
-                    SubImm8(r2, -param2)
-                END
-            ELSE
-                r3 := GetAnyReg();
-                MovConst(r3, param2);
-                AddReg(r2, r2, r3);
-                drop
-            END;
+            AddConst(r2, param2);
             Str32(r2, r1);
             drop;
             drop
@@ -1016,21 +1181,8 @@ BEGIN
             drop
 
         |IL.opADDL, IL.opADDR:
-            IF param2 # 0 THEN
-                UnOp(r1);
-                IF ABS(param2) <= 255 THEN
-                    IF param2 > 0 THEN
-                        AddImm8(r1, param2)
-                    ELSE
-                        SubImm8(r1, -param2)
-                    END
-                ELSE
-                    r2 := GetAnyReg();
-                    MovConst(r2, param2);
-                    AddReg(r1, r1, r2);
-                    drop
-                END
-            END
+            UnOp(r1);
+            AddConst(r1, param2)
 
         |IL.opSUB:
             BinOp(r1, r2);
@@ -1083,7 +1235,7 @@ BEGIN
             ELSIF a = -1 THEN
                 Neg(r1)
             ELSIF a = 0 THEN
-                MovImm8(r1, 0)
+                MovConst(r1, 0)
             ELSE
                 IF n > 0 THEN
                     IF a < 0 THEN
@@ -1098,10 +1250,44 @@ BEGIN
                 END
             END
 
+        |IL.opABS:
+            UnOp(r1);
+            Tst(r1);
+            L := NewLabel();
+            jcc(jge, L);
+            Neg(r1);
+            Label(L)
+
         |IL.opCHKIDX:
             UnOp(r1);
             CmpConst(r1, param2);
             jcc(jb, param1)
+
+        |IL.opLADR_SAVEC:
+            LocAdr(param1);
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, param2);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opLADR_SAVE:
+            LocAdr(param2);
+            BinOp(r2, r1);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opLADR_INCC:
+            LocAdr(param1);
+            UnOp(r1);
+            r2 := GetAnyReg();
+            Ldr32(r2, r1);
+            AddConst(r2, param2);
+            Str32(r2, r1);
+            drop;
+            drop
 
         |IL.opLOOP, IL.opENDLOOP:
 
@@ -1115,7 +1301,6 @@ BEGIN
 
     ASSERT(R.pushed = 0);
     ASSERT(R.top = -1)
-
 END translate;
 
 
@@ -1138,6 +1323,8 @@ BEGIN
     opt.pic := FALSE;
 
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
+
+    StkCount := 0;
 
     translate(ORD(opt.pic), tcount * 4);
 
