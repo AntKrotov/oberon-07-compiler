@@ -830,6 +830,26 @@ BEGIN
 END AddSP;
 
 
+PROCEDURE Shift (op, r1, r2: INTEGER);
+VAR
+    L: INTEGER;
+
+BEGIN
+    LslImm(r2, r2, 27);
+    LsrImm(r2, r2, 27);
+    Tst(r2);
+    L := NewLabel();
+    jcc(je, L);
+    CASE op OF
+    |IL.opLSL, IL.opLSL1: gen4(2, r2, r1)
+    |IL.opLSR, IL.opLSR1: gen4(3, r2, r1)
+    |IL.opASR, IL.opASR1: gen4(4, r2, r1)
+    |IL.opROR, IL.opROR1: gen4(7, r2, r1)
+    END;
+    Label(L)
+END Shift;
+
+
 PROCEDURE LocAdr (offs: INTEGER);
 VAR
     r1: INTEGER;
@@ -869,6 +889,13 @@ BEGIN
 
         |IL.opCALL:
             call(param1)
+
+        |IL.opCALLP:
+            UnOp(r1);
+            mov(LR, PC);
+            mov(PC, r1);
+            drop;
+            ASSERT(R.top = -1)
 
         |IL.opENTER:
             ASSERT(R.top = -1);
@@ -912,6 +939,9 @@ BEGIN
             AddSP(StkCount);
             pop(R1);
             mov(PC, R1)
+
+        |IL.opLEAVEC:
+            mov(PC, LR)
 
         |IL.opPRECALL:
             PushAll(0)
@@ -963,8 +993,10 @@ BEGIN
             drop
 
         |IL.opGADR:
-            r1 := GetAnyReg();
-            reloc(r1, BIN.RBSS + pic, param2)
+            reloc(GetAnyReg(), BIN.RBSS + pic, param2)
+
+        |IL.opLADR:
+            LocAdr(param2)
 
         |IL.opGLOAD32:
             r1 := GetAnyReg();
@@ -981,10 +1013,20 @@ BEGIN
             reloc(r1, BIN.RBSS + pic, param2);
             Ldr8(r1, r1)
 
-        |IL.opLLOAD32:
+        |IL.opLLOAD32, IL.opVADR:
             LocAdr(param2);
             UnOp(r1);
             Ldr32(r1, r1)
+
+        |IL.opLLOAD16:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr16(r1, r1)
+
+        |IL.opLLOAD8:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr8(r1, r1)
 
         |IL.opLLOAD32_PARAM:
             LocAdr(param2);
@@ -1062,6 +1104,40 @@ BEGIN
             Str8(r2, r1);
             drop;
             drop
+
+        |IL.opSAVEP:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            reloc(r2, BIN.RCODE + pic, param2);
+            Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opPUSHP:
+            reloc(GetAnyReg(), BIN.RCODE + pic, param2)
+
+        |IL.opEQB, IL.opNEB:
+            BinOp(r1, r2);
+            drop;
+
+            Tst(r1);
+            L := NewLabel();
+            jcc(je, L);
+            MovConst(r1, 1);
+            Label(L);
+
+            Tst(r2);
+            L := NewLabel();
+            jcc(je, L);
+            MovConst(r2, 1);
+            Label(L);
+
+            Cmp(r1, r2);
+            IF opcode = IL.opEQB THEN
+                SetCC(je, r1)
+            ELSE
+                SetCC(jne, r1)
+            END
 
         |IL.opACC:
             IF (R.top # 0) OR (R.stk[0] # ACC) THEN
@@ -1258,10 +1334,90 @@ BEGIN
             Neg(r1);
             Label(L)
 
+        |IL.opNOT:
+            UnOp(r1);
+            Tst(r1);
+            SetCC(je, r1)
+
+        |IL.opORD:
+            UnOp(r1);
+            Tst(r1);
+            SetCC(jne, r1)
+
+        |IL.opODD:
+            UnOp(r1);
+            LslImm(r1, r1, 31);
+            LsrImm(r1, r1, 31)
+
+        |IL.opCHR:
+            UnOp(r1);
+            LslImm(r1, r1, 24);
+            LsrImm(r1, r1, 24)
+
+        |IL.opWCHR:
+            UnOp(r1);
+            LslImm(r1, r1, 16);
+            LsrImm(r1, r1, 16)
+
+        |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
+            BinOp(r1, r2);
+            Shift(opcode, r1, r2);
+            drop
+
+        |IL.opASR1, IL.opROR1, IL.opLSL1, IL.opLSR1:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r2, r1);
+            Shift(opcode, r1, r2);
+            INCL(R.regs, r2);
+            DEC(R.top);
+            R.stk[R.top] := r1
+
+        |IL.opASR2, IL.opROR2, IL.opLSL2, IL.opLSR2:
+            n := param2 MOD 32;
+            IF n # 0 THEN
+                UnOp(r1);
+                CASE opcode OF
+                |IL.opASR2: AsrImm(r1, r1, n)
+                |IL.opROR2: r2 := GetAnyReg(); MovConst(r2, n); Shift(IL.opROR, r1, r2); drop
+                |IL.opLSL2: LslImm(r1, r1, n)
+                |IL.opLSR2: LsrImm(r1, r1, n)
+                END
+            END
+
+        |IL.opCHKBYTE:
+            BinOp(r1, r2);
+            CmpConst(r1, 256);
+            jcc(jb, param1)
+
         |IL.opCHKIDX:
             UnOp(r1);
             CmpConst(r1, param2);
             jcc(jb, param1)
+
+        |IL.opCHKIDX2:
+            BinOp(r1, r2);
+            IF param2 # -1 THEN
+                Cmp(r2, r1);
+                jcc(jb, param1)
+            END;
+            INCL(R.regs, r1);
+            DEC(R.top);
+            R.stk[R.top] := r2
+
+        |IL.opLEN:
+            n := param2;
+            UnOp(r1);
+            drop;
+            EXCL(R.regs, r1);
+
+            WHILE n > 0 DO
+                UnOp(r2);
+                drop;
+                DEC(n)
+            END;
+
+            INCL(R.regs, r1);
+            ASSERT(REG.GetReg(R, r1))
 
         |IL.opLADR_SAVEC:
             LocAdr(param1);

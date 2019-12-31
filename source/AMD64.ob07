@@ -2084,14 +2084,11 @@ BEGIN
             BinOp(reg1, reg2);
             IF param2 # -1 THEN
                 cmprr(reg2, reg1);
-                mov(reg1, reg2);
-                drop;
-                jcc(jb, param1)
-            ELSE
-                INCL(R.regs, reg1);
-                DEC(R.top);
-                R.stk[R.top] := reg2
-            END
+                jcc(jb, param1);
+            END;
+            INCL(R.regs, reg1);
+            DEC(R.top);
+            R.stk[R.top] := reg2
 
         |IL.opLENGTH:
             PushAll(2);

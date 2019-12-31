@@ -963,9 +963,9 @@ VAR
                 ConstExpression(parser, code);
                 check(code.typ = ARITH.tINTEGER, pos2, 43);
                 IF TARGETS.CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
-                    check(ARITH.range(code, 0, 255), pos, 42)
+                    check(ARITH.range(code, 0, 255), pos2, 42)
                 ELSIF TARGETS.CPU = TARGETS.cpuTHUMB THEN
-                    check(ARITH.range(code, 0, 65535), pos, 110)
+                    check(ARITH.range(code, 0, 65535), pos2, 110)
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
                 comma := parser.sym = SCAN.lxCOMMA;
