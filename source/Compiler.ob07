@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -158,7 +158,7 @@ BEGIN
     C.Ln;
     C.String("Akron Oberon Compiler v"); C.Int(UTILS.vMajor); C.String("."); C.Int2(UTILS.vMinor);
         C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit)");
-    C.StringLn("Copyright (c) 2018-2019, Anton Krotov");
+    C.StringLn("Copyright (c) 2018-2020, Anton Krotov");
 
     IF inname = "" THEN
         C.Ln;

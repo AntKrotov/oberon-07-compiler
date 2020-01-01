@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -1380,35 +1380,20 @@ BEGIN
                 OutByte(n)
             END
 
-        |IL.opMIN:
+        |IL.opMAX, IL.opMIN:
             BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            OutByte2(07EH, 002H);  // jle @f
-            mov(reg1, reg2);       // mov reg1, reg2
-                                   // @@:
+            OutByte2(07DH + ORD(opcode = IL.opMIN), 2);  // jge/jle L
+            mov(reg1, reg2);
+            // L:
             drop
 
-        |IL.opMAX:
-            BinOp(reg1, reg2);
-            cmprr(reg1, reg2);
-            OutByte2(07DH, 002H);  // jge @f
-            mov(reg1, reg2);       // mov reg1, reg2
-                                   // @@:
-            drop
-
-        |IL.opMINC:
+        |IL.opMAXC, IL.opMINC:
             UnOp(reg1);
             cmprc(reg1, param2);
-            OutByte2(07EH, 005H);    // jle @f
-            movrc(reg1, param2)      // mov reg1, param2
-                                     // @@:
-
-        |IL.opMAXC:
-            UnOp(reg1);
-            cmprc(reg1, param2);
-            OutByte2(07DH, 005H);    // jge @f
-            movrc(reg1, param2)      // mov reg1, param2
-                                     // @@:
+            OutByte2(07DH + ORD(opcode = IL.opMINC), 5);  // jge/jle L
+            movrc(reg1, param2)
+            // L:
 
         |IL.opIN:
             label := NewLabel();

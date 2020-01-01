@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -3293,12 +3293,7 @@ BEGIN
     CaseVariants := LISTS.create(NIL);
     LISTS.push(CaseVariants, NewVariant(0, NIL));
 
-    CASE CPU OF
-    |TARGETS.cpuAMD64:  IL.init(6, IL.little_endian)
-    |TARGETS.cpuX86:    IL.init(8, IL.little_endian)
-    |TARGETS.cpuMSP430: IL.init(0, IL.little_endian)
-    |TARGETS.cpuTHUMB:  IL.init(0, IL.little_endian)
-    END;
+    IL.init(CPU);
 
     IF CPU # TARGETS.cpuMSP430 THEN
         parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);

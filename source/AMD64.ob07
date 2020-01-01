@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -1732,35 +1732,24 @@ BEGIN
             drop;
             drop
 
-        |IL.opMIN:
+        |IL.opMAX, IL.opMIN:
             BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            OutByte2(7EH, 3); // jle L
+            OutByte2(7DH + ORD(opcode = IL.opMIN), 3);  // jge/jle L
             mov(reg1, reg2);
             // L:
             drop
 
-        |IL.opMAX:
-            BinOp(reg1, reg2);
-            cmprr(reg1, reg2);
-            OutByte2(7DH, 3);  // jge L
-            mov(reg1, reg2);
-            // L:
-            drop
-
-        |IL.opMINC:
+        |IL.opMAXC, IL.opMINC:
             UnOp(reg1);
             cmprc(reg1, param2);
             label := NewLabel();
-            jcc(jle, label);
-            movrc(reg1, param2);
-            X86.SetLabel(label)
-
-        |IL.opMAXC:
-            UnOp(reg1);
-            cmprc(reg1, param2);
-            label := NewLabel();
-            jcc(jge, label);
+            IF opcode = IL.opMINC THEN
+                cc := jle
+            ELSE
+                cc := jge
+            END;
+            jcc(cc, label);
             movrc(reg1, param2);
             X86.SetLabel(label)
 

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -21,6 +21,8 @@ CONST
     je = 0; jne = 1; jnb = 2; jb = 3; jge = 10; jl = 11; jg = 12; jle = 13;
 
     FileAlignment = 1000H;
+
+    inf = 7F800000H;
 
 
 TYPE
@@ -218,32 +220,6 @@ BEGIN
 END gen5;
 
 
-PROCEDURE gen6 (rd, imm: INTEGER);
-BEGIN
-    ASSERT(range(rd, 3));
-    ASSERT(range(imm, 8));
-    Code(4800H + LSL(rd, 8) + imm)
-END gen6;
-
-
-PROCEDURE gen7 (l, b: BOOLEAN; ro, rb, rd: INTEGER);
-BEGIN
-    ASSERT(range(ro, 3));
-    ASSERT(range(rb, 3));
-    ASSERT(range(rd, 3));
-    Code(5000H + LSL(ORD(l), 11) + LSL(ORD(b), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
-END gen7;
-
-
-PROCEDURE gen8 (h, s: BOOLEAN; ro, rb, rd: INTEGER);
-BEGIN
-    ASSERT(range(ro, 3));
-    ASSERT(range(rb, 3));
-    ASSERT(range(rd, 3));
-    Code(5200H + LSL(ORD(h), 11) + LSL(ORD(s), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
-END gen8;
-
-
 PROCEDURE gen9 (b, l: BOOLEAN; imm, rb, rd: INTEGER);
 BEGIN
     ASSERT(range(imm, 5));
@@ -260,29 +236,6 @@ BEGIN
     ASSERT(range(rd, 3));
     Code(8000H + LSL(ORD(l), 11) + LSL(imm, 6) + LSL(rb, 3) + rd)
 END gen10;
-
-
-PROCEDURE gen11 (l: BOOLEAN; rd, imm: INTEGER);
-BEGIN
-    ASSERT(range(rd, 3));
-    ASSERT(range(imm, 8));
-    Code(9000H + LSL(ORD(l), 11) + LSL(rd, 8) + imm)
-END gen11;
-
-
-PROCEDURE gen12 (sp: BOOLEAN; rd, imm: INTEGER);
-BEGIN
-    ASSERT(range(rd, 3));
-    ASSERT(range(imm, 8));
-    Code(0A000H + LSL(ORD(sp), 11) + LSL(rd, 8) + imm)
-END gen12;
-
-
-PROCEDURE gen13 (imm: INTEGER);
-BEGIN
-    ASSERT(range(imm, 7));
-    Code(0B000H + imm)
-END gen13;
 
 
 PROCEDURE gen14 (l, r: BOOLEAN; rlist: SET);
@@ -309,42 +262,22 @@ BEGIN
 END gen14;
 
 
-PROCEDURE gen15 (l: BOOLEAN; rb: INTEGER; rlist: SET);
+PROCEDURE LslImm (r, imm5: INTEGER);
 BEGIN
-    ASSERT(range(rb, 3));
-    ASSERT(range(ORD(rlist), 8));
-    Code(0C000H + LSL(ORD(l), 11) + LSL(rb, 8) + ORD(rlist))
-END gen15;
-
-
-PROCEDURE LslImm (rd, rs, imm5: INTEGER);
-BEGIN
-    gen1(0, imm5, rs, rd)
+    gen1(0, imm5, r, r)
 END LslImm;
 
 
-PROCEDURE LsrImm (rd, rs, imm5: INTEGER);
+PROCEDURE LsrImm (r, imm5: INTEGER);
 BEGIN
-    gen1(1, imm5, rs, rd)
+    gen1(1, imm5, r, r)
 END LsrImm;
 
 
-PROCEDURE AsrImm (rd, rs, imm5: INTEGER);
+PROCEDURE AsrImm (r, imm5: INTEGER);
 BEGIN
-    gen1(2, imm5, rs, rd)
+    gen1(2, imm5, r, r)
 END AsrImm;
-
-
-PROCEDURE AddImm (rd, rs, imm3: INTEGER);
-BEGIN
-    gen2(TRUE, FALSE, imm3, rs, rd)
-END AddImm;
-
-
-PROCEDURE SubImm (rd, rs, imm3: INTEGER);
-BEGIN
-    gen2(TRUE, TRUE, imm3, rs, rd)
-END SubImm;
 
 
 PROCEDURE AddReg (rd, rs, rn: INTEGER);
@@ -443,15 +376,15 @@ BEGIN
 END Tst;
 
 
-PROCEDURE MovImm32 (rd, imm32: INTEGER);
+PROCEDURE MovImm32 (r, imm32: INTEGER);
 BEGIN
-    MovImm8(rd, LSR(imm32, 24) MOD 256);
-    LslImm(rd, rd, 8);
-    AddImm8(rd, LSR(imm32, 16) MOD 256);
-    LslImm(rd, rd, 8);
-    AddImm8(rd, LSR(imm32, 8) MOD 256);
-    LslImm(rd, rd, 8);
-    AddImm8(rd, imm32 MOD 256)
+    MovImm8(r, LSR(imm32, 24) MOD 256);
+    LslImm(r, 8);
+    AddImm8(r, LSR(imm32, 16) MOD 256);
+    LslImm(r, 8);
+    AddImm8(r, LSR(imm32, 8) MOD 256);
+    LslImm(r, 8);
+    AddImm8(r, imm32 MOD 256)
 END MovImm32;
 
 
@@ -647,7 +580,7 @@ END pop;
 PROCEDURE mov (r1, r2: INTEGER);
 BEGIN
     IF (r1 < 8) & (r2 < 8) THEN
-        LslImm(r1, r2, 0)
+        gen1(0, 0, r2, r1)
     ELSE
         gen5(2, r1 >= 8, r2 >= 8, r2 MOD 8, r1 MOD 8)
     END
@@ -746,6 +679,8 @@ VAR
 BEGIN
     IF c = 0 THEN
         Tst(r)
+    ELSIF range(c, 8) THEN
+        CmpImm8(r, c)
     ELSE
         r2 := GetAnyReg();
         ASSERT(r2 # r);
@@ -835,8 +770,8 @@ VAR
     L: INTEGER;
 
 BEGIN
-    LslImm(r2, r2, 27);
-    LsrImm(r2, r2, 27);
+    LslImm(r2, 27);
+    LsrImm(r2, 27);
     Tst(r2);
     L := NewLabel();
     jcc(je, L);
@@ -866,7 +801,7 @@ VAR
     cmd: COMMAND;
     opcode, param1, param2: INTEGER;
 
-    r1, r2: INTEGER;
+    r1, r2, r3: INTEGER;
 
     a, n, cc, L: INTEGER;
 
@@ -960,11 +895,11 @@ BEGIN
         |IL.opCLEANUP:
             AddSP(param2)
 
-        |IL.opRES:
+        |IL.opRES, IL.opRESF:
             ASSERT(R.top = -1);
             GetRegA
 
-        |IL.opPUSHC, IL.opCONST_PARAM:
+        |IL.opPUSHC:
             PushConst(param2)
 
         |IL.opONERR:
@@ -977,20 +912,8 @@ BEGIN
 
         |IL.opNOP:
 
-        |IL.opSADR_PARAM:
-            r1 := GetAnyReg();
-            reloc(r1, BIN.RDATA + pic, stroffs + param2);
-            push(r1);
-            drop
-
-        |IL.opGADR_SAVEC:
-            r1 := GetAnyReg();
-            reloc(r1, BIN.RBSS + pic, param1);
-            r2 := GetAnyReg();
-            MovConst(r2, param2);
-            Str32(r2, r1);
-            drop;
-            drop
+        |IL.opSADR:
+            reloc(GetAnyReg(), BIN.RDATA + pic, stroffs + param2)
 
         |IL.opGADR:
             reloc(GetAnyReg(), BIN.RBSS + pic, param2)
@@ -1028,14 +951,7 @@ BEGIN
             UnOp(r1);
             Ldr8(r1, r1)
 
-        |IL.opLLOAD32_PARAM:
-            LocAdr(param2);
-            UnOp(r1);
-            Ldr32(r1, r1);
-            push(r1);
-            drop
-
-        |IL.opLOAD32:
+        |IL.opLOAD32, IL.opLOADF:
             UnOp(r1);
             Ldr32(r1, r1)
 
@@ -1045,6 +961,24 @@ BEGIN
 
         |IL.opLOAD8:
             UnOp(r1);
+            Ldr8(r1, r1)
+
+        |IL.opVLOAD32:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr32(r1, r1);
+            Ldr32(r1, r1)
+
+        |IL.opVLOAD16:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr32(r1, r1);
+            Ldr16(r1, r1)
+
+        |IL.opVLOAD8:
+            LocAdr(param2);
+            UnOp(r1);
+            Ldr32(r1, r1);
             Ldr8(r1, r1)
 
         |IL.opSBOOL:
@@ -1087,7 +1021,7 @@ BEGIN
             drop;
             drop
 
-        |IL.opSAVE, IL.opSAVE32:
+        |IL.opSAVE, IL.opSAVE32, IL.opSAVEF:
             BinOp(r2, r1);
             Str32(r2, r1);
             drop;
@@ -1160,6 +1094,11 @@ BEGIN
             UnOp(r1);
             Tst(r1);
             jcc(je, param1)
+
+        |IL.opJG:
+            UnOp(r1);
+            Tst(r1);
+            jcc(jg, param1)
 
         |IL.opJE:
             UnOp(r1);
@@ -1247,6 +1186,18 @@ BEGIN
             drop;
             drop
 
+        |IL.opINCCB, IL.opDECCB:
+            IF opcode = IL.opDECCB THEN
+                param2 := -param2
+            END;
+            UnOp(r1);
+            r2 := GetAnyReg();
+            Ldr8(r2, r1);
+            AddConst(r2, param2);
+            Str8(r2, r1);
+            drop;
+            drop
+
         |IL.opUMINUS:
             UnOp(r1);
             Neg(r1)
@@ -1317,7 +1268,7 @@ BEGIN
                     IF a < 0 THEN
                         Neg(r1)
                     END;
-                    LslImm(r1, r1, n)
+                    LslImm(r1, n)
                 ELSE
                     r2 := GetAnyReg();
                     MovConst(r2, a);
@@ -1346,18 +1297,18 @@ BEGIN
 
         |IL.opODD:
             UnOp(r1);
-            LslImm(r1, r1, 31);
-            LsrImm(r1, r1, 31)
+            LslImm(r1, 31);
+            LsrImm(r1, 31)
 
         |IL.opCHR:
             UnOp(r1);
-            LslImm(r1, r1, 24);
-            LsrImm(r1, r1, 24)
+            LslImm(r1, 24);
+            LsrImm(r1, 24)
 
         |IL.opWCHR:
             UnOp(r1);
-            LslImm(r1, r1, 16);
-            LsrImm(r1, r1, 16)
+            LslImm(r1, 16);
+            LsrImm(r1, 16)
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             BinOp(r1, r2);
@@ -1377,10 +1328,10 @@ BEGIN
             IF n # 0 THEN
                 UnOp(r1);
                 CASE opcode OF
-                |IL.opASR2: AsrImm(r1, r1, n)
+                |IL.opASR2: AsrImm(r1, n)
                 |IL.opROR2: r2 := GetAnyReg(); MovConst(r2, n); Shift(IL.opROR, r1, r2); drop
-                |IL.opLSL2: LslImm(r1, r1, n)
-                |IL.opLSR2: LsrImm(r1, r1, n)
+                |IL.opLSL2: LslImm(r1, n)
+                |IL.opLSR2: LsrImm(r1, n)
                 END
             END
 
@@ -1419,33 +1370,220 @@ BEGIN
             INCL(R.regs, r1);
             ASSERT(REG.GetReg(R, r1))
 
-        |IL.opLADR_SAVEC:
-            LocAdr(param1);
-            UnOp(r1);
-            r2 := GetAnyReg();
-            MovConst(r2, param2);
-            Str32(r2, r1);
-            drop;
-            drop
-
-        |IL.opLADR_SAVE:
-            LocAdr(param2);
-            BinOp(r2, r1);
-            Str32(r2, r1);
-            drop;
-            drop
-
-        |IL.opLADR_INCC:
-            LocAdr(param1);
-            UnOp(r1);
-            r2 := GetAnyReg();
-            Ldr32(r2, r1);
-            AddConst(r2, param2);
-            Str32(r2, r1);
-            drop;
-            drop
-
         |IL.opLOOP, IL.opENDLOOP:
+
+        |IL.opINF:
+            MovConst(GetAnyReg(), inf)
+
+        |IL.opPUSHF:
+            UnOp(r1);
+            push(r1);
+            drop
+
+        |IL.opCONST:
+            MovConst(GetAnyReg(), param2)
+
+        |IL.opEQP, IL.opNEP:
+            reloc(GetAnyReg(), BIN.RCODE + pic, param1);
+            BinOp(r1, r2);
+            Cmp(r1, r2);
+            drop;
+            IF opcode = IL.opEQP THEN
+                SetCC(je, r1)
+            ELSE
+                SetCC(jne, r1)
+            END
+
+        |IL.opPUSHT:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            mov(r2, r1);
+            SubImm8(r2, 4);
+            Ldr32(r2, r2)
+
+        |IL.opGET, IL.opGETC:
+            IF opcode = IL.opGET THEN
+                BinOp(r1, r2)
+            ELSIF opcode = IL.opGETC THEN
+                UnOp(r2);
+                r1 := GetAnyReg();
+                MovConst(r1, param1)
+            END;
+            drop;
+            drop;
+
+            CASE param2 OF
+            |1: Ldr8(r1, r1); Str8(r1, r2)
+            |2: Ldr16(r1, r1); Str16(r1, r2)
+            |4: Ldr32(r1, r1); Str32(r1, r2)
+            END
+
+        |IL.opINC, IL.opDEC:
+            BinOp(r2, r1);
+            r3 := GetAnyReg();
+            Ldr32(r3, r1);
+            IF opcode = IL.opINC THEN
+                AddReg(r3, r3, r2)
+            ELSE
+                SubReg(r3, r3, r2)
+            END;
+            Str32(r3, r1);
+            drop;
+            drop;
+            drop
+
+        |IL.opINCB, IL.opDECB:
+            BinOp(r2, r1);
+            r3 := GetAnyReg();
+            Ldr8(r3, r1);
+            IF opcode = IL.opINCB THEN
+                AddReg(r3, r3, r2)
+            ELSE
+                SubReg(r3, r3, r2)
+            END;
+            Str8(r3, r1);
+            drop;
+            drop;
+            drop
+
+        |IL.opMIN, IL.opMAX:
+            BinOp(r1, r2);
+            Cmp(r1, r2);
+            L := NewLabel();
+            IF opcode = IL.opMIN THEN
+                cc := jle
+            ELSE
+                cc := jge
+            END;
+            jcc(cc, L);
+            mov(r1, r2);
+            Label(L);
+            drop
+
+        |IL.opMINC, IL.opMAXC:
+            UnOp(r1);
+            CmpConst(r1, param2);
+            L := NewLabel();
+            IF opcode = IL.opMINC THEN
+                cc := jle
+            ELSE
+                cc := jge
+            END;
+            jcc(cc, L);
+            MovConst(r1, param2);
+            Label(L)
+
+        |IL.opMULS:
+            BinOp(r1, r2);
+            gen4(0, r2, r1); (* and r1, r2 *)
+            drop
+
+        |IL.opMULSC:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r1, r2);
+            gen4(0, r2, r1); (* and r1, r2 *)
+            drop
+
+        |IL.opDIVS:
+            BinOp(r1, r2);
+            gen4(1, r2, r1); (* eor r1, r2 *)
+            drop
+
+        |IL.opDIVSC:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r1, r2);
+            gen4(1, r2, r1); (* eor r1, r2 *)
+            drop
+
+        |IL.opADDS:
+            BinOp(r1, r2);
+            gen4(12, r2, r1); (* orr r1, r2 *)
+            drop
+
+        |IL.opSUBS:
+            BinOp(r1, r2);
+            gen4(14, r2, r1); (* bic r1, r2 *)
+            drop
+
+        |IL.opADDSL, IL.opADDSR:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r1, r2);
+            gen4(12, r2, r1); (* orr r1, r2 *)
+            drop
+
+        |IL.opSUBSL:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r1, r2);
+            gen4(14, r1, r2); (* bic r2, r1 *)
+            INCL(R.regs, r1);
+            DEC(R.top);
+            R.stk[R.top] := r2
+
+        |IL.opSUBSR:
+            MovConst(GetAnyReg(), param2);
+            BinOp(r1, r2);
+            gen4(14, r2, r1); (* bic r1, r2 *)
+            drop
+
+        |IL.opUMINS:
+            UnOp(r1);
+            gen4(15, r1, r1) (* mvn r1, r1 *)
+
+        |IL.opINCL, IL.opEXCL:
+            BinOp(r1, r2);
+            r3 := GetAnyReg();
+            MovConst(r3, 1);
+            CmpConst(r1, 32);
+            L := NewLabel();
+            jcc(jnb, L);
+            gen4(2, r1, r3); (* lsl r3, r1 *)
+            Ldr32(r1, r2);
+            IF opcode = IL.opINCL THEN
+                gen4(12, r3, r1) (* orr r1, r3 *)
+            ELSE
+                gen4(14, r3, r1) (* bic r1, r3 *)
+            END;
+            Str32(r1, r2);
+            Label(L);
+            drop;
+            drop;
+            drop
+
+        |IL.opINCLC, IL.opEXCLC:
+            UnOp(r2);
+            r1 := GetAnyReg();
+            r3 := GetAnyReg();
+            MovConst(r3, 1);
+            LslImm(r3, param2);
+            Ldr32(r1, r2);
+            IF opcode = IL.opINCLC THEN
+                gen4(12, r3, r1) (* orr r1, r3 *)
+            ELSE
+                gen4(14, r3, r1) (* bic r1, r3 *)
+            END;
+            Str32(r1, r2);
+            drop;
+            drop;
+            drop
+
+                  (*
+|IL.opEQF..IL.opGEF:
+|IL.opEQS..IL.opGES:
+|IL.opEQSW..IL.opGESW:
+|IL.opCOPYS: |IL.opCOPYA: |IL.opCASET: |IL.opDIV: |IL.opMOD: |IL.opDIVL: |IL.opMODL: |IL.opDIVR: |IL.opMODR:
+|IL.opCONSTF: |IL.opMULF: |IL.opDIVF: |IL.opDIVFI:
+|IL.opUMINF: |IL.opADDFI: |IL.opSUBFI: |IL.opADDF: |IL.opSUBF:
+|IL.opIN: |IL.opINL: |IL.opINR:
+|IL.opRSET: |IL.opRSETL: |IL.opRSETR: |IL.opRSET1: |IL.opLENGTH:
+|IL.opNEW:
+|IL.opPACK: |IL.opPACKC: |IL.opUNPK: |IL.opCOPY:
+|IL.opFABS: |IL.opFLOOR: |IL.opFLT:
+|IL.opTYPEGP: |IL.opIS:
+|IL.opTYPEGR: |IL.opISREC:
+|IL.opROT: |IL.opSAVES: |IL.opMOVE:
+|IL.opTYPEGD:
+|IL.opLENGTHW:
+*)
 
         ELSE
             C.IntLn(opcode);

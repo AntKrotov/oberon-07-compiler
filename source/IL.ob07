@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
 MODULE IL;
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, TARGETS;
 
 
 CONST
@@ -200,8 +200,7 @@ TYPE
 VAR
 
     codes*: CODES;
-    endianness: INTEGER;
-    numRegsFloat: INTEGER;
+    endianness, numRegsFloat, CPU: INTEGER;
 
     commands, variables: C.COLLECTION;
 
@@ -435,52 +434,57 @@ VAR
 
 
 BEGIN
-    old_opcode := cur.opcode;
-    param2 := nov.param2;
+    IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64, TARGETS.cpuMSP430} THEN
 
-    IF (nov.opcode = opPARAM) & (param2 = 1) THEN
+        old_opcode := cur.opcode;
+        param2 := nov.param2;
 
-        CASE old_opcode OF
-        |opGLOAD64: cur.opcode := opGLOAD64_PARAM
-        |opLLOAD64: cur.opcode := opLLOAD64_PARAM
-        |opLOAD64:  cur.opcode := opLOAD64_PARAM
-        |opGLOAD32: cur.opcode := opGLOAD32_PARAM
-        |opLLOAD32: cur.opcode := opLLOAD32_PARAM
-        |opLOAD32:  cur.opcode := opLOAD32_PARAM
-        |opSADR:    cur.opcode := opSADR_PARAM
-        |opVADR:    cur.opcode := opVADR_PARAM
-        |opCONST:   cur.opcode := opCONST_PARAM
+        IF (nov.opcode = opPARAM) & (param2 = 1) THEN
+
+            CASE old_opcode OF
+            |opGLOAD64: cur.opcode := opGLOAD64_PARAM
+            |opLLOAD64: cur.opcode := opLLOAD64_PARAM
+            |opLOAD64:  cur.opcode := opLOAD64_PARAM
+            |opGLOAD32: cur.opcode := opGLOAD32_PARAM
+            |opLLOAD32: cur.opcode := opLLOAD32_PARAM
+            |opLOAD32:  cur.opcode := opLOAD32_PARAM
+            |opSADR:    cur.opcode := opSADR_PARAM
+            |opVADR:    cur.opcode := opVADR_PARAM
+            |opCONST:   cur.opcode := opCONST_PARAM
+            ELSE
+                old_opcode := -1
+            END
+
+        ELSIF old_opcode = opLADR THEN
+
+            CASE nov.opcode OF
+            |opSAVEC: set(cur, opLADR_SAVEC, param2)
+            |opSAVE:  cur.opcode := opLADR_SAVE
+            |opINC:   cur.opcode := opLADR_INC
+            |opDEC:   cur.opcode := opLADR_DEC
+            |opINCB:  cur.opcode := opLADR_INCB
+            |opDECB:  cur.opcode := opLADR_DECB
+            |opINCL:  cur.opcode := opLADR_INCL
+            |opEXCL:  cur.opcode := opLADR_EXCL
+            |opUNPK:  cur.opcode := opLADR_UNPK
+            |opINCC:  set(cur, opLADR_INCC, param2)
+            |opINCCB: set(cur, opLADR_INCCB, param2)
+            |opDECCB: set(cur, opLADR_DECCB, param2)
+            |opINCLC: set(cur, opLADR_INCLC, param2)
+            |opEXCLC: set(cur, opLADR_EXCLC, param2)
+            ELSE
+                old_opcode := -1
+            END
+
+        ELSIF (nov.opcode = opSAVEC) & (old_opcode = opGADR) THEN
+            set(cur, opGADR_SAVEC, param2)
+
+        ELSIF (nov.opcode = opMULC) & (old_opcode = opMULC) THEN
+            cur.param2 := param2 * cur.param2
+
         ELSE
             old_opcode := -1
         END
-
-    ELSIF old_opcode = opLADR THEN
-
-        CASE nov.opcode OF
-        |opSAVEC: set(cur, opLADR_SAVEC, param2)
-        |opSAVE:  cur.opcode := opLADR_SAVE
-        |opINC:   cur.opcode := opLADR_INC
-        |opDEC:   cur.opcode := opLADR_DEC
-        |opINCB:  cur.opcode := opLADR_INCB
-        |opDECB:  cur.opcode := opLADR_DECB
-        |opINCL:  cur.opcode := opLADR_INCL
-        |opEXCL:  cur.opcode := opLADR_EXCL
-        |opUNPK:  cur.opcode := opLADR_UNPK
-        |opINCC:  set(cur, opLADR_INCC, param2)
-        |opINCCB: set(cur, opLADR_INCCB, param2)
-        |opDECCB: set(cur, opLADR_DECCB, param2)
-        |opINCLC: set(cur, opLADR_INCLC, param2)
-        |opEXCLC: set(cur, opLADR_EXCLC, param2)
-        ELSE
-            old_opcode := -1
-        END
-
-    ELSIF (nov.opcode = opSAVEC) & (old_opcode = opGADR) THEN
-        set(cur, opGADR_SAVEC, param2)
-
-    ELSIF (nov.opcode = opMULC) & (old_opcode = opMULC) THEN
-        cur.param2 := param2 * cur.param2
-
     ELSE
         old_opcode := -1
     END;
@@ -1139,7 +1143,7 @@ BEGIN
 END DelImport;
 
 
-PROCEDURE init* (pNumRegsFloat, pEndianness: INTEGER);
+PROCEDURE init* (pCPU: INTEGER);
 VAR
     cmd:    COMMAND;
     i:      INTEGER;
@@ -1147,8 +1151,15 @@ VAR
 BEGIN
     commands := C.create();
     variables := C.create();
-    numRegsFloat := pNumRegsFloat;
-    endianness := pEndianness;
+
+    CPU := pCPU;
+    endianness := little_endian;
+    CASE CPU OF
+    |TARGETS.cpuAMD64:  numRegsFloat := 6
+    |TARGETS.cpuX86:    numRegsFloat := 8
+    |TARGETS.cpuMSP430: numRegsFloat := 0
+    |TARGETS.cpuTHUMB:  numRegsFloat := 256
+    END;
 
     NEW(codes.begcall);
     codes.begcall.top := -1;

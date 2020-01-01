@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -1079,36 +1079,29 @@ BEGIN
             CallRTL(RTL._length, 2);
             GetRegA
 
-        |IL.opMIN:
+        |IL.opMAX,IL.opMIN:
             BinOp(reg1, reg2);
             Op2(opCMP, reg2 * 256, reg1);
-            EmitWord(opJL + 1); (* jl L *)
-            MovRR(reg2, reg1);
-                                (* L: *)
-            drop
-
-
-        |IL.opMAX:
-            BinOp(reg1, reg2);
-            Op2(opCMP, reg2 * 256, reg1);
-            EmitWord(opJGE + 1); (* jge L *)
+            IF opcode = IL.opMIN THEN
+                cc := opJL + 1
+            ELSE
+                cc := opJGE + 1
+            END;
+            EmitWord(cc);        (* jge/jl L *)
             MovRR(reg2, reg1);
                                  (* L: *)
             drop
 
-        |IL.opMINC:
+        |IL.opMAXC, IL.opMINC:
             UnOp(reg1);
             Op2(opCMP, imm(param2), reg1);
             L := NewLabel();
-            jcc(jl, L);
-            Op2(opMOV, imm(param2), reg1);
-            EmitLabel(L)
-
-        |IL.opMAXC:
-            UnOp(reg1);
-            Op2(opCMP, imm(param2), reg1);
-            L := NewLabel();
-            jcc(jge, L);
+            IF opcode = IL.opMINC THEN
+                cc := jl
+            ELSE
+                cc := jge
+            END;
+            jcc(cc, L);
             Op2(opMOV, imm(param2), reg1);
             EmitLabel(L)
 
