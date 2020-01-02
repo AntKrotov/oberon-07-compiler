@@ -25,6 +25,10 @@ CONST
     inf = 7F800000H;
 
 
+    _error = 1; _length = 2; _move = 3; _lengthw = 4; _strcmp = 5; _strcmpw = 6;
+    _arrcpy = 7; _strcpy = 8; _divmod = 9; _set = 10; _set1 = 11;
+
+
 TYPE
 
     COMMAND = IL.COMMAND;
@@ -655,13 +659,6 @@ BEGIN
 END GetRegA;
 
 
-PROCEDURE CallRTL (n: INTEGER);
-BEGIN
-    MovImm8(ACC, n);
-    Code(0DF00H)
-END CallRTL;
-
-
 PROCEDURE MovConst (r, c: INTEGER);
 BEGIN
     IF range(c, 8) THEN
@@ -757,9 +754,9 @@ END AddHH;
 PROCEDURE AddSP (n: INTEGER);
 BEGIN
     IF n > 0 THEN
-        ASSERT(R1 IN R.regs);
-        MovConst(R1, n * 4);
-        AddHH(SP, R1);
+        ASSERT(R2 IN R.regs);
+        MovConst(R2, n * 4);
+        AddHH(SP, R2);
         DEC(StkCount, n)
     END
 END AddSP;
@@ -796,6 +793,14 @@ BEGIN
 END LocAdr;
 
 
+PROCEDURE CallRTL (n, par: INTEGER);
+BEGIN
+    MovImm8(ACC, n);
+    Code(0DF00H);
+    AddSP(par)
+END CallRTL;
+
+
 PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
     cmd: COMMAND;
@@ -803,7 +808,7 @@ VAR
 
     r1, r2, r3: INTEGER;
 
-    a, n, cc, L: INTEGER;
+    a, n, cc, L, L2: INTEGER;
 
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
@@ -842,12 +847,12 @@ BEGIN
             n := param2;
             IF n >= 5 THEN
                 MovConst(ACC, 0);
-                MovConst(R1, n);
+                MovConst(R2, n);
                 L := NewLabel();
                 Label(L);
                 push(ACC);
-                SubImm8(R1, 1);
-                Tst(R1);
+                SubImm8(R2, 1);
+                Tst(R2);
                 jcc(jne, L)
             ELSIF n > 0 THEN
                 MovConst(ACC, 0);
@@ -872,8 +877,8 @@ BEGIN
             ASSERT(R.top = -1);
 
             AddSP(StkCount);
-            pop(R1);
-            mov(PC, R1)
+            pop(R2);
+            mov(PC, R2)
 
         |IL.opLEAVEC:
             mov(PC, LR)
@@ -908,7 +913,7 @@ BEGIN
             jmp(param1)
 
         |IL.opERR:
-            CallRTL(1)
+            CallRTL(_error, 0)
 
         |IL.opNOP:
 
@@ -1117,7 +1122,7 @@ BEGIN
             IF param2 = 0 THEN
                 r2 := ACC
             ELSE
-                r2 := R1
+                r2 := R2
             END;
             IF r1 # r2 THEN
                 ASSERT(REG.GetReg(R, r2));
@@ -1566,23 +1571,205 @@ BEGIN
             drop;
             drop
 
-                  (*
+        |IL.opLENGTH:
+            PushAll(2);
+            CallRTL(_length, 2);
+            GetRegA
+
+        |IL.opLENGTHW:
+            PushAll(2);
+            CallRTL(_lengthw, 2);
+            GetRegA
+
+        |IL.opSAVES:
+            UnOp(r2);
+            REG.PushAll_1(R);
+            r1 := GetAnyReg();
+            reloc(r1, BIN.RDATA + pic, stroffs + param2);
+            push(r1);
+            drop;
+            push(r2);
+            drop;
+            PushConst(param1);
+            CallRTL(_move, 3)
+
+        |IL.opEQS .. IL.opGES:
+            PushAll(4);
+            PushConst(opcode - IL.opEQS);
+            CallRTL(_strcmp, 5);
+            GetRegA
+
+        |IL.opEQSW .. IL.opGESW:
+            PushAll(4);
+            PushConst(opcode - IL.opEQSW);
+            CallRTL(_strcmpw, 5);
+            GetRegA
+
+        |IL.opCOPY:
+            PushAll(2);
+            PushConst(param2);
+            CallRTL(_move, 3)
+
+        |IL.opMOVE:
+            PushAll(3);
+            CallRTL(_move, 3)
+
+        |IL.opCOPYA:
+            PushAll(4);
+            PushConst(param2);
+            CallRTL(_arrcpy, 5);
+            GetRegA
+
+        |IL.opCOPYS:
+            PushAll(4);
+            PushConst(param2);
+            CallRTL(_strcpy, 5)
+
+        |IL.opDIV:
+            PushAll(2);
+            CallRTL(_divmod, 2);
+            GetRegA
+
+        |IL.opDIVL:
+            UnOp(r1);
+            REG.PushAll_1(R);
+            PushConst(param2);
+            push(r1);
+            drop;
+            CallRTL(_divmod, 2);
+            GetRegA
+
+        |IL.opDIVR:
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
+                UnOp(r1);
+                AsrImm(r1, n)
+            ELSIF n < 0 THEN
+                PushAll(1);
+                PushConst(param2);
+                CallRTL(IL._divmod, 2);
+                GetRegA
+            END
+
+        |IL.opMOD:
+            PushAll(2);
+            CallRTL(_divmod, 2);
+            mov(R0, R1);
+            GetRegA
+
+        |IL.opMODR:
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
+                UnOp(r1);
+                LslImm(r1, 32 - n);
+                LsrImm(r1, 32 - n)
+            ELSIF n < 0 THEN
+                PushAll(1);
+                PushConst(param2);
+                CallRTL(_divmod, 2);
+                mov(R0, R1);
+                GetRegA
+            ELSE
+                UnOp(r1);
+                MovConst(r1, 0)
+            END
+
+        |IL.opMODL:
+            UnOp(r1);
+            REG.PushAll_1(R);
+            PushConst(param2);
+            push(r1);
+            drop;
+            CallRTL(_divmod, 2);
+            mov(R0, R1);
+            GetRegA
+
+        |IL.opIN:
+            L := NewLabel();
+            L2 := NewLabel();
+            BinOp(r1, r2);
+            r3 := GetAnyReg();
+            CmpConst(r1, 32);
+            jcc(jb, L);
+            MovConst(r1, 0);
+            jmp(L2);
+            Label(L);
+            MovConst(r3, 1);
+            Shift(IL.opLSL, r3, r1);
+            gen4(0, r3, r2); (* and r2, r3 *)
+            SetCC(jne, r1);
+            Label(L2);
+            drop;
+            drop;
+
+        |IL.opINR:
+            L := NewLabel();
+            L2 := NewLabel();
+            UnOp(r1);
+            r2 := GetAnyReg();
+            r3 := GetAnyReg();
+            CmpConst(r1, 32);
+            jcc(jb, L);
+            MovConst(r1, 0);
+            jmp(L2);
+            Label(L);
+            MovConst(r2, param2);
+            MovConst(r3, 1);
+            Shift(IL.opLSL, r3, r1);
+            gen4(0, r3, r2); (* and r2, r3 *)
+            SetCC(jne, r1);
+            Label(L2);
+            drop;
+            drop
+
+        |IL.opINL:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, LSL(1, param2));
+            gen4(0, r2, r1); (* and r1, r2 *)
+            SetCC(jne, r1);
+            drop
+
+        |IL.opRSET:
+            PushAll(2);
+            CallRTL(_set, 2);
+            GetRegA
+
+        |IL.opRSETR:
+            PushAll(1);
+            PushConst(param2);
+            CallRTL(_set, 2);
+            GetRegA
+
+        |IL.opRSETL:
+            UnOp(r1);
+            REG.PushAll_1(R);
+            PushConst(param2);
+            push(r1);
+            drop;
+            CallRTL(_set, 2);
+            GetRegA
+
+        |IL.opRSET1:
+            PushAll(1);
+            CallRTL(_set1, 1);
+            GetRegA
+
+
+        (*
 |IL.opEQF..IL.opGEF:
-|IL.opEQS..IL.opGES:
-|IL.opEQSW..IL.opGESW:
-|IL.opCOPYS: |IL.opCOPYA: |IL.opCASET: |IL.opDIV: |IL.opMOD: |IL.opDIVL: |IL.opMODL: |IL.opDIVR: |IL.opMODR:
 |IL.opCONSTF: |IL.opMULF: |IL.opDIVF: |IL.opDIVFI:
 |IL.opUMINF: |IL.opADDFI: |IL.opSUBFI: |IL.opADDF: |IL.opSUBF:
-|IL.opIN: |IL.opINL: |IL.opINR:
-|IL.opRSET: |IL.opRSETL: |IL.opRSETR: |IL.opRSET1: |IL.opLENGTH:
-|IL.opNEW:
-|IL.opPACK: |IL.opPACKC: |IL.opUNPK: |IL.opCOPY:
+|IL.opPACK: |IL.opPACKC: |IL.opUNPK:
 |IL.opFABS: |IL.opFLOOR: |IL.opFLT:
+
+|IL.opNEW:
+
 |IL.opTYPEGP: |IL.opIS:
 |IL.opTYPEGR: |IL.opISREC:
-|IL.opROT: |IL.opSAVES: |IL.opMOVE:
-|IL.opTYPEGD:
-|IL.opLENGTHW:
+|IL.opTYPEGD: |IL.opCASET:
+
+|IL.opROT:
 *)
 
         ELSE
