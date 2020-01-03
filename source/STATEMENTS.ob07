@@ -416,7 +416,7 @@ BEGIN
             IF e.obj = eCONST THEN
                 IL.Float(ARITH.Float(e.value))
             END;
-            IL.savef
+            IL.savef(e.obj = eCONST)
         ELSIF isChar(e) & (VarType = tCHAR) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSAVE8C, ARITH.Int(e.value))
@@ -884,9 +884,9 @@ BEGIN
                 PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66);
                 IF e2.obj = eCONST THEN
                     IF e2.type = tREAL THEN
-                        IL.setlast(endcall.prev(IL.COMMAND));
                         IL.Float(ARITH.Float(e2.value));
-                        IL.savef
+                        IL.setlast(endcall.prev(IL.COMMAND));
+                        IL.savef(FALSE)
                     ELSE
                         LoadConst(e2);
                         IL.setlast(endcall.prev(IL.COMMAND));
@@ -895,7 +895,7 @@ BEGIN
                 ELSE
                     IL.setlast(endcall.prev(IL.COMMAND));
                     IF e2.type = tREAL THEN
-                        IL.savef
+                        IL.savef(FALSE)
                     ELSIF e2.type = tBYTE THEN
                         IL.SysPut(tINTEGER.size)
                     ELSE

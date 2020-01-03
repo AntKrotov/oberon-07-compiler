@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -146,6 +146,39 @@ END now;
 PROCEDURE UnixTime* (): INTEGER;
     RETURN API.time(0)
 END UnixTime;
+
+
+PROCEDURE d2s* (x: REAL): INTEGER;
+VAR
+    h, l, s, e: INTEGER;
+
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x), l);
+    SYSTEM.GET(SYSTEM.ADR(x) + 4, h);
+
+    s := ASR(h, 31) MOD 2;
+    e := (h DIV 100000H) MOD 2048;
+    IF e < 896 THEN
+        s := 0;
+        e := 0;
+        h := 0;
+        l := 0
+    ELSIF (1150 < e) & (e < 2047) THEN
+        e := 255;
+        h := 0;
+        l := 0
+    ELSIF e = 2047 THEN
+        e := 255;
+        IF (h MOD 100000H # 0) OR (l # 0) THEN
+            h := 80000H;
+            l := 0
+        END
+    ELSE
+        e := e - 1023 + 127
+    END
+
+    RETURN LSL(s, 31) + LSL(e, 23) + (h MOD 100000H) * 8 + (l DIV 20000000H) MOD 8
+END d2s;
 
 
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;

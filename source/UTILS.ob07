@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -116,6 +116,11 @@ END OutChar;
 PROCEDURE splitf* (x: REAL; VAR a, b: INTEGER): INTEGER;
     RETURN HOST.splitf(x, a, b)
 END splitf;
+
+
+PROCEDURE d2s* (x: REAL): INTEGER;
+    RETURN HOST.d2s(x)
+END d2s;
 
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;

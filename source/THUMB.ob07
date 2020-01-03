@@ -24,9 +24,11 @@ CONST
 
     inf = 7F800000H;
 
-
-    _error = 1; _length = 2; _move = 3; _lengthw = 4; _strcmp = 5; _strcmpw = 6;
+    _init = 0; _error = 1; _length = 2; _move = 3; _lengthw = 4; _strcmp = 5; _strcmpw = 6;
     _arrcpy = 7; _strcpy = 8; _divmod = 9; _set = 10; _set1 = 11;
+    _mulf = 12; _divf = 13; _divfi = 14; _addf = 15; _subf = 16; _subfi = 17;
+    _cmpf = 18; _floor = 19; _flt = 20; _new = 21; _guard = 22; _is = 23; _guardrec = 24;
+    _rot = 25; _pack = 26; _unpk = 27; _exit = 28;
 
 
 TYPE
@@ -92,7 +94,7 @@ VAR
 
     program: BIN.PROGRAM;
 
-    StkCount: INTEGER;
+    StkCount, StkCount2: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -861,7 +863,8 @@ BEGIN
                     DEC(n)
                 END
             END;
-            StkCount := param2
+            StkCount := param2;
+            StkCount2 := param2
 
         |IL.opLEAVE, IL.opLEAVER, IL.opLEAVEF:
             IF opcode # IL.opLEAVE THEN
@@ -876,6 +879,7 @@ BEGIN
 
             ASSERT(R.top = -1);
 
+            ASSERT(StkCount2 = StkCount);
             AddSP(StkCount);
             pop(R2);
             mov(PC, R2)
@@ -1029,6 +1033,12 @@ BEGIN
         |IL.opSAVE, IL.opSAVE32, IL.opSAVEF:
             BinOp(r2, r1);
             Str32(r2, r1);
+            drop;
+            drop
+
+        |IL.opSAVEFI:
+            BinOp(r2, r1);
+            Str32(r1, r2);
             drop;
             drop
 
@@ -1755,26 +1765,144 @@ BEGIN
             CallRTL(_set1, 1);
             GetRegA
 
+        |IL.opCONSTF:
+            MovConst(GetAnyReg(), UTILS.d2s(cmd.float))
 
-        (*
-|IL.opEQF..IL.opGEF:
-|IL.opCONSTF: |IL.opMULF: |IL.opDIVF: |IL.opDIVFI:
-|IL.opUMINF: |IL.opADDFI: |IL.opSUBFI: |IL.opADDF: |IL.opSUBF:
-|IL.opPACK: |IL.opPACKC: |IL.opUNPK:
-|IL.opFABS: |IL.opFLOOR: |IL.opFLT:
+        |IL.opMULF:
+            PushAll(2);
+            CallRTL(_mulf, 2);
+            GetRegA
 
-|IL.opNEW:
+        |IL.opDIVF:
+            PushAll(2);
+            CallRTL(_divf, 2);
+            GetRegA
 
-|IL.opTYPEGP: |IL.opIS:
-|IL.opTYPEGR: |IL.opISREC:
-|IL.opTYPEGD: |IL.opCASET:
+        |IL.opDIVFI:
+            PushAll(2);
+            CallRTL(_divfi, 2);
+            GetRegA
 
-|IL.opROT:
-*)
+        |IL.opADDF, IL.opADDFI:
+            PushAll(2);
+            CallRTL(_addf, 2);
+            GetRegA
 
-        ELSE
-            C.IntLn(opcode);
-            ASSERT(FALSE)
+        |IL.opSUBFI:
+            PushAll(2);
+            CallRTL(_subfi, 2);
+            GetRegA
+
+        |IL.opSUBF:
+            PushAll(2);
+            CallRTL(_subf, 2);
+            GetRegA
+
+        |IL.opEQF..IL.opGEF:
+            PushAll(2);
+            PushConst(opcode - IL.opEQF);
+            CallRTL(_cmpf, 3);
+            GetRegA
+
+        |IL.opFLOOR:
+            PushAll(1);
+            CallRTL(_floor, 1);
+            GetRegA
+
+        |IL.opFLT:
+            PushAll(1);
+            CallRTL(_flt, 1);
+            GetRegA
+
+        |IL.opUMINF:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, 1);
+            LslImm(r2, 31);
+            gen4(1, r2, r1); (* eor r1, r2 *)
+            drop
+
+        |IL.opFABS:
+            UnOp(r1);
+            r2 := GetAnyReg();
+            MovConst(r2, 1);
+            LslImm(r2, 31);
+            gen4(14, r2, r1); (* bic r1, r2 *)
+            drop
+
+        |IL.opNEW:
+            PushAll(1);
+            n := param2 + 8;
+            ASSERT(UTILS.Align(n, 32));
+            PushConst(n);
+            PushConst(param1);
+            CallRTL(_new, 3)
+
+        |IL.opTYPEGP:
+            UnOp(r1);
+            PushAll(0);
+            push(r1);
+            PushConst(param2);
+            CallRTL(_guard, 2);
+            GetRegA
+
+        |IL.opIS:
+            PushAll(1);
+            PushConst(param2);
+            CallRTL(_is, 2);
+            GetRegA
+
+        |IL.opISREC:
+            PushAll(2);
+            PushConst(param2);
+            CallRTL(_guardrec, 3);
+            GetRegA
+
+        |IL.opTYPEGR:
+            PushAll(1);
+            PushConst(param2);
+            CallRTL(_guardrec, 2);
+            GetRegA
+
+        |IL.opTYPEGD:
+            UnOp(r1);
+            PushAll(0);
+            SubImm8(r1, 4);
+            Ldr32(r1, r1);
+            push(r1);
+            PushConst(param2);
+            CallRTL(_guardrec, 2);
+            GetRegA
+
+        |IL.opCASET:
+            push(R2);
+            push(R2);
+            PushConst(param2);
+            CallRTL(_guardrec, 2);
+            pop(R2);
+            Tst(ACC);
+            jcc(jne, param1)
+
+        |IL.opROT:
+            PushAll(0);
+            mov(R2, SP);
+            push(R2);
+            PushConst(param2);
+            CallRTL(_rot, 2)
+
+        |IL.opPACK:
+            PushAll(2);
+            CallRTL(_pack, 2)
+
+        |IL.opPACKC:
+            PushAll(1);
+            PushConst(param2);
+            CallRTL(_pack, 2)
+
+        |IL.opUNPK:
+            PushAll(2);
+            CallRTL(_unpk, 2)
+
         END;
 
         cmd := cmd.next(COMMAND)
@@ -1783,6 +1911,17 @@ BEGIN
     ASSERT(R.pushed = 0);
     ASSERT(R.top = -1)
 END translate;
+
+
+PROCEDURE prolog (GlobSize, tcount, pic: INTEGER);
+BEGIN
+    reloc(GetAnyReg(), BIN.RDATA + pic, 0);
+    reloc(GetAnyReg(), BIN.RBSS + pic, 0);
+    PushAll(2);
+    PushConst(tcount);
+    PushConst(GlobSize);
+    CallRTL(_init, 4)
+END prolog;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
@@ -1807,8 +1946,6 @@ BEGIN
 
     StkCount := 0;
 
-    translate(ORD(opt.pic), tcount * 4);
-
     dcount := CHL.Length(IL.codes.data);
 
     FOR i := 0 TO tcount - 1 DO
@@ -1820,6 +1957,10 @@ BEGIN
     END;
 
     IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
+
+    prolog(IL.codes.bss, tcount, ORD(opt.pic));
+    translate(ORD(opt.pic), tcount * 4);
+    CallRTL(_exit, 0);
 
     fixup(CHL.Length(program.data), IL.codes.bss);
 

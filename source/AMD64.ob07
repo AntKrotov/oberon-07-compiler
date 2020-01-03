@@ -1274,7 +1274,7 @@ BEGIN
         |IL.opLADR:
             n := param2 * 8;
             next := cmd.next(COMMAND);
-            IF next.opcode = IL.opSAVEF THEN
+            IF (next.opcode = IL.opSAVEF) OR (next.opcode = IL.opSAVEFI) THEN
                 movsdmr(rbp, n, xmm);
                 DEC(xmm);
                 cmd := next
@@ -2196,7 +2196,7 @@ BEGIN
             drop;
             NewNumber(UTILS.splitf(float, a, b))
 
-        |IL.opSAVEF:
+        |IL.opSAVEF, IL.opSAVEFI:
             UnOp(reg1);
             movsdmr(reg1, 0, xmm);
             DEC(xmm);

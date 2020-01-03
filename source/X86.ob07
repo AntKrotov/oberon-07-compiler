@@ -1797,7 +1797,7 @@ BEGIN
                 addrc(esp, 8)
             END
 
-        |IL.opSAVEF:
+        |IL.opSAVEF, IL.opSAVEFI:
             UnOp(reg1);
             OutByte2(0DDH, 018H + reg1); // fstp qword[reg1]
             drop
