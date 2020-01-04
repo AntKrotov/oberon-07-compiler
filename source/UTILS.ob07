@@ -167,10 +167,11 @@ BEGIN
     target.maxHex    := BitDepth DIV 4;
     target.minInt    := ASR(minint, bit_diff);
     target.maxInt    := ASR(maxint, bit_diff);
-    target.maxReal   := 1.9;
+
     IF Double THEN
-        PACK(target.maxReal, 1023)
+        target.maxReal := maxreal
     ELSE
+        target.maxReal := 1.9;
         PACK(target.maxReal, 127)
     END
 END SetBitDepth;
@@ -275,7 +276,6 @@ END init;
 BEGIN
     time := GetTickCount();
     COPY(HOST.eol, eol);
-    maxreal := 1.9;
-    PACK(maxreal, 1023);
+    maxreal := HOST.maxreal;
     init(days)
 END UTILS.

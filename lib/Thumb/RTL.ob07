@@ -7,4 +7,12 @@
 
 MODULE RTL;
 
+
+CONST
+
+    bit_depth* = 32;
+    maxint* = 7FFFFFFFH;
+    minint* = 80000000H;
+
+
 END RTL.

@@ -82,6 +82,8 @@ VAR
 
     eol*: ARRAY 3 OF CHAR;
 
+    maxreal*: REAL;
+
 
 PROCEDURE [windows-, "kernel32.dll", "GetTickCount"]
     _GetTickCount (): INTEGER;
@@ -359,6 +361,8 @@ END splitf;
 
 BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
+    maxreal := 1.9;
+    PACK(maxreal, 1023);
     hConsoleOutput := _GetStdHandle(-11);
     ParamParse
 END HOST.

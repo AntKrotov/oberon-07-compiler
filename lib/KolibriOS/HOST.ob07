@@ -57,6 +57,8 @@ VAR
 
     eol*: ARRAY 3 OF CHAR;
 
+    maxreal*: REAL;
+
 
 PROCEDURE [stdcall, "Console.obj", "con_init"] con_init (wnd_width, wnd_height, scr_width, scr_height, title: INTEGER);
 
@@ -496,6 +498,8 @@ END splitf;
 
 BEGIN
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
+    maxreal := 1.9;
+    PACK(maxreal, 1023);
     Console := API.import;
     IF Console THEN
         con_init(-1, -1, -1, -1, SYSTEM.SADR("Oberon-07 for KolibriOS"))

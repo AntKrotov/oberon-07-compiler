@@ -20,7 +20,7 @@ CONST
 
     je = 0; jne = 1; jnb = 2; jb = 3; jge = 10; jl = 11; jg = 12; jle = 13;
 
-    FileAlignment = 1000H;
+    FileAlignment = 10H;
 
     inf = 7F800000H;
 
@@ -300,13 +300,17 @@ END SubReg;
 
 PROCEDURE AddImm8 (rd, imm8: INTEGER);
 BEGIN
-    gen3(2, rd, imm8)
+    IF imm8 # 0 THEN
+        gen3(2, rd, imm8)
+    END
 END AddImm8;
 
 
 PROCEDURE SubImm8 (rd, imm8: INTEGER);
 BEGIN
-    gen3(3, rd, imm8)
+    IF imm8 # 0 THEN
+        gen3(3, rd, imm8)
+    END
 END SubImm8;
 
 
@@ -555,13 +559,19 @@ BEGIN
 
         |RELOC:
                 CASE code.rel OF
-                |BIN.RCODE: reloc := BIN.GetLabel(program, code.value) * 2 + CodeAdr
-                |BIN.RDATA: reloc := code.value + DataAdr;
-                |BIN.RBSS:  reloc := code.value + BssAdr
+                |BIN.RCODE, BIN.PICCODE: reloc := BIN.GetLabel(program, code.value) * 2 + CodeAdr
+                |BIN.RDATA, BIN.PICDATA: reloc := code.value + DataAdr
+                |BIN.RBSS,  BIN.PICBSS:  reloc := code.value + BssAdr
+                END;
+                IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
+                    DEC(reloc, code.offset * 2 + 18)
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
                 FOR i := 0 TO LEN(RelocCode) - 1 DO
                     PutCode(RelocCode[i])
+                END;
+                IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
+                    PutCode(4478H + code.reg) (* add code.reg, PC*)
                 END
         END;
 
@@ -729,8 +739,8 @@ VAR
 
 BEGIN
     IF n # 0 THEN
-        IF ABS(n) <= 255 THEN
-            IF n >= 0 THEN
+        IF (-255 <= n) & (n <= 255) THEN
+            IF n > 0 THEN
                 AddImm8(r, n)
             ELSE
                 SubImm8(r, -n)
@@ -912,7 +922,8 @@ BEGIN
             PushConst(param2)
 
         |IL.opONERR:
-            PushConst(param2);
+            MovConst(R0, param2);
+            push(R0);
             DEC(StkCount);
             jmp(param1)
 
@@ -1234,7 +1245,7 @@ BEGIN
         |IL.opSUBL, IL.opSUBR:
             IF param2 # 0 THEN
                 UnOp(r1);
-                IF ABS(param2) <= 255 THEN
+                IF (-255 <= param2) & (param2 <= 255) THEN
                     IF param2 > 0 THEN
                         SubImm8(r1, param2)
                     ELSE

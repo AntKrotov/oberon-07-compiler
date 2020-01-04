@@ -26,6 +26,8 @@ VAR
 
     eol*: ARRAY 2 OF CHAR;
 
+    maxreal*: REAL;
+
 
 PROCEDURE ExitProcess* (code: INTEGER);
 BEGIN
@@ -197,5 +199,7 @@ END splitf;
 
 BEGIN
     eol := 0AX;
+    maxreal := 1.9;
+    PACK(maxreal, 1023);
     SYSTEM.GET(API.MainParam, argc)
 END HOST.
