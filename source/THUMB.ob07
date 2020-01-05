@@ -382,7 +382,7 @@ END Cmp;
 
 PROCEDURE Tst (r: INTEGER);
 BEGIN
-    gen4(8, r, r)
+    gen3(1, r, 0) (* cmp r, #0 *)
 END Tst;
 
 

@@ -78,10 +78,10 @@ END isRelative;
 
 PROCEDURE d2s* (x: REAL): INTEGER;
 VAR
-    i: INTEGER;
+    res: INTEGER;
 BEGIN
-    SYSTEM.GET(SYSTEM.ADR(x), i)
-    RETURN i
+    SYSTEM.GET(SYSTEM.ADR(x), res)
+    RETURN res
 END d2s;
 
 
@@ -95,7 +95,7 @@ BEGIN
     e := (x DIV 800000H) MOD 256;
     IF e = 255 THEN
         e := 2047
-    ELSE
+    ELSIF (e # 0) OR (f # 0) THEN
         e := e - 127 + 1023
     END;
     h := LSL(s, 31) + LSL(e, 20) + (f DIV 8);
