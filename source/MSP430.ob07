@@ -169,9 +169,18 @@ END bw;
 
 
 PROCEDURE src_x (x, Rn: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
 BEGIN
-    IdxWords.src := x
-    RETURN Rn * 256 + sIDX
+    IF (x = 0) & ~(Rn IN {PC, SR, CG}) THEN
+        res := Rn * 256 + sINDIR
+    ELSE
+        IdxWords.src := x;
+        res := Rn * 256 + sIDX
+    END
+
+    RETURN res
 END src_x;
 
 
@@ -199,7 +208,7 @@ VAR
 BEGIN
     CASE x OF
     | 0: res := CG * 256
-    | 1: res := src_x(0, CG); IdxWords.src := NOWORD
+    | 1: res := CG * 256 + sIDX
     | 2: res := indir(CG)
     | 4: res := indir(SR)
     | 8: res := incr(SR)
@@ -215,9 +224,9 @@ END imm;
 
 PROCEDURE Op2 (op, src, dst: INTEGER);
 BEGIN
-    ASSERT(BITS(op) + {6, 12..15} = {6, 12..15});
-    ASSERT(BITS(src) + {4, 5, 8..11} = {4, 5, 8..11});
-    ASSERT(BITS(dst) + {0..3, 7} = {0..3, 7});
+    ASSERT(BITS(op) - {6, 12..15} = {});
+    ASSERT(BITS(src) - {4, 5, 8..11} = {});
+    ASSERT(BITS(dst) - {0..3, 7} = {});
 
     EmitWord(op + src + dst);
 
@@ -593,6 +602,16 @@ PROCEDURE LocalOffset (offset: INTEGER): INTEGER;
 END LocalOffset;
 
 
+PROCEDURE LocalDst (offset: INTEGER): INTEGER;
+    RETURN dst_x(LocalOffset(offset), SP)
+END LocalDst;
+
+
+PROCEDURE LocalSrc (offset: INTEGER): INTEGER;
+    RETURN src_x(LocalOffset(offset), SP)
+END LocalSrc;
+
+
 PROCEDURE translate;
 VAR
     cmd, next: COMMAND;
@@ -731,14 +750,17 @@ BEGIN
 
         |IL.opLADR:
             reg1 := GetAnyReg();
-            Op2(opMOV, imm(LocalOffset(param2)), reg1);
-            Op2(opADD, SP * 256, reg1)
+            n := LocalOffset(param2);
+            Op2(opMOV, SP * 256, reg1);
+            IF n # 0 THEN
+                Op2(opADD, imm(n), reg1)
+            END
 
         |IL.opLLOAD8:
-            Op2(opMOV + BW, src_x(LocalOffset(param2), SP), GetAnyReg())
+            Op2(opMOV + BW, LocalSrc(param2), GetAnyReg())
 
         |IL.opLLOAD16, IL.opVADR:
-            Op2(opMOV, src_x(LocalOffset(param2), SP), GetAnyReg())
+            Op2(opMOV, LocalSrc(param2), GetAnyReg())
 
         |IL.opGLOAD8:
             Op2(opMOV + BW, src_x(param2, SR), GetAnyReg());
@@ -758,12 +780,12 @@ BEGIN
 
         |IL.opVLOAD8:
             reg1 := GetAnyReg();
-            Op2(opMOV, src_x(LocalOffset(param2), SP), reg1);
+            Op2(opMOV, LocalSrc(param2), reg1);
             Op2(opMOV + BW, indir(reg1), reg1)
 
         |IL.opVLOAD16:
             reg1 := GetAnyReg();
-            Op2(opMOV, src_x(LocalOffset(param2), SP), reg1);
+            Op2(opMOV, LocalSrc(param2), reg1);
             Op2(opMOV, indir(reg1), reg1)
 
         |IL.opSAVE, IL.opSAVE16:
@@ -814,20 +836,15 @@ BEGIN
                 Op2(opSUB, imm(param2), reg1)
             END;
             IF opcode = IL.opSUBL THEN
-                reg2 := GetAnyReg();
-                Clear(reg2);
-                Op2(opSUB, reg1 * 256, reg2);
-                drop;
-                drop;
-                ASSERT(REG.GetReg(R, reg2))
+                Neg(reg1)
             END
 
         |IL.opLADR_SAVEC:
-            Op2(opMOV, imm(param2), dst_x(LocalOffset(param1), SP))
+            Op2(opMOV, imm(param2), LocalDst(param1))
 
         |IL.opLADR_SAVE:
             UnOp(reg1);
-            Op2(opMOV, reg1 * 256, dst_x(LocalOffset(param2), SP));
+            Op2(opMOV, reg1 * 256, LocalDst(param2));
             drop
 
         |IL.opGADR_SAVEC:
@@ -982,19 +999,19 @@ BEGIN
             drop
 
         |IL.opLADR_INCC, IL.opLADR_INCCB:
-            Op2(opADD + bw(opcode = IL.opLADR_INCCB), imm(param2), dst_x(LocalOffset(param1), SP))
+            Op2(opADD + bw(opcode = IL.opLADR_INCCB), imm(param2), LocalDst(param1))
 
         |IL.opLADR_DECCB:
-            Op2(opSUB + BW, imm(param2), dst_x(LocalOffset(param1), SP))
+            Op2(opSUB + BW, imm(param2), LocalDst(param1))
 
         |IL.opLADR_INC, IL.opLADR_INCB:
             UnOp(reg1);
-            Op2(opADD + bw(opcode = IL.opLADR_INCB), reg1 * 256, dst_x(LocalOffset(param2), SP));
+            Op2(opADD + bw(opcode = IL.opLADR_INCB), reg1 * 256, LocalDst(param2));
             drop
 
         |IL.opLADR_DEC, IL.opLADR_DECB:
             UnOp(reg1);
-            Op2(opSUB + bw(opcode = IL.opLADR_DECB), reg1 * 256, dst_x(LocalOffset(param2), SP));
+            Op2(opSUB + bw(opcode = IL.opLADR_DECB), reg1 * 256, LocalDst(param2));
             drop
 
         |IL.opPUSHT:
@@ -1436,7 +1453,7 @@ BEGIN
 
         |IL.opVADR_PARAM:
             reg1 := GetAnyReg();
-            Op2(opMOV, src_x(LocalOffset(param2), SP), reg1);
+            Op2(opMOV, LocalSrc(param2), reg1);
             Push(reg1);
             drop
 
@@ -1511,7 +1528,10 @@ BEGIN
         |IL.opLADR_INCL, IL.opLADR_EXCL:
             PushAll(1);
             MovRR(SP, ACC);
-            Op2(opADD, imm(LocalOffset(param2)), ACC);
+            n := LocalOffset(param2);
+            IF n # 0 THEN
+                Op2(opADD, imm(n), ACC)
+            END;
             Push(ACC);
             IF opcode = IL.opLADR_INCL THEN
                 CallRTL(RTL._incl, 2)
@@ -1520,10 +1540,10 @@ BEGIN
             END
 
         |IL.opLADR_INCLC:
-            Op2(opBIS, imm(ORD({param2})), dst_x(LocalOffset(param1), SP))
+            Op2(opBIS, imm(ORD({param2})), LocalDst(param1))
 
         |IL.opLADR_EXCLC:
-            Op2(opBIC, imm(ORD({param2})), dst_x(LocalOffset(param1), SP))
+            Op2(opBIC, imm(ORD({param2})), LocalDst(param1))
 
         END;
 
