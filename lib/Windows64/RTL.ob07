@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -436,7 +436,7 @@ BEGIN
     CASE err OF
     | 1: append(s, "assertion failure")
     | 2: append(s, "NIL dereference")
-    | 3: append(s, "division by zero")
+    | 3: append(s, "bad divisor")
     | 4: append(s, "NIL procedure call")
     | 5: append(s, "type guard error")
     | 6: append(s, "index out of range")

@@ -1111,6 +1111,11 @@ BEGIN
             test(reg1);
             jcc(je, param1)
 
+        |IL.opJG:
+            UnOp(reg1);
+            test(reg1);
+            jcc(jg, param1)
+
         |IL.opJE:
             UnOp(reg1);
             test(reg1);
@@ -1487,48 +1492,19 @@ BEGIN
             GetRegA
 
         |IL.opDIVR:
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
-            ELSE
-                n := -1
-            END;
-
-            IF a = 1 THEN
-
-            ELSIF a = -1 THEN
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
                 UnOp(reg1);
-                neg(reg1)
-            ELSE
-                IF n > 0 THEN
-                    UnOp(reg1);
-
-                    IF a < 0 THEN
-                        reg2 := GetAnyReg();
-                        mov(reg2, reg1);
-                        IF n # 1 THEN
-                            OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
-                        ELSE
-                            OutByte2(0D1H, 0F8H + reg1)        // sar reg1, 1
-                        END;
-                        OutByte2(29H, 0C0H + reg2 * 8 + reg1); // sub reg1, reg2
-                        drop
-                    ELSE
-                        IF n # 1 THEN
-                            OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
-                        ELSE
-                            OutByte2(0D1H, 0F8H + reg1)        // sar reg1, 1
-                        END
-                    END
-
+                IF n # 1 THEN
+                    OutByte3(0C1H, 0F8H + reg1, n)     // sar reg1, n
                 ELSE
-                    PushAll(1);
-                    pushc(param2);
-                    CallRTL(pic, IL._divmod);
-                    GetRegA
+                    OutByte2(0D1H, 0F8H + reg1)        // sar reg1, 1
                 END
+            ELSIF n < 0 THEN
+                PushAll(1);
+                pushc(param2);
+                CallRTL(pic, IL._divmod);
+                GetRegA
             END
 
         |IL.opDIVL:
@@ -1547,42 +1523,19 @@ BEGIN
             GetRegA
 
         |IL.opMODR:
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
+                UnOp(reg1);
+                andrc(reg1, ABS(param2) - 1);
+            ELSIF n < 0 THEN
+                PushAll(1);
+                pushc(param2);
+                CallRTL(pic, IL._divmod);
+                mov(eax, edx);
+                GetRegA
             ELSE
-                n := -1
-            END;
-
-            IF ABS(a) = 1 THEN
                 UnOp(reg1);
                 xor(reg1, reg1)
-            ELSE
-                IF n > 0 THEN
-                    UnOp(reg1);
-                    andrc(reg1, ABS(a) - 1);
-
-                    IF a < 0 THEN
-                        test(reg1);
-                        OutByte(74H);      // je @f
-                        IF isByte(a) THEN
-                            OutByte(3)
-                        ELSE
-                            OutByte(6)
-                        END;
-                        addrc(reg1, a)
-                                           // @@:
-                    END
-
-                ELSE
-                    PushAll(1);
-                    pushc(param2);
-                    CallRTL(pic, IL._divmod);
-                    mov(eax, edx);
-                    GetRegA
-                END
             END
 
         |IL.opMODL:

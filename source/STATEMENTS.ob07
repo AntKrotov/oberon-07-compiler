@@ -1969,10 +1969,7 @@ VAR
             |SCAN.lxDIV, SCAN.lxMOD:
                 PARS.check(isInt(e) & isInt(e1), pos, 37);
                 IF e1.obj = eCONST THEN
-                    PARS.check(~ARITH.isZero(e1.value), pos, 46);
-                    IF CPU IN {TARGETS.cpuMSP430, TARGETS.cpuTHUMB} THEN
-                        PARS.check(ARITH.Int(e1.value) > 0, pos, 122)
-                    END
+                    PARS.check(ARITH.Int(e1.value) > 0, pos, 122)
                 END;
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
@@ -1985,11 +1982,7 @@ VAR
                 ELSE
                     IF e1.obj # eCONST THEN
                         label1 := IL.NewLabel();
-                        IF CPU IN {TARGETS.cpuMSP430, TARGETS.cpuTHUMB} THEN
-                            IL.AddJmpCmd(IL.opJG, label1)
-                        ELSE
-                            IL.AddJmpCmd(IL.opJNZ, label1)
-                        END
+                        IL.AddJmpCmd(IL.opJG, label1)
                     END;
                     IF e.obj = eCONST THEN
                         IL.OnError(pos.line, errDIV);

@@ -685,7 +685,6 @@ VAR
     reg:        INTEGER;
     max:        INTEGER;
     loop:       INTEGER;
-    param2:     INTEGER;
 
 BEGIN
     loop := 1;
@@ -761,17 +760,7 @@ BEGIN
             leaf := FALSE
 
         |IL.opDIVR, IL.opMODR:
-            param2 := cur.param2;
-            IF param2 >= 1 THEN
-                param2 := UTILS.Log2(param2)
-            ELSIF param2 <= -1 THEN
-                param2 := UTILS.Log2(-param2)
-            ELSE
-                param2 := -1
-            END;
-            IF param2 < 0 THEN
-                leaf := FALSE
-            END
+            leaf := UTILS.Log2(cur.param2) >= 0
 
         ELSE
 
@@ -1452,6 +1441,11 @@ BEGIN
             test(reg1);
             jcc(je, param1)
 
+        |IL.opJG:
+            UnOp(reg1);
+            test(reg1);
+            jcc(jg, param1)
+
         |IL.opJE:
             UnOp(reg1);
             test(reg1);
@@ -1821,40 +1815,15 @@ BEGIN
             GetRegA
 
         |IL.opDIVR:
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
-            ELSE
-                n := -1
-            END;
-
-            IF a = 1 THEN
-
-            ELSIF a = -1 THEN
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
                 UnOp(reg1);
-                neg(reg1)
-            ELSE
-                IF n > 0 THEN
-                    UnOp(reg1);
-
-                    IF a < 0 THEN
-                        reg2 := GetAnyReg();
-                        mov(reg2, reg1);
-                        shiftrc(sar, reg1, n);
-                        sub(reg1, reg2);
-                        drop
-                    ELSE
-                        shiftrc(sar, reg1, n)
-                    END
-
-                ELSE
-                    PushAll(1);
-                    pushc(param2);
-                    CallRTL(IL._divmod);
-                    GetRegA
-                END
+                shiftrc(sar, reg1, n)
+            ELSIF n < 0 THEN
+                PushAll(1);
+                pushc(param2);
+                CallRTL(IL._divmod);
+                GetRegA
             END
 
         |IL.opDIVL:
@@ -1873,38 +1842,19 @@ BEGIN
             GetRegA
 
         |IL.opMODR:
-            a := param2;
-            IF a > 1 THEN
-                n := UTILS.Log2(a)
-            ELSIF a < -1 THEN
-                n := UTILS.Log2(-a)
+            n := UTILS.Log2(param2);
+            IF n > 0 THEN
+                UnOp(reg1);
+                andrc(reg1, ABS(param2) - 1);
+            ELSIF n < 0 THEN
+                PushAll(1);
+                pushc(param2);
+                CallRTL(IL._divmod);
+                mov(rax, rdx);
+                GetRegA
             ELSE
-                n := -1
-            END;
-
-            IF ABS(a) = 1 THEN
                 UnOp(reg1);
                 xor(reg1, reg1)
-            ELSE
-                IF n > 0 THEN
-                    UnOp(reg1);
-                    andrc(reg1, ABS(a) - 1);
-
-                    IF a < 0 THEN
-                        test(reg1);
-                        label := NewLabel();
-                        jcc(je, label);
-                        addrc(reg1, a);
-                        X86.SetLabel(label)
-                    END
-
-                ELSE
-                    PushAll(1);
-                    pushc(param2);
-                    CallRTL(IL._divmod);
-                    mov(rax, rdx);
-                    GetRegA
-                END
             END
 
         |IL.opMODL:
