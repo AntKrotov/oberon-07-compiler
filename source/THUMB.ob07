@@ -24,12 +24,6 @@ CONST
 
     inf = 7F800000H;
 
-    _init = 0; _error = 1; _length = 2; _move = 3; _lengthw = 4; _strcmp = 5; _strcmpw = 6;
-    _arrcpy = 7; _strcpy = 8; _divmod = 9; _set = 10; _set1 = 11;
-    _mulf = 12; _divf = 13; _divfi = 14; _addf = 15; _subf = 16; _subfi = 17;
-    _cmpf = 18; _floor = 19; _flt = 20; _new = 21; _guard = 22; _is = 23; _guardrec = 24;
-    _rot = 25; _pack = 26; _unpk = 27; _exit = 28;
-
 
 TYPE
 
@@ -805,10 +799,9 @@ BEGIN
 END LocAdr;
 
 
-PROCEDURE CallRTL (n, par: INTEGER);
+PROCEDURE CallRTL (proc, par: INTEGER);
 BEGIN
-    MovImm8(ACC, n);
-    Code(0DF00H);
+    call(IL.codes.rtl[proc]);
     AddSP(par)
 END CallRTL;
 
@@ -928,7 +921,7 @@ BEGIN
             jmp(param1)
 
         |IL.opERR:
-            CallRTL(_error, 0)
+            CallRTL(IL._error, 0)
 
         |IL.opNOP:
 
@@ -1594,12 +1587,12 @@ BEGIN
 
         |IL.opLENGTH:
             PushAll(2);
-            CallRTL(_length, 2);
+            CallRTL(IL._length, 2);
             GetRegA
 
         |IL.opLENGTHW:
             PushAll(2);
-            CallRTL(_lengthw, 2);
+            CallRTL(IL._lengthw, 2);
             GetRegA
 
         |IL.opSAVES:
@@ -1612,43 +1605,43 @@ BEGIN
             push(r2);
             drop;
             PushConst(param1);
-            CallRTL(_move, 3)
+            CallRTL(IL._move, 3)
 
         |IL.opEQS .. IL.opGES:
             PushAll(4);
             PushConst(opcode - IL.opEQS);
-            CallRTL(_strcmp, 5);
+            CallRTL(IL._strcmp, 5);
             GetRegA
 
         |IL.opEQSW .. IL.opGESW:
             PushAll(4);
             PushConst(opcode - IL.opEQSW);
-            CallRTL(_strcmpw, 5);
+            CallRTL(IL._strcmpw, 5);
             GetRegA
 
         |IL.opCOPY:
             PushAll(2);
             PushConst(param2);
-            CallRTL(_move, 3)
+            CallRTL(IL._move, 3)
 
         |IL.opMOVE:
             PushAll(3);
-            CallRTL(_move, 3)
+            CallRTL(IL._move, 3)
 
         |IL.opCOPYA:
             PushAll(4);
             PushConst(param2);
-            CallRTL(_arrcpy, 5);
+            CallRTL(IL._arrcpy, 5);
             GetRegA
 
         |IL.opCOPYS:
             PushAll(4);
             PushConst(param2);
-            CallRTL(_strcpy, 5)
+            CallRTL(IL._strcpy, 5)
 
         |IL.opDIV:
             PushAll(2);
-            CallRTL(_divmod, 2);
+            CallRTL(IL._divmod, 2);
             GetRegA
 
         |IL.opDIVL:
@@ -1657,7 +1650,7 @@ BEGIN
             PushConst(param2);
             push(r1);
             drop;
-            CallRTL(_divmod, 2);
+            CallRTL(IL._divmod, 2);
             GetRegA
 
         |IL.opDIVR:
@@ -1674,7 +1667,7 @@ BEGIN
 
         |IL.opMOD:
             PushAll(2);
-            CallRTL(_divmod, 2);
+            CallRTL(IL._divmod, 2);
             mov(R0, R1);
             GetRegA
 
@@ -1687,7 +1680,7 @@ BEGIN
             ELSIF n < 0 THEN
                 PushAll(1);
                 PushConst(param2);
-                CallRTL(_divmod, 2);
+                CallRTL(IL._divmod, 2);
                 mov(R0, R1);
                 GetRegA
             ELSE
@@ -1701,7 +1694,7 @@ BEGIN
             PushConst(param2);
             push(r1);
             drop;
-            CallRTL(_divmod, 2);
+            CallRTL(IL._divmod, 2);
             mov(R0, R1);
             GetRegA
 
@@ -1753,13 +1746,13 @@ BEGIN
 
         |IL.opRSET:
             PushAll(2);
-            CallRTL(_set, 2);
+            CallRTL(IL._set, 2);
             GetRegA
 
         |IL.opRSETR:
             PushAll(1);
             PushConst(param2);
-            CallRTL(_set, 2);
+            CallRTL(IL._set, 2);
             GetRegA
 
         |IL.opRSETL:
@@ -1768,12 +1761,12 @@ BEGIN
             PushConst(param2);
             push(r1);
             drop;
-            CallRTL(_set, 2);
+            CallRTL(IL._set, 2);
             GetRegA
 
         |IL.opRSET1:
             PushAll(1);
-            CallRTL(_set1, 1);
+            CallRTL(IL._set1, 1);
             GetRegA
 
         |IL.opCONSTF:
@@ -1781,48 +1774,48 @@ BEGIN
 
         |IL.opMULF:
             PushAll(2);
-            CallRTL(_mulf, 2);
+            CallRTL(IL._mulf, 2);
             GetRegA
 
         |IL.opDIVF:
             PushAll(2);
-            CallRTL(_divf, 2);
+            CallRTL(IL._divf, 2);
             GetRegA
 
         |IL.opDIVFI:
             PushAll(2);
-            CallRTL(_divfi, 2);
+            CallRTL(IL._divfi, 2);
             GetRegA
 
         |IL.opADDF, IL.opADDFI:
             PushAll(2);
-            CallRTL(_addf, 2);
+            CallRTL(IL._addf, 2);
             GetRegA
 
         |IL.opSUBFI:
             PushAll(2);
-            CallRTL(_subfi, 2);
+            CallRTL(IL._subfi, 2);
             GetRegA
 
         |IL.opSUBF:
             PushAll(2);
-            CallRTL(_subf, 2);
+            CallRTL(IL._subf, 2);
             GetRegA
 
         |IL.opEQF..IL.opGEF:
             PushAll(2);
             PushConst(opcode - IL.opEQF);
-            CallRTL(_cmpf, 3);
+            CallRTL(IL._cmpf, 3);
             GetRegA
 
         |IL.opFLOOR:
             PushAll(1);
-            CallRTL(_floor, 1);
+            CallRTL(IL._floor, 1);
             GetRegA
 
         |IL.opFLT:
             PushAll(1);
-            CallRTL(_flt, 1);
+            CallRTL(IL._flt, 1);
             GetRegA
 
         |IL.opUMINF:
@@ -1847,32 +1840,32 @@ BEGIN
             ASSERT(UTILS.Align(n, 32));
             PushConst(n);
             PushConst(param1);
-            CallRTL(_new, 3)
+            CallRTL(IL._new, 3)
 
         |IL.opTYPEGP:
             UnOp(r1);
             PushAll(0);
             push(r1);
             PushConst(param2);
-            CallRTL(_guard, 2);
+            CallRTL(IL._guard, 2);
             GetRegA
 
         |IL.opIS:
             PushAll(1);
             PushConst(param2);
-            CallRTL(_is, 2);
+            CallRTL(IL._is, 2);
             GetRegA
 
         |IL.opISREC:
             PushAll(2);
             PushConst(param2);
-            CallRTL(_guardrec, 3);
+            CallRTL(IL._guardrec, 3);
             GetRegA
 
         |IL.opTYPEGR:
             PushAll(1);
             PushConst(param2);
-            CallRTL(_guardrec, 2);
+            CallRTL(IL._guardrec, 2);
             GetRegA
 
         |IL.opTYPEGD:
@@ -1882,14 +1875,14 @@ BEGIN
             Ldr32(r1, r1);
             push(r1);
             PushConst(param2);
-            CallRTL(_guardrec, 2);
+            CallRTL(IL._guardrec, 2);
             GetRegA
 
         |IL.opCASET:
             push(R2);
             push(R2);
             PushConst(param2);
-            CallRTL(_guardrec, 2);
+            CallRTL(IL._guardrec, 2);
             pop(R2);
             Tst(ACC);
             jcc(jne, param1)
@@ -1899,20 +1892,20 @@ BEGIN
             mov(R2, SP);
             push(R2);
             PushConst(param2);
-            CallRTL(_rot, 2)
+            CallRTL(IL._rot, 2)
 
         |IL.opPACK:
             PushAll(2);
-            CallRTL(_pack, 2)
+            CallRTL(IL._pack, 2)
 
         |IL.opPACKC:
             PushAll(1);
             PushConst(param2);
-            CallRTL(_pack, 2)
+            CallRTL(IL._pack, 2)
 
         |IL.opUNPK:
             PushAll(2);
-            CallRTL(_unpk, 2)
+            CallRTL(IL._unpk, 2)
 
         END;
 
@@ -1931,7 +1924,7 @@ BEGIN
     PushAll(2);
     PushConst(tcount);
     PushConst(GlobSize);
-    CallRTL(_init, 4)
+    CallRTL(IL._init, 4)
 END prolog;
 
 
@@ -1971,7 +1964,8 @@ BEGIN
 
     prolog(IL.codes.bss, tcount, ORD(opt.pic));
     translate(ORD(opt.pic), tcount * 4);
-    CallRTL(_exit, 0);
+    PushConst(0);
+    CallRTL(IL._exit, 0);
 
     fixup(CHL.Length(program.data), IL.codes.bss);
 

@@ -121,6 +121,18 @@ CONST
     _guard     *=  20;
     _guardrec  *=  21;
 
+    _mulf      *=  22;
+    _divf      *=  23;
+    _divfi     *=  24;
+    _addf      *=  25;
+    _subf      *=  26;
+    _subfi     *=  27;
+    _cmpf      *=  28;
+    _floor     *=  29;
+    _flt       *=  30;
+    _pack      *=  31;
+    _unpk      *=  32;
+
 
 TYPE
 
@@ -186,7 +198,7 @@ TYPE
         dmin*:      INTEGER;
         lcount*:    INTEGER;
         bss*:       INTEGER;
-        rtl*:       ARRAY 22 OF INTEGER;
+        rtl*:       ARRAY 33 OF INTEGER;
         errlabels*: ARRAY 12 OF INTEGER;
 
         charoffs:   ARRAY 256 OF INTEGER;

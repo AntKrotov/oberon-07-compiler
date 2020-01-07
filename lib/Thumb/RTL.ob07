@@ -1,11 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
 MODULE RTL;
+
+IMPORT SYSTEM;
 
 
 CONST
@@ -13,6 +15,164 @@ CONST
     bit_depth* = 32;
     maxint* = 7FFFFFFFH;
     minint* = 80000000H;
+
+
+VAR
+
+    Heap, Types, TypesCount: INTEGER;
+
+
+PROCEDURE _init* (gsize, tcount, gadr, types: INTEGER);
+VAR
+    i: INTEGER;
+
+BEGIN
+    gsize := gsize DIV 16;
+    gsize := gsize * 16 + 16;
+
+    FOR i := 0 TO gsize - 4 BY 4 DO
+        SYSTEM.PUT(gadr + i, 0)
+    END;
+
+    Heap := gadr + gsize;
+    TypesCount := tcount;
+    Types := types
+END _init;
+
+
+PROCEDURE [code] _error* (module, err, line: INTEGER)
+    2001H, 0DF00H;
+
+PROCEDURE [code] _length* (len, str: INTEGER): INTEGER
+    2002H, 0DF00H;
+
+PROCEDURE [code] _move* (bytes, dest, source: INTEGER)
+    2003H, 0DF00H;
+
+PROCEDURE [code] _lengthw* (len, str: INTEGER): INTEGER
+    2004H, 0DF00H;
+
+PROCEDURE [code] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
+    2005H, 0DF00H;
+
+PROCEDURE [code] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
+    2006H, 0DF00H;
+
+PROCEDURE [code] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN
+    2007H, 0DF00H;
+
+PROCEDURE [code] _strcpy* (chr_size, len_src, src, len_dst, dst: INTEGER)
+    2008H, 0DF00H;
+
+PROCEDURE [code] _divmod* (b, a: INTEGER)
+    2009H, 0DF00H;
+
+PROCEDURE [code] _set* (b, a: INTEGER): SET
+    200AH, 0DF00H;
+
+PROCEDURE [code] _set1* (a: INTEGER): SET
+    200BH, 0DF00H;
+
+PROCEDURE [code] _mulf* (b, a: REAL): REAL
+    200CH, 0DF00H;
+
+PROCEDURE [code] _divf* (b, a: REAL): REAL
+    200DH, 0DF00H;
+
+PROCEDURE [code] _divfi* (b, a: REAL): REAL
+    200EH, 0DF00H;
+
+PROCEDURE [code] _addf* (b, a: REAL): REAL
+    200FH, 0DF00H;
+
+PROCEDURE [code] _subf* (b, a: REAL): REAL
+    2010H, 0DF00H;
+
+PROCEDURE [code] _subfi* (b, a: REAL): REAL
+    2011H, 0DF00H;
+
+PROCEDURE [code] _cmpf* (op: INTEGER; b, a: REAL): BOOLEAN
+    2012H, 0DF00H;
+
+PROCEDURE [code] _floor* (x: REAL): INTEGER
+    2013H, 0DF00H;
+
+PROCEDURE [code] _flt* (x: INTEGER): REAL
+    2014H, 0DF00H;
+
+
+PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
+VAR
+    i, res: INTEGER;
+
+BEGIN
+    res := Heap;
+    Heap := Heap + size;
+    FOR i := 4 TO size - 4 BY 4 DO
+        SYSTEM.PUT(res + i, 0)
+    END;
+    SYSTEM.PUT(res, t);
+    p := res + 4
+END _new;
+
+
+PROCEDURE _guard* (t, p: INTEGER): BOOLEAN;
+VAR
+    type: INTEGER;
+
+BEGIN
+    SYSTEM.GET(p, p);
+    IF p # 0 THEN
+        SYSTEM.GET(p - 4, type);
+        WHILE (type # t) & (type # 0) DO
+            SYSTEM.GET(Types + type * 4, type)
+        END
+    ELSE
+        type := t
+    END
+
+    RETURN type = t
+END _guard;
+
+
+PROCEDURE _is* (t, p: INTEGER): BOOLEAN;
+VAR
+    type: INTEGER;
+
+BEGIN
+    type := 0;
+    IF p # 0 THEN
+        SYSTEM.GET(p - 4, type);
+        WHILE (type # t) & (type # 0) DO
+            SYSTEM.GET(Types + type * 4, type)
+        END
+    END
+
+    RETURN type = t
+END _is;
+
+
+PROCEDURE _guardrec* (t0, t1: INTEGER): BOOLEAN;
+BEGIN
+    WHILE (t1 # t0) & (t1 # 0) DO
+        SYSTEM.GET(Types + t1 * 4, t1)
+    END
+
+    RETURN t1 = t0
+END _guardrec;
+
+
+PROCEDURE [code] _rot* (VAR A: ARRAY OF INTEGER)
+    2019H, 0DF00H;
+
+PROCEDURE [code] _pack* (n: INTEGER; VAR x: REAL)
+    201AH, 0DF00H;
+
+PROCEDURE [code] _unpk* (VAR n: INTEGER; VAR x: REAL)
+    201BH, 0DF00H;
+
+PROCEDURE [code] _exit* (n: INTEGER)
+    201CH, 0DF00H;
 
 
 END RTL.

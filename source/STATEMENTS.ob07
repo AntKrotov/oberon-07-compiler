@@ -3232,31 +3232,43 @@ BEGIN
     rtl := PARS.program.rtl;
     ASSERT(rtl # NIL);
 
+    getproc(rtl, "_strcmp",   IL._strcmp);
+    getproc(rtl, "_length",   IL._length);
+    getproc(rtl, "_arrcpy",   IL._arrcpy);
+    getproc(rtl, "_is",       IL._is);
+    getproc(rtl, "_guard",    IL._guard);
+    getproc(rtl, "_guardrec", IL._guardrec);
+    getproc(rtl, "_error",    IL._error);
+    getproc(rtl, "_new",      IL._new);
+    getproc(rtl, "_rot",      IL._rot);
+    getproc(rtl, "_strcpy",   IL._strcpy);
+    getproc(rtl, "_move",     IL._move);
+    getproc(rtl, "_divmod",   IL._divmod);
+    getproc(rtl, "_set",      IL._set);
+    getproc(rtl, "_set1",     IL._set1);
+    getproc(rtl, "_lengthw",  IL._lengthw);
+    getproc(rtl, "_strcmpw",  IL._strcmpw);
+    getproc(rtl, "_exit",     IL._exit);
+    getproc(rtl, "_init",     IL._init);
+
     IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
-        getproc(rtl, "_strcmp",   IL._strcmp);
-        getproc(rtl, "_length",   IL._length);
-        getproc(rtl, "_arrcpy",   IL._arrcpy);
-        getproc(rtl, "_is",       IL._is);
-        getproc(rtl, "_guard",    IL._guard);
-        getproc(rtl, "_guardrec", IL._guardrec);
-        getproc(rtl, "_error",    IL._error);
-        getproc(rtl, "_new",      IL._new);
-        getproc(rtl, "_rot",      IL._rot);
-        getproc(rtl, "_strcpy",   IL._strcpy);
-        getproc(rtl, "_move",     IL._move);
-        getproc(rtl, "_divmod",   IL._divmod);
-        getproc(rtl, "_set",      IL._set);
-        getproc(rtl, "_set1",     IL._set1);
-        getproc(rtl, "_isrec",    IL._isrec);
-        getproc(rtl, "_lengthw",  IL._lengthw);
-        getproc(rtl, "_strcmpw",  IL._strcmpw);
-        getproc(rtl, "_dllentry", IL._dllentry);
         getproc(rtl, "_dispose",  IL._dispose);
-        getproc(rtl, "_exit",     IL._exit);
-        getproc(rtl, "_init",     IL._init);
+        getproc(rtl, "_isrec",    IL._isrec);
+        getproc(rtl, "_dllentry", IL._dllentry);
         getproc(rtl, "_sofinit",  IL._sofinit)
     ELSIF CPU = TARGETS.cpuTHUMB THEN
-
+        getproc(rtl, "_mulf",  IL._mulf);
+        getproc(rtl, "_divf",  IL._divf);
+        getproc(rtl, "_divfi", IL._divfi);
+        getproc(rtl, "_is",    IL._is);
+        getproc(rtl, "_addf",  IL._addf);
+        getproc(rtl, "_subf",  IL._subf);
+        getproc(rtl, "_subfi", IL._subfi);
+        getproc(rtl, "_cmpf",  IL._cmpf);
+        getproc(rtl, "_floor", IL._floor);
+        getproc(rtl, "_flt",   IL._flt);
+        getproc(rtl, "_pack",  IL._pack);
+        getproc(rtl, "_unpk",  IL._unpk)
     END
 
 END setrtl;
