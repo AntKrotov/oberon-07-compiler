@@ -3260,7 +3260,6 @@ BEGIN
         getproc(rtl, "_mulf",  IL._mulf);
         getproc(rtl, "_divf",  IL._divf);
         getproc(rtl, "_divfi", IL._divfi);
-        getproc(rtl, "_is",    IL._is);
         getproc(rtl, "_addf",  IL._addf);
         getproc(rtl, "_subf",  IL._subf);
         getproc(rtl, "_subfi", IL._subfi);

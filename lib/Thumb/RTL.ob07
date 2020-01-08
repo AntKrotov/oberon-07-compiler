@@ -16,62 +16,20 @@ CONST
     maxint* = 7FFFFFFFH;
     minint* = 80000000H;
 
+    WORD = bit_depth DIV 8;
+    MAX_SET = bit_depth - 1;
+
 
 VAR
 
     Heap, Types, TypesCount: INTEGER;
 
 
-PROCEDURE _init* (gsize, tcount, gadr, types: INTEGER);
-VAR
-    i: INTEGER;
-
-BEGIN
-    gsize := gsize DIV 16;
-    gsize := gsize * 16 + 16;
-
-    FOR i := 0 TO gsize - 4 BY 4 DO
-        SYSTEM.PUT(gadr + i, 0)
-    END;
-
-    Heap := gadr + gsize;
-    TypesCount := tcount;
-    Types := types
-END _init;
-
-
 PROCEDURE [code] _error* (module, err, line: INTEGER)
     2001H, 0DF00H;
 
-PROCEDURE [code] _length* (len, str: INTEGER): INTEGER
-    2002H, 0DF00H;
-
-PROCEDURE [code] _move* (bytes, dest, source: INTEGER)
-    2003H, 0DF00H;
-
-PROCEDURE [code] _lengthw* (len, str: INTEGER): INTEGER
-    2004H, 0DF00H;
-
-PROCEDURE [code] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
-    2005H, 0DF00H;
-
-PROCEDURE [code] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
-    2006H, 0DF00H;
-
-PROCEDURE [code] _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN
-    2007H, 0DF00H;
-
-PROCEDURE [code] _strcpy* (chr_size, len_src, src, len_dst, dst: INTEGER)
-    2008H, 0DF00H;
-
-PROCEDURE [code] _divmod* (b, a: INTEGER)
-    2009H, 0DF00H;
-
-PROCEDURE [code] _set* (b, a: INTEGER): SET
-    200AH, 0DF00H;
-
-PROCEDURE [code] _set1* (a: INTEGER): SET
-    200BH, 0DF00H;
+PROCEDURE [code] _exit* (n: INTEGER)
+    201CH, 0DF00H;
 
 PROCEDURE [code] _mulf* (b, a: REAL): REAL
     200CH, 0DF00H;
@@ -101,6 +59,295 @@ PROCEDURE [code] _flt* (x: INTEGER): REAL
     2014H, 0DF00H;
 
 
+PROCEDURE _pack* (n: INTEGER; VAR x: SET);
+BEGIN
+    n := LSL((LSR(ORD(x), 23) MOD 256 + n) MOD 256, 23);
+    x := x - {23..30} + BITS(n)
+END _pack;
+
+
+PROCEDURE _unpk* (VAR n: INTEGER; VAR x: SET);
+BEGIN
+    n := LSR(ORD(x), 23) MOD 256 - 127;
+    x := x - {30} + {23..29}
+END _unpk;
+
+
+PROCEDURE divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
+VAR
+    res, c, r: INTEGER;
+
+BEGIN
+    res := 0;
+
+    WHILE (a >= b) OR (a < 0) DO
+        r := 2;
+        c := b * 2;
+        WHILE (c > 0) & (ABS(a) >= c) DO
+            c := c * 2;
+            r := r * 2
+        END;
+
+        IF a < 0 THEN
+            INC(a, LSR(c, 1));
+            DEC(res, LSR(r, 1))
+        ELSE
+            DEC(a, LSR(c, 1));
+            INC(res, LSR(r, 1))
+        END
+    END;
+
+    mod := a
+
+    RETURN res
+END divmod;
+
+
+PROCEDURE _divmod* (b, a: INTEGER);  (* a DIV b -> r0; a MOD b -> r1 *)
+VAR
+    mod: INTEGER;
+
+BEGIN
+    a := divmod(a, b, mod);
+    SYSTEM.CODE(
+    09900H,  (*  ldr r1, [sp]       *)
+    09803H,  (*  ldr r0, [sp + 12]  *)
+    0B001H,  (*  add sp, 4          *)
+    0BC04H,  (*  pop r2             *)
+    04697H   (*  mov pc, r2         *)
+    )
+END _divmod;
+
+
+PROCEDURE _rot* (VAR A: ARRAY OF INTEGER);
+VAR
+    i, n, k: INTEGER;
+
+BEGIN
+    k := LEN(A) - 1;
+    n := A[0];
+    i := 0;
+    WHILE i < k DO
+        A[i] := A[i + 1];
+        INC(i)
+    END;
+    A[k] := n
+END _rot;
+
+
+PROCEDURE _set* (b, a: INTEGER): INTEGER;
+BEGIN
+    IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
+        IF b > MAX_SET THEN
+            b := MAX_SET
+        END;
+        IF a < 0 THEN
+            a := 0
+        END;
+        a := LSR(ASR(minint, b - a), MAX_SET - b)
+    ELSE
+        a := 0
+    END
+
+    RETURN a
+END _set;
+
+
+PROCEDURE _set1* (a: INTEGER): INTEGER;
+BEGIN
+    IF ASR(a, 5) = 0 THEN
+        a := LSL(1, a)
+    ELSE
+        a := 0
+    END
+    RETURN a
+END _set1;
+
+
+PROCEDURE _length* (len, str: INTEGER): INTEGER;
+VAR
+    c: CHAR;
+    res: INTEGER;
+
+BEGIN
+    res := 0;
+    REPEAT
+        SYSTEM.GET(str, c);
+        INC(str);
+        DEC(len);
+        INC(res)
+    UNTIL (len = 0) OR (c = 0X);
+
+    RETURN res - ORD(c = 0X)
+END _length;
+
+
+PROCEDURE _move* (bytes, dest, source: INTEGER);
+VAR
+    b: BYTE;
+    i: INTEGER;
+
+BEGIN
+    WHILE ((source MOD WORD # 0) OR (dest MOD WORD # 0)) & (bytes > 0) DO
+        SYSTEM.GET(source, b);
+        SYSTEM.PUT8(dest, b);
+        INC(source);
+        INC(dest);
+        DEC(bytes)
+    END;
+
+    WHILE bytes >= WORD DO
+        SYSTEM.GET(source, i);
+        SYSTEM.PUT(dest, i);
+        INC(source, WORD);
+        INC(dest, WORD);
+        DEC(bytes, WORD)
+    END;
+
+    WHILE bytes > 0 DO
+        SYSTEM.GET(source, b);
+        SYSTEM.PUT8(dest, b);
+        INC(source);
+        INC(dest);
+        DEC(bytes)
+    END
+END _move;
+
+
+PROCEDURE _lengthw* (len, str: INTEGER): INTEGER;
+VAR
+    c: WCHAR;
+    res: INTEGER;
+
+BEGIN
+    res := 0;
+    REPEAT
+        SYSTEM.GET(str, c);
+        INC(str, 2);
+        DEC(len);
+        INC(res)
+    UNTIL (len = 0) OR (c = 0X);
+
+    RETURN res - ORD(c = 0X)
+END _lengthw;
+
+
+PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
+VAR
+    A, B: CHAR;
+    res: INTEGER;
+
+BEGIN
+    res := 0;
+    WHILE n > 0 DO
+        SYSTEM.GET(a, A); INC(a);
+        SYSTEM.GET(b, B); INC(b);
+        DEC(n);
+        IF A # B THEN
+            res := ORD(A) - ORD(B);
+            n := 0
+        ELSIF A = 0X THEN
+            n := 0
+        END
+    END
+    RETURN res
+END strncmp;
+
+
+PROCEDURE _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+VAR
+    res: INTEGER;
+    bRes: BOOLEAN;
+
+BEGIN
+
+    res := strncmp(str1, str2, MIN(len1, len2));
+    IF res = 0 THEN
+        res := _length(len1, str1) - _length(len2, str2)
+    END;
+
+    CASE op OF
+    |0: bRes := res =  0
+    |1: bRes := res #  0
+    |2: bRes := res <  0
+    |3: bRes := res <= 0
+    |4: bRes := res >  0
+    |5: bRes := res >= 0
+    END
+
+    RETURN bRes
+END _strcmp;
+
+
+PROCEDURE strncmpw (a, b, n: INTEGER): INTEGER;
+VAR
+    A, B: WCHAR;
+    res:  INTEGER;
+
+BEGIN
+    res := 0;
+    WHILE n > 0 DO
+        SYSTEM.GET(a, A); INC(a, 2);
+        SYSTEM.GET(b, B); INC(b, 2);
+        DEC(n);
+        IF A # B THEN
+            res := ORD(A) - ORD(B);
+            n := 0
+        ELSIF A = WCHR(0) THEN
+            n := 0
+        END
+    END
+    RETURN res
+END strncmpw;
+
+
+PROCEDURE _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
+VAR
+    res: INTEGER;
+    bRes: BOOLEAN;
+
+BEGIN
+
+    res := strncmpw(str1, str2, MIN(len1, len2));
+    IF res = 0 THEN
+        res := _lengthw(len1, str1) - _lengthw(len2, str2)
+    END;
+
+    CASE op OF
+    |0: bRes := res =  0
+    |1: bRes := res #  0
+    |2: bRes := res <  0
+    |3: bRes := res <= 0
+    |4: bRes := res >  0
+    |5: bRes := res >= 0
+    END
+
+    RETURN bRes
+END _strcmpw;
+
+
+PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
+VAR
+    res: BOOLEAN;
+
+BEGIN
+    IF len_src > len_dst THEN
+        res := FALSE
+    ELSE
+        _move(len_src * base_size, dst, src);
+        res := TRUE
+    END
+
+    RETURN res
+END _arrcpy;
+
+
+PROCEDURE _strcpy* (chr_size, len_src, src, len_dst, dst: INTEGER);
+BEGIN
+    _move(MIN(len_dst, len_src) * chr_size, dst, src)
+END _strcpy;
+
+
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
 VAR
     i, res: INTEGER;
@@ -108,11 +355,11 @@ VAR
 BEGIN
     res := Heap;
     Heap := Heap + size;
-    FOR i := 4 TO size - 4 BY 4 DO
+    FOR i := WORD TO size - WORD BY WORD DO
         SYSTEM.PUT(res + i, 0)
     END;
     SYSTEM.PUT(res, t);
-    p := res + 4
+    p := res + WORD
 END _new;
 
 
@@ -123,9 +370,9 @@ VAR
 BEGIN
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        SYSTEM.GET(p - 4, type);
+        SYSTEM.GET(p - WORD, type);
         WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * 4, type)
+            SYSTEM.GET(Types + type * WORD, type)
         END
     ELSE
         type := t
@@ -142,9 +389,9 @@ VAR
 BEGIN
     type := 0;
     IF p # 0 THEN
-        SYSTEM.GET(p - 4, type);
+        SYSTEM.GET(p - WORD, type);
         WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * 4, type)
+            SYSTEM.GET(Types + type * WORD, type)
         END
     END
 
@@ -155,24 +402,29 @@ END _is;
 PROCEDURE _guardrec* (t0, t1: INTEGER): BOOLEAN;
 BEGIN
     WHILE (t1 # t0) & (t1 # 0) DO
-        SYSTEM.GET(Types + t1 * 4, t1)
+        SYSTEM.GET(Types + t1 * WORD, t1)
     END
 
     RETURN t1 = t0
 END _guardrec;
 
 
-PROCEDURE [code] _rot* (VAR A: ARRAY OF INTEGER)
-    2019H, 0DF00H;
+PROCEDURE _init* (gsize, tcount, gadr, types: INTEGER);
+VAR
+    i: INTEGER;
 
-PROCEDURE [code] _pack* (n: INTEGER; VAR x: REAL)
-    201AH, 0DF00H;
+BEGIN
+    gsize := gsize DIV 16;
+    gsize := gsize * 16 + 16;
 
-PROCEDURE [code] _unpk* (VAR n: INTEGER; VAR x: REAL)
-    201BH, 0DF00H;
+    FOR i := 0 TO gsize - WORD BY WORD DO
+        SYSTEM.PUT(gadr + i, 0)
+    END;
 
-PROCEDURE [code] _exit* (n: INTEGER)
-    201CH, 0DF00H;
+    Heap := gadr + gsize;
+    TypesCount := tcount;
+    Types := types
+END _init;
 
 
 END RTL.
