@@ -1774,38 +1774,38 @@ BEGIN
 
         |IL.opMULF:
             PushAll(2);
-            CallRTL(IL._mulf, 2);
+            CallRTL(IL._fmul, 2);
             GetRegA
 
         |IL.opDIVF:
             PushAll(2);
-            CallRTL(IL._divf, 2);
+            CallRTL(IL._fdiv, 2);
             GetRegA
 
         |IL.opDIVFI:
             PushAll(2);
-            CallRTL(IL._divfi, 2);
+            CallRTL(IL._fdivi, 2);
             GetRegA
 
         |IL.opADDF, IL.opADDFI:
             PushAll(2);
-            CallRTL(IL._addf, 2);
+            CallRTL(IL._fadd, 2);
             GetRegA
 
         |IL.opSUBFI:
             PushAll(2);
-            CallRTL(IL._subfi, 2);
+            CallRTL(IL._fsubi, 2);
             GetRegA
 
         |IL.opSUBF:
             PushAll(2);
-            CallRTL(IL._subf, 2);
+            CallRTL(IL._fsub, 2);
             GetRegA
 
         |IL.opEQF..IL.opGEF:
             PushAll(2);
             PushConst(opcode - IL.opEQF);
-            CallRTL(IL._cmpf, 3);
+            CallRTL(IL._fcmp, 3);
             GetRegA
 
         |IL.opFLOOR:

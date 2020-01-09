@@ -7,7 +7,7 @@
 
 MODULE RTL;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM, F := FPU;
 
 
 CONST
@@ -20,43 +20,68 @@ CONST
     MAX_SET = bit_depth - 1;
 
 
+TYPE
+
+    TrapProc = PROCEDURE (module, err, line: INTEGER);
+
+
 VAR
 
     Heap, Types, TypesCount: INTEGER;
+    Trap: TrapProc;
 
 
-PROCEDURE [code] _error* (module, err, line: INTEGER)
-    2001H, 0DF00H;
+PROCEDURE _error* (module, err, line: INTEGER);
+BEGIN
+    IF Trap # NIL THEN
+        Trap(module, err, line)
+    END
+END _error;
 
-PROCEDURE [code] _exit* (n: INTEGER)
-    201CH, 0DF00H;
 
-PROCEDURE [code] _mulf* (b, a: REAL): REAL
-    200CH, 0DF00H;
+PROCEDURE _fmul* (b, a: INTEGER): INTEGER;
+    RETURN F.mul(b, a)
+END _fmul;
 
-PROCEDURE [code] _divf* (b, a: REAL): REAL
-    200DH, 0DF00H;
 
-PROCEDURE [code] _divfi* (b, a: REAL): REAL
-    200EH, 0DF00H;
+PROCEDURE _fdiv* (b, a: INTEGER): INTEGER;
+    RETURN F.div(b, a)
+END _fdiv;
 
-PROCEDURE [code] _addf* (b, a: REAL): REAL
-    200FH, 0DF00H;
 
-PROCEDURE [code] _subf* (b, a: REAL): REAL
-    2010H, 0DF00H;
+PROCEDURE _fdivi* (b, a: INTEGER): INTEGER;
+    RETURN F.div(a, b)
+END _fdivi;
 
-PROCEDURE [code] _subfi* (b, a: REAL): REAL
-    2011H, 0DF00H;
 
-PROCEDURE [code] _cmpf* (op: INTEGER; b, a: REAL): BOOLEAN
-    2012H, 0DF00H;
+PROCEDURE _fadd* (b, a: INTEGER): INTEGER;
+    RETURN F.add(b, a)
+END _fadd;
 
-PROCEDURE [code] _floor* (x: REAL): INTEGER
-    2013H, 0DF00H;
 
-PROCEDURE [code] _flt* (x: INTEGER): REAL
-    2014H, 0DF00H;
+PROCEDURE _fsub* (b, a: INTEGER): INTEGER;
+    RETURN F.sub(b, a)
+END _fsub;
+
+
+PROCEDURE _fsubi* (b, a: INTEGER): INTEGER;
+    RETURN F.sub(a, b)
+END _fsubi;
+
+
+PROCEDURE _fcmp* (op, b, a: INTEGER): BOOLEAN;
+    RETURN F.cmp(op, b, a)
+END _fcmp;
+
+
+PROCEDURE _floor* (x: INTEGER): INTEGER;
+    RETURN F.floor(x)
+END _floor;
+
+
+PROCEDURE _flt* (x: INTEGER): INTEGER;
+    RETURN F.flt(x)
+END _flt;
 
 
 PROCEDURE _pack* (n: INTEGER; VAR x: SET);
@@ -425,6 +450,12 @@ BEGIN
     TypesCount := tcount;
     Types := types
 END _init;
+
+
+PROCEDURE SetTrap* (trap: TrapProc);
+BEGIN
+    Trap := trap
+END SetTrap;
 
 
 END RTL.

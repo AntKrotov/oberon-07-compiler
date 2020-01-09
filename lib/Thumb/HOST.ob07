@@ -7,7 +7,7 @@
 
 MODULE HOST;
 
-IMPORT SYSTEM, RTL;
+IMPORT SYSTEM, RTL, TRAP;
 
 
 CONST
@@ -54,11 +54,11 @@ PROCEDURE [code] FileOpen* (FName: ARRAY OF CHAR): INTEGER
 PROCEDURE [code] OutChar* (c: CHAR)
     2049H, 0DF00H;
 
-PROCEDURE [code] now* (VAR year, month, day, hour, min, sec: INTEGER)
-    204BH, 0DF00H;
-
 PROCEDURE [code] GetTickCount* (): INTEGER
     204AH, 0DF00H;
+
+PROCEDURE [code] now* (VAR year, month, day, hour, min, sec: INTEGER)
+    204BH, 0DF00H;
 
 
 PROCEDURE UnixTime* (): INTEGER;
@@ -115,6 +115,7 @@ END splitf;
 
 
 BEGIN
+    RTL.SetTrap(TRAP.trap);
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     maxreal := 1.9;
     PACK(maxreal, 127)

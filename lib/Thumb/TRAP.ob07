@@ -1,0 +1,123 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2020, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE TRAP;
+
+IMPORT SYSTEM;
+
+
+PROCEDURE [code] exit (code: INTEGER)
+    2041H, 0DF00H;
+
+PROCEDURE [code] OutChar (c: CHAR)
+    2049H, 0DF00H;
+
+
+PROCEDURE PCharToStr (pchar: INTEGER; VAR s: ARRAY OF CHAR);
+VAR
+    c: CHAR;
+    i: INTEGER;
+
+BEGIN
+    i := 0;
+    REPEAT
+        SYSTEM.GET(pchar, c);
+        s[i] := c;
+        INC(pchar);
+        INC(i)
+    UNTIL c = 0X
+END PCharToStr;
+
+
+PROCEDURE IntToStr (x: INTEGER; VAR str: ARRAY OF CHAR);
+VAR
+    i, a, b: INTEGER;
+    c: CHAR;
+
+BEGIN
+    i := 0;
+    REPEAT
+        str[i] := CHR(x MOD 10 + ORD("0"));
+        x := x DIV 10;
+        INC(i)
+    UNTIL x = 0;
+
+    a := 0;
+    b := i - 1;
+    WHILE a < b DO
+        c := str[a];
+        str[a] := str[b];
+        str[b] := c;
+        INC(a);
+        DEC(b)
+    END;
+    str[i] := 0X
+END IntToStr;
+
+
+PROCEDURE append (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
+VAR
+    n1, n2, i, j: INTEGER;
+
+BEGIN
+    n1 := LENGTH(s1);
+    n2 := LENGTH(s2);
+
+    ASSERT(n1 + n2 < LEN(s1));
+
+    i := 0;
+    j := n1;
+    WHILE i < n2 DO
+        s1[j] := s2[i];
+        INC(i);
+        INC(j)
+    END;
+
+    s1[j] := 0X
+END append;
+
+
+PROCEDURE trap* (module, err, line: INTEGER);
+VAR
+    s, temp: ARRAY 1024 OF CHAR;
+    eol: ARRAY 3 OF CHAR;
+    i: INTEGER;
+
+BEGIN
+    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
+
+    COPY(eol, s);
+    CASE err OF
+    | 1: append(s, "assertion failure")
+    | 2: append(s, "NIL dereference")
+    | 3: append(s, "bad divisor")
+    | 4: append(s, "NIL procedure call")
+    | 5: append(s, "type guard error")
+    | 6: append(s, "index out of range")
+    | 7: append(s, "invalid CASE")
+    | 8: append(s, "array assignment error")
+    | 9: append(s, "CHR out of range")
+    |10: append(s, "WCHR out of range")
+    |11: append(s, "BYTE out of range")
+    END;
+
+    append(s, eol);
+
+    append(s, "module: "); PCharToStr(module, temp); append(s, temp); append(s, eol);
+    append(s, "line: ");   IntToStr(line, temp);     append(s, temp); append(s, eol);
+
+    i := 0;
+    WHILE s[i] # 0X DO
+        OutChar(s[i]);
+        INC(i)
+    END;
+
+    exit(0)
+END trap;
+
+
+END TRAP.
