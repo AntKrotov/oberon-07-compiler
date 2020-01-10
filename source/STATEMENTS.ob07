@@ -3249,9 +3249,9 @@ BEGIN
     getproc(rtl, "_lengthw",  IL._lengthw);
     getproc(rtl, "_strcmpw",  IL._strcmpw);
     getproc(rtl, "_init",     IL._init);
+    getproc(rtl, "_exit",     IL._exit);
 
     IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
-        getproc(rtl, "_exit",     IL._exit);
         getproc(rtl, "_dispose",  IL._dispose);
         getproc(rtl, "_isrec",    IL._isrec);
         getproc(rtl, "_dllentry", IL._dllentry);

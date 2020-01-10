@@ -215,8 +215,6 @@ VAR
     n: INTEGER;
 
 BEGIN
-    ASSERT((x > 0) OR (x = minint));
-
     n := 0;
     WHILE ~ODD(x) DO
         x := x DIV 2;

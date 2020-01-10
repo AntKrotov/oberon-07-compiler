@@ -10,9 +10,6 @@ MODULE TRAP;
 IMPORT SYSTEM;
 
 
-PROCEDURE [code] exit (code: INTEGER)
-    2041H, 0DF00H;
-
 PROCEDURE [code] OutChar (c: CHAR)
     2049H, 0DF00H;
 
@@ -114,9 +111,7 @@ BEGIN
     WHILE s[i] # 0X DO
         OutChar(s[i]);
         INC(i)
-    END;
-
-    exit(0)
+    END
 END trap;
 
 

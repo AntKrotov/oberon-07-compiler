@@ -88,7 +88,7 @@ VAR
 
     program: BIN.PROGRAM;
 
-    StkCount, StkCount2: INTEGER;
+    StkCount: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -238,6 +238,22 @@ BEGIN
 END gen10;
 
 
+PROCEDURE gen11 (l: BOOLEAN; rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Code(9000H + LSL(ORD(l), 11) + LSL(rd, 8) + imm)
+END gen11;
+
+
+PROCEDURE gen12 (sp: BOOLEAN; rd, imm: INTEGER);
+BEGIN
+    ASSERT(range(rd, 3));
+    ASSERT(range(imm, 8));
+    Code(0A000H + LSL(ORD(sp), 11) + LSL(rd, 8) + imm)
+END gen12;
+
+
 PROCEDURE gen14 (l, r: BOOLEAN; rlist: SET);
 VAR
     i, n: INTEGER;
@@ -378,6 +394,12 @@ PROCEDURE Tst (r: INTEGER);
 BEGIN
     gen3(1, r, 0) (* cmp r, #0 *)
 END Tst;
+
+
+PROCEDURE LdrSp (r, offset: INTEGER);
+BEGIN
+    gen11(TRUE, r, offset)
+END LdrSp;
 
 
 PROCEDURE MovImm32 (r, imm32: INTEGER);
@@ -667,8 +689,17 @@ END GetRegA;
 
 PROCEDURE MovConst (r, c: INTEGER);
 BEGIN
-    IF range(c, 8) THEN
+    IF (0 <= c) & (c <= 255) THEN
         MovImm8(r, c)
+    ELSIF (-255 <= c) & (c < 0) THEN
+        MovImm8(r, -c);
+        Neg(r)
+    ELSIF UTILS.Log2(c) >= 0 THEN
+        MovImm8(r, 1);
+        LslImm(r, UTILS.Log2(c))
+    ELSIF c = UTILS.min32 THEN
+        MovImm8(r, 1);
+        LslImm(r, 31)
     ELSE
         MovImm32(r, c)
     END
@@ -680,9 +711,7 @@ VAR
     r2: INTEGER;
 
 BEGIN
-    IF c = 0 THEN
-        Tst(r)
-    ELSIF range(c, 8) THEN
+    IF (0 <= c) & (c <= 255) THEN
         CmpImm8(r, c)
     ELSE
         r2 := GetAnyReg();
@@ -760,9 +789,13 @@ END AddHH;
 PROCEDURE AddSP (n: INTEGER);
 BEGIN
     IF n > 0 THEN
-        ASSERT(R2 IN R.regs);
-        MovConst(R2, n * 4);
-        AddHH(SP, R2);
+        IF n < 127 THEN
+            Code(0B000H + n) (*  add sp, n*4  *)
+        ELSE
+            ASSERT(R2 IN R.regs);
+            MovConst(R2, n * 4);
+            AddHH(SP, R2)
+        END;
         DEC(StkCount, n)
     END
 END AddSP;
@@ -790,12 +823,17 @@ END Shift;
 
 PROCEDURE LocAdr (offs: INTEGER);
 VAR
-    r1: INTEGER;
+    r1, n: INTEGER;
 
 BEGIN
     r1 := GetAnyReg();
-    MovConst(r1, LocalOffset(offs));
-    AddHH(r1, SP)
+    n := LocalOffset(offs) DIV 4;
+    IF n <= 255 THEN
+        gen12(TRUE, r1, n)
+    ELSE
+        MovConst(r1, n * 4);
+        AddHH(r1, SP)
+    END
 END LocAdr;
 
 
@@ -866,8 +904,7 @@ BEGIN
                     DEC(n)
                 END
             END;
-            StkCount := param2;
-            StkCount2 := param2
+            StkCount := param2
 
         |IL.opLEAVE, IL.opLEAVER, IL.opLEAVEF:
             IF opcode # IL.opLEAVE THEN
@@ -881,9 +918,9 @@ BEGIN
             END;
 
             ASSERT(R.top = -1);
+            ASSERT(StkCount = param1);
 
-            ASSERT(StkCount2 = StkCount);
-            AddSP(StkCount);
+            AddSP(param1);
             pop(R2);
             mov(PC, R2)
 
@@ -949,10 +986,20 @@ BEGIN
             reloc(r1, BIN.RBSS + pic, param2);
             Ldr8(r1, r1)
 
-        |IL.opLLOAD32, IL.opVADR:
-            LocAdr(param2);
-            UnOp(r1);
-            Ldr32(r1, r1)
+        |IL.opLLOAD32, IL.opVADR, IL.opVLOAD32:
+            r1 := GetAnyReg();
+            n := LocalOffset(param2) DIV 4;
+            IF n <= 255 THEN
+                LdrSp(r1, n)
+            ELSE
+                drop;
+                LocAdr(param2);
+                UnOp(r1);
+                Ldr32(r1, r1)
+            END;
+            IF opcode = IL.opVLOAD32 THEN
+                Ldr32(r1, r1)
+            END
 
         |IL.opLLOAD16:
             LocAdr(param2);
@@ -975,12 +1022,6 @@ BEGIN
         |IL.opLOAD8:
             UnOp(r1);
             Ldr8(r1, r1)
-
-        |IL.opVLOAD32:
-            LocAdr(param2);
-            UnOp(r1);
-            Ldr32(r1, r1);
-            Ldr32(r1, r1)
 
         |IL.opVLOAD16:
             LocAdr(param2);

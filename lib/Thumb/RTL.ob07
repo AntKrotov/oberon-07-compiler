@@ -31,11 +31,16 @@ VAR
     Trap: TrapProc;
 
 
+PROCEDURE [code] _exit* (code: INTEGER)
+    2041H, 0DF00H;
+
+
 PROCEDURE _error* (module, err, line: INTEGER);
 BEGIN
     IF Trap # NIL THEN
         Trap(module, err, line)
-    END
+    END;
+    _exit(0)
 END _error;
 
 
