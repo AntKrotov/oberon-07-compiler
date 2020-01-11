@@ -94,9 +94,15 @@ BEGIN
     f := x MOD 800000H;
     e := (x DIV 800000H) MOD 256;
     IF e = 255 THEN
-        e := 2047
-    ELSIF (e # 0) OR (f # 0) THEN
-        e := e - 127 + 1023
+        e := 1151
+    ELSIF e = 0 THEN
+        WHILE (f < 800000H) & (f # 0) DO
+            f := f * 2;
+            DEC(e)
+        END
+    END;
+    IF e # 0 THEN
+        INC(e, 896)
     END;
     h := LSL(s, 31) + LSL(e, 20) + (f DIV 8);
     l := (f MOD 8) * 20000000H

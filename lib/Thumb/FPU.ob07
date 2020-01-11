@@ -144,7 +144,7 @@ END add2;
 
 PROCEDURE sub2 (b, a: INTEGER): INTEGER;
 VAR
-    ea, eb, e, d, r, t, s: INTEGER;
+    ea, eb, e, d, r, s: INTEGER;
 
 BEGIN
     ea := (a DIV 800000H) MOD 256;
@@ -153,16 +153,16 @@ BEGIN
     a := a MOD 800000H + 800000H;
     b := b MOD 800000H + 800000H;
 
-    d  := ea - eb;
+    d := ea - eb;
 
     IF (d > 0) OR (d = 0) & (a >= b) THEN
         s := 0
     ELSE
         ea := eb;
         d := -d;
-        t := a;
+        r := a;
         a := b;
-        b := t;
+        b := r;
         s := 80000000H
     END;
 
@@ -199,38 +199,64 @@ BEGIN
 END sub2;
 
 
+PROCEDURE zero (VAR x: INTEGER);
+BEGIN
+    IF BITS(x) * {23..30} = {} THEN
+        x := 0
+    END
+END zero;
+
+
+PROCEDURE isNaN (a: INTEGER): BOOLEAN;
+    RETURN (a > INF) OR (a < 0) & (a > NINF)
+END isNaN;
+
+
+PROCEDURE isInf (a: INTEGER): BOOLEAN;
+    RETURN (a = INF) OR (a = NINF)
+END isInf;
+
+
+PROCEDURE isNormal (a: INTEGER): BOOLEAN;
+    RETURN (BITS(a) * {23..30} # {23..30}) & (BITS(a) * {23..30} # {})
+END isNormal;
+
+
 PROCEDURE add* (b, a: INTEGER): INTEGER;
 VAR
     r: INTEGER;
 
 BEGIN
-    IF a = 80000000H THEN a := 0 END;
-    IF b = 80000000H THEN b := 0 END;
+    zero(a); zero(b);
 
-    IF (a > INF) OR (a < 0) & (a > NINF) OR (b > INF) OR (b < 0) & (b > NINF) THEN
+    IF isNormal(a) & isNormal(b) THEN
+
+        IF (a > 0) & (b > 0) THEN
+            r := add2(b, a)
+        ELSIF (a < 0) & (b < 0) THEN
+            r := add2(b, a) + 80000000H
+        ELSIF (a > 0) & (b < 0) THEN
+            r := sub2(b, a)
+        ELSIF (a < 0) & (b > 0) THEN
+            r := sub2(a, b)
+        END
+
+    ELSIF isNaN(a) OR isNaN(b) THEN
         r := NAN
-    ELSIF ((a = INF) OR (a = NINF)) & ((b = INF) OR (b = NINF)) THEN
+    ELSIF isInf(a) & isInf(b) THEN
         IF a = b THEN
             r := a
         ELSE
             r := NAN
         END
-    ELSIF (a = INF) OR (a = NINF) THEN
+    ELSIF isInf(a) THEN
         r := a
-    ELSIF (b = INF) OR (b = NINF) THEN
+    ELSIF isInf(b) THEN
         r := b
     ELSIF a = 0 THEN
         r := b
     ELSIF b = 0 THEN
         r := a
-    ELSIF (a > 0) & (b > 0) THEN
-        r := add2(b, a)
-    ELSIF (a < 0) & (b < 0) THEN
-        r := add2(b, a) + 80000000H
-    ELSIF (a > 0) & (b < 0) THEN
-        r := sub2(b, a)
-    ELSIF (a < 0) & (b > 0) THEN
-        r := sub2(a, b)
     END
 
     RETURN r
@@ -242,20 +268,31 @@ VAR
     r: INTEGER;
 
 BEGIN
-    IF a = 80000000H THEN a := 0 END;
-    IF b = 80000000H THEN b := 0 END;
+    zero(a); zero(b);
 
-    IF (a > INF) OR (a < 0) & (a > NINF) OR (b > INF) OR (b < 0) & (b > NINF) THEN
+    IF isNormal(a) & isNormal(b) THEN
+
+        IF (a > 0) & (b > 0) THEN
+            r := sub2(b, a)
+        ELSIF (a < 0) & (b < 0) THEN
+            r := sub2(a, b)
+        ELSIF (a > 0) & (b < 0) THEN
+            r := add2(b, a)
+        ELSIF (a < 0) & (b > 0) THEN
+            r := add2(b, a) + 80000000H
+        END
+
+    ELSIF isNaN(a) OR isNaN(b) THEN
         r := NAN
-    ELSIF ((a = INF) OR (a = NINF)) & ((b = INF) OR (b = NINF)) THEN
+    ELSIF isInf(a) & isInf(b) THEN
         IF a # b THEN
             r := a
         ELSE
             r := NAN
         END
-    ELSIF (a = INF) OR (a = NINF) THEN
+    ELSIF isInf(a) THEN
         r := a
-    ELSIF (b = INF) OR (b = NINF) THEN
+    ELSIF isInf(b) THEN
         r := INF + ORD(BITS(b) / {31} - {0..30})
     ELSIF (a = 0) & (b = 0) THEN
         r := 0
@@ -263,14 +300,6 @@ BEGIN
         r := ORD(BITS(b) / {31})
     ELSIF b = 0 THEN
         r := a
-    ELSIF (a > 0) & (b > 0) THEN
-        r := sub2(b, a)
-    ELSIF (a < 0) & (b < 0) THEN
-        r := sub2(a, b)
-    ELSIF (a > 0) & (b < 0) THEN
-        r := add2(b, a)
-    ELSIF (a < 0) & (b > 0) THEN
-        r := add2(b, a) + 80000000H
     END
 
     RETURN r
@@ -282,19 +311,18 @@ VAR
     r: INTEGER;
 
 BEGIN
-    IF a = 80000000H THEN a := 0 END;
-    IF b = 80000000H THEN b := 0 END;
+    zero(a); zero(b);
 
-    IF (a > INF) OR (a < 0) & (a > NINF) OR (b > INF) OR (b < 0) & (b > NINF) THEN
+    IF isNormal(a) & isNormal(b) THEN
+        r := mul2(b, a)
+    ELSIF isNaN(a) OR isNaN(b) THEN
         r := NAN
-    ELSIF (((a = INF) OR (a = NINF)) & (b = 0)) OR (((b = INF) OR (b = NINF)) & (a = 0)) THEN
+    ELSIF (isInf(a) & (b = 0)) OR (isInf(b) & (a = 0)) THEN
         r := NAN
-    ELSIF (a = INF) OR (a = NINF) OR (b = INF) OR (b = NINF) THEN
+    ELSIF isInf(a) OR isInf(b) THEN
         r := INF + ORD(BITS(a) / BITS(b) - {0..30})
     ELSIF (a = 0) OR (b = 0) THEN
         r := 0
-    ELSE
-        r := mul2(b, a)
     END
 
     RETURN r
@@ -306,16 +334,17 @@ VAR
     r: INTEGER;
 
 BEGIN
-    IF a = 80000000H THEN a := 0 END;
-    IF b = 80000000H THEN b := 0 END;
+    zero(a); zero(b);
 
-    IF (a > INF) OR (a < 0) & (a > NINF) OR (b > INF) OR (b < 0) & (b > NINF) THEN
+    IF isNormal(a) & isNormal(b) THEN
+        r := div2(b, a)
+    ELSIF isNaN(a) OR isNaN(b) THEN
         r := NAN
-    ELSIF ((a = INF) OR (a = NINF)) & ((b = INF) OR (b = NINF)) THEN
+    ELSIF isInf(a) & isInf(b) THEN
         r := NAN
-    ELSIF (a = INF) OR (a = NINF) THEN
+    ELSIF isInf(a) THEN
         r := INF + ORD(BITS(a) / BITS(b) - {0..30})
-    ELSIF (b = INF) OR (b = NINF) THEN
+    ELSIF isInf(b) THEN
         r := 0
     ELSIF a = 0 THEN
         IF b = 0 THEN
@@ -329,8 +358,6 @@ BEGIN
         ELSE
             r := NINF
         END
-    ELSE
-        r := div2(b, a)
     END
 
     RETURN r
@@ -342,10 +369,9 @@ VAR
     res: BOOLEAN;
 
 BEGIN
-    IF a = 80000000H THEN a := 0 END;
-    IF b = 80000000H THEN b := 0 END;
+    zero(a); zero(b);
 
-    IF (a > INF) OR (a < 0) & (a > NINF) OR (b > INF) OR (b < 0) & (b > NINF) THEN
+    IF isNaN(a) OR isNaN(b) THEN
         res := op = 1
     ELSIF (a < 0) & (b < 0) THEN
         CASE op OF
@@ -413,7 +439,7 @@ VAR
     r, e: INTEGER;
 
 BEGIN
-    IF x = 80000000H THEN x := 0 END;
+    zero(x);
 
     e := (x DIV 800000H) MOD 256 - 127;
     r := x MOD 800000H + 800000H;
