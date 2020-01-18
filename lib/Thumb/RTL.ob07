@@ -31,8 +31,10 @@ VAR
     Trap: TrapProc;
 
 
-PROCEDURE [code] _exit* (code: INTEGER)
-    2041H, 0DF00H;
+PROCEDURE _exit* (code: INTEGER);
+BEGIN
+    WHILE TRUE DO END
+END _exit;
 
 
 PROCEDURE _error* (module, err, line: INTEGER);

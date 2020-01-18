@@ -7,7 +7,7 @@
 
 MODULE MSP430;
 
-IMPORT IL, LISTS, REG, CHL := CHUNKLISTS, ERRORS, FILES, WRITER,
+IMPORT IL, LISTS, REG, CHL := CHUNKLISTS, ERRORS, WR := WRITER, HEX,
        UTILS, C := CONSOLE, PROG, RTL := MSP430RTL;
 
 
@@ -1623,51 +1623,6 @@ BEGIN
 END epilog;
 
 
-PROCEDURE hexdgt (n: BYTE): BYTE;
-BEGIN
-    IF n < 10 THEN
-        n := n + ORD("0")
-    ELSE
-        n := n - 10 + ORD("A")
-    END
-
-    RETURN n
-END hexdgt;
-
-
-PROCEDURE WriteHexByte (file: FILES.FILE; byte: BYTE);
-BEGIN
-    WRITER.WriteByte(file, hexdgt(byte DIV 16));
-    WRITER.WriteByte(file, hexdgt(byte MOD 16));
-END WriteHexByte;
-
-
-PROCEDURE WriteHex (file: FILES.FILE; mem: ARRAY OF BYTE; idx, cnt: INTEGER);
-VAR
-    i, len, chksum: INTEGER;
-
-BEGIN
-    WHILE cnt > 0 DO
-        len := MIN(cnt, 16);
-        chksum := len + idx DIV 256 + idx MOD 256;
-        WRITER.WriteByte(file, ORD(":"));
-        WriteHexByte(file, len);
-        WriteHexByte(file, idx DIV 256);
-        WriteHexByte(file, idx MOD 256);
-        WriteHexByte(file, 0);
-        FOR i := 1 TO len DO
-            WriteHexByte(file, mem[idx]);
-            INC(chksum, mem[idx]);
-            INC(idx)
-        END;
-        WriteHexByte(file, (-chksum) MOD 256);
-        DEC(cnt, len);
-        WRITER.WriteByte(file, 0DH);
-        WRITER.WriteByte(file, 0AH)
-    END
-END WriteHex;
-
-
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     i, adr, heap, stack, TextSize, TypesSize, bits, n: INTEGER;
@@ -1678,7 +1633,7 @@ VAR
 
     reloc: RELOC;
 
-    file: FILES.FILE;
+    file: WR.FILE;
 
 BEGIN
     IdxWords.src := NOWORD;
@@ -1784,20 +1739,13 @@ BEGIN
         PutWord(LabelOffs(IV[i]) * 2, adr)
     END;
 
-    file := FILES.create(outname);
-    WriteHex(file, mem, Code.address, TextSize);
-    WriteHex(file, mem, 10000H - IntVectorSize - TypesSize, IntVectorSize + TypesSize);
+    file := WR.Create(outname);
 
-    WRITER.WriteByte(file, ORD(":"));
-    WriteHexByte(file, 0);
-    WriteHexByte(file, 0);
-    WriteHexByte(file, 0);
-    WriteHexByte(file, 1);
-    WriteHexByte(file, 255);
-    WRITER.WriteByte(file, 0DH);
-    WRITER.WriteByte(file, 0AH);
+    HEX.Data(file, mem, Code.address, TextSize);
+    HEX.Data(file, mem, 10000H - IntVectorSize - TypesSize, IntVectorSize + TypesSize);
+    HEX.End(file);
 
-    FILES.close(file);
+    WR.Close(file);
 
     INC(TextSize, IntVectorSize + TypesSize);
     INC(Bss.size, minStackSize + RTL.VarSize);

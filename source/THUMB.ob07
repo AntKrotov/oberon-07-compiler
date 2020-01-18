@@ -7,7 +7,7 @@
 
 MODULE THUMB;
 
-IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER;
+IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER, HEX;
 
 
 CONST
@@ -19,8 +19,6 @@ CONST
     ACC = R0;
 
     je = 0; jne = 1; jnb = 2; jb = 3; jge = 10; jl = 11; jg = 12; jle = 13;
-
-    FileAlignment = 10H;
 
     inf = 7F800000H;
 
@@ -419,7 +417,7 @@ PROCEDURE inv0 (cond: INTEGER): INTEGER;
 END inv0;
 
 
-PROCEDURE fixup (DataSize, BssSize: INTEGER);
+PROCEDURE fixup (CodeAdr, DataAdr, BssAdr: INTEGER);
 VAR
     code:    ANYCODE;
     count:   INTEGER;
@@ -428,7 +426,6 @@ VAR
 
     first, second: INTEGER;
 
-    CodeAdr, DataAdr, BssAdr: INTEGER;
     reloc, i: INTEGER;
 
     RelocCode: RELOCCODE;
@@ -530,12 +527,6 @@ BEGIN
         END
 
     UNTIL ~shorted;
-
-    CodeAdr := 0;
-    DataAdr := CodeAdr + count * 2;
-    ASSERT(UTILS.Align(DataAdr, FileAlignment));
-    BssAdr := DataAdr + DataSize;
-    ASSERT(UTILS.Align(BssAdr, FileAlignment));
 
     code := CodeList.first(ANYCODE);
     WHILE code # NIL DO
@@ -875,8 +866,8 @@ BEGIN
 
         |IL.opCALLP:
             UnOp(r1);
-            mov(LR, PC);
-            mov(PC, r1);
+            AddImm8(r1, 1);
+            gen5(3, TRUE, FALSE, r1, 0); (* blx r1 *)
             drop;
             ASSERT(R.top = -1)
 
@@ -921,11 +912,10 @@ BEGIN
             ASSERT(StkCount = param1);
 
             AddSP(param1);
-            pop(R2);
-            mov(PC, R2)
+            gen14(TRUE, TRUE, {}) (* pop PC *)
 
         |IL.opLEAVEC:
-            mov(PC, LR)
+            gen5(3, FALSE, TRUE, 6, 0) (* bx LR *)
 
         |IL.opPRECALL:
             PushAll(0)
@@ -1958,8 +1948,43 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (GlobSize, tcount, pic: INTEGER);
+PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, SRAMAdr, SRAMSize: INTEGER);
+VAR
+    r1, r2, i, dcount: INTEGER;
+    Int: ARRAY 128 OF INTEGER;
+
 BEGIN
+    FOR i := 0 TO 127 DO
+        Int[i] := 1
+    END;
+    Int[0] := SRAMAdr + SRAMSize;
+    Int[1] := FlashAdr + 200H + 1;
+
+    FOR i := 0 TO 127 DO
+        Code(Int[i] MOD 65536);
+        Code(Int[i] DIV 65536);
+    END;
+
+    r1 := GetAnyReg();
+    r2 := GetAnyReg();
+    reloc(r1, BIN.RDATA + pic, 0);
+
+    FOR i := 0 TO tcount - 1 DO
+        MovConst(r2, CHL.GetInt(IL.codes.types, i));
+        Str32(r2, r1);
+        AddImm8(r1, 4)
+    END;
+
+    dcount := CHL.Length(IL.codes.data);
+    FOR i := 0 TO dcount - 1 DO
+        MovConst(r2, CHL.GetByte(IL.codes.data, i));
+        Str8(r2, r1);
+        AddImm8(r1, 1)
+    END;
+
+    drop;
+    drop;
+
     reloc(GetAnyReg(), BIN.RDATA + pic, 0);
     reloc(GetAnyReg(), BIN.RBSS + pic, 0);
     PushAll(2);
@@ -1970,12 +1995,19 @@ END prolog;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
+CONST
+
+    FlashAdr = 8000000H;
+    SRAMAdr  = 20000000H;
+    SRAMSize = 32 * 1024;
+
 VAR
     opt: PROG.OPTIONS;
 
-    dcount, i: INTEGER;
+    DataAdr, BssAdr, DataSize, BssSize: INTEGER;
 
     File: WR.FILE;
+
 
 BEGIN
     tcount := CHL.Length(IL.codes.types);
@@ -1985,36 +2017,30 @@ BEGIN
 
     program := BIN.create(IL.codes.lcount);
 
-    opt.pic := FALSE;
-
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
 
     StkCount := 0;
 
-    dcount := CHL.Length(IL.codes.data);
-
-    FOR i := 0 TO tcount - 1 DO
-        BIN.PutData32LE(program, CHL.GetInt(IL.codes.types, i))
-    END;
-
-    FOR i := 0 TO dcount - 1 DO
-        BIN.PutData(program, CHL.GetByte(IL.codes.data, i))
-    END;
+    DataAdr := SRAMAdr;
+    DataSize := CHL.Length(IL.codes.data) + tcount * 4;
+    ASSERT(UTILS.Align(DataSize, 4));
+    BssAdr := DataAdr + DataSize;
 
     IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
 
-    prolog(IL.codes.bss, tcount, ORD(opt.pic));
-    translate(ORD(opt.pic), tcount * 4);
-    PushConst(0);
-    CallRTL(IL._exit, 0);
+    BssSize := IL.codes.bss;
+    ASSERT(UTILS.Align(BssSize, 4));
 
-    fixup(CHL.Length(program.data), IL.codes.bss);
+    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr, SRAMSize);
+    translate(ORD(opt.pic), tcount * 4);
+
+    fixup(FlashAdr, DataAdr, BssAdr);
 
     File := WR.Create(outname);
 
-    CHL.WriteToFile(File, program.code);
-    WR.Padding(File, FileAlignment);
-    CHL.WriteToFile(File, program.data);
+    HEX.ExtLA(File, FlashAdr DIV 65536);
+    HEX.Data2(File, program.code, 0, CHL.Length(program.code));
+    HEX.End(File);
 
     WR.Close(File)
 END CodeGen;
