@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -589,7 +589,7 @@ BEGIN
     ELSE
         CASE TARGETS.BitDepth OF
         |16: call := PROG.default16
-        |32: IF TARGETS.target = TARGETS.Thumb THEN
+        |32: IF TARGETS.target = TARGETS.STM32 THEN
                  call := PROG.ccall
              ELSE
                  call := PROG.default32

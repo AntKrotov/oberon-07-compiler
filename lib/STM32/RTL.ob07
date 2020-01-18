@@ -19,6 +19,8 @@ CONST
     WORD = bit_depth DIV 8;
     MAX_SET = bit_depth - 1;
 
+    FlashAdr = 8000000H;
+
 
 TYPE
 
@@ -27,13 +29,26 @@ TYPE
 
 VAR
 
-    Heap, Types, TypesCount: INTEGER;
+    Heap, Types, TypesCount, Entry: INTEGER;
     Trap: TrapProc;
+
+
+PROCEDURE [code] sp (): INTEGER
+    4668H; (* mov r0, sp *)
+
+PROCEDURE [code] jmp (adr: INTEGER)
+    0BD00H; (* pop PC *)
+
+
+PROCEDURE restart;
+BEGIN
+    jmp(Entry)
+END restart;
 
 
 PROCEDURE _exit* (code: INTEGER);
 BEGIN
-    WHILE TRUE DO END
+    restart
 END _exit;
 
 
@@ -381,17 +396,18 @@ END _strcpy;
 
 
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
-VAR
-    i, res: INTEGER;
-
 BEGIN
-    res := Heap;
-    Heap := Heap + size;
-    FOR i := WORD TO size - WORD BY WORD DO
-        SYSTEM.PUT(res + i, 0)
-    END;
-    SYSTEM.PUT(res, t);
-    p := res + WORD
+    IF Heap + size < sp() - 16 THEN
+        p := Heap + WORD;
+        REPEAT
+            SYSTEM.PUT(Heap, t);
+            INC(Heap, WORD);
+            DEC(size, WORD);
+            t := 0
+        UNTIL size = 0
+    ELSE
+        p := 0
+    END
 END _new;
 
 
@@ -442,17 +458,10 @@ END _guardrec;
 
 
 PROCEDURE _init* (gsize, tcount, gadr, types: INTEGER);
-VAR
-    i: INTEGER;
-
 BEGIN
+    SYSTEM.GET(FlashAdr + WORD, Entry);
     gsize := gsize DIV 16;
     gsize := gsize * 16 + 16;
-
-    FOR i := 0 TO gsize - WORD BY WORD DO
-        SYSTEM.PUT(gadr + i, 0)
-    END;
-
     Heap := gadr + gsize;
     TypesCount := tcount;
     Types := types

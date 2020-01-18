@@ -68,21 +68,44 @@ BEGIN
 END Data;
 
 
-PROCEDURE Data2* (file: FILES.FILE; mem: CHL.BYTELIST; idx, cnt: INTEGER);
+PROCEDURE ExtLA* (file: FILES.FILE; LA: INTEGER);
+BEGIN
+    ASSERT((0 <= LA) & (LA <= 0FFFFH));
+    StartCode(file);
+    Byte(file, 2);
+    Byte(file, 0);
+    Byte(file, 0);
+    Byte(file, 4);
+    Byte(file, LA DIV 256);
+    Byte(file, LA MOD 256);
+    NewLine(file)
+END ExtLA;
+
+
+PROCEDURE Data2* (file: FILES.FILE; mem: CHL.BYTELIST; idx, cnt, LA: INTEGER);
 VAR
-    i, len: INTEGER;
+    i, len, offset: INTEGER;
 
 BEGIN
+    ExtLA(file, LA);
+    offset := 0;
     WHILE cnt > 0 DO
+        ASSERT(offset <= 65536);
+        IF offset = 65536 THEN
+            INC(LA);
+            ExtLA(file, LA);
+            offset := 0
+        END;
         len := MIN(cnt, 16);
         StartCode(file);
         Byte(file, len);
-        Byte(file, idx DIV 256);
-        Byte(file, idx MOD 256);
+        Byte(file, offset DIV 256);
+        Byte(file, offset MOD 256);
         Byte(file, 0);
         FOR i := 1 TO len DO
             Byte(file, CHL.GetByte(mem, idx));
-            INC(idx)
+            INC(idx);
+            INC(offset)
         END;
         DEC(cnt, len);
         NewLine(file)
@@ -99,20 +122,6 @@ BEGIN
     Byte(file, 1);
     NewLine(file)
 END End;
-
-
-PROCEDURE ExtLA* (file: FILES.FILE; LA: INTEGER);
-BEGIN
-    ASSERT((0 <= LA) & (LA <= 0FFFFH));
-    StartCode(file);
-    Byte(file, 2);
-    Byte(file, 0);
-    Byte(file, 0);
-    Byte(file, 4);
-    Byte(file, LA DIV 256);
-    Byte(file, LA MOD 256);
-    NewLine(file)
-END ExtLA;
 
 
 END HEX.

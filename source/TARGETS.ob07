@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -23,9 +23,9 @@ CONST
     Linux32SO*    = 10;
     Linux64*      = 11;
     Linux64SO*    = 12;
-    Thumb*        = 13;
+    STM32*        = 13;
 
-    cpuX86* = 1; cpuAMD64* = 2; cpuMSP430* = 3; cpuTHUMB* = 4;
+    cpuX86* = 0; cpuAMD64* = 1; cpuMSP430* = 2; cpuTHUMB* = 3;
 
     osNONE*    = 0;  osWIN32*   = 1;  osWIN64* = 2;
     osLINUX32* = 3;  osLINUX64* = 4;  osKOS*   = 5;
@@ -88,7 +88,7 @@ BEGIN
         FileExt := Targets[i].FileExt;
 
         Import := OS IN {osWIN32, osWIN64, osKOS};
-        Dispose := ~(target IN {MSP430, Thumb});
+        Dispose := ~(target IN {MSP430, STM32});
         Dll := target IN {Linux32SO, Linux64SO, Win32DLL, Win64DLL, KolibriOSDLL};
         WordSize := BitDepth DIV 8;
         AdrSize  := WordSize
@@ -112,5 +112,5 @@ BEGIN
     Enter( Linux32SO,     cpuX86,     32,  8,  osLINUX32,  "elfso",      "Linux32",    ".so");
     Enter( Linux64,       cpuAMD64,   64,  8,  osLINUX64,  "elfexe64",   "Linux64",    "");
     Enter( Linux64SO,     cpuAMD64,   64,  8,  osLINUX64,  "elfso64",    "Linux64",    ".so");
-    Enter( Thumb,         cpuTHUMB,   32,  4,  osNONE,     "thumb",      "Thumb",      ".bin");
+    Enter( STM32,         cpuTHUMB,   32,  4,  osNONE,     "stm32",      "STM32",      ".hex");
 END TARGETS.
