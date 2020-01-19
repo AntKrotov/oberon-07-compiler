@@ -7,7 +7,7 @@
 
 MODULE THUMB;
 
-IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER, HEX;
+IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER, HEX, ERRORS;
 
 
 CONST
@@ -571,14 +571,14 @@ BEGIN
                 |BIN.RBSS,  BIN.PICBSS:  reloc := code.value + BssAdr
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    DEC(reloc, code.offset * 2 + 18)
+                    DEC(reloc, CodeAdr + code.offset * 2 + 18)
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
                 FOR i := 0 TO LEN(RelocCode) - 1 DO
                     PutCode(RelocCode[i])
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    PutCode(4478H + code.reg) (* add code.reg, PC*)
+                    PutCode(4478H + code.reg) (* add code.reg, PC *)
                 END
         END;
 
@@ -1950,7 +1950,7 @@ END translate;
 
 PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, SRAMAdr, SRAMSize: INTEGER);
 VAR
-    r1, r2, i, dcount: INTEGER;
+    r1, r2, i, dcount, entry: INTEGER;
     Int: ARRAY 128 OF INTEGER;
 
 BEGIN
@@ -1964,6 +1964,9 @@ BEGIN
         Code(Int[i] MOD 65536);
         Code(Int[i] DIV 65536);
     END;
+
+    entry := NewLabel();
+    Label(entry);
 
     r1 := GetAnyReg();
     r2 := GetAnyReg();
@@ -1987,26 +1990,27 @@ BEGIN
 
     MovConst(R0, Int[0]);
     mov(SP, R0);
-    reloc(GetAnyReg(), BIN.RDATA + pic, 0);
-    reloc(GetAnyReg(), BIN.RBSS + pic, 0);
-    PushAll(2);
+    reloc(GetAnyReg(), BIN.RDATA + pic, 0);  PushAll(1);
+    reloc(GetAnyReg(), BIN.RBSS + pic, 0);  PushAll(1);
+    reloc(GetAnyReg(), BIN.RCODE + pic, entry); PushAll(1);
     PushConst(tcount);
     PushConst(GlobSize);
-    CallRTL(IL._init, 4)
+    CallRTL(IL._init, 5)
 END prolog;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
 
-    FlashAdr = 8000000H;
-    SRAMAdr  = 20000000H;
-    SRAMSize = 32 * 1024;
+    FlashAdr  = 8000000H;
+    SRAMAdr   = 20000000H;
+    SRAMSize  = 32 * 1024;
+    FlashSize = 256 * 1024;
 
 VAR
     opt: PROG.OPTIONS;
 
-    DataAdr, BssAdr, DataSize, BssSize: INTEGER;
+    DataAdr, BssAdr, DataSize, BssSize, CodeSize: INTEGER;
 
     File: WR.FILE;
 
@@ -2039,12 +2043,29 @@ BEGIN
 
     fixup(FlashAdr, DataAdr, BssAdr);
 
+    INC(DataSize, BssSize);
+    CodeSize := CHL.Length(program.code);
+
+    IF CodeSize > FlashSize THEN
+        ERRORS.Error(203)
+    END;
+
+    IF DataSize > SRAMSize - 512 THEN
+        ERRORS.Error(204)
+    END;
+
     File := WR.Create(outname);
 
-    HEX.Data2(File, program.code, 0, CHL.Length(program.code), FlashAdr DIV 65536);
+    HEX.Data2(File, program.code, 0, CodeSize, FlashAdr DIV 65536);
     HEX.End(File);
 
-    WR.Close(File)
+    WR.Close(File);
+
+    C.StringLn("--------------------------------------------");
+    C.String(  "  rom:  "); C.Int(CodeSize); C.String(" of "); C.Int(FlashSize); C.String("  ("); C.Int(CodeSize * 100 DIV FlashSize); C.StringLn("%)");
+    C.Ln;
+    C.String(  "  ram:  "); C.Int(DataSize); C.String(" of "); C.Int(SRAMSize);  C.String("  ("); C.Int(DataSize * 100 DIV SRAMSize);  C.StringLn("%)")
+
 END CodeGen;
 
 

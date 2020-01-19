@@ -179,6 +179,7 @@ BEGIN
         UTILS.Exit(0)
     END;
 
+    C.StringLn("--------------------------------------------");
     PATHS.split(inname, path, modname, ext);
 
     IF ext # UTILS.FILE_EXT THEN
@@ -232,7 +233,7 @@ BEGIN
     ST.compile(path, lib_path, modname, outname, target, options);
 
     time := UTILS.GetTickCount() - UTILS.time;
-
+    C.StringLn("--------------------------------------------");
     C.Int(PARS.lines); C.String(" lines, ");
     C.Int(time DIV 100); C.String("."); C.Int2(time MOD 100); C.String(" sec, ");
     C.Int(WRITER.counter); C.StringLn(" bytes");

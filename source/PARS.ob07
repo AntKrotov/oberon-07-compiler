@@ -77,7 +77,7 @@ VAR
 
     parsers: C.COLLECTION;
 
-    lines*: INTEGER;
+    lines*, modules: INTEGER;
 
 
 PROCEDURE destroy* (VAR parser: PARSER);
@@ -1147,7 +1147,13 @@ BEGIN
         ImportList(parser)
     END;
 
-    CONSOLE.String("compiling "); CONSOLE.String(unit.name.s);
+    INC(modules);
+
+    CONSOLE.String("compiling ");
+    IF TARGETS.CPU = TARGETS.cpuTHUMB THEN
+        CONSOLE.String("("); CONSOLE.Int(modules); CONSOLE.String(") ")
+    END;
+    CONSOLE.String(unit.name.s);
     IF parser.unit.sysimport THEN
         CONSOLE.String(" (SYSTEM)")
     END;
@@ -1162,6 +1168,9 @@ BEGIN
     IL.SetLabel(errlabel);
     IL.StrAdr(name);
     IL.Param1;
+    IF TARGETS.CPU = TARGETS.cpuTHUMB THEN
+        IL.AddCmd(IL.opPUSHC, modules)
+    END;
     IL.AddCmd0(IL.opERR);
 
     FOR errno := 1 TO LEN(IL.codes.errlabels) - 1 DO
@@ -1257,7 +1266,8 @@ PROCEDURE init* (options: PROG.OPTIONS);
 BEGIN
     program := PROG.create(options);
     parsers := C.create();
-    lines   := 0
+    lines   := 0;
+    modules := 0
 END init;
 
 

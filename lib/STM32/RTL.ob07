@@ -19,12 +19,10 @@ CONST
     WORD = bit_depth DIV 8;
     MAX_SET = bit_depth - 1;
 
-    FlashAdr = 8000000H;
-
 
 TYPE
 
-    TrapProc = PROCEDURE (module, err, line: INTEGER);
+    TrapProc = PROCEDURE (modNum, modName, err, line: INTEGER);
 
 
 VAR
@@ -40,22 +38,16 @@ PROCEDURE [code] jmp (adr: INTEGER)
     0BD00H; (* pop PC *)
 
 
-PROCEDURE restart;
-BEGIN
-    jmp(Entry)
-END restart;
-
-
 PROCEDURE _exit* (code: INTEGER);
 BEGIN
-    restart
+    jmp(Entry)
 END _exit;
 
 
-PROCEDURE _error* (module, err, line: INTEGER);
+PROCEDURE _error* (modNum, modName, err, line: INTEGER);
 BEGIN
     IF Trap # NIL THEN
-        Trap(module, err, line)
+        Trap(modNum, modName, err, line)
     END;
     _exit(0)
 END _error;
@@ -457,14 +449,14 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE _init* (gsize, tcount, gadr, types: INTEGER);
+PROCEDURE _init* (gsize, tcount, entry, gadr, types: INTEGER);
 BEGIN
-    SYSTEM.GET(FlashAdr + WORD, Entry);
     gsize := gsize DIV 16;
     gsize := gsize * 16 + 16;
     Heap := gadr + gsize;
     TypesCount := tcount;
-    Types := types
+    Types := types;
+    Entry := entry + 1
 END _init;
 
 

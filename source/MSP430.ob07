@@ -1757,8 +1757,7 @@ BEGIN
             C.Hex(Free.address, 4); C.String("H..0"); C.Hex(Free.address + Free.size - 1, 4); C.StringLn("H)")
     END;
     C.Ln;
-    C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)");
-    C.StringLn("--------------------------------------------")
+    C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)")
 
 END CodeGen;
 
