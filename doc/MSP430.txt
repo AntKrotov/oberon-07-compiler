@@ -422,11 +422,13 @@ TYPE
         pc - сохраненное значение регистра PC
 
 
-    TTrapProc = PROCEDURE (errno, ModName, line: INTEGER)
+    TTrapProc = PROCEDURE (modNum, modName, err, line: INTEGER);
         Процедура-обработчик ошибок.
 
-        errno   - номер ошибки
-        ModName - адрес имени модуля
+        modNum  - номер модуля (в отчете о компиляции:
+                  compiling (modNum) "modName" )
+        modName - адрес имени модуля
+        err     - номер ошибки
         line    - номер строки
 
 

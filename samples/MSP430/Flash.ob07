@@ -98,7 +98,7 @@ END Write;
 
 
 (* обработчик ошибок *)
-PROCEDURE trap (errno, ModName, line: INTEGER);
+PROCEDURE trap (modNum, modName, err, line: INTEGER);
 BEGIN
     set_bits(P1OUT, REDLED) (* включить красный светодиод *)
 END trap;

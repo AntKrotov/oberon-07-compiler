@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -39,7 +39,7 @@ TYPE
 
     TInterrupt* = RECORD priority*: INTEGER; sr*: SET; pc*: INTEGER END;
 
-    TTrapProc* = PROCEDURE (errno, ModName, line: INTEGER);
+    TTrapProc* = PROCEDURE (modNum, modName, err, line: INTEGER);
 
     TIntProc*  = PROCEDURE (priority: INTEGER; interrupt: TInterrupt);
 
