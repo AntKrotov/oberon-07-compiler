@@ -12,9 +12,9 @@ IMPORT SYSTEM, F := FPU;
 
 CONST
 
-    bit_depth* = 32;
-    maxint* = 7FFFFFFFH;
-    minint* = 80000000H;
+    bit_depth = 32;
+    maxint = 7FFFFFFFH;
+    minint = 80000000H;
 
     WORD = bit_depth DIV 8;
     MAX_SET = bit_depth - 1;
@@ -22,26 +22,40 @@ CONST
 
 TYPE
 
-    TrapProc = PROCEDURE (modNum, modName, err, line: INTEGER);
+    TrapProc* = PROCEDURE (modNum, modName, err, line: INTEGER);
+
+    IntProc*  = PROCEDURE (iv: INTEGER);
 
 
 VAR
 
     Heap, Types, TypesCount, Entry: INTEGER;
+
     Trap: TrapProc;
+    Interrupt: IntProc;
+
+
+PROCEDURE emptyInt (n: INTEGER);
+END emptyInt;
 
 
 PROCEDURE [code] sp (): INTEGER
     4668H; (* mov r0, sp *)
 
 PROCEDURE [code] jmp (adr: INTEGER)
-    0BD00H; (* pop PC *)
+    0BD00H; (* pop pc *)
 
 
-PROCEDURE _exit* (code: INTEGER);
+PROCEDURE _exit*;
 BEGIN
     jmp(Entry)
 END _exit;
+
+
+PROCEDURE _int* (n: INTEGER);
+BEGIN
+    Interrupt(n * WORD)
+END _int;
 
 
 PROCEDURE _error* (modNum, modName, err, line: INTEGER);
@@ -49,7 +63,7 @@ BEGIN
     IF Trap # NIL THEN
         Trap(modNum, modName, err, line)
     END;
-    _exit(0)
+    _exit
 END _error;
 
 
@@ -152,8 +166,7 @@ BEGIN
     09900H,  (*  ldr r1, [sp]       *)
     09803H,  (*  ldr r0, [sp + 12]  *)
     0B001H,  (*  add sp, 4          *)
-    0BC04H,  (*  pop r2             *)
-    04697H   (*  mov pc, r2         *)
+    0BD00H   (*  pop pc             *)
     )
 END _divmod;
 
@@ -456,7 +469,8 @@ BEGIN
     Heap := gadr + gsize;
     TypesCount := tcount;
     Types := types;
-    Entry := entry + 1
+    Entry := entry + 1;
+    Interrupt := emptyInt
 END _init;
 
 
@@ -464,6 +478,15 @@ PROCEDURE SetTrap* (trap: TrapProc);
 BEGIN
     Trap := trap
 END SetTrap;
+
+
+PROCEDURE SetInt* (int: IntProc);
+BEGIN
+    IF int = NIL THEN
+        int := emptyInt
+    END;
+    Interrupt := int
+END SetInt;
 
 
 END RTL.
