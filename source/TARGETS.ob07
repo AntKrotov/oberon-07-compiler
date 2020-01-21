@@ -38,14 +38,14 @@ TYPE
     TARGET = RECORD
 
         target, CPU, BitDepth, OS, RealSize: INTEGER;
-        ComLinePar, LibDir, FileExt: STRING
+        ComLinePar*, LibDir, FileExt: STRING
 
     END;
 
 
 VAR
 
-    Targets: ARRAY 14 OF TARGET;
+    Targets*: ARRAY 14 OF TARGET;
 
     target*, CPU*, BitDepth*, OS*, RealSize*, WordSize*, AdrSize*: INTEGER;
     ComLinePar*, LibDir*, FileExt*: STRING;
@@ -99,18 +99,18 @@ END Select;
 
 
 BEGIN
-    Enter( MSP430,        cpuMSP430,  16,  0,  osNONE,     "msp430",     "MSP430",     ".hex");
-    Enter( Win32C,        cpuX86,     32,  8,  osWIN32,    "console",    "Windows32",  ".exe");
-    Enter( Win32GUI,      cpuX86,     32,  8,  osWIN32,    "gui",        "Windows32",  ".exe");
-    Enter( Win32DLL,      cpuX86,     32,  8,  osWIN32,    "dll",        "Windows32",  ".dll");
-    Enter( KolibriOS,     cpuX86,     32,  8,  osKOS,      "kos",        "KolibriOS",  "");
-    Enter( KolibriOSDLL,  cpuX86,     32,  8,  osKOS,      "obj",        "KolibriOS",  ".obj");
-    Enter( Win64C,        cpuAMD64,   64,  8,  osWIN64,    "console64",  "Windows64",  ".exe");
-    Enter( Win64GUI,      cpuAMD64,   64,  8,  osWIN64,    "gui64",      "Windows64",  ".exe");
-    Enter( Win64DLL,      cpuAMD64,   64,  8,  osWIN64,    "dll64",      "Windows64",  ".dll");
-    Enter( Linux32,       cpuX86,     32,  8,  osLINUX32,  "elfexe",     "Linux32",    "");
-    Enter( Linux32SO,     cpuX86,     32,  8,  osLINUX32,  "elfso",      "Linux32",    ".so");
-    Enter( Linux64,       cpuAMD64,   64,  8,  osLINUX64,  "elfexe64",   "Linux64",    "");
-    Enter( Linux64SO,     cpuAMD64,   64,  8,  osLINUX64,  "elfso64",    "Linux64",    ".so");
-    Enter( STM32,         cpuTHUMB,   32,  4,  osNONE,     "stm32",      "STM32",      ".hex");
+    Enter( MSP430,        cpuMSP430,  16,  0,  osNONE,     "msp430",      "MSP430",     ".hex");
+    Enter( Win32C,        cpuX86,     32,  8,  osWIN32,    "win32con",    "Windows32",  ".exe");
+    Enter( Win32GUI,      cpuX86,     32,  8,  osWIN32,    "win32gui",    "Windows32",  ".exe");
+    Enter( Win32DLL,      cpuX86,     32,  8,  osWIN32,    "win32dll",    "Windows32",  ".dll");
+    Enter( KolibriOS,     cpuX86,     32,  8,  osKOS,      "kosexe",      "KolibriOS",  "");
+    Enter( KolibriOSDLL,  cpuX86,     32,  8,  osKOS,      "kosdll",      "KolibriOS",  ".obj");
+    Enter( Win64C,        cpuAMD64,   64,  8,  osWIN64,    "win64con",    "Windows64",  ".exe");
+    Enter( Win64GUI,      cpuAMD64,   64,  8,  osWIN64,    "win64gui",    "Windows64",  ".exe");
+    Enter( Win64DLL,      cpuAMD64,   64,  8,  osWIN64,    "win64dll",    "Windows64",  ".dll");
+    Enter( Linux32,       cpuX86,     32,  8,  osLINUX32,  "linux32exe",  "Linux32",    "");
+    Enter( Linux32SO,     cpuX86,     32,  8,  osLINUX32,  "linux32so",   "Linux32",    ".so");
+    Enter( Linux64,       cpuAMD64,   64,  8,  osLINUX64,  "linux64exe",  "Linux64",    "");
+    Enter( Linux64SO,     cpuAMD64,   64,  8,  osLINUX64,  "linux64so",   "Linux64",    ".so");
+    Enter( STM32,         cpuTHUMB,   32,  4,  osNONE,     "stm32",       "STM32",      ".hex");
 END TARGETS.

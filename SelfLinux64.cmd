@@ -1,2 +1,2 @@
-Compiler.exe source\Compiler.ob07 elfexe64 -out source\Compiler -stk 2
+Compiler.exe source\Compiler.ob07 linux64exe -out source\Compiler -stk 2
 @pause
