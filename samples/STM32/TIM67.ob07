@@ -128,7 +128,7 @@ BEGIN
     SYSTEM.GET(GPIOBMODER, x);
     SYSTEM.PUT(GPIOBMODER, x + {12, 14} - {13, 15});
 
-    (* разрешить прерывания от таймеров TIM6 и TIM7 *)
+    (* разрешить прерывания от таймеров TIM6 (позиция 43) и TIM7 (позиция 44) *)
     SYSTEM.PUT(NVIC_ISER1, {11, 12});
 
     (* настроить и запустить TIM6 *)
