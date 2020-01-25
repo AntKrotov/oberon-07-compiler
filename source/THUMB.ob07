@@ -91,6 +91,10 @@ VAR
 
     StkCount: INTEGER;
 
+    thumb2, sdiv: BOOLEAN;
+
+    sdivProc: INTEGER;
+
 
 PROCEDURE Code (code: INTEGER);
 VAR
@@ -163,6 +167,13 @@ BEGIN
     r.value := value;
     LISTS.push(CodeList, r)
 END reloc;
+
+
+PROCEDURE NewLabel (): INTEGER;
+BEGIN
+    BIN.NewLabel(program)
+    RETURN IL.NewLabel()
+END NewLabel;
 
 
 PROCEDURE range (x, n: INTEGER): BOOLEAN;
@@ -415,6 +426,30 @@ BEGIN
 END MovImm32;
 
 
+PROCEDURE movwt (r, imm16, t: INTEGER);
+VAR
+    i, imm3, imm4, imm8: INTEGER;
+
+BEGIN
+    ASSERT(range(r, 3));
+    ASSERT(range(imm16, 16));
+    ASSERT(range(t, 1));
+    imm8  := imm16 MOD 256;
+    imm4  := LSR(imm16, 12);
+    imm3  := LSR(imm16, 8) MOD 8;
+    i     := LSR(imm16, 11) MOD 2;
+    Code(0F240H + i * 1024 + t * 128 + imm4);
+    Code(imm3 * 4096 + r * 256 + imm8);
+END movwt;
+
+
+PROCEDURE MovImm32T2 (r, imm32: INTEGER);
+BEGIN
+    movwt(r, imm32 MOD 65536, 0);
+    movwt(r, (imm32 DIV 65536) MOD 65536, 1)
+END MovImm32T2;
+
+
 PROCEDURE inv0 (cond: INTEGER): INTEGER;
     RETURN ORD(BITS(cond) / {0})
 END inv0;
@@ -457,15 +492,34 @@ VAR
     END genlongjmp;
 
 
+    PROCEDURE movwt (r, imm16, t: INTEGER; VAR code: RELOCCODE);
+    VAR
+        i, imm3, imm4, imm8: INTEGER;
+
+    BEGIN
+        imm8 := imm16 MOD 256;
+        imm4 := LSR(imm16, 12);
+        imm3 := LSR(imm16, 8) MOD 8;
+        i    := LSR(imm16, 11) MOD 2;
+        code[ORD(t = 128) * 2]     := 0F240H + i * 1024 + t + imm4;
+        code[ORD(t = 128) * 2 + 1] := imm3 * 4096 + r * 256 + imm8
+    END movwt;
+
+
     PROCEDURE genmovimm32 (r, value: INTEGER; VAR code: RELOCCODE);
     BEGIN
-        code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* mov r, #imm8 *)
-        code[1] := 0200H + r * 9;                           (* lsl r, r, #8 *)
-        code[2] := 3000H + r * 256 + UTILS.Byte(value, 2);  (* add r, #imm8 *)
-        code[3] := code[1];                                 (* lsl r, r, #8 *)
-        code[4] := 3000H + r * 256 + UTILS.Byte(value, 1);  (* add r, #imm8 *)
-        code[5] := code[1];                                 (* lsl r, r, #8 *)
-        code[6] := 3000H + r * 256 + UTILS.Byte(value, 0)   (* add r, #imm8 *)
+        IF thumb2 THEN
+            movwt(r, value MOD 65536, 0, code);
+            movwt(r, (value DIV 65536) MOD 65536, 128, code)
+        ELSE
+            code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* mov r, #imm8 *)
+            code[1] := 0200H + r * 9;                           (* lsl r, r, #8 *)
+            code[2] := 3000H + r * 256 + UTILS.Byte(value, 2);  (* add r, #imm8 *)
+            code[3] := code[1];                                 (* lsl r, r, #8 *)
+            code[4] := 3000H + r * 256 + UTILS.Byte(value, 1);  (* add r, #imm8 *)
+            code[5] := code[1];                                 (* lsl r, r, #8 *)
+            code[6] := 3000H + r * 256 + UTILS.Byte(value, 0)   (* add r, #imm8 *)
+        END
     END genmovimm32;
 
 
@@ -492,7 +546,7 @@ BEGIN
             |JMP:    INC(count, ORD(~code.short) + 1); code.offset := count + ORD(code.short)
             |JCC:    INC(count, ORD(~code.short) + ORD(~code.short2) + 1); code.offset := count + ORD(code.short OR code.short2)
             |CALL:   INC(count, 2); code.offset := count
-            |RELOC:  INC(count, 7 + ORD(ODD(code.rel)))
+            |RELOC:  INC(count, 7 - ORD(thumb2) * 3 + ORD(ODD(code.rel)))
             END;
 
             code := code.next(ANYCODE)
@@ -574,10 +628,10 @@ BEGIN
                 |BIN.RBSS,  BIN.PICBSS:  reloc := code.value + BssAdr
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    DEC(reloc, CodeAdr + code.offset * 2 + 18)
+                    DEC(reloc, CodeAdr + code.offset * 2 + 18 - 6 * ORD(thumb2))
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
-                FOR i := 0 TO LEN(RelocCode) - 1 DO
+                FOR i := 0 TO 6 - 3 * ORD(thumb2) DO
                     PutCode(RelocCode[i])
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
@@ -650,13 +704,6 @@ BEGIN
 END PushAll;
 
 
-PROCEDURE NewLabel (): INTEGER;
-BEGIN
-    BIN.NewLabel(program)
-    RETURN IL.NewLabel()
-END NewLabel;
-
-
 PROCEDURE cond (op: INTEGER): INTEGER;
 VAR
     res: INTEGER;
@@ -695,7 +742,15 @@ BEGIN
         MovImm8(r, 1);
         LslImm(r, 31)
     ELSE
-        MovImm32(r, c)
+        IF thumb2 THEN
+            IF (0 <= c) & (c <= 65535) THEN
+                movwt(r, c, 0)
+            ELSE
+                MovImm32T2(r, c)
+            END
+        ELSE
+            MovImm32(r, c)
+        END
     END
 END MovConst;
 
@@ -1970,6 +2025,11 @@ BEGIN
         Code((IV[i] DIV 65536) MOD 65536);
     END;
 
+    IF sdiv THEN
+        sdivProc := NewLabel();
+        IL.set_rtl(IL._divmod, sdivProc)
+    END;
+
     entry := NewLabel();
     L1 := NewLabel();
     Label(entry);
@@ -2017,6 +2077,28 @@ BEGIN
 END prolog;
 
 
+PROCEDURE epilog;
+BEGIN
+    CallRTL(IL._exit, 0);
+    IF sdiv THEN
+        Label(sdivProc);
+        Code(09800H);  (* ldr  r0, [sp + #0] *)
+        Code(09901H);  (* ldr  r1, [sp + #4] *)
+        Code(0FB91H);  (* sdiv r2, r1, r0    *)
+        Code(0F2F0H);
+        Code(00013H);  (* mov  r3, r2        *)
+        Code(04343H);  (* mul  r3, r0        *)
+        Code(01AC9H);  (* sub  r1, r3        *)
+        Code(0DA01H);  (* bge  L             *)
+        Code(04401H);  (* add  r1, r0        *)
+        Code(03A01H);  (* sub  r2, #1        *)
+                       (* L:                 *)
+        Code(00010H);  (* mov  r0, r2        *)
+        Code(04770H)   (* bx   lr            *)
+    END
+END epilog;
+
+
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 CONST
     FlashAdr = 08000000H;
@@ -2032,6 +2114,9 @@ VAR
     File: WR.FILE;
 
 BEGIN
+    thumb2 := TRUE;
+    sdiv := TRUE;
+
     ram := options.ram;
     rom := options.rom;
 
@@ -2061,7 +2146,7 @@ BEGIN
 
     prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr, ram);
     translate(ORD(opt.pic), tcount * 4);
-    CallRTL(IL._exit, 0);
+    epilog;
 
     fixup(FlashAdr, DataAdr, BssAdr);
 
