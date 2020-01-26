@@ -88,14 +88,14 @@ VAR
 
 
 (* обработчик прерываний *)
-PROCEDURE handler (ivoffs: INTEGER);
+PROCEDURE handler (iv: INTEGER);
 BEGIN
-    IF ivoffs = 0ECH THEN   (* прерывание от TIM6 *)
+    IF iv = 59 THEN   (* прерывание от TIM6 *)
         state1 := ~state1;
         (* включить или выключить синий светодиод *)
         SYSTEM.PUT(GPIOBBSRR, {BLUELED + 16 * ORD(state1)});
         SYSTEM.PUT(TIM6_SR, 0)  (* сбросить флаг прерывания *)
-    ELSIF ivoffs = 0F0H THEN  (* прерывание от TIM7 *)
+    ELSIF iv = 60 THEN  (* прерывание от TIM7 *)
         state2 := ~state2;
         (* включить или выключить зеленый светодиод *)
         SYSTEM.PUT(GPIOBBSRR, {GREENLED + 16 * ORD(state2)});

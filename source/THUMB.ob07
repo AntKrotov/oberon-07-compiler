@@ -93,7 +93,7 @@ VAR
 
     thumb2: BOOLEAN;
 
-    sdivProc, intProc: INTEGER;
+    sdivProc: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -2016,25 +2016,26 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len: INTEGER);
+PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len, sram: INTEGER);
 VAR
-    r1, r2, i, dcount, entry, L1: INTEGER;
-    IV: ARRAY 256 OF INTEGER;
+    r1, r2, i, dcount, entry, L1, reset: INTEGER;
 
 BEGIN
-    IV[0] := sp;
-    IV[1] := FlashAdr + ivt_len * 4 + 1;
+    reset := FlashAdr + ivt_len * 4 + 1;
+
+    Code(low(sp));
+    Code(high(sp));
+
+    Code(low(reset));
+    Code(high(reset));
+
+    INC(reset, 4);
 
     FOR i := 2 TO ivt_len - 1 DO
-        IV[i] := IV[1] + 4 + 4*2 * (i - 2)
+        Code(low(reset));
+        Code(high(reset))
     END;
 
-    FOR i := 0 TO ivt_len - 1 DO
-        Code(low(IV[i]));
-        Code(high(IV[i]))
-    END;
-
-    intProc := NewLabel();
     sdivProc := NewLabel();
     IL.set_rtl(IL._divmod, sdivProc);
 
@@ -2043,11 +2044,13 @@ BEGIN
     Label(entry);
     call(L1);
 
-    FOR i := 2 TO ivt_len - 1 DO
-        MovImm8(R1, i);
-        gen14(FALSE, TRUE, {}); (* push {LR} *)
-        call(intProc)
-    END;
+    gen14(FALSE, TRUE, {});      (* push {LR}    *)
+    MovConst(R0, sram);
+    Ldr32(R0, R0);
+    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr *)
+    push(R1);
+    gen5(3, TRUE, FALSE, R0, 0); (* blx R0       *)
+    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
 
     Label(L1);
     r1 := GetAnyReg();
@@ -2071,7 +2074,7 @@ BEGIN
     drop;
 
     r1 := GetAnyReg();
-    MovConst(r1, IV[0]);
+    MovConst(r1, sp);
     mov(SP, r1);
     reloc(r1, BIN.RDATA + pic, 0);
     push(r1);
@@ -2089,18 +2092,10 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog (sram: INTEGER);
+PROCEDURE epilog;
 BEGIN
     Code(0BF30H);  (* L2: wfi *)
     Code(0E7FDH);  (* b L2 *)
-
-    Label(intProc);
-    MovConst(R0, sram);
-    Ldr32(R0, R0);
-    LslImm(R1, 2);
-    push(R1);
-    gen5(3, TRUE, FALSE, R0, 0); (* blx R0       *)
-    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
 
     Label(sdivProc);
     Code(09800H);  (* ldr  r0, [sp + #0] *)
@@ -2166,9 +2161,9 @@ BEGIN
     BssSize := IL.codes.bss;
     ASSERT(UTILS.Align(BssSize, 4));
 
-    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen);
+    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen, SRAMAdr);
     translate(ORD(opt.pic), tcount * 4);
-    epilog(SRAMAdr);
+    epilog;
 
     fixup(FlashAdr, DataAdr, BssAdr);
 

@@ -53,9 +53,9 @@ VAR
 
 
 (* обработчик прерываний *)
-PROCEDURE handler (ivoffs: INTEGER);
+PROCEDURE handler (iv: INTEGER);
 BEGIN
-    IF ivoffs = 3CH THEN (* прерывание от System tick timer *)
+    IF iv = 15 THEN (* прерывание от System tick timer *)
         state := ~state;
         (* включить или выключить светодиоды *)
         SYSTEM.PUT(GPIOBBSRR, {Blue + 16 * ORD(state)});

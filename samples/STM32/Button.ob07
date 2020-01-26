@@ -76,9 +76,9 @@ VAR
 
 
 (* обработчик прерываний *)
-PROCEDURE handler (ivoffs: INTEGER);
+PROCEDURE handler (iv: INTEGER);
 BEGIN
-    IF ivoffs = 058H THEN   (* прерывание от EXTI0 *)
+    IF iv = 22 THEN   (* прерывание от EXTI0 *)
         state := (state + 1) MOD 4;
         (* изменить состояние светодиодов *)
         CASE state OF
