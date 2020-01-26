@@ -3257,7 +3257,6 @@ BEGIN
         getproc(rtl, "_dllentry", IL._dllentry);
         getproc(rtl, "_sofinit",  IL._sofinit)
     ELSIF CPU = TARGETS.cpuTHUMB THEN
-        getproc(rtl, "_int",   IL._int);
         getproc(rtl, "_fmul",  IL._fmul);
         getproc(rtl, "_fdiv",  IL._fdiv);
         getproc(rtl, "_fdivi", IL._fdivi);

@@ -93,7 +93,7 @@ VAR
 
     thumb2: BOOLEAN;
 
-    sdivProc: INTEGER;
+    sdivProc, intProc: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -2026,7 +2026,7 @@ BEGIN
     IV[1] := FlashAdr + ivt_len * 4 + 1;
 
     FOR i := 2 TO ivt_len - 1 DO
-        IV[i] := IV[1] + 4 + 5*2 * (i - 2)
+        IV[i] := IV[1] + 4 + 4*2 * (i - 2)
     END;
 
     FOR i := 0 TO ivt_len - 1 DO
@@ -2034,6 +2034,7 @@ BEGIN
         Code(high(IV[i]))
     END;
 
+    intProc := NewLabel();
     sdivProc := NewLabel();
     IL.set_rtl(IL._divmod, sdivProc);
 
@@ -2043,10 +2044,9 @@ BEGIN
     call(L1);
 
     FOR i := 2 TO ivt_len - 1 DO
-        MovImm8(R0, i);
-        gen14(FALSE, TRUE, {R0}); (* push {R0, LR} *)
-        CallRTL(IL._int, 0);
-        gen14(TRUE, TRUE, {R0})   (* pop  {R0, PC} *)
+        MovImm8(R1, i);
+        gen14(FALSE, TRUE, {}); (* push {LR} *)
+        call(intProc)
     END;
 
     Label(L1);
@@ -2089,10 +2089,19 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog;
+PROCEDURE epilog (sram: INTEGER);
 BEGIN
     Code(0BF30H);  (* L2: wfi *)
     Code(0E7FDH);  (* b L2 *)
+
+    Label(intProc);
+    MovConst(R0, sram);
+    Ldr32(R0, R0);
+    LslImm(R1, 2);
+    push(R1);
+    gen5(3, TRUE, FALSE, R0, 0); (* blx R0       *)
+    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
+
     Label(sdivProc);
     Code(09800H);  (* ldr  r0, [sp + #0] *)
     Code(09901H);  (* ldr  r1, [sp + #4] *)
@@ -2116,7 +2125,7 @@ CONST
     SRAMAdr  = 20000000H;
     IVTLen   = 256;
 
-    Reserved = 0;
+    Reserved = 4;
 
 VAR
     opt: PROG.OPTIONS;
@@ -2159,7 +2168,7 @@ BEGIN
 
     prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen);
     translate(ORD(opt.pic), tcount * 4);
-    epilog;
+    epilog(SRAMAdr);
 
     fixup(FlashAdr, DataAdr, BssAdr);
 
