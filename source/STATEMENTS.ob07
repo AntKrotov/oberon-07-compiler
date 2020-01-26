@@ -3243,15 +3243,15 @@ BEGIN
     getproc(rtl, "_rot",      IL._rot);
     getproc(rtl, "_strcpy",   IL._strcpy);
     getproc(rtl, "_move",     IL._move);
-    getproc(rtl, "_divmod",   IL._divmod);
     getproc(rtl, "_set",      IL._set);
     getproc(rtl, "_set1",     IL._set1);
     getproc(rtl, "_lengthw",  IL._lengthw);
     getproc(rtl, "_strcmpw",  IL._strcmpw);
     getproc(rtl, "_init",     IL._init);
-    getproc(rtl, "_exit",     IL._exit);
 
     IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
+        getproc(rtl, "_divmod",   IL._divmod);
+        getproc(rtl, "_exit",     IL._exit);
         getproc(rtl, "_dispose",  IL._dispose);
         getproc(rtl, "_isrec",    IL._isrec);
         getproc(rtl, "_dllentry", IL._dllentry);

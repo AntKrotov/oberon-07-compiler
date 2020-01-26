@@ -35,21 +35,15 @@ VAR
     Interrupt: IntProc;
 
 
-PROCEDURE emptyInt (n: INTEGER);
-END emptyInt;
+PROCEDURE [code] emptyInt (n: INTEGER);
 
 
 PROCEDURE [code] sp (): INTEGER
     4668H; (* mov r0, sp *)
 
+
 PROCEDURE [code] jmp (adr: INTEGER)
     0BD00H; (* pop pc *)
-
-
-PROCEDURE _exit*;
-BEGIN
-    jmp(Entry)
-END _exit;
 
 
 PROCEDURE _int* (n: INTEGER);
@@ -63,7 +57,7 @@ BEGIN
     IF Trap # NIL THEN
         Trap(modNum, modName, err, line)
     END;
-    _exit
+    jmp(Entry)
 END _error;
 
 
@@ -124,51 +118,6 @@ BEGIN
     n := LSR(ORD(x), 23) MOD 256 - 127;
     x := x - {30} + {23..29}
 END _unpk;
-
-
-PROCEDURE divmod (a, b: INTEGER; VAR mod: INTEGER): INTEGER;
-VAR
-    res, c, r: INTEGER;
-
-BEGIN
-    res := 0;
-
-    WHILE (a >= b) OR (a < 0) DO
-        r := 2;
-        c := b * 2;
-        WHILE (c > 0) & (ABS(a) >= c) DO
-            c := c * 2;
-            r := r * 2
-        END;
-
-        IF a < 0 THEN
-            INC(a, LSR(c, 1));
-            DEC(res, LSR(r, 1))
-        ELSE
-            DEC(a, LSR(c, 1));
-            INC(res, LSR(r, 1))
-        END
-    END;
-
-    mod := a
-
-    RETURN res
-END divmod;
-
-
-PROCEDURE _divmod* (b, a: INTEGER);  (* a DIV b -> r0; a MOD b -> r1 *)
-VAR
-    mod: INTEGER;
-
-BEGIN
-    a := divmod(a, b, mod);
-    SYSTEM.CODE(
-    09900H,  (*  ldr r1, [sp]       *)
-    09803H,  (*  ldr r0, [sp + 12]  *)
-    0B001H,  (*  add sp, 4          *)
-    0BD00H   (*  pop pc             *)
-    )
-END _divmod;
 
 
 PROCEDURE _rot* (VAR A: ARRAY OF INTEGER);
@@ -462,15 +411,14 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE _init* (gsize, tcount, entry, gadr, types: INTEGER);
+PROCEDURE _init* (tcount, entry, heap, types: INTEGER);
 BEGIN
-    gsize := gsize DIV 16;
-    gsize := gsize * 16 + 16;
-    Heap := gadr + gsize;
+    Heap := heap;
     TypesCount := tcount;
     Types := types;
     Entry := entry + 1;
-    Interrupt := emptyInt
+    Interrupt := emptyInt;
+    Trap := NIL
 END _init;
 
 

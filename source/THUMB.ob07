@@ -91,7 +91,7 @@ VAR
 
     StkCount: INTEGER;
 
-    thumb2, sdiv: BOOLEAN;
+    thumb2: BOOLEAN;
 
     sdivProc: INTEGER;
 
@@ -426,6 +426,16 @@ BEGIN
 END MovImm32;
 
 
+PROCEDURE low (x: INTEGER): INTEGER;
+    RETURN x MOD 65536
+END low;
+
+
+PROCEDURE high (x: INTEGER): INTEGER;
+    RETURN (x DIV 65536) MOD 65536
+END high;
+
+
 PROCEDURE movwt (r, imm16, t: INTEGER);
 VAR
     i, imm3, imm4, imm8: INTEGER;
@@ -445,8 +455,8 @@ END movwt;
 
 PROCEDURE MovImm32T2 (r, imm32: INTEGER);
 BEGIN
-    movwt(r, imm32 MOD 65536, 0);
-    movwt(r, (imm32 DIV 65536) MOD 65536, 1)
+    movwt(r, low(imm32), 0);
+    movwt(r, high(imm32), 1)
 END MovImm32T2;
 
 
@@ -501,16 +511,16 @@ VAR
         imm4 := LSR(imm16, 12);
         imm3 := LSR(imm16, 8) MOD 8;
         i    := LSR(imm16, 11) MOD 2;
-        code[ORD(t = 128) * 2]     := 0F240H + i * 1024 + t + imm4;
-        code[ORD(t = 128) * 2 + 1] := imm3 * 4096 + r * 256 + imm8
+        code[t * 2]     := 0F240H + i * 1024 + t * 128 + imm4;
+        code[t * 2 + 1] := imm3 * 4096 + r * 256 + imm8
     END movwt;
 
 
     PROCEDURE genmovimm32 (r, value: INTEGER; VAR code: RELOCCODE);
     BEGIN
         IF thumb2 THEN
-            movwt(r, value MOD 65536, 0, code);
-            movwt(r, (value DIV 65536) MOD 65536, 128, code)
+            movwt(r, low(value), 0, code);
+            movwt(r, high(value), 1, code)
         ELSE
             code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* mov r, #imm8 *)
             code[1] := 0200H + r * 9;                           (* lsl r, r, #8 *)
@@ -1110,7 +1120,7 @@ BEGIN
         |IL.opSAVE16C:
             UnOp(r1);
             r2 := GetAnyReg();
-            MovConst(r2, param2 MOD 65536);
+            MovConst(r2, low(param2));
             Str16(r2, r1);
             drop;
             drop
@@ -2006,41 +2016,37 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, SRAMAdr, SRAMSize: INTEGER);
+PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len: INTEGER);
 VAR
     r1, r2, i, dcount, entry, L1: INTEGER;
     IV: ARRAY 256 OF INTEGER;
 
 BEGIN
+    IV[0] := sp;
+    IV[1] := FlashAdr + ivt_len * 4 + 1;
 
-    IV[0] := SRAMAdr + SRAMSize;
-    IV[1] := FlashAdr + LEN(IV) * 4 + 1;
-
-    FOR i := 2 TO LEN(IV) - 1 DO
-        IV[i] := IV[1] + 4 + 7*2 * (i - 2)
+    FOR i := 2 TO ivt_len - 1 DO
+        IV[i] := IV[1] + 4 + 5*2 * (i - 2)
     END;
 
-    FOR i := 0 TO LEN(IV) - 1 DO
-        Code(IV[i] MOD 65536);
-        Code((IV[i] DIV 65536) MOD 65536);
+    FOR i := 0 TO ivt_len - 1 DO
+        Code(low(IV[i]));
+        Code(high(IV[i]))
     END;
 
-    IF sdiv THEN
-        sdivProc := NewLabel();
-        IL.set_rtl(IL._divmod, sdivProc)
-    END;
+    sdivProc := NewLabel();
+    IL.set_rtl(IL._divmod, sdivProc);
 
     entry := NewLabel();
     L1 := NewLabel();
     Label(entry);
     call(L1);
 
-    FOR i := 2 TO LEN(IV) - 1 DO
-        gen14(FALSE, TRUE, {}); (* push LR *)
+    FOR i := 2 TO ivt_len - 1 DO
         MovImm8(R0, i);
-        push(R0);
-        CallRTL(IL._int, 1);
-        gen14(TRUE, TRUE, {})   (* pop PC *)
+        gen14(FALSE, TRUE, {R0}); (* push {R0, LR} *)
+        CallRTL(IL._int, 0);
+        gen14(TRUE, TRUE, {R0})   (* pop  {R0, PC} *)
     END;
 
     Label(L1);
@@ -2067,35 +2073,40 @@ BEGIN
     r1 := GetAnyReg();
     MovConst(r1, IV[0]);
     mov(SP, r1);
-    reloc(r1, BIN.RDATA + pic,     0);  push(r1);
-    reloc(r1, BIN.RBSS  + pic,     0);  push(r1);
-    reloc(r1, BIN.RCODE + pic, entry);  push(r1);
+    reloc(r1, BIN.RDATA + pic, 0);
+    push(r1);
+    reloc(r1, BIN.RBSS + pic, 0);
+    r2 := GetAnyReg();
+    MovConst(r2, GlobSize);
+    AddReg(r1, r1, r2);
+    drop;
+    push(r1);
+    reloc(r1, BIN.RCODE + pic, entry);
+    push(r1);
     drop;
     PushConst(tcount);
-    PushConst(GlobSize);
-    CallRTL(IL._init, 5)
+    CallRTL(IL._init, 4)
 END prolog;
 
 
 PROCEDURE epilog;
 BEGIN
-    CallRTL(IL._exit, 0);
-    IF sdiv THEN
-        Label(sdivProc);
-        Code(09800H);  (* ldr  r0, [sp + #0] *)
-        Code(09901H);  (* ldr  r1, [sp + #4] *)
-        Code(0FB91H);  (* sdiv r2, r1, r0    *)
-        Code(0F2F0H);
-        Code(00013H);  (* mov  r3, r2        *)
-        Code(04343H);  (* mul  r3, r0        *)
-        Code(01AC9H);  (* sub  r1, r3        *)
-        Code(0DA01H);  (* bge  L             *)
-        Code(04401H);  (* add  r1, r0        *)
-        Code(03A01H);  (* sub  r2, #1        *)
-                       (* L:                 *)
-        Code(00010H);  (* mov  r0, r2        *)
-        Code(04770H)   (* bx   lr            *)
-    END
+    Code(0BF30H);  (* L2: wfi *)
+    Code(0E7FDH);  (* b L2 *)
+    Label(sdivProc);
+    Code(09800H);  (* ldr  r0, [sp + #0] *)
+    Code(09901H);  (* ldr  r1, [sp + #4] *)
+    Code(0FB91H);  (* sdiv r2, r1, r0    *)
+    Code(0F2F0H);
+    Code(00013H);  (* mov  r3, r2        *)
+    Code(04343H);  (* mul  r3, r0        *)
+    Code(01AC9H);  (* sub  r1, r3        *)
+    Code(0DA01H);  (* bge  L             *)
+    Code(04401H);  (* add  r1, r0        *)
+    Code(03A01H);  (* sub  r2, #1        *)
+                   (* L:                 *)
+    Code(00010H);  (* mov  r0, r2        *)
+    Code(04770H)   (* bx   lr            *)
 END epilog;
 
 
@@ -2103,6 +2114,9 @@ PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIO
 CONST
     FlashAdr = 08000000H;
     SRAMAdr  = 20000000H;
+    IVTLen   = 256;
+
+    Reserved = 0;
 
 VAR
     opt: PROG.OPTIONS;
@@ -2115,7 +2129,6 @@ VAR
 
 BEGIN
     thumb2 := TRUE;
-    sdiv := TRUE;
 
     ram := options.ram;
     rom := options.rom;
@@ -2134,17 +2147,17 @@ BEGIN
 
     StkCount := 0;
 
-    DataAdr := SRAMAdr;
-    DataSize := CHL.Length(IL.codes.data) + tcount * 4;
+    DataAdr := SRAMAdr + Reserved;
+    DataSize := CHL.Length(IL.codes.data) + tcount * 4 + Reserved;
     ASSERT(UTILS.Align(DataSize, 4));
-    BssAdr := DataAdr + DataSize;
+    BssAdr := DataAdr + DataSize - Reserved;
 
     IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
 
     BssSize := IL.codes.bss;
     ASSERT(UTILS.Align(BssSize, 4));
 
-    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr, ram);
+    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen);
     translate(ORD(opt.pic), tcount * 4);
     epilog;
 
@@ -2163,7 +2176,7 @@ BEGIN
 
     File := WR.Create(outname);
 
-    HEX.Data2(File, program.code, 0, CodeSize, FlashAdr DIV 65536);
+    HEX.Data2(File, program.code, 0, CodeSize, high(FlashAdr));
     HEX.End(File);
 
     WR.Close(File);

@@ -52,11 +52,6 @@ VAR
     x: SET; state: BOOLEAN;
 
 
-(* ждать прерывание *)
-PROCEDURE [code] WFI
-    0BF30H; (* wfi *)
-
-
 (* обработчик прерываний *)
 PROCEDURE handler (ivoffs: INTEGER);
 BEGIN
@@ -86,8 +81,4 @@ BEGIN
     (* настроить и запустить SysTick *)
     SYSTEM.PUT(STK_LOAD, 1048576);
     SYSTEM.PUT(STK_CTRL, ENABLE + TICKINT + CLKSOURCE);
-
-    REPEAT
-        WFI (* ждать прерывание *)
-    UNTIL FALSE
 END SysTick.

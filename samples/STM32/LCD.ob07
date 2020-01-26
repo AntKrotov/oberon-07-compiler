@@ -100,10 +100,6 @@ VAR
     digits: ARRAY 10 OF SET;
 
 
-PROCEDURE [code] WFI
-    0BF30H; (* wfi *)
-
-
 PROCEDURE SetPinsMode (reg: INTEGER; pins: SET; mode: INTEGER);
 VAR
     x: SET;
@@ -366,6 +362,5 @@ END main;
 
 
 BEGIN
-    main;
-    REPEAT WFI UNTIL FALSE
+    main
 END LCD.

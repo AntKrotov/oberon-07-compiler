@@ -75,11 +75,6 @@ VAR
     state: INTEGER;
 
 
-(* ждать прерывание *)
-PROCEDURE [code] WFI
-    0BF30H; (* wfi *)
-
-
 (* обработчик прерываний *)
 PROCEDURE handler (ivoffs: INTEGER);
 BEGIN
@@ -121,8 +116,4 @@ BEGIN
     (* разрешить прерывания от LINE0 по нарастающему краю импульса *)
     SYSTEM.PUT(EXTI_IMR, LINE0);
     SYSTEM.PUT(EXTI_RTSR, LINE0);
-
-    REPEAT
-        WFI (* ждать прерывание *)
-    UNTIL FALSE
 END Button.

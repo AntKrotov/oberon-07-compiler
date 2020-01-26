@@ -87,11 +87,6 @@ VAR
     state1, state2: BOOLEAN;
 
 
-(* ждать прерывание *)
-PROCEDURE [code] WFI
-    0BF30H; (* wfi *)
-
-
 (* обработчик прерываний *)
 PROCEDURE handler (ivoffs: INTEGER);
 BEGIN
@@ -144,8 +139,4 @@ BEGIN
     SYSTEM.PUT(TIM7_DIER, UIE);
     SYSTEM.GET(TIM7_CR1, x);
     SYSTEM.PUT(TIM7_CR1, x + CEN - (UDIS + URS + OPM + ARPE));
-
-    REPEAT
-        WFI (* ждать прерывание *)
-    UNTIL FALSE
 END TIM67.
