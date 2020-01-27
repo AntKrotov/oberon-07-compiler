@@ -6,7 +6,7 @@
 
 MODULE SysTick;
 
-IMPORT SYSTEM, RTL;
+IMPORT SYSTEM, Handler;
 
 
 CONST
@@ -68,7 +68,7 @@ BEGIN
     state := FALSE;
 
     (* назначить обработчик прерываний *)
-    RTL.SetInt(handler);
+    Handler.SetInt(handler);
 
     (* подключить GPIOB *)
     SYSTEM.GET(RCC_AHBENR, x);

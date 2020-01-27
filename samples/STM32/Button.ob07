@@ -7,7 +7,7 @@
 
 MODULE Button;
 
-IMPORT SYSTEM, RTL;
+IMPORT SYSTEM, Handler;
 
 
 CONST
@@ -96,7 +96,7 @@ BEGIN
     state := 0;
 
     (* назначить обработчик прерываний *)
-    RTL.SetInt(handler);
+    Handler.SetInt(handler);
 
     (* подключить GPIOA и GPIOB *)
     SYSTEM.GET(RCC_AHBENR, x);

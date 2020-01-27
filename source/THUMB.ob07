@@ -25,6 +25,9 @@ CONST
     STM32_minROM* = 16; STM32_maxROM* = 65536;
     STM32_minRAM* = 4;  STM32_maxRAM* = 65536;
 
+    Interrupt = 0;
+    Trap      = 4;
+
 
 TYPE
 
@@ -93,7 +96,7 @@ VAR
 
     thumb2: BOOLEAN;
 
-    sdivProc: INTEGER;
+    sdivProc, trapProc, entry: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -903,6 +906,13 @@ BEGIN
 END CallRTL;
 
 
+PROCEDURE divmod;
+BEGIN
+    call(sdivProc);
+    AddSP(2)
+END divmod;
+
+
 PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
     cmd: COMMAND;
@@ -1016,7 +1026,7 @@ BEGIN
             jmp(param1)
 
         |IL.opERR:
-            CallRTL(IL._error, 0)
+            call(trapProc)
 
         |IL.opNOP:
 
@@ -1740,7 +1750,7 @@ BEGIN
 
         |IL.opDIV:
             PushAll(2);
-            CallRTL(IL._divmod, 2);
+            divmod;
             GetRegA
 
         |IL.opDIVL:
@@ -1749,7 +1759,7 @@ BEGIN
             PushConst(param2);
             push(r1);
             drop;
-            CallRTL(IL._divmod, 2);
+            divmod;
             GetRegA
 
         |IL.opDIVR:
@@ -1760,13 +1770,13 @@ BEGIN
             ELSIF n < 0 THEN
                 PushAll(1);
                 PushConst(param2);
-                CallRTL(IL._divmod, 2);
+                divmod;
                 GetRegA
             END
 
         |IL.opMOD:
             PushAll(2);
-            CallRTL(IL._divmod, 2);
+            divmod;
             mov(R0, R1);
             GetRegA
 
@@ -1779,7 +1789,7 @@ BEGIN
             ELSIF n < 0 THEN
                 PushAll(1);
                 PushConst(param2);
-                CallRTL(IL._divmod, 2);
+                divmod;
                 mov(R0, R1);
                 GetRegA
             ELSE
@@ -1793,7 +1803,7 @@ BEGIN
             PushConst(param2);
             push(r1);
             drop;
-            CallRTL(IL._divmod, 2);
+            divmod;
             mov(R0, R1);
             GetRegA
 
@@ -2018,7 +2028,7 @@ END translate;
 
 PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len, sram: INTEGER);
 VAR
-    r1, r2, i, dcount, entry, L1, reset: INTEGER;
+    r1, r2, i, dcount, L1, reset: INTEGER;
 
 BEGIN
     reset := FlashAdr + ivt_len * 4 + 1;
@@ -2036,16 +2046,15 @@ BEGIN
         Code(high(reset))
     END;
 
-    sdivProc := NewLabel();
-    IL.set_rtl(IL._divmod, sdivProc);
-
     entry := NewLabel();
+    trapProc := NewLabel();
+    sdivProc := NewLabel();
     L1 := NewLabel();
     Label(entry);
     call(L1);
 
     gen14(FALSE, TRUE, {});      (* push {LR}    *)
-    MovConst(R0, sram);
+    MovConst(R0, sram + Interrupt);
     Ldr32(R0, R0);
     Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr *)
     push(R1);
@@ -2092,10 +2101,16 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog;
+PROCEDURE epilog (sram: INTEGER);
 BEGIN
     Code(0BF30H);  (* L2: wfi *)
     Code(0E7FDH);  (* b L2 *)
+
+    Label(trapProc);
+    MovConst(R0, sram + Trap);
+    Ldr32(R0, R0);
+    gen5(3, TRUE, FALSE, R0, 0); (* blx R0 *)
+    call(entry);
 
     Label(sdivProc);
     Code(09800H);  (* ldr  r0, [sp + #0] *)
@@ -2120,7 +2135,7 @@ CONST
     SRAMAdr  = 20000000H;
     IVTLen   = 256;
 
-    Reserved = 4;
+    Reserved = 8;
 
 VAR
     opt: PROG.OPTIONS;
@@ -2163,7 +2178,7 @@ BEGIN
 
     prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen, SRAMAdr);
     translate(ORD(opt.pic), tcount * 4);
-    epilog;
+    epilog(SRAMAdr);
 
     fixup(FlashAdr, DataAdr, BssAdr);
 

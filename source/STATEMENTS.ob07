@@ -3238,7 +3238,6 @@ BEGIN
     getproc(rtl, "_is",       IL._is);
     getproc(rtl, "_guard",    IL._guard);
     getproc(rtl, "_guardrec", IL._guardrec);
-    getproc(rtl, "_error",    IL._error);
     getproc(rtl, "_new",      IL._new);
     getproc(rtl, "_rot",      IL._rot);
     getproc(rtl, "_strcpy",   IL._strcpy);
@@ -3250,6 +3249,7 @@ BEGIN
     getproc(rtl, "_init",     IL._init);
 
     IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
+        getproc(rtl, "_error",    IL._error);
         getproc(rtl, "_divmod",   IL._divmod);
         getproc(rtl, "_exit",     IL._exit);
         getproc(rtl, "_dispose",  IL._dispose);

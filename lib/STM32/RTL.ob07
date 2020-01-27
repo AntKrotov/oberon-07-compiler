@@ -7,7 +7,7 @@
 
 MODULE RTL;
 
-IMPORT SYSTEM, F := FPU;
+IMPORT SYSTEM, F := FPU, Handler;
 
 
 CONST
@@ -19,42 +19,14 @@ CONST
     WORD = bit_depth DIV 8;
     MAX_SET = bit_depth - 1;
 
-    SRAM = 20000000H;
-        Interrupt = SRAM;
-
-
-TYPE
-
-    TrapProc* = PROCEDURE (modNum, modName, err, line: INTEGER);
-
-    IntProc*  = PROCEDURE (iv: INTEGER);
-
 
 VAR
 
     Heap, Types, TypesCount, Entry: INTEGER;
 
-    Trap: TrapProc;
-
-
-PROCEDURE [code] emptyInt (n: INTEGER);
-
 
 PROCEDURE [code] sp (): INTEGER
     4668H; (* mov r0, sp *)
-
-
-PROCEDURE [code] jmp (adr: INTEGER)
-    0BD00H; (* pop pc *)
-
-
-PROCEDURE _error* (modNum, modName, err, line: INTEGER);
-BEGIN
-    IF Trap # NIL THEN
-        Trap(modNum, modName, err, line)
-    END;
-    jmp(Entry)
-END _error;
 
 
 PROCEDURE _fmul* (b, a: INTEGER): INTEGER;
@@ -412,29 +384,8 @@ BEGIN
     Heap := heap;
     TypesCount := tcount;
     Types := types;
-    Entry := entry + 1; (* thumb *)
-    SYSTEM.PUT(Interrupt, SYSTEM.ADR(emptyInt) + 1); (* thumb *)
-    Trap := NIL
+    Entry := entry + 1
 END _init;
-
-
-PROCEDURE SetTrap* (trap: TrapProc);
-BEGIN
-    Trap := trap
-END SetTrap;
-
-
-PROCEDURE SetInt* (int: IntProc);
-VAR
-    a: INTEGER;
-
-BEGIN
-    IF int = NIL THEN
-        int := emptyInt
-    END;
-    SYSTEM.GET(SYSTEM.ADR(int), a);
-    SYSTEM.PUT(Interrupt, a + 1) (* thumb *)
-END SetInt;
 
 
 END RTL.
