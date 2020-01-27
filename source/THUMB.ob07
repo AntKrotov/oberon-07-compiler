@@ -94,7 +94,7 @@ VAR
 
     StkCount: INTEGER;
 
-    thumb2: BOOLEAN;
+    thumb2, it, sdiv: BOOLEAN;
 
     sdivProc, trapProc, entry: INTEGER;
 
@@ -786,7 +786,7 @@ END CmpConst;
 
 
 PROCEDURE LocalOffset (offset: INTEGER): INTEGER;
-    RETURN (offset + StkCount - ORD(offset > 0)) * 4
+    RETURN offset + StkCount - ORD(offset > 0)
 END LocalOffset;
 
 
@@ -795,14 +795,20 @@ VAR
     L1, L2: INTEGER;
 
 BEGIN
-    L1 := NewLabel();
-    L2 := NewLabel();
-    jcc(cc, L1);
-    MovConst(r, 0);
-    jmp(L2);
-    Label(L1);
-    MovConst(r, 1);
-    Label(L2);
+    IF it THEN
+        Code(0BF00H + cc * 16 + ORD(~ODD(cc)) * 8 + 4); (* ite cc *)
+        MovConst(r, 1);
+        MovConst(r, 0)
+    ELSE
+        L1 := NewLabel();
+        L2 := NewLabel();
+        jcc(cc, L1);
+        MovConst(r, 0);
+        jmp(L2);
+        Label(L1);
+        MovConst(r, 1);
+        Label(L2)
+    END
 END SetCC;
 
 
@@ -863,6 +869,20 @@ BEGIN
 END AddSP;
 
 
+PROCEDURE cbz (r, label: INTEGER);
+BEGIN
+    Tst(r);
+    jcc(je, label)
+END cbz;
+
+
+PROCEDURE cbnz (r, label: INTEGER);
+BEGIN
+    Tst(r);
+    jcc(jne, label)
+END cbnz;
+
+
 PROCEDURE Shift (op, r1, r2: INTEGER);
 VAR
     L: INTEGER;
@@ -870,9 +890,8 @@ VAR
 BEGIN
     LslImm(r2, 27);
     LsrImm(r2, 27);
-    Tst(r2);
     L := NewLabel();
-    jcc(je, L);
+    cbz(r2, L);
     CASE op OF
     |IL.opLSL, IL.opLSL1: gen4(2, r2, r1)
     |IL.opLSR, IL.opLSR1: gen4(3, r2, r1)
@@ -889,7 +908,7 @@ VAR
 
 BEGIN
     r1 := GetAnyReg();
-    n := LocalOffset(offs) DIV 4;
+    n := LocalOffset(offs);
     IF n <= 255 THEN
         gen12(TRUE, r1, n)
     ELSE
@@ -1056,7 +1075,7 @@ BEGIN
 
         |IL.opLLOAD32, IL.opVADR, IL.opVLOAD32:
             r1 := GetAnyReg();
-            n := LocalOffset(param2) DIV 4;
+            n := LocalOffset(param2);
             IF n <= 255 THEN
                 LdrSp(r1, n)
             ELSE
@@ -1182,15 +1201,13 @@ BEGIN
             BinOp(r1, r2);
             drop;
 
-            Tst(r1);
             L := NewLabel();
-            jcc(je, L);
+            cbz(r1, L);
             MovConst(r1, 1);
             Label(L);
 
-            Tst(r2);
             L := NewLabel();
-            jcc(je, L);
+            cbz(r2, L);
             MovConst(r2, 1);
             Label(L);
 
@@ -1215,13 +1232,11 @@ BEGIN
 
         |IL.opJNZ:
             UnOp(r1);
-            Tst(r1);
-            jcc(jne, param1)
+            cbnz(r1, param1)
 
         |IL.opJZ:
             UnOp(r1);
-            Tst(r1);
-            jcc(je, param1)
+            cbz(r1, param1)
 
         |IL.opJG:
             UnOp(r1);
@@ -1230,14 +1245,12 @@ BEGIN
 
         |IL.opJE:
             UnOp(r1);
-            Tst(r1);
-            jcc(jne, param1);
+            cbnz(r1, param1);
             drop
 
         |IL.opJNE:
             UnOp(r1);
-            Tst(r1);
-            jcc(je, param1);
+            cbz(r1, param1);
             drop
 
         |IL.opSWITCH:
@@ -1993,8 +2006,7 @@ BEGIN
             PushConst(param2);
             CallRTL(IL._guardrec, 2);
             pop(R2);
-            Tst(ACC);
-            jcc(jne, param1)
+            cbnz(ACC, param1)
 
         |IL.opROT:
             PushAll(0);
@@ -2112,6 +2124,7 @@ BEGIN
     gen5(3, TRUE, FALSE, R0, 0); (* blx R0 *)
     call(entry);
 
+    ASSERT(sdiv);
     Label(sdivProc);
     Code(09800H);  (* ldr  r0, [sp + #0] *)
     Code(09901H);  (* ldr  r1, [sp + #4] *)
@@ -2148,6 +2161,8 @@ VAR
 
 BEGIN
     thumb2 := TRUE;
+    it     := TRUE;
+    sdiv   := TRUE;
 
     ram := options.ram;
     rom := options.rom;
