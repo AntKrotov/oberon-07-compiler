@@ -589,7 +589,7 @@ BEGIN
     ELSE
         CASE TARGETS.BitDepth OF
         |16: call := PROG.default16
-        |32: IF TARGETS.target = TARGETS.STM32 THEN
+        |32: IF TARGETS.target = TARGETS.STM32CM3 THEN
                  call := PROG.ccall
              ELSE
                  call := PROG.default32

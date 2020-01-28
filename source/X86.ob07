@@ -1400,7 +1400,11 @@ BEGIN
             movrc(reg1, param2)
             // L:
 
-        |IL.opIN:
+        |IL.opIN, IL.opINR:
+            IF opcode = IL.opINR THEN
+                reg2 := GetAnyReg();
+                movrc(reg2, param2)
+            END;
             label := NewLabel();
             BinOp(reg1, reg2);
             cmprc(reg1, 32);
@@ -1408,22 +1412,6 @@ BEGIN
             xor(reg1, reg1);
             jmp(label);
             //L:
-            OutByte3(0FH, 0A3H, 0C0H + reg2 + 8 * reg1); // bt reg2, reg1
-            setcc(setc, reg1);
-            andrc(reg1, 1);
-            SetLabel(label);
-            drop
-
-        |IL.opINR:
-            label := NewLabel();
-            UnOp(reg1);
-            reg2 := GetAnyReg();
-            cmprc(reg1, 32);
-            OutByte2(72H, 4); // jb L
-            xor(reg1, reg1);
-            jmp(label);
-            //L:
-            movrc(reg2, param2);
             OutByte3(0FH, 0A3H, 0C0H + reg2 + 8 * reg1); // bt reg2, reg1
             setcc(setc, reg1);
             andrc(reg1, 1);

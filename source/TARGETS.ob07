@@ -23,7 +23,7 @@ CONST
     Linux32SO*    = 10;
     Linux64*      = 11;
     Linux64SO*    = 12;
-    STM32*        = 13;
+    STM32CM3*     = 13;
 
     cpuX86* = 0; cpuAMD64* = 1; cpuMSP430* = 2; cpuTHUMB* = 3;
 
@@ -88,7 +88,7 @@ BEGIN
         FileExt := Targets[i].FileExt;
 
         Import := OS IN {osWIN32, osWIN64, osKOS};
-        Dispose := ~(target IN {MSP430, STM32});
+        Dispose := ~(target IN {MSP430, STM32CM3});
         Dll := target IN {Linux32SO, Linux64SO, Win32DLL, Win64DLL, KolibriOSDLL};
         WordSize := BitDepth DIV 8;
         AdrSize  := WordSize
@@ -112,5 +112,5 @@ BEGIN
     Enter( Linux32SO,     cpuX86,     32,  8,  osLINUX32,  "linux32so",   "Linux32",    ".so");
     Enter( Linux64,       cpuAMD64,   64,  8,  osLINUX64,  "linux64exe",  "Linux64",    "");
     Enter( Linux64SO,     cpuAMD64,   64,  8,  osLINUX64,  "linux64so",   "Linux64",    ".so");
-    Enter( STM32,         cpuTHUMB,   32,  4,  osNONE,     "stm32",       "STM32",      ".hex");
+    Enter( STM32CM3,      cpuTHUMB,   32,  4,  osNONE,     "stm32cm3",    "STM32CM3",   ".hex");
 END TARGETS.

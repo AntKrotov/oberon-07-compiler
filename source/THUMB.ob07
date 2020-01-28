@@ -7,7 +7,8 @@
 
 MODULE THUMB;
 
-IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE, UTILS, WR := WRITER, HEX, ERRORS;
+IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE,
+       UTILS, WR := WRITER, HEX, ERRORS, TARGETS;
 
 
 CONST
@@ -53,7 +54,8 @@ TYPE
 
     JUMP = POINTER TO RECORD (ANYCODE)
 
-        label, diff, len, short, cond: INTEGER
+        label, diff, len, cond: INTEGER;
+        short: BOOLEAN
 
     END;
 
@@ -96,7 +98,14 @@ VAR
 
     StkCount: INTEGER;
 
-    InstrSet: RECORD thumb2, it, cbxz, sdiv: BOOLEAN END;
+    Target: RECORD
+        FlashAdr,
+        SRAMAdr,
+        IVTLen,
+        MinStack,
+        Reserved: INTEGER;
+        InstrSet: RECORD thumb2, it, cbxz, sdiv: BOOLEAN END
+    END;
 
     sdivProc, trapProc, entry: INTEGER;
 
@@ -131,7 +140,7 @@ BEGIN
     NEW(j);
     j.label := label;
     j.cond  := cond;
-    j.short := 0;
+    j.short := FALSE;
     j.len   := 3;
     LISTS.push(CodeList, j)
 END jcc;
@@ -146,7 +155,7 @@ BEGIN
     j.label := label;
     j.cond  := cond;
     j.reg   := reg;
-    j.short := 0;
+    j.short := FALSE;
     j.len   := 4;
     LISTS.push(CodeList, j)
 END cbxz;
@@ -159,7 +168,7 @@ VAR
 BEGIN
     NEW(j);
     j.label := label;
-    j.short := 0;
+    j.short := FALSE;
     j.len   := 2;
     LISTS.push(CodeList, j)
 END jmp;
@@ -172,7 +181,7 @@ VAR
 BEGIN
     NEW(c);
     c.label := label;
-    c.short := 0;
+    c.short := FALSE;
     c.len   := 2;
     LISTS.push(CodeList, c)
 END call;
@@ -496,7 +505,7 @@ VAR
 
     first, second: INTEGER;
 
-    reloc, i: INTEGER;
+    reloc, i, diff, len: INTEGER;
 
     RelocCode: RELOCCODE;
 
@@ -540,7 +549,7 @@ VAR
 
     PROCEDURE genmovimm32 (r, value: INTEGER; VAR code: RELOCCODE);
     BEGIN
-        IF InstrSet.thumb2 THEN
+        IF Target.InstrSet.thumb2 THEN
             movwt(r, low(value), 0, code);
             movwt(r, high(value), 1, code)
         ELSE
@@ -566,14 +575,14 @@ VAR
         first, second: INTEGER;
 
     BEGIN
-        CASE code.short OF
-        |0: PutCode(genjcc(inv0(code.cond), 1));
+        CASE code.len OF
+        |1: PutCode(genjcc(code.cond, code.diff))
+        |2: PutCode(genjcc(inv0(code.cond), 0));
+            PutCode(genjmp(code.diff))
+        |3: PutCode(genjcc(inv0(code.cond), 1));
             genlongjmp(code.diff, first, second);
             PutCode(first);
             PutCode(second)
-        |1: PutCode(genjcc(inv0(code.cond), 0));
-            PutCode(genjmp(code.diff))
-        |2: PutCode(genjcc(code.cond, code.diff))
         END
     END genbc;
 
@@ -592,8 +601,8 @@ BEGIN
             CASE code OF
             |CODE:  INC(count)
             |LABEL: BIN.SetLabel(program, code.label, count)
-            |JUMP:  INC(count, code.len - code.short); code.offset := count + ORD(code.short > 0)
-            |RELOC: INC(count, 7 - ORD(InstrSet.thumb2) * 3 + ORD(ODD(code.rel)))
+            |JUMP:  INC(count, code.len); code.offset := count + ORD(code.short)
+            |RELOC: INC(count, 7 - ORD(Target.InstrSet.thumb2) * 3 + ORD(ODD(code.rel)))
             END;
 
             code := code.next(ANYCODE)
@@ -604,31 +613,37 @@ BEGIN
 
             IF code IS JUMP THEN
                 jump := code(JUMP);
-                jump.diff := BIN.GetLabel(program, jump.label) - code.offset;
+                jump.diff := BIN.GetLabel(program, jump.label) - jump.offset;
+                len := jump.len;
+                diff := jump.diff;
                 CASE jump OF
                 |JMP:
-                    IF (jump.short = 0) & srange(jump.diff, 11) THEN
-                        jump.short := 1;
-                        shorted := TRUE
+                    IF (len = 2) & srange(diff, 11) THEN
+                        len := 1
                     END
 
                 |JCC:
-                    CASE jump.short OF
-                    |0: IF srange(jump.diff, 11) THEN INC(jump.short); shorted := TRUE END
-                    |1: IF srange(jump.diff, 8) THEN INC(jump.short); shorted := TRUE END
-                    |2:
+                    CASE len OF
+                    |1:
+                    |2: IF srange(diff, 8) THEN DEC(len) END
+                    |3: IF srange(diff, 11) THEN DEC(len) END
                     END
 
                 |CBXZ:
-                    CASE jump.short OF
-                    |0: IF srange(jump.diff, 11) THEN INC(jump.short); shorted := TRUE END
-                    |1: IF srange(jump.diff, 8) THEN INC(jump.short); shorted := TRUE END
-                    |2: IF range(jump.diff, 6) THEN INC(jump.short); shorted := TRUE END
-                    |3:
+                    CASE len OF
+                    |1:
+                    |2: IF range(diff, 6) THEN DEC(len) END
+                    |3: IF srange(diff, 8) THEN DEC(len) END
+                    |4: IF srange(diff, 11) THEN DEC(len) END
                     END
 
                 |CALL:
 
+                END;
+                IF len # jump.len THEN
+                    jump.len := len;
+                    jump.short := TRUE;
+                    shorted := TRUE
                 END
             END;
 
@@ -647,7 +662,7 @@ BEGIN
         |LABEL:
 
         |JMP:
-                IF code.short = 1 THEN
+                IF code.len = 1 THEN
                     PutCode(genjmp(code.diff))
                 ELSE
                     genlongjmp(code.diff, first, second);
@@ -658,11 +673,12 @@ BEGIN
         |JCC:  genbc(code)
 
         |CBXZ:
-                IF code.short < 3 THEN
+                IF code.len > 1 THEN
                     PutCode(2800H + code.reg * 256); (* cmp code.reg, #0 *)
+                    DEC(code.len);
                     genbc(code)
                 ELSE
-                    (* cbXz code.reg, L *)
+                    (* cb(n)z code.reg, L *)
                     PutCode(0B100H + 800H * ORD(code.cond = jne) + 200H * ORD(code.diff >= 32) + (code.diff MOD 32) * 8 + code.reg)
                 END
 
@@ -678,10 +694,10 @@ BEGIN
                 |BIN.RBSS,  BIN.PICBSS:  reloc := code.value + BssAdr
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    DEC(reloc, CodeAdr + code.offset * 2 + 18 - 6 * ORD(InstrSet.thumb2))
+                    DEC(reloc, CodeAdr + 2 * (code.offset - 3 * ORD(Target.InstrSet.thumb2) + 9))
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
-                FOR i := 0 TO 6 - 3 * ORD(InstrSet.thumb2) DO
+                FOR i := 0 TO 6 - 3 * ORD(Target.InstrSet.thumb2) DO
                     PutCode(RelocCode[i])
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
@@ -792,7 +808,7 @@ BEGIN
         MovImm8(r, 1);
         LslImm(r, 31)
     ELSE
-        IF InstrSet.thumb2 THEN
+        IF Target.InstrSet.thumb2 THEN
             IF (0 <= c) & (c <= 65535) THEN
                 movwt(r, c, 0)
             ELSE
@@ -832,7 +848,7 @@ VAR
     L1, L2: INTEGER;
 
 BEGIN
-    IF InstrSet.it THEN
+    IF Target.InstrSet.it THEN
         Code(0BF00H + cc * 16 + ORD(~ODD(cc)) * 8 + 4); (* ite cc *)
         MovConst(r, 1);
         MovConst(r, 0)
@@ -908,7 +924,7 @@ END AddSP;
 
 PROCEDURE cbz (r, label: INTEGER);
 BEGIN
-    IF InstrSet.cbxz THEN
+    IF Target.InstrSet.cbxz THEN
         cbxz(je, r, label)
     ELSE
         Tst(r);
@@ -919,7 +935,7 @@ END cbz;
 
 PROCEDURE cbnz (r, label: INTEGER);
 BEGIN
-    IF InstrSet.cbxz THEN
+    IF Target.InstrSet.cbxz THEN
         cbxz(jne, r, label)
     ELSE
         Tst(r);
@@ -1865,7 +1881,11 @@ BEGIN
             mov(R0, R1);
             GetRegA
 
-        |IL.opIN:
+        |IL.opIN, IL.opINR:
+            IF opcode = IL.opINR THEN
+                r2 := GetAnyReg();
+                MovConst(r2, param2)
+            END;
             L := NewLabel();
             L2 := NewLabel();
             BinOp(r1, r2);
@@ -1875,26 +1895,6 @@ BEGIN
             MovConst(r1, 0);
             jmp(L2);
             Label(L);
-            MovConst(r3, 1);
-            Shift(IL.opLSL, r3, r1);
-            gen4(0, r3, r2); (* and r2, r3 *)
-            SetCC(jne, r1);
-            Label(L2);
-            drop;
-            drop;
-
-        |IL.opINR:
-            L := NewLabel();
-            L2 := NewLabel();
-            UnOp(r1);
-            r2 := GetAnyReg();
-            r3 := GetAnyReg();
-            CmpConst(r1, 32);
-            jcc(jb, L);
-            MovConst(r1, 0);
-            jmp(L2);
-            Label(L);
-            MovConst(r2, param2);
             MovConst(r3, 1);
             Shift(IL.opLSL, r3, r1);
             gen4(0, r3, r2); (* and r2, r3 *)
@@ -2130,10 +2130,10 @@ BEGIN
     END;
 
     dcount := CHL.Length(IL.codes.data);
-    FOR i := 0 TO dcount - 1 DO
-        MovConst(r2, CHL.GetByte(IL.codes.data, i));
-        Str8(r2, r1);
-        AddImm8(r1, 1)
+    FOR i := 0 TO dcount - 1 BY 4 DO
+        MovConst(r2, BIN.get32le(IL.codes.data, i));
+        Str32(r2, r1);
+        AddImm8(r1, 4)
     END;
 
     drop;
@@ -2169,7 +2169,7 @@ BEGIN
     gen5(3, TRUE, FALSE, R0, 0); (* blx R0 *)
     call(entry);
 
-    ASSERT(InstrSet.sdiv);
+    ASSERT(Target.InstrSet.sdiv);
     Label(sdivProc);
     Code(09800H);  (* ldr  r0, [sp + #0] *)
     Code(09901H);  (* ldr  r1, [sp + #4] *)
@@ -2187,14 +2187,21 @@ BEGIN
 END epilog;
 
 
+PROCEDURE CortexM3;
+BEGIN
+    Target.FlashAdr := 08000000H;
+    Target.SRAMAdr  := 20000000H;
+    Target.IVTLen   := 256;
+    Target.Reserved := 8;
+    Target.MinStack := 512;
+    Target.InstrSet.thumb2 := TRUE;
+    Target.InstrSet.it     := TRUE;
+    Target.InstrSet.sdiv   := TRUE;
+    Target.InstrSet.cbxz   := TRUE
+END CortexM3;
+
+
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
-CONST
-    FlashAdr = 08000000H;
-    SRAMAdr  = 20000000H;
-    IVTLen   = 256;
-
-    Reserved = 8;
-
 VAR
     opt: PROG.OPTIONS;
 
@@ -2205,16 +2212,12 @@ VAR
     File: WR.FILE;
 
 BEGIN
-    InstrSet.thumb2 := TRUE;
-    InstrSet.it := TRUE;
-    InstrSet.sdiv := TRUE;
-    InstrSet.cbxz := TRUE;
+    IF target = TARGETS.STM32CM3 THEN
+        CortexM3
+    END;
 
-    ram := options.ram;
-    rom := options.rom;
-
-    ram := MIN(MAX(ram, STM32_minRAM), STM32_maxRAM) * 1024;
-    rom := MIN(MAX(rom, STM32_minROM), STM32_maxROM) * 1024;
+    ram := MIN(MAX(options.ram, STM32_minRAM), STM32_maxRAM) * 1024;
+    rom := MIN(MAX(options.rom, STM32_minROM), STM32_maxROM) * 1024;
 
     tcount := CHL.Length(IL.codes.types);
 
@@ -2227,21 +2230,24 @@ BEGIN
 
     StkCount := 0;
 
-    DataAdr := SRAMAdr + Reserved;
-    DataSize := CHL.Length(IL.codes.data) + tcount * 4 + Reserved;
-    ASSERT(UTILS.Align(DataSize, 4));
-    BssAdr := DataAdr + DataSize - Reserved;
+    DataAdr := Target.SRAMAdr + Target.Reserved;
+    DataSize := CHL.Length(IL.codes.data) + tcount * 4 + Target.Reserved;
+    WHILE DataSize MOD 4 # 0 DO
+        CHL.PushByte(IL.codes.data, 0);
+        INC(DataSize)
+    END;
+    BssAdr := DataAdr + DataSize - Target.Reserved;
 
     IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
 
     BssSize := IL.codes.bss;
     ASSERT(UTILS.Align(BssSize, 4));
 
-    prolog(BssSize, tcount, ORD(opt.pic), FlashAdr, SRAMAdr + ram, IVTLen, SRAMAdr);
+    prolog(BssSize, tcount, ORD(opt.pic), Target.FlashAdr, Target.SRAMAdr + ram, Target.IVTLen, Target.SRAMAdr);
     translate(ORD(opt.pic), tcount * 4);
-    epilog(SRAMAdr);
+    epilog(Target.SRAMAdr);
 
-    fixup(FlashAdr, DataAdr, BssAdr);
+    fixup(Target.FlashAdr, DataAdr, BssAdr);
 
     INC(DataSize, BssSize);
     CodeSize := CHL.Length(program.code);
@@ -2250,13 +2256,13 @@ BEGIN
         ERRORS.Error(203)
     END;
 
-    IF DataSize > ram - 512 THEN
+    IF DataSize > ram - Target.MinStack THEN
         ERRORS.Error(204)
     END;
 
     File := WR.Create(outname);
 
-    HEX.Data2(File, program.code, 0, CodeSize, high(FlashAdr));
+    HEX.Data2(File, program.code, 0, CodeSize, high(Target.FlashAdr));
     HEX.End(File);
 
     WR.Close(File);

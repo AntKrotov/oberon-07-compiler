@@ -1458,7 +1458,11 @@ BEGIN
             jcc(je, param1);
             drop
 
-        |IL.opIN:
+        |IL.opIN, IL.opINR:
+            IF opcode = IL.opINR THEN
+                reg2 := GetAnyReg();
+                movrc(reg2, param2)
+            END;
             label := NewLabel();
             L := NewLabel();
             BinOp(reg1, reg2);
@@ -1467,24 +1471,6 @@ BEGIN
             xor(reg1, reg1);
             jmp(label);
             X86.SetLabel(L);
-            Rex(reg2, reg1);
-            OutByte3(0FH, 0A3H, 0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); // bt reg2, reg1
-            setcc(setc, reg1);
-            andrc(reg1, 1);
-            X86.SetLabel(label);
-            drop
-
-        |IL.opINR:
-            label := NewLabel();
-            L := NewLabel();
-            UnOp(reg1);
-            reg2 := GetAnyReg();
-            cmprc(reg1, 64);
-            jcc(jb, L);
-            xor(reg1, reg1);
-            jmp(label);
-            X86.SetLabel(L);
-            movrc(reg2, param2);
             Rex(reg2, reg1);
             OutByte3(0FH, 0A3H, 0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); // bt reg2, reg1
             setcc(setc, reg1);

@@ -196,7 +196,7 @@ BEGIN
         OutTargetItem(TARGETS.KolibriOS, "KolibriOS Exec");
         OutTargetItem(TARGETS.KolibriOSDLL, "KolibriOS DLL");
         OutTargetItem(TARGETS.MSP430, "MSP430 microcontrollers");
-        OutTargetItem(TARGETS.STM32, "STM32 Cortex-M3 microcontrollers");
+        OutTargetItem(TARGETS.STM32CM3, "STM32 Cortex-M3 microcontrollers");
         C.Ln;
         C.StringLn("optional settings:"); C.Ln;
         C.StringLn("  -out <file name>      output"); C.Ln;
@@ -237,7 +237,7 @@ BEGIN
         options.rom := MSP430.minROM
     END;
 
-    IF target = TARGETS.STM32 THEN
+    IF target = TARGETS.STM32CM3 THEN
         options.ram := THUMB.STM32_minRAM;
         options.rom := THUMB.STM32_minROM
     END;
