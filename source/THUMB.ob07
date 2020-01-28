@@ -1504,13 +1504,11 @@ BEGIN
 
         |IL.opCHR:
             UnOp(r1);
-            LslImm(r1, 24);
-            LsrImm(r1, 24)
+            Code(0B2C0H + r1 * 9) (* uxtb r1 *)
 
         |IL.opWCHR:
             UnOp(r1);
-            LslImm(r1, 16);
-            LsrImm(r1, 16)
+            Code(0B280H + r1 * 9) (* uxth r1 *)
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             BinOp(r1, r2);
@@ -1858,8 +1856,14 @@ BEGIN
             n := UTILS.Log2(param2);
             IF n > 0 THEN
                 UnOp(r1);
-                LslImm(r1, 32 - n);
-                LsrImm(r1, 32 - n)
+                IF n = 8 THEN
+                    Code(0B2C0H + r1 * 9) (* uxtb r1 *)
+                ELSIF n = 16 THEN
+                    Code(0B280H + r1 * 9) (* uxth r1 *)
+                ELSE
+                    LslImm(r1, 32 - n);
+                    LsrImm(r1, 32 - n)
+                END
             ELSIF n < 0 THEN
                 PushAll(1);
                 PushConst(param2);
