@@ -13,7 +13,7 @@ IMPORT PROG, LISTS, CHL := CHUNKLISTS, BIN, REG, IL, C := CONSOLE,
 
 CONST
 
-    R0 = 0; R1 = 1; R2 = 2; R3 = 3;
+    R0 = 0; R1 = 1; R2 = 2; R3 = 3; R4 = 4;
 
     SP = 13; LR = 14; PC = 15;
 
@@ -2090,21 +2090,20 @@ END translate;
 PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len, sram: INTEGER);
 VAR
     r1, r2, i, dcount, L1, reset: INTEGER;
+    IVT: ARRAY 1024 OF INTEGER;
 
 BEGIN
     reset := FlashAdr + ivt_len * 4 + 1;
 
-    Code(low(sp));
-    Code(high(sp));
-
-    Code(low(reset));
-    Code(high(reset));
-
-    INC(reset, 4);
-
+    IVT[0] := sp;
+    IVT[1] := reset;
     FOR i := 2 TO ivt_len - 1 DO
-        Code(low(reset));
-        Code(high(reset))
+        IVT[i] := reset + 4
+    END;
+
+    FOR i := 0 TO ivt_len - 1 DO
+        Code(low(IVT[i]));
+        Code(high(IVT[i]))
     END;
 
     entry := NewLabel();
@@ -2163,6 +2162,9 @@ END prolog;
 
 
 PROCEDURE epilog (sram: INTEGER);
+VAR
+    L1, L2, L3, L4: INTEGER;
+
 BEGIN
     Code(0BF30H);  (* L2: wfi *)
     Code(0E7FDH);  (* b L2 *)
@@ -2173,21 +2175,89 @@ BEGIN
     gen5(3, TRUE, FALSE, R0, 0); (* blx R0 *)
     call(entry);
 
-    ASSERT(Target.InstrSet.sdiv);
     Label(sdivProc);
-    Code(09800H);  (* ldr  r0, [sp + #0] *)
-    Code(09901H);  (* ldr  r1, [sp + #4] *)
-    Code(0FB91H);  (* sdiv r2, r1, r0    *)
-    Code(0F2F0H);
-    Code(00013H);  (* mov  r3, r2        *)
-    Code(04343H);  (* mul  r3, r0        *)
-    Code(01AC9H);  (* sub  r1, r3        *)
-    Code(0DA01H);  (* bge  L             *)
-    Code(04401H);  (* add  r1, r0        *)
-    Code(03A01H);  (* sub  r2, #1        *)
-                   (* L:                 *)
-    Code(00010H);  (* mov  r0, r2        *)
-    Code(04770H)   (* bx   lr            *)
+    IF Target.InstrSet.sdiv THEN
+        Code(09800H);  (* ldr  r0, [sp + #0] *)
+        Code(09901H);  (* ldr  r1, [sp + #4] *)
+        Code(0FB91H);  (* sdiv r2, r1, r0    *)
+        Code(0F2F0H);
+        Code(00013H);  (* mov  r3, r2        *)
+        Code(04343H);  (* mul  r3, r0        *)
+        Code(01AC9H);  (* sub  r1, r3        *)
+        Code(0DA01H);  (* bge  L             *)
+        Code(04401H);  (* add  r1, r0        *)
+        Code(03A01H);  (* sub  r2, #1        *)
+                       (* L:                 *)
+        Code(00010H);  (* mov  r0, r2        *)
+        Code(04770H);  (* bx   lr            *)
+    ELSE
+        (* a / b; a >= 0 *)
+        L1 := NewLabel();
+        L2 := NewLabel();
+        L3 := NewLabel();
+        L4 := NewLabel();
+
+        LdrSp(R1, 1);
+        LdrSp(R2, 0);
+        MovConst(R0, 0);
+        push(R4);
+
+        Label(L4);
+        Cmp(R1, R2);
+        jcc(jl, L1);
+        MovConst(R3, 2);
+        mov(R4, R2);
+        LslImm(R4, 1);
+        Label(L3);
+        Cmp(R1, R4);
+        jcc(jl, L2);
+        CmpConst(R4, 0);
+        jcc(jle, L2);
+        LslImm(R4, 1);
+        LslImm(R3, 1);
+        jmp(L3);
+        Label(L2);
+        LsrImm(R4, 1);
+        LsrImm(R3, 1);
+        SubReg(R1, R1, R4);
+        AddReg(R0, R0, R3);
+        jmp(L4);
+        Label(L1);
+
+        (* a / b; a < 0 *)
+        L1 := NewLabel();
+        L2 := NewLabel();
+        L3 := NewLabel();
+        L4 := NewLabel();
+
+        Label(L4);
+        CmpConst(R1, 0);
+        jcc(jge, L1);
+        MovConst(R3, 2);
+        mov(R4, R2);
+        LslImm(R4, 1);
+        Neg(R1);
+        Label(L3);
+        Cmp(R1, R4);
+        jcc(jl, L2);
+        CmpConst(R4, 0);
+        jcc(jle, L2);
+        LslImm(R4, 1);
+        LslImm(R3, 1);
+        jmp(L3);
+        Label(L2);
+        Neg(R1);
+        LsrImm(R4, 1);
+        LsrImm(R3, 1);
+        AddReg(R1, R1, R4);
+        SubReg(R0, R0, R3);
+        jmp(L4);
+        Label(L1);
+
+        pop(R4);
+        Code(04770H);  (* bx lr *)
+    END
+
 END epilog;
 
 
