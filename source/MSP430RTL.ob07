@@ -39,7 +39,8 @@ CONST
     LenIV* = 32;
 
     iv          = 10000H - LenIV * 2;
-    sp          = iv - 2;
+    bsl         = iv - 2;
+    sp          = bsl - 2;
     empty_proc* = sp - 2;
     free_size   = empty_proc - 2;
     free_adr    = free_size - 2;
@@ -665,14 +666,9 @@ BEGIN
     Label := pLabel;
     Word  := pWord;
     Call  := pCall;
-
-    IF ramSize > 2048 THEN
-        ram := 1100H
-    ELSE
-        ram := 200H
-    END;
-    trap := ram;
-    int  := trap + 2
+    ram   := 200H;
+    trap  := ram;
+    int   := trap + 2
 END Init;
 
 

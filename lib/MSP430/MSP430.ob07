@@ -14,7 +14,8 @@ CONST
 
     iv  = 0FFC0H;
 
-    sp         = iv - 2;
+    bsl        = iv - 2;
+    sp         = bsl - 2;
     empty_proc = sp - 2;
     free_size  = empty_proc - 2;
     free_adr   = free_size - 2;

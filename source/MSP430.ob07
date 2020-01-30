@@ -13,8 +13,8 @@ IMPORT IL, LISTS, REG, CHL := CHUNKLISTS, ERRORS, WR := WRITER, HEX,
 
 CONST
 
-    minRAM* = 128;  maxRAM* = 10240;
-    minROM* = 2048; maxROM* = 49152;
+    minRAM* = 128;  maxRAM* = 2048;
+    minROM* = 2048; maxROM* = 24576;
 
     minStackSize = 64;
 
@@ -1734,6 +1734,7 @@ BEGIN
     PutWord(Free.size, adr);
     PutWord(4130H, adr); (* RET *)
     PutWord(stack, adr);
+    PutWord(0001H, adr); (* bsl signature (adr 0FFBEH) *)
 
     FOR i := 0 TO LEN(IV) - 1 DO
         PutWord(LabelOffs(IV[i]) * 2, adr)
