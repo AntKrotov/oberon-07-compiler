@@ -7,7 +7,7 @@
 
 MODULE RTL;
 
-IMPORT SYSTEM, F := FPU, Handler;
+IMPORT SYSTEM, F := FPU;
 
 
 CONST

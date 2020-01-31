@@ -7,7 +7,8 @@
 
 MODULE PARS;
 
-IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, IL, CONSOLE, PATHS, UTILS, C := COLLECTIONS, TARGETS;
+IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, IL, CONSOLE, PATHS, UTILS,
+       C := COLLECTIONS, TARGETS, THUMB;
 
 
 CONST
@@ -901,11 +902,13 @@ VAR
         variables:  LISTS.LIST;
         int, flt:   INTEGER;
         comma:      BOOLEAN;
-        code:       ARITH.VALUE;
-        codeProc:   BOOLEAN;
+        code, iv:   ARITH.VALUE;
+        codeProc,
+        handler:    BOOLEAN;
 
     BEGIN
         endmod := FALSE;
+        handler := FALSE;
 
         unit := parser.unit;
 
@@ -932,6 +935,20 @@ VAR
 
         FormalParameters(parser, t);
 
+        IF parser.sym = SCAN.lxLSQUARE THEN
+            getpos(parser, pos2);
+            check(TARGETS.target = TARGETS.STM32CM3, pos2, 24);
+            Next(parser);
+            getpos(parser, pos2);
+            ConstExpression(parser, iv);
+            check(iv.typ = ARITH.tINTEGER, pos2, 43);
+            check((0 <= ARITH.Int(iv)) & (ARITH.Int(iv) <= THUMB.maxIVT), pos2, 46);
+            check(THUMB.SetIV(ARITH.Int(iv)), pos2, 121);
+            checklex(parser, SCAN.lxRSQUARE);
+            Next(parser);
+            handler := TRUE
+        END;
+
         codeProc := call IN {PROG.code, PROG._code};
 
         IF call IN {PROG.systemv, PROG._systemv} THEN
@@ -952,7 +969,11 @@ VAR
 
         IF import = NIL THEN
             label := IL.NewLabel();
-            proc.proc.label := label
+            proc.proc.label := label;
+            proc.proc.used  := handler;
+            IF handler THEN
+                IL.AddCmd2(IL.opHANDLER, label, ARITH.Int(iv))
+            END
         END;
 
         IF codeProc THEN

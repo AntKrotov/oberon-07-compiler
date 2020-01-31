@@ -7,7 +7,7 @@
 
 MODULE Button;
 
-IMPORT SYSTEM, Handler;
+IMPORT SYSTEM;
 
 
 CONST
@@ -75,28 +75,23 @@ VAR
     state: INTEGER;
 
 
-(* обработчик прерываний *)
-PROCEDURE handler (iv: INTEGER);
+(* обработчик прерываний от EXTI0 *)
+PROCEDURE PushButton [22];
 BEGIN
-    IF iv = 22 THEN   (* прерывание от EXTI0 *)
-        state := (state + 1) MOD 4;
-        (* изменить состояние светодиодов *)
-        CASE state OF
-        |0: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green + 16})
-        |1: SYSTEM.PUT(GPIOBBSRR, {Blue, Green + 16})
-        |2: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green})
-        |3: SYSTEM.PUT(GPIOBBSRR, {Blue, Green})
-        END;
-        SYSTEM.PUT(EXTI_PR, LINE0)  (* сбросить флаг прерывания *)
-    END
-END handler;
+    state := (state + 1) MOD 4;
+    (* изменить состояние светодиодов *)
+    CASE state OF
+    |0: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green + 16})
+    |1: SYSTEM.PUT(GPIOBBSRR, {Blue, Green + 16})
+    |2: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green})
+    |3: SYSTEM.PUT(GPIOBBSRR, {Blue, Green})
+    END;
+    SYSTEM.PUT(EXTI_PR, LINE0)  (* сбросить флаг прерывания *)
+END PushButton;
 
 
 BEGIN
     state := 0;
-
-    (* назначить обработчик прерываний *)
-    Handler.SetInt(handler);
 
     (* подключить GPIOA и GPIOB *)
     SYSTEM.GET(RCC_AHBENR, x);

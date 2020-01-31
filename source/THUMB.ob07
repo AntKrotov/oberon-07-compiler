@@ -26,8 +26,7 @@ CONST
     STM32_minROM* = 16; STM32_maxROM* = 65536;
     STM32_minRAM* = 4;  STM32_maxRAM* = 65536;
 
-    Interrupt = 0;
-    Trap      = 4;
+    maxIVT* = 1023;
 
 
 TYPE
@@ -107,7 +106,9 @@ VAR
         InstrSet: RECORD thumb2, it, cbxz, sdiv: BOOLEAN END
     END;
 
-    sdivProc, trapProc, entry: INTEGER;
+    IVT: ARRAY maxIVT + 1 OF INTEGER;
+
+    sdivProc, trap, genTrap, entry, emptyProc, int0, genInt: INTEGER;
 
 
 PROCEDURE Code (code: INTEGER);
@@ -587,6 +588,25 @@ VAR
     END genbc;
 
 
+    PROCEDURE SetIV (idx, label, CodeAdr: INTEGER);
+    VAR
+        l, h: ANYCODE;
+
+    BEGIN
+        l := CodeList.first(ANYCODE);
+        h := l.next(ANYCODE);
+        WHILE idx > 0 DO
+            l := l.next(ANYCODE);
+            l := l.next(ANYCODE);
+            h := l.next(ANYCODE);
+            DEC(idx)
+        END;
+        label := BIN.GetLabel(program, label) * 2 + CodeAdr + 1;
+        l(CODE).code := low(label);
+        h(CODE).code := high(label)
+    END SetIV;
+
+
 BEGIN
 
     REPEAT
@@ -651,6 +671,10 @@ BEGIN
         END
 
     UNTIL ~shorted;
+
+    FOR i := 1 TO Target.IVTLen - 1 DO
+        SetIV(i, IVT[i], CodeAdr)
+    END;
 
     code := CodeList.first(ANYCODE);
     WHILE code # NIL DO
@@ -1019,6 +1043,15 @@ BEGIN
         |IL.opLABEL:
             Label(param1)
 
+        |IL.opHANDLER:
+            IF param2 = 0 THEN
+                int0 := param1
+            ELSIF param2 = 1 THEN
+                trap := param1
+            ELSE
+                IVT[param2] := param1
+            END
+
         |IL.opCALL:
             call(param1)
 
@@ -1106,7 +1139,7 @@ BEGIN
             jmp(param1)
 
         |IL.opERR:
-            call(trapProc)
+            call(genTrap)
 
         |IL.opNOP:
 
@@ -2087,18 +2120,24 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len, sram: INTEGER);
+PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len: INTEGER);
 VAR
-    r1, r2, i, dcount, L1, reset: INTEGER;
-    IVT: ARRAY 1024 OF INTEGER;
+    r1, r2, i, dcount: INTEGER;
 
 BEGIN
-    reset := FlashAdr + ivt_len * 4 + 1;
+    entry := NewLabel();
+    emptyProc := NewLabel();
+    genInt := NewLabel();
+    genTrap := NewLabel();
+    sdivProc := NewLabel();
+
+    trap := emptyProc;
+    int0 := emptyProc;
 
     IVT[0] := sp;
-    IVT[1] := reset;
+    IVT[1] := entry;
     FOR i := 2 TO ivt_len - 1 DO
-        IVT[i] := reset + 4
+        IVT[i] := genInt
     END;
 
     FOR i := 0 TO ivt_len - 1 DO
@@ -2106,22 +2145,8 @@ BEGIN
         Code(high(IVT[i]))
     END;
 
-    entry := NewLabel();
-    trapProc := NewLabel();
-    sdivProc := NewLabel();
-    L1 := NewLabel();
     Label(entry);
-    call(L1);
 
-    gen14(FALSE, TRUE, {});      (* push {LR}    *)
-    MovConst(R0, sram + Interrupt);
-    Ldr32(R0, R0);
-    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr *)
-    push(R1);
-    gen5(3, TRUE, FALSE, R0, 0); (* blx R0       *)
-    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
-
-    Label(L1);
     r1 := GetAnyReg();
     r2 := GetAnyReg();
     reloc(r1, BIN.RDATA + pic, 0);
@@ -2161,7 +2186,7 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog (sram: INTEGER);
+PROCEDURE epilog;
 VAR
     L1, L2, L3, L4: INTEGER;
 
@@ -2169,10 +2194,18 @@ BEGIN
     Code(0BF30H);  (* L2: wfi *)
     Code(0E7FDH);  (* b L2 *)
 
-    Label(trapProc);
-    MovConst(R0, sram + Trap);
-    Ldr32(R0, R0);
-    gen5(3, TRUE, FALSE, R0, 0); (* blx R0 *)
+    Label(genInt);
+    gen14(FALSE, TRUE, {});      (* push {LR}    *)
+    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr *)
+    push(R1);
+    call(int0);
+    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
+
+    Label(emptyProc);
+    Code(04770H);  (* bx lr *)
+
+    Label(genTrap);
+    call(trap);
     call(entry);
 
     Label(sdivProc);
@@ -2266,7 +2299,7 @@ BEGIN
     Target.FlashAdr := 08000000H;
     Target.SRAMAdr  := 20000000H;
     Target.IVTLen   := 256;
-    Target.Reserved := 8;
+    Target.Reserved := 0;
     Target.MinStack := 512;
     Target.InstrSet.thumb2 := TRUE;
     Target.InstrSet.it     := TRUE;
@@ -2317,9 +2350,9 @@ BEGIN
     BssSize := IL.codes.bss;
     ASSERT(UTILS.Align(BssSize, 4));
 
-    prolog(BssSize, tcount, ORD(opt.pic), Target.FlashAdr, Target.SRAMAdr + ram, Target.IVTLen, Target.SRAMAdr);
+    prolog(BssSize, tcount, ORD(opt.pic), Target.FlashAdr, Target.SRAMAdr + ram, Target.IVTLen);
     translate(ORD(opt.pic), tcount * 4);
-    epilog(Target.SRAMAdr);
+    epilog;
 
     fixup(Target.FlashAdr, DataAdr, BssAdr);
 
@@ -2349,4 +2382,29 @@ BEGIN
 END CodeGen;
 
 
+PROCEDURE SetIV* (idx: INTEGER): BOOLEAN;
+VAR
+    res: BOOLEAN;
+
+BEGIN
+    res := IVT[idx] = 0;
+    IVT[idx] := 1
+
+    RETURN res
+END SetIV;
+
+
+PROCEDURE init;
+VAR
+    i: INTEGER;
+
+BEGIN
+    FOR i := 0 TO LEN(IVT) - 1 DO
+        IVT[i] := 0
+    END
+END init;
+
+
+BEGIN
+    init
 END THUMB.

@@ -6,7 +6,7 @@
 
 MODULE SysTick;
 
-IMPORT SYSTEM, Handler;
+IMPORT SYSTEM;
 
 
 CONST
@@ -52,23 +52,18 @@ VAR
     x: SET; state: BOOLEAN;
 
 
-(* обработчик прерываний *)
-PROCEDURE handler (iv: INTEGER);
+(* обработчик прерываний от System tick timer *)
+PROCEDURE tick [15];
 BEGIN
-    IF iv = 15 THEN (* прерывание от System tick timer *)
-        state := ~state;
-        (* включить или выключить светодиоды *)
-        SYSTEM.PUT(GPIOBBSRR, {Blue + 16 * ORD(state)});
-        SYSTEM.PUT(GPIOBBSRR, {Green + 16 * ORD(state)})
-    END;
-END handler;
+    state := ~state;
+    (* включить или выключить светодиоды *)
+    SYSTEM.PUT(GPIOBBSRR, {Blue + 16 * ORD(state)});
+    SYSTEM.PUT(GPIOBBSRR, {Green + 16 * ORD(state)})
+END tick;
 
 
 BEGIN
     state := FALSE;
-
-    (* назначить обработчик прерываний *)
-    Handler.SetInt(handler);
 
     (* подключить GPIOB *)
     SYSTEM.GET(RCC_AHBENR, x);

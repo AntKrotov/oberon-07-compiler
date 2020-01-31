@@ -73,7 +73,7 @@ BEGIN
     | 43: str := "expression is not an integer"
     | 44: str := "out of range 0..MAXSET"
     | 45: str := "division by zero"
-
+    | 46: str := "IV out of range"
     | 47: str := "'OF' or ',' expected"
     | 48: str := "undeclared identifier"
     | 49: str := "type expected"
@@ -146,7 +146,7 @@ BEGIN
     |116: str := "procedure too deep nested"
 
     |120: str := "too many formal parameters"
-
+    |121: str := "multiply defined handler"
     |122: str := "bad divisor"
     |123: str := "illegal flag"
     |124: str := "unknown flag"
