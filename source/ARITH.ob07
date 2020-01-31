@@ -407,13 +407,8 @@ VAR
 BEGIN
     ASSERT(x > 0);
 
-    n := 0;
-    WHILE ~ODD(x) DO
-        x := x DIV 2;
-        INC(n)
-    END;
-
-    IF x # 1 THEN
+    n := UTILS.Log2(x);
+    IF n = -1 THEN
         n := 255
     END
 
@@ -521,7 +516,7 @@ BEGIN
     |"-": success := subInt(a.int, b.int)
     |"*": success := mulInt(a.int, b.int)
     |"/": success := FALSE
-    |"D": IF (b.int # -1) OR (a.int # UTILS.minint) THEN a.int := a.int DIV b.int ELSE success := FALSE END
+    |"D": a.int := a.int DIV b.int
     |"M": a.int := a.int MOD b.int
     |"L": a.int := _LSL(a.int, b.int)
     |"A": a.int := _ASR(a.int, b.int)

@@ -1514,7 +1514,7 @@ BEGIN
             n := UTILS.Log2(param2);
             IF n > 0 THEN
                 UnOp(reg1);
-                andrc(reg1, ABS(param2) - 1);
+                andrc(reg1, param2 - 1);
             ELSIF n < 0 THEN
                 PushAll(1);
                 pushc(param2);
