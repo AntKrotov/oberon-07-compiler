@@ -90,20 +90,21 @@ VAR
 (* обработчик прерываний от TIM6 *)
 PROCEDURE tim6 [59];
 BEGIN
+    SYSTEM.PUT(TIM6_SR, 0);  (* сбросить флаг прерывания *)
     state1 := ~state1;
     (* включить или выключить синий светодиод *)
-    SYSTEM.PUT(GPIOBBSRR, {BLUELED + 16 * ORD(state1)});
-    SYSTEM.PUT(TIM6_SR, 0)  (* сбросить флаг прерывания *)
+    SYSTEM.PUT(GPIOBBSRR, {BLUELED + 16 * ORD(state1)})
+
 END tim6;
 
 
 (* обработчик прерываний от TIM7 *)
 PROCEDURE tim7 [60];
 BEGIN
+    SYSTEM.PUT(TIM7_SR, 0);  (* сбросить флаг прерывания *)
     state2 := ~state2;
     (* включить или выключить зеленый светодиод *)
-    SYSTEM.PUT(GPIOBBSRR, {GREENLED + 16 * ORD(state2)});
-    SYSTEM.PUT(TIM7_SR, 0)  (* сбросить флаг прерывания *)
+    SYSTEM.PUT(GPIOBBSRR, {GREENLED + 16 * ORD(state2)})
 END tim7;
 
 

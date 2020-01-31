@@ -78,6 +78,7 @@ VAR
 (* обработчик прерываний от EXTI0 *)
 PROCEDURE PushButton [22];
 BEGIN
+    SYSTEM.PUT(EXTI_PR, LINE0);  (* сбросить флаг прерывания *)
     state := (state + 1) MOD 4;
     (* изменить состояние светодиодов *)
     CASE state OF
@@ -85,8 +86,7 @@ BEGIN
     |1: SYSTEM.PUT(GPIOBBSRR, {Blue, Green + 16})
     |2: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green})
     |3: SYSTEM.PUT(GPIOBBSRR, {Blue, Green})
-    END;
-    SYSTEM.PUT(EXTI_PR, LINE0)  (* сбросить флаг прерывания *)
+    END
 END PushButton;
 
 

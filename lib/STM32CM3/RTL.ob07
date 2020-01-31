@@ -22,7 +22,7 @@ CONST
 
 VAR
 
-    Heap, Types, TypesCount, Entry: INTEGER;
+    Heap, Types, TypesCount: INTEGER;
 
 
 PROCEDURE [code] sp (): INTEGER
@@ -379,12 +379,11 @@ BEGIN
 END _guardrec;
 
 
-PROCEDURE _init* (tcount, entry, heap, types: INTEGER);
+PROCEDURE _init* (tcount, heap, types: INTEGER);
 BEGIN
     Heap := heap;
     TypesCount := tcount;
-    Types := types;
-    Entry := entry + 1
+    Types := types
 END _init;
 
 

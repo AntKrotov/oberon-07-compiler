@@ -2178,11 +2178,9 @@ BEGIN
     AddReg(r1, r1, r2);
     drop;
     push(r1);
-    reloc(r1, BIN.RCODE + pic, entry);
-    push(r1);
     drop;
     PushConst(tcount);
-    CallRTL(IL._init, 4)
+    CallRTL(IL._init, 3)
 END prolog;
 
 
