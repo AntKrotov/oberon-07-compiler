@@ -485,13 +485,6 @@ BEGIN
 END movwt;
 
 
-PROCEDURE MovImm32T2 (r, imm32: INTEGER);
-BEGIN
-    movwt(r, low(imm32), 0);
-    movwt(r, high(imm32), 1)
-END MovImm32T2;
-
-
 PROCEDURE inv0 (cond: INTEGER): INTEGER;
     RETURN ORD(BITS(cond) / {0})
 END inv0;
@@ -596,8 +589,7 @@ VAR
         l := CodeList.first(ANYCODE);
         h := l.next(ANYCODE);
         WHILE idx > 0 DO
-            l := l.next(ANYCODE);
-            l := l.next(ANYCODE);
+            l := h.next(ANYCODE);
             h := l.next(ANYCODE);
             DEC(idx)
         END;
@@ -833,10 +825,9 @@ BEGIN
         LslImm(r, 31)
     ELSE
         IF Target.InstrSet.thumb2 THEN
-            IF (0 <= c) & (c <= 65535) THEN
-                movwt(r, c, 0)
-            ELSE
-                MovImm32T2(r, c)
+            movwt(r, low(c), 0);
+            IF (c < 0) OR (c > 65535) THEN
+                movwt(r, high(c), 1)
             END
         ELSE
             MovImm32(r, c)
@@ -2190,14 +2181,13 @@ VAR
 
 BEGIN
     Code(0BF30H);  (* L2: wfi *)
-    Code(0E7FDH);  (* b L2 *)
+    Code(0E7FDH);  (* b L2    *)
 
     Label(genInt);
-    gen14(FALSE, TRUE, {});      (* push {LR}    *)
-    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr *)
-    push(R1);
+    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr  *)
+    gen14(FALSE, TRUE, {R1});    (* push {LR, R1} *)
     call(int0);
-    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1} *)
+    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1}  *)
 
     Label(emptyProc);
     Code(04770H);  (* bx lr *)
