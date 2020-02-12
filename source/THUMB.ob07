@@ -264,6 +264,24 @@ BEGIN
 END gen5;
 
 
+PROCEDURE gen7 (l, b: BOOLEAN; ro, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(ro, 3));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Code(5000H + LSL(ORD(l), 11) + LSL(ORD(b), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+END gen7;
+
+
+PROCEDURE gen8 (h, s: BOOLEAN; ro, rb, rd: INTEGER);
+BEGIN
+    ASSERT(range(ro, 3));
+    ASSERT(range(rb, 3));
+    ASSERT(range(rd, 3));
+    Code(5200H + LSL(ORD(h), 11) + LSL(ORD(s), 10) + LSL(ro, 6) + LSL(rb, 3) + rd)
+END gen8;
+
+
 PROCEDURE gen9 (b, l: BOOLEAN; imm, rb, rd: INTEGER);
 BEGIN
     ASSERT(range(imm, 5));
@@ -322,6 +340,16 @@ BEGIN
 END gen14;
 
 
+PROCEDURE split16 (imm16: INTEGER; VAR imm4, imm1, imm3, imm8: INTEGER);
+BEGIN
+    ASSERT(range(imm16, 16));
+    imm8 := imm16 MOD 256;
+    imm4 := LSR(imm16, 12);
+    imm3 := LSR(imm16, 8) MOD 8;
+    imm1 := LSR(imm16, 11) MOD 2;
+END split16;
+
+
 PROCEDURE LslImm (r, imm5: INTEGER);
 BEGIN
     gen1(0, imm5, r, r)
@@ -366,6 +394,17 @@ BEGIN
         gen3(3, rd, imm8)
     END
 END SubImm8;
+
+
+PROCEDURE AddSubImm12 (r, imm12: INTEGER; sub: BOOLEAN);
+VAR
+    imm4, imm1, imm3, imm8: INTEGER;
+
+BEGIN
+    split16(imm12, imm4, imm1, imm3, imm8);
+    Code(0F200H + LSL(imm1, 10) + r + 0A0H * ORD(sub));  (* addw/subw r, r, imm12 *)
+    Code(LSL(imm3, 12) + LSL(r, 8) + imm8)
+END AddSubImm12;
 
 
 PROCEDURE MovImm8 (rd, imm8: INTEGER);
@@ -470,17 +509,14 @@ END high;
 
 PROCEDURE movwt (r, imm16, t: INTEGER);
 VAR
-    i, imm3, imm4, imm8: INTEGER;
+    imm1, imm3, imm4, imm8: INTEGER;
 
 BEGIN
     ASSERT(range(r, 3));
     ASSERT(range(imm16, 16));
     ASSERT(range(t, 1));
-    imm8  := imm16 MOD 256;
-    imm4  := LSR(imm16, 12);
-    imm3  := LSR(imm16, 8) MOD 8;
-    i     := LSR(imm16, 11) MOD 2;
-    Code(0F240H + i * 1024 + t * 128 + imm4);
+    split16(imm16, imm4, imm1, imm3, imm8);
+    Code(0F240H + imm1 * 1024 + t * 128 + imm4);
     Code(imm3 * 4096 + r * 256 + imm8);
 END movwt;
 
@@ -529,14 +565,11 @@ VAR
 
     PROCEDURE movwt (r, imm16, t: INTEGER; VAR code: RELOCCODE);
     VAR
-        i, imm3, imm4, imm8: INTEGER;
+        imm1, imm3, imm4, imm8: INTEGER;
 
     BEGIN
-        imm8 := imm16 MOD 256;
-        imm4 := LSR(imm16, 12);
-        imm3 := LSR(imm16, 8) MOD 8;
-        i    := LSR(imm16, 11) MOD 2;
-        code[t * 2]     := 0F240H + i * 1024 + t * 128 + imm4;
+        split16(imm16, imm4, imm1, imm3, imm8);
+        code[t * 2]     := 0F240H + imm1 * 1024 + t * 128 + imm4;
         code[t * 2 + 1] := imm3 * 4096 + r * 256 + imm8
     END movwt;
 
@@ -904,11 +937,22 @@ BEGIN
             ELSE
                 SubImm8(r, -n)
             END
+        ELSIF Target.InstrSet.thumb2 & (-4095 <= n) & (n <= 4095) THEN
+            IF n > 0 THEN
+                AddSubImm12(r, n, FALSE)
+            ELSE
+                AddSubImm12(r, -n, TRUE)
+            END
         ELSE
             r2 := GetAnyReg();
             ASSERT(r2 # r);
-            MovConst(r2, n);
-            AddReg(r, r, r2);
+            IF n > 0 THEN
+                MovConst(r2, n);
+                AddReg(r, r, r2)
+            ELSE
+                MovConst(r2, -n);
+                SubReg(r, r, r2)
+            END;
             drop
         END
     END
@@ -1430,7 +1474,19 @@ BEGIN
 
         |IL.opADD:
             BinOp(r1, r2);
-            AddReg(r1, r1, r2);
+            CASE cmd.next(COMMAND).opcode OF
+            |IL.opLOAD32, IL.opLOADF:
+                gen7(TRUE, FALSE, r2, r1, r1); (* ldr r1, [r1, r2] *)
+                cmd := cmd.next(COMMAND)
+            |IL.opLOAD8:
+                gen7(TRUE, TRUE, r2, r1, r1);  (* ldrb r1, [r1, r2] *)
+                cmd := cmd.next(COMMAND)
+            |IL.opLOAD16:
+                gen8(TRUE, FALSE, r2, r1, r1); (* ldrh r1, [r1, r2] *)
+                cmd := cmd.next(COMMAND)
+            ELSE
+                AddReg(r1, r1, r2)
+            END;
             drop
 
         |IL.opADDL, IL.opADDR:
@@ -1443,27 +1499,10 @@ BEGIN
             drop
 
         |IL.opSUBL, IL.opSUBR:
-            IF param2 # 0 THEN
-                UnOp(r1);
-                IF (-255 <= param2) & (param2 <= 255) THEN
-                    IF param2 > 0 THEN
-                        SubImm8(r1, param2)
-                    ELSE
-                        AddImm8(r1, -param2)
-                    END;
-                    IF opcode = IL.opSUBL THEN
-                        Neg(r1)
-                    END
-                ELSE
-                    r2 := GetAnyReg();
-                    MovConst(r2, param2);
-                    IF opcode = IL.opSUBL THEN
-                        SubReg(r1, r2, r1)
-                    ELSE
-                        SubReg(r1, r1, r2)
-                    END;
-                    drop
-                END
+            UnOp(r1);
+            AddConst(r1, -param2);
+            IF opcode = IL.opSUBL THEN
+                Neg(r1)
             END
 
         |IL.opMUL:
