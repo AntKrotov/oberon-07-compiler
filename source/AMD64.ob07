@@ -417,6 +417,18 @@ BEGIN
 END andrc;
 
 
+PROCEDURE orrc (reg, n: INTEGER); // or reg, n
+BEGIN
+    oprc(0C8H, reg, n, or)
+END orrc;
+
+
+PROCEDURE xorrc (reg, n: INTEGER); // xor reg, n
+BEGIN
+    oprc(0F0H, reg, n, xor)
+END xorrc;
+
+
 PROCEDURE pushc (n: INTEGER);
 VAR
     reg2: INTEGER;
@@ -1530,11 +1542,13 @@ BEGIN
             UnOp(reg1);
             andrc(reg1, param2)
 
-        |IL.opDIVSC, IL.opADDSL, IL.opADDSR:
+        |IL.opDIVSC:
             UnOp(reg1);
-            Rex(reg1, 0);
-            OutByte2(81H + short(param2), 0C8H + 28H * ORD(opcode = IL.opDIVSC) + reg1 MOD 8); // or/xor reg1, param2
-            OutIntByte(param2)
+            xorrc(reg1, param2)
+
+        |IL.opADDSL, IL.opADDSR:
+            UnOp(reg1);
+            orrc(reg1, param2)
 
         |IL.opSUBSL:
             UnOp(reg1);
