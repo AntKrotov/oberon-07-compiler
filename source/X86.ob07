@@ -311,6 +311,12 @@ BEGIN
 END xor;
 
 
+PROCEDURE ret*;
+BEGIN
+    OutByte(0C3H)
+END ret;
+
+
 PROCEDURE drop;
 BEGIN
     REG.Drop(R)
@@ -566,6 +572,16 @@ BEGIN
 END GetRegA;
 
 
+PROCEDURE fcmp;
+BEGIN
+    GetRegA;
+    OutByte2(0DAH, 0E9H);       (* fucompp *)
+    OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
+    OutByte(09EH);              (* sahf *)
+    movrc(eax, 0)
+END fcmp;
+
+
 PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
 VAR
     cmd: COMMAND;
@@ -703,7 +719,7 @@ BEGIN
                 n := n * 4;
                 OutByte(0C2H); OutWord(n MOD 65536) (* ret n *)
             ELSE
-                OutByte(0C3H) (* ret *)
+                ret
             END
 
         |IL.opPUSHC:
@@ -1788,31 +1804,19 @@ BEGIN
             addrc(esp, 4)
 
         |IL.opEQF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(sete, al)
                                         (* L: *)
 
         |IL.opNEF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(setne, al)
                                         (* L: *)
 
         |IL.opLTF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 00EH);       (* jp L *)
             setcc(setc, al);
             setcc(sete, ah);
@@ -1822,11 +1826,7 @@ BEGIN
                                         (* L: *)
 
         |IL.opGTF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 00FH);       (* jp L *)
             setcc(setc, al);
             setcc(sete, ah);
@@ -1836,21 +1836,13 @@ BEGIN
                                         (* L: *)
 
         |IL.opLEF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(setnc, al)
                                         (* L: *)
 
         |IL.opGEF:
-            GetRegA;
-            OutByte2(0DAH, 0E9H);       (* fucompp *)
-            OutByte3(09BH, 0DFH, 0E0H); (* fstsw ax *)
-            OutByte(09EH);              (* sahf *)
-            movrc(eax, 0);
+            fcmp;
             OutByte2(07AH, 010H);       (* jp L *)
             setcc(setc, al);
             setcc(sete, ah);
@@ -2141,12 +2133,12 @@ BEGIN
         OutByte3(0C2H, 0CH, 0) (* ret 12 *)
     ELSIF target = TARGETS.KolibriOSDLL THEN
         movrc(eax, 1);
-        OutByte(0C3H)  (* ret *)
+        ret
     ELSIF target = TARGETS.Linux32SO THEN
-        OutByte(0C3H);  (* ret *)
+        ret;
         SetLabel(sofinit);
         CallRTL(pic, IL._sofinit);
-        OutByte(0C3H)   (* ret *)
+        ret
     END;
 
     fixup;

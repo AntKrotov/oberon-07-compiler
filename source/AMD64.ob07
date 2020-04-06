@@ -1168,7 +1168,7 @@ BEGIN
             IF param2 > 0 THEN
                 OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256) (* ret param2 *)
             ELSE
-                OutByte(0C3H) (* ret *)
+                X86.ret
             END;
             REG.Reset(R)
 
@@ -2370,7 +2370,7 @@ BEGIN
                     movmr(rbp, n, reg2);
                     drop
                 ELSE
-                    OutByte3(48H, 0C7H, 45H + long(n)); (* mov qword[rbp+n],param2 *)
+                    OutByte3(48H, 0C7H, 45H + long(n)); (* mov qword[rbp+n], param2 *)
                     OutIntByte(n);
                     OutInt(param2)
                 END
@@ -2624,13 +2624,13 @@ VAR
 BEGIN
     IF target = TARGETS.Win64DLL THEN
         X86.SetLabel(dllret);
-        OutByte(0C3H) (* ret *)
+        X86.ret
     ELSIF target = TARGETS.Linux64SO THEN
         sofinit := NewLabel();
-        OutByte(0C3H); (* ret *)
+        X86.ret;
         X86.SetLabel(sofinit);
         CallRTL(IL._sofinit);
-        OutByte(0C3H) (* ret *)
+        X86.ret
     ELSE
         pushc(0);
         CallRTL(IL._exit)
