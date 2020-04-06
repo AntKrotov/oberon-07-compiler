@@ -154,74 +154,74 @@ END Rex;
 PROCEDURE lea (reg, offset, section: INTEGER);
 BEGIN
     Rex(0, reg);
-    OutByte2(8DH, 05H + 8 * (reg MOD 8)); // lea reg, [rip + offset]
+    OutByte2(8DH, 05H + 8 * (reg MOD 8)); (* lea reg, [rip + offset] *)
     X86.Reloc(section, offset)
 END lea;
 
 
-PROCEDURE oprr (op: BYTE; reg1, reg2: INTEGER);  // op reg1, reg2
+PROCEDURE oprr (op: BYTE; reg1, reg2: INTEGER); (* op reg1, reg2 *)
 BEGIN
     Rex(reg1, reg2);
     OutByte2(op, 0C0H + 8 * (reg2 MOD 8) + reg1 MOD 8)
 END oprr;
 
 
-PROCEDURE oprr2 (op1, op2: BYTE; reg1, reg2: INTEGER);  // op reg1, reg2
+PROCEDURE oprr2 (op1, op2: BYTE; reg1, reg2: INTEGER); (* op reg1, reg2 *)
 BEGIN
     Rex(reg1, reg2);
     OutByte3(op1, op2, 0C0H + 8 * (reg2 MOD 8) + reg1 MOD 8)
 END oprr2;
 
 
-PROCEDURE mov (reg1, reg2: INTEGER); // mov reg1, reg2
+PROCEDURE mov (reg1, reg2: INTEGER); (* mov reg1, reg2 *)
 BEGIN
     oprr(89H, reg1, reg2)
 END mov;
 
 
-PROCEDURE xor (reg1, reg2: INTEGER); // xor reg1, reg2
+PROCEDURE xor (reg1, reg2: INTEGER); (* xor reg1, reg2 *)
 BEGIN
     oprr(31H, reg1, reg2)
 END xor;
 
 
-PROCEDURE and (reg1, reg2: INTEGER); // and reg1, reg2
+PROCEDURE and (reg1, reg2: INTEGER); (* and reg1, reg2 *)
 BEGIN
     oprr(21H, reg1, reg2)
 END and;
 
 
-PROCEDURE or (reg1, reg2: INTEGER); // and reg1, reg2
+PROCEDURE or (reg1, reg2: INTEGER); (* or reg1, reg2 *)
 BEGIN
     oprr(09H, reg1, reg2)
 END or;
 
 
-PROCEDURE add (reg1, reg2: INTEGER); // add reg1, reg2
+PROCEDURE add (reg1, reg2: INTEGER); (* add reg1, reg2 *)
 BEGIN
     oprr(01H, reg1, reg2)
 END add;
 
 
-PROCEDURE sub (reg1, reg2: INTEGER); // sub reg1, reg2
+PROCEDURE sub (reg1, reg2: INTEGER); (* sub reg1, reg2 *)
 BEGIN
     oprr(29H, reg1, reg2)
 END sub;
 
 
-PROCEDURE xchg (reg1, reg2: INTEGER); // xchg reg1, reg2
+PROCEDURE xchg (reg1, reg2: INTEGER); (* xchg reg1, reg2 *)
 BEGIN
     oprr(87H, reg1, reg2)
 END xchg;
 
 
-PROCEDURE cmprr (reg1, reg2: INTEGER);  // cmp reg1, reg2
+PROCEDURE cmprr (reg1, reg2: INTEGER);  (* cmp reg1, reg2 *)
 BEGIN
     oprr(39H, reg1, reg2)
 END cmprr;
 
 
-PROCEDURE pop (reg: INTEGER); // pop reg
+PROCEDURE pop (reg: INTEGER); (* pop reg *)
 BEGIN
     IF reg >= 8 THEN
         OutByte(41H)
@@ -230,7 +230,7 @@ BEGIN
 END pop;
 
 
-PROCEDURE push (reg: INTEGER); // push reg
+PROCEDURE push (reg: INTEGER); (* push reg *)
 BEGIN
     IF reg >= 8 THEN
         OutByte(41H)
@@ -242,14 +242,14 @@ END push;
 PROCEDURE decr (reg: INTEGER);
 BEGIN
     Rex(reg, 0);
-    OutByte2(0FFH, 0C8H + reg MOD 8) // dec reg1
+    OutByte2(0FFH, 0C8H + reg MOD 8) (* dec reg1 *)
 END decr;
 
 
 PROCEDURE incr (reg: INTEGER);
 BEGIN
     Rex(reg, 0);
-    OutByte2(0FFH, 0C0H + reg MOD 8) // inc reg1
+    OutByte2(0FFH, 0C0H + reg MOD 8) (* inc reg1 *)
 END incr;
 
 
@@ -276,7 +276,7 @@ VAR
 BEGIN
     reg := GetAnyReg();
     lea(reg, label, sIMP);
-    IF reg >= 8 THEN // call qword[reg]
+    IF reg >= 8 THEN (* call qword[reg] *)
         OutByte(41H)
     END;
     OutByte2(0FFH, 10H + reg MOD 8);
@@ -337,14 +337,14 @@ VAR
 
 BEGIN
     Rex(reg, 0);
-    OutByte(0B8H + reg MOD 8);  // movabs reg, n
+    OutByte(0B8H + reg MOD 8); (* movabs reg, n *)
     FOR i := 0 TO 7 DO
         OutByte(UTILS.Byte(n, i))
     END
 END movabs;
 
 
-PROCEDURE movrc (reg, n: INTEGER); // mov reg, n
+PROCEDURE movrc (reg, n: INTEGER); (* mov reg, n *)
 BEGIN
     IF isLong(n) THEN
         movabs(reg, n)
@@ -358,7 +358,7 @@ BEGIN
 END movrc;
 
 
-PROCEDURE test (reg: INTEGER); // test reg, reg
+PROCEDURE test (reg: INTEGER); (* test reg, reg *)
 BEGIN
     oprr(85H, reg, reg)
 END test;
@@ -389,7 +389,7 @@ BEGIN
 END oprc;
 
 
-PROCEDURE cmprc (reg, n: INTEGER); // cmp reg, n
+PROCEDURE cmprc (reg, n: INTEGER); (* cmp reg, n *)
 BEGIN
     IF n = 0 THEN
         test(reg)
@@ -399,31 +399,31 @@ BEGIN
 END cmprc;
 
 
-PROCEDURE addrc (reg, n: INTEGER); // add reg, n
+PROCEDURE addrc (reg, n: INTEGER); (* add reg, n *)
 BEGIN
     oprc(0C0H, reg, n, add)
 END addrc;
 
 
-PROCEDURE subrc (reg, n: INTEGER); // sub reg, n
+PROCEDURE subrc (reg, n: INTEGER); (* sub reg, n *)
 BEGIN
     oprc(0E8H, reg, n, sub)
 END subrc;
 
 
-PROCEDURE andrc (reg, n: INTEGER); // and reg, n
+PROCEDURE andrc (reg, n: INTEGER); (* and reg, n *)
 BEGIN
     oprc(0E0H, reg, n, and)
 END andrc;
 
 
-PROCEDURE orrc (reg, n: INTEGER); // or reg, n
+PROCEDURE orrc (reg, n: INTEGER); (* or reg, n *)
 BEGIN
     oprc(0C8H, reg, n, or)
 END orrc;
 
 
-PROCEDURE xorrc (reg, n: INTEGER); // xor reg, n
+PROCEDURE xorrc (reg, n: INTEGER); (* xor reg, n *)
 BEGIN
     oprc(0F0H, reg, n, xor)
 END xorrc;
@@ -440,26 +440,26 @@ BEGIN
         push(reg2);
         drop
     ELSE
-        OutByte(68H + short(n)); OutIntByte(n) // push n
+        OutByte(68H + short(n)); OutIntByte(n) (* push n *)
     END
 END pushc;
 
 
-PROCEDURE not (reg: INTEGER); // not reg
+PROCEDURE not (reg: INTEGER); (* not reg *)
 BEGIN
     Rex(reg, 0);
     OutByte2(0F7H, 0D0H + reg MOD 8)
 END not;
 
 
-PROCEDURE neg (reg: INTEGER); // neg reg
+PROCEDURE neg (reg: INTEGER); (* neg reg *)
 BEGIN
     Rex(reg, 0);
     OutByte2(0F7H, 0D8H + reg MOD 8)
 END neg;
 
 
-PROCEDURE movzx (reg1, reg2, offs: INTEGER; word: BOOLEAN);  // movzx reg1, byte/word[reg2 + offs]
+PROCEDURE movzx (reg1, reg2, offs: INTEGER; word: BOOLEAN); (* movzx reg1, byte/word[reg2 + offs] *)
 VAR
     b: BYTE;
 
@@ -508,55 +508,55 @@ BEGIN
 END _movrm;
 
 
-PROCEDURE movmr32 (reg1, offs, reg2: INTEGER); // mov dword[reg1+offs], reg2_32
+PROCEDURE movmr32 (reg1, offs, reg2: INTEGER); (* mov dword[reg1+offs], reg2_32 *)
 BEGIN
     _movrm(reg2, reg1, offs, 32, TRUE)
 END movmr32;
 
 
-PROCEDURE movrm32 (reg1, reg2, offs: INTEGER); // mov reg1_32, dword[reg2+offs]
+PROCEDURE movrm32 (reg1, reg2, offs: INTEGER); (* mov reg1_32, dword[reg2+offs] *)
 BEGIN
     _movrm(reg1, reg2, offs, 32, FALSE)
 END movrm32;
 
 
-PROCEDURE movmr8 (reg1, offs, reg2: INTEGER); // mov byte[reg1+offs], reg2_8
+PROCEDURE movmr8 (reg1, offs, reg2: INTEGER); (* mov byte[reg1+offs], reg2_8 *)
 BEGIN
     _movrm(reg2, reg1, offs, 8, TRUE)
 END movmr8;
 
 
-PROCEDURE movrm8 (reg1, reg2, offs: INTEGER); // mov reg1_8, byte[reg2+offs]
+PROCEDURE movrm8 (reg1, reg2, offs: INTEGER); (* mov reg1_8, byte[reg2+offs] *)
 BEGIN
     _movrm(reg1, reg2, offs, 8, FALSE)
 END movrm8;
 
 
-PROCEDURE movmr16 (reg1, offs, reg2: INTEGER); // mov word[reg1+offs], reg2_16
+PROCEDURE movmr16 (reg1, offs, reg2: INTEGER); (* mov word[reg1+offs], reg2_16 *)
 BEGIN
     _movrm(reg2, reg1, offs, 16, TRUE)
 END movmr16;
 
 
-PROCEDURE movrm16 (reg1, reg2, offs: INTEGER); // mov reg1_16, word[reg2+offs]
+PROCEDURE movrm16 (reg1, reg2, offs: INTEGER); (* mov reg1_16, word[reg2+offs] *)
 BEGIN
     _movrm(reg1, reg2, offs, 16, FALSE)
 END movrm16;
 
 
-PROCEDURE movmr (reg1, offs, reg2: INTEGER); // mov qword[reg1+offs], reg2
+PROCEDURE movmr (reg1, offs, reg2: INTEGER); (* mov qword[reg1+offs], reg2 *)
 BEGIN
     _movrm(reg2, reg1, offs, 64, TRUE)
 END movmr;
 
 
-PROCEDURE movrm (reg1, reg2, offs: INTEGER); // mov reg1, qword[reg2+offs]
+PROCEDURE movrm (reg1, reg2, offs: INTEGER); (* mov reg1, qword[reg2+offs] *)
 BEGIN
     _movrm(reg1, reg2, offs, 64, FALSE)
 END movrm;
 
 
-PROCEDURE pushm (reg, offs: INTEGER); // push qword[reg+offs]
+PROCEDURE pushm (reg, offs: INTEGER); (* push qword[reg+offs] *)
 VAR
     b: BYTE;
 
@@ -580,7 +580,7 @@ BEGIN
 END pushm;
 
 
-PROCEDURE comisd (xmm1, xmm2: INTEGER); // comisd xmm1, xmm2
+PROCEDURE comisd (xmm1, xmm2: INTEGER); (* comisd xmm1, xmm2 *)
 BEGIN
     OutByte(66H);
     IF (xmm1 >= 8) OR (xmm2 >= 8) THEN
@@ -615,13 +615,13 @@ BEGIN
 END _movsdrm;
 
 
-PROCEDURE movsdrm (xmm, reg, offs: INTEGER); // movsd xmm, qword[reg+offs]
+PROCEDURE movsdrm (xmm, reg, offs: INTEGER); (* movsd xmm, qword[reg+offs] *)
 BEGIN
     _movsdrm(xmm, reg, offs, FALSE)
 END movsdrm;
 
 
-PROCEDURE movsdmr (reg, offs, xmm: INTEGER); // movsd qword[reg+offs], xmm
+PROCEDURE movsdmr (reg, offs, xmm: INTEGER); (* movsd qword[reg+offs], xmm *)
 BEGIN
     _movsdrm(xmm, reg, offs, TRUE)
 END movsdmr;
@@ -637,19 +637,19 @@ BEGIN
 END opxx;
 
 
-PROCEDURE jcc (cc, label: INTEGER); // jcc label
+PROCEDURE jcc (cc, label: INTEGER); (* jcc label *)
 BEGIN
     X86.jcc(cc, label)
 END jcc;
 
 
-PROCEDURE jmp (label: INTEGER); // jmp label
+PROCEDURE jmp (label: INTEGER); (* jmp label *)
 BEGIN
     X86.jmp(label)
 END jmp;
 
 
-PROCEDURE setcc (cc, reg: INTEGER); //setcc reg8
+PROCEDURE setcc (cc, reg: INTEGER); (* setcc reg8 *)
 BEGIN
     IF reg >= 8 THEN
         OutByte(41H)
@@ -918,9 +918,9 @@ BEGIN
         comisd(xmm - 1, xmm);
         cc := setnc
     END;
-    OutByte2(7AH, 3 + reg DIV 8); // jp L
+    OutByte2(7AH, 3 + reg DIV 8); (* jp L *)
     setcc(cc, reg);
-    //L:
+    (* L: *)
 END fcmp;
 
 
@@ -975,7 +975,7 @@ BEGIN
             |IL.opWIN64CALLP: Win64Passing(param2)
             |IL.opSYSVCALLP:  SysVPassing(param2)
             END;
-            OutByte2(0FFH, 0D0H); // call rax
+            OutByte2(0FFH, 0D0H); (* call rax *)
             REG.Restore(R);
             ASSERT(R.top = -1)
 
@@ -1127,9 +1127,9 @@ BEGIN
             n := param2;
             IF n > 4 THEN
                 movrc(rcx, n);
-                                      // L:
+                                     (* L: *)
                 pushc(0);
-                OutByte2(0E2H, 0FCH) // loop L
+                OutByte2(0E2H, 0FCH) (* loop L *)
             ELSE
                 WHILE n > 0 DO
                     pushc(0);
@@ -1166,9 +1166,9 @@ BEGIN
 
             pop(rbp);
             IF param2 > 0 THEN
-                OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256)  // ret param2
+                OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256) (* ret param2 *)
             ELSE
-                OutByte(0C3H) // ret
+                OutByte(0C3H) (* ret *)
             END;
             REG.Reset(R)
 
@@ -1286,7 +1286,7 @@ BEGIN
             ELSE
                 reg1 := GetAnyReg();
                 Rex(0, reg1);
-                OutByte2(8DH, 45H + long(n) + (reg1 MOD 8) * 8);  // lea reg1, qword[rbp+n]
+                OutByte2(8DH, 45H + long(n) + (reg1 MOD 8) * 8); (* lea reg1, qword[rbp+n] *)
                 OutIntByte(n)
             END
 
@@ -1301,7 +1301,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(0C6H, reg1 MOD 8, param2); // mov byte[reg1], param2
+            OutByte3(0C6H, reg1 MOD 8, param2); (* mov byte[reg1], param2 *)
             drop
 
         |IL.opSAVE16C:
@@ -1311,7 +1311,7 @@ BEGIN
                 OutByte(41H)
             END;
             OutByte2(0C7H, reg1 MOD 8);
-            OutByte2(param2 MOD 256, param2 DIV 256); // mov word[reg1], param2
+            OutByte2(param2 MOD 256, param2 DIV 256); (* mov word[reg1], param2 *)
             drop
 
         |IL.opSAVEC:
@@ -1323,7 +1323,7 @@ BEGIN
                 drop
             ELSE
                 Rex(reg1, 0);
-                OutByte2(0C7H, reg1 MOD 8); // mov qword[reg1], param2
+                OutByte2(0C7H, reg1 MOD 8); (* mov qword[reg1], param2 *)
                 OutInt(param2)
             END;
             drop
@@ -1356,17 +1356,17 @@ BEGIN
         |IL.opINCL, IL.opEXCL:
             BinOp(reg1, reg2);
             cmprc(reg1, 64);
-            OutByte2(73H, 04H); // jnb L
+            OutByte2(73H, 04H); (* jnb L *)
             Rex(reg2, reg1);
-            OutByte3(0FH, 0ABH + 8 * ORD(opcode = IL.opEXCL), 8 * (reg1 MOD 8) + reg2 MOD 8); // bts/btr qword[reg2], reg1
-            // L:
+            OutByte3(0FH, 0ABH + 8 * ORD(opcode = IL.opEXCL), 8 * (reg1 MOD 8) + reg2 MOD 8); (* bts/btr qword[reg2], reg1 *)
+            (* L: *)
             drop;
             drop
 
         |IL.opINCLC, IL.opEXCLC:
             UnOp(reg1);
             Rex(reg1, 0);
-            OutByte2(0FH, 0BAH);  // bts/btr qword[reg1], param2
+            OutByte2(0FH, 0BAH); (* bts/btr qword[reg1], param2 *)
             OutByte2(28H + 8 * ORD(opcode = IL.opEXCLC) + reg1 MOD 8, param2);
             drop
 
@@ -1484,7 +1484,7 @@ BEGIN
             jmp(label);
             X86.SetLabel(L);
             Rex(reg2, reg1);
-            OutByte3(0FH, 0A3H, 0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); // bt reg2, reg1
+            OutByte3(0FH, 0A3H, 0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); (* bt reg2, reg1 *)
             setcc(setc, reg1);
             andrc(reg1, 1);
             X86.SetLabel(label);
@@ -1493,7 +1493,7 @@ BEGIN
         |IL.opINL:
             UnOp(reg1);
             Rex(reg1, 0);
-            OutByte2(0FH, 0BAH);  // bt reg1, param2
+            OutByte2(0FH, 0BAH); (* bt reg1, param2 *)
             OutByte2(0E0H + reg1 MOD 8, param2);
             setcc(setc, reg1);
             andrc(reg1, 1)
@@ -1513,9 +1513,9 @@ BEGIN
         |IL.opABS:
             UnOp(reg1);
             test(reg1);
-            OutByte2(7DH, 03H); // jge L
+            OutByte2(7DH, 03H); (* jge L *)
             neg(reg1)
-            // L:
+            (* L: *)
 
         |IL.opEQB, IL.opNEB:
             BinOp(reg1, reg2);
@@ -1672,7 +1672,7 @@ BEGIN
 
         |IL.opINC, IL.opDEC:
             BinOp(reg1, reg2);
-            // add/sub qword[reg2], reg1
+            (* add/sub qword[reg2], reg1 *)
             Rex(reg2, reg1);
             OutByte2(01H + 28H * ORD(opcode = IL.opDEC), reg2 MOD 8 + (reg1 MOD 8) * 8);
             drop;
@@ -1683,15 +1683,15 @@ BEGIN
             IF isLong(param2) THEN
                 reg2 := GetAnyReg();
                 movrc(reg2, param2);
-                // add qword[reg1], reg2
+                (* add qword[reg1], reg2 *)
                 Rex(reg1, reg2);
                 OutByte2(01H, reg1 MOD 8 + (reg2 MOD 8) * 8);
                 drop
             ELSIF ABS(param2) = 1 THEN
                 Rex(reg1, 0);
-                OutByte2(0FFH, reg1 MOD 8 + 8 * ORD(param2 = -1)) // inc/dec qword[reg1]
+                OutByte2(0FFH, reg1 MOD 8 + 8 * ORD(param2 = -1)) (* inc/dec qword[reg1] *)
             ELSE
-                // add qword[reg1], param2
+                (* add qword[reg1], param2 *)
                 Rex(reg1, 0);
                 OutByte2(81H + short(param2), reg1 MOD 8);
                 OutIntByte(param2)
@@ -1729,9 +1729,9 @@ BEGIN
         |IL.opMAX, IL.opMIN:
             BinOp(reg1, reg2);
             cmprr(reg1, reg2);
-            OutByte2(7DH + ORD(opcode = IL.opMIN), 3);  // jge/jle L
+            OutByte2(7DH + ORD(opcode = IL.opMIN), 3); (* jge/jle L *)
             mov(reg1, reg2);
-            // L:
+            (* L: *)
             drop
 
         |IL.opMAXC, IL.opMINC:
@@ -1753,7 +1753,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(0FH, 95H, reg1 MOD 8); // setne byte[reg1]
+            OutByte3(0FH, 95H, reg1 MOD 8); (* setne byte[reg1] *)
             drop;
             drop
 
@@ -1762,7 +1762,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(0C6H, reg1 MOD 8, ORD(param2 # 0)); // mov byte[reg1], 0/1
+            OutByte3(0C6H, reg1 MOD 8, ORD(param2 # 0)); (* mov byte[reg1], 0/1 *)
             drop
 
         |IL.opODD:
@@ -1869,13 +1869,13 @@ BEGIN
 
         |IL.opMUL:
             BinOp(reg1, reg2);
-            oprr2(0FH, 0AFH, reg2, reg1); // imul reg1, reg2
+            oprr2(0FH, 0AFH, reg2, reg1); (* imul reg1, reg2 *)
             drop
 
         |IL.opMULC:
             IF (cmd.next(COMMAND).opcode = IL.opADD) & ((param2 = 2) OR (param2 = 4) OR (param2 = 8)) THEN
                 BinOp(reg1, reg2);
-                OutByte2(48H + 5 * (reg1 DIV 8) + 2 * (reg2 DIV 8), 8DH);  // lea reg1, [reg1 + reg2 * param2]
+                OutByte2(48H + 5 * (reg1 DIV 8) + 2 * (reg2 DIV 8), 8DH); (* lea reg1, [reg1 + reg2 * param2] *)
                 reg1 := reg1 MOD 8;
                 reg2 := reg2 MOD 8;
                 OutByte2(04H + reg1 * 8, reg1 + reg2 * 8 + 40H * UTILS.Log2(param2));
@@ -1910,10 +1910,10 @@ BEGIN
                             reg2 := GetAnyReg();
                             movabs(reg2, a);
                             ASSERT(reg1 # reg2);
-                            oprr2(0FH, 0AFH, reg2, reg1); // imul reg1, reg2
+                            oprr2(0FH, 0AFH, reg2, reg1); (* imul reg1, reg2 *)
                             drop
                         ELSE
-                            // imul reg1, a
+                            (* imul reg1, a *)
                             Rex(reg1, reg1);
                             OutByte2(69H + short(a), 0C0H + (reg1 MOD 8) * 9);
                             OutIntByte(a)
@@ -1975,7 +1975,7 @@ BEGIN
             xchg(reg2, rcx);
             Rex(reg1, 0);
             OutByte(0D3H);
-            X86.shift(opcode, reg1 MOD 8); // shift reg1, cl
+            X86.shift(opcode, reg1 MOD 8); (* shift reg1, cl *)
             xchg(reg2, rcx);
             drop
 
@@ -1986,7 +1986,7 @@ BEGIN
             xchg(reg1, rcx);
             Rex(reg2, 0);
             OutByte(0D3H);
-            X86.shift(opcode, reg2 MOD 8); // shift reg2, cl
+            X86.shift(opcode, reg2 MOD 8); (* shift reg2, cl *)
             xchg(reg1, rcx);
             drop;
             drop;
@@ -2092,7 +2092,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte3(80H, 28H * ORD(opcode = IL.opDECCB) + reg1 MOD 8, param2 MOD 256); // add/sub byte[reg1], param2 MOD 256
+            OutByte3(80H, 28H * ORD(opcode = IL.opDECCB) + reg1 MOD 8, param2 MOD 256); (* add/sub byte[reg1], param2 MOD 256 *)
             drop
 
         |IL.opINCB, IL.opDECB:
@@ -2100,7 +2100,7 @@ BEGIN
             IF (reg1 >= 8) OR (reg2 >= 8) THEN
                 OutByte(40H + reg2 DIV 8 + 4 * (reg1 DIV 8))
             END;
-            OutByte2(28H * ORD(opcode = IL.opDECB), reg2 MOD 8 + 8 * (reg1 MOD 8)); // add/sub byte[reg2], reg1_8
+            OutByte2(28H * ORD(opcode = IL.opDECB), reg2 MOD 8 + 8 * (reg1 MOD 8)); (* add/sub byte[reg2], reg1_8 *)
             drop;
             drop
 
@@ -2114,7 +2114,7 @@ BEGIN
             IF reg1 >= 8 THEN
                 OutByte(41H)
             END;
-            OutByte2(8FH, reg1 MOD 8); // pop qword[reg1]
+            OutByte2(8FH, reg1 MOD 8); (* pop qword[reg1] *)
             drop
 
         |IL.opCLEANUP:
@@ -2181,35 +2181,35 @@ BEGIN
         |IL.opUMINF:
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs, sDATA);
-            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); // xorpd xmm, xmmword[reg1]
+            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); (* xorpd xmm, xmmword[reg1] *)
             OutByte2(57H, reg1 MOD 8 + (xmm MOD 8) * 8);
             drop
 
         |IL.opFABS:
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs + 16, sDATA);
-            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); // andpd xmm, xmmword[reg1]
+            OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); (* andpd xmm, xmmword[reg1] *)
             OutByte2(54H, reg1 MOD 8 + (xmm MOD 8) * 8);
             drop
 
         |IL.opFLT:
             UnOp(reg1);
             INC(xmm);
-            OutByte(0F2H); Rex(reg1, xmm); OutByte(0FH); // cvtsi2sd xmm, reg1
+            OutByte(0F2H); Rex(reg1, xmm); OutByte(0FH); (* cvtsi2sd xmm, reg1 *)
             OutByte2(2AH, 0C0H + (xmm MOD 8) * 8 + reg1 MOD 8);
             drop
 
         |IL.opFLOOR:
             reg1 := GetAnyReg();
             subrc(rsp, 8);
-            OutByte3(00FH, 0AEH, 05CH); OutByte2(024H, 004H); // stmxcsr dword[rsp+4];
-            OutByte2(00FH, 0AEH); OutByte2(01CH, 024H);       // stmxcsr dword[rsp];
-            OutByte3(081H, 024H, 024H); OutByte2(0FFH, 09FH); OutByte2(0FFH, 0FFH); // and dword[rsp],11111111111111111001111111111111b;
-            OutByte3(081H, 00CH, 024H); OutByte2(000H, 020H); OutByte2(000H, 000H); // or dword[rsp],00000000000000000010000000000000b;
-            OutByte2(00FH, 0AEH); OutByte2(014H, 024H); // ldmxcsr dword[rsp];
-            OutByte(0F2H); Rex(xmm, reg1); OutByte(0FH); // cvtsd2si reg1, xmm
+            OutByte3(00FH, 0AEH, 05CH); OutByte2(024H, 004H);                       (* stmxcsr dword[rsp+4];                              *)
+            OutByte2(00FH, 0AEH); OutByte2(01CH, 024H);                             (* stmxcsr dword[rsp];                                *)
+            OutByte3(081H, 024H, 024H); OutByte2(0FFH, 09FH); OutByte2(0FFH, 0FFH); (* and dword[rsp],11111111111111111001111111111111b;  *)
+            OutByte3(081H, 00CH, 024H); OutByte2(000H, 020H); OutByte2(000H, 000H); (* or dword[rsp],00000000000000000010000000000000b;   *)
+            OutByte2(00FH, 0AEH); OutByte2(014H, 024H);                             (* ldmxcsr dword[rsp];                                *)
+            OutByte(0F2H); Rex(xmm, reg1); OutByte(0FH);                            (* cvtsd2si reg1, xmm                                 *)
             OutByte2(2DH, 0C0H + xmm MOD 8 + (reg1 MOD 8) * 8);
-            OutByte3(00FH, 0AEH, 054H); OutByte2(024H, 004H); // ldmxcsr dword[rsp+4];
+            OutByte3(00FH, 0AEH, 054H); OutByte2(024H, 004H);                       (* ldmxcsr dword[rsp+4];                              *)
             addrc(rsp, 8);
             DEC(xmm)
 
@@ -2243,7 +2243,7 @@ BEGIN
             movrm(reg2, reg2, 0);
 
             push(reg1);
-            lea(reg1, Numbers_Offs + 40, sDATA); // {0..51, 63}
+            lea(reg1, Numbers_Offs + 40, sDATA); (* {0..51, 63} *)
             movrm(reg1, reg1, 0);
             and(reg2, reg1);
             pop(reg1);
@@ -2264,7 +2264,7 @@ BEGIN
                 IF ~regVar THEN
                     reg2 := GetAnyReg();
                     Rex(0, reg2);
-                    OutByte2(8DH, 45H + long(n) + (reg2 MOD 8) * 8);  // lea reg2, qword[rbp+n]
+                    OutByte2(8DH, 45H + long(n) + (reg2 MOD 8) * 8); (* lea reg2, qword[rbp+n] *)
                     OutIntByte(n)
                 END
             ELSE
@@ -2289,14 +2289,14 @@ BEGIN
             movrm(reg1, reg2, 0);
 
             push(reg2);
-            lea(reg2, Numbers_Offs + 48, sDATA); // {52..61}
+            lea(reg2, Numbers_Offs + 48, sDATA); (* {52..61} *)
             movrm(reg2, reg2, 0);
             or(reg1, reg2);
             pop(reg2);
 
             Rex(reg1, 0);
             OutByte2(0FH, 0BAH);
-            OutByte2(0F0H + reg1 MOD 8, 3EH); // btr reg1, 62
+            OutByte2(0F0H + reg1 MOD 8, 3EH); (* btr reg1, 62 *)
             movmr(reg2, 0, reg1);
             drop;
             drop
@@ -2370,7 +2370,7 @@ BEGIN
                     movmr(rbp, n, reg2);
                     drop
                 ELSE
-                    OutByte3(48H, 0C7H, 45H + long(n)); // mov qword[rbp+n],param2
+                    OutByte3(48H, 0C7H, 45H + long(n)); (* mov qword[rbp+n],param2 *)
                     OutIntByte(n);
                     OutInt(param2)
                 END
@@ -2389,7 +2389,7 @@ BEGIN
                 reg2 := GetAnyReg();
                 lea(reg2, param1, sBSS);
                 Rex(reg2, 0);
-                OutByte2(0C7H, reg2 MOD 8); // mov qword[reg2], param2
+                OutByte2(0C7H, reg2 MOD 8); (* mov qword[reg2], param2 *)
                 OutInt(param2);
                 drop
             END
@@ -2415,7 +2415,7 @@ BEGIN
                     n := param1 * 8;
                     Rex(0, reg2);
                     OutByte2(01H, 45H + long(n) + (reg2 MOD 8) * 8);
-                    OutIntByte(n) // add qword[rbp+n],reg2
+                    OutIntByte(n) (* add qword[rbp+n], reg2 *)
                 END;
                 drop
             ELSIF ABS(param2) = 1 THEN
@@ -2427,7 +2427,7 @@ BEGIN
                     END
                 ELSE
                     n := param1 * 8;
-                    OutByte3(48H, 0FFH, 45H + 8 * ORD(param2 = -1) + long(n)); // inc/dec qword[rbp+n]
+                    OutByte3(48H, 0FFH, 45H + 8 * ORD(param2 = -1) + long(n)); (* inc/dec qword[rbp+n] *)
                     OutIntByte(n)
                 END
             ELSE
@@ -2437,7 +2437,7 @@ BEGIN
                     n := param1 * 8;
                     OutByte3(48H, 81H + short(param2), 45H + long(n));
                     OutIntByte(n);
-                    OutIntByte(param2) // add qword[rbp+n],param2
+                    OutIntByte(param2) (* add qword[rbp+n], param2 *)
                 END
             END
 
@@ -2455,7 +2455,7 @@ BEGIN
                 n := param1 * 8;
                 OutByte2(80H, 45H + long(n) + 28H * ORD(opcode = IL.opLADR_DECCB));
                 OutIntByte(n);
-                OutByte(param2) // add/sub byte[rbp+n],param2
+                OutByte(param2) (* add/sub byte[rbp+n], param2 *)
             END
 
         |IL.opLADR_INC, IL.opLADR_DEC:
@@ -2471,7 +2471,7 @@ BEGIN
                 n := param2 * 8;
                 Rex(0, reg1);
                 OutByte2(01H + 28H * ORD(opcode = IL.opLADR_DEC), 45H + long(n) + (reg1 MOD 8) * 8);
-                OutIntByte(n) // add/sub qword[rbp+n],reg1
+                OutIntByte(n) (* add/sub qword[rbp+n], reg1 *)
             END;
             drop
 
@@ -2491,7 +2491,7 @@ BEGIN
                     OutByte(44H)
                 END;
                 OutByte2(28H * ORD(opcode = IL.opLADR_DECB), 45H + long(n) + 8 * (reg1 MOD 8));
-                OutIntByte(n) // add/sub byte[rbp+n], reg1_8
+                OutIntByte(n) (* add/sub byte[rbp+n], reg1_8 *)
             END;
             drop
 
@@ -2500,27 +2500,27 @@ BEGIN
             cmprc(reg1, 64);
             reg2 := GetVarReg(param2);
             IF reg2 # -1 THEN
-                OutByte2(73H, 4); // jnb L
-                oprr2(0FH, 0ABH + 8 * ORD(opcode = IL.opLADR_EXCL), reg2, reg1) // bts/btr reg2, reg1
+                OutByte2(73H, 4); (* jnb L *)
+                oprr2(0FH, 0ABH + 8 * ORD(opcode = IL.opLADR_EXCL), reg2, reg1) (* bts/btr reg2, reg1 *)
             ELSE
                 n := param2 * 8;
-                OutByte2(73H, 5 + 3 * ORD(~isByte(n))); // jnb L
+                OutByte2(73H, 5 + 3 * ORD(~isByte(n))); (* jnb L *)
                 Rex(0, reg1);
                 OutByte3(0FH, 0ABH + 8 * ORD(opcode = IL.opLADR_EXCL), 45H + long(n) + 8 * (reg1 MOD 8));
-                OutIntByte(n) // bts/btr qword[rbp+n], reg1
+                OutIntByte(n) (* bts/btr qword[rbp+n], reg1 *)
             END;
-            // L:
+            (* L: *)
             drop
 
         |IL.opLADR_INCLC, IL.opLADR_EXCLC:
             reg1 := GetVarReg(param1);
             IF reg1 # -1 THEN
                 Rex(reg1, 0);
-                OutByte3(0FH, 0BAH, 0E8H);  // bts/btr reg1, param2
+                OutByte3(0FH, 0BAH, 0E8H); (* bts/btr reg1, param2 *)
                 OutByte2(reg1 MOD 8 + 8 * ORD(opcode = IL.opLADR_EXCLC), param2)
             ELSE
                 n := param1 * 8;
-                OutByte3(48H, 0FH, 0BAH);  // bts/btr qword[rbp+n], param2
+                OutByte3(48H, 0FH, 0BAH); (* bts/btr qword[rbp+n], param2 *)
                 OutByte(6DH + long(n) + 8 * ORD(opcode = IL.opLADR_EXCLC));
                 OutIntByte(n);
                 OutByte(param2)
@@ -2569,9 +2569,9 @@ BEGIN
 
     lea(rax, entry, sCODE);
     push(rax);
-    pushDA(0); //TYPES
+    pushDA(0); (* TYPES *)
     pushc(tcount);
-    pushDA(ModName_Offs); //MODNAME
+    pushDA(ModName_Offs); (* MODNAME *)
     CallRTL(IL._init);
 
     IF target IN {TARGETS.Win64C, TARGETS.Win64GUI, TARGETS.Linux64} THEN
@@ -2624,13 +2624,13 @@ VAR
 BEGIN
     IF target = TARGETS.Win64DLL THEN
         X86.SetLabel(dllret);
-        OutByte(0C3H) // ret
+        OutByte(0C3H) (* ret *)
     ELSIF target = TARGETS.Linux64SO THEN
         sofinit := NewLabel();
-        OutByte(0C3H);  // ret
+        OutByte(0C3H); (* ret *)
         X86.SetLabel(sofinit);
         CallRTL(IL._sofinit);
-        OutByte(0C3H)   // ret
+        OutByte(0C3H) (* ret *)
     ELSE
         pushc(0);
         CallRTL(IL._exit)

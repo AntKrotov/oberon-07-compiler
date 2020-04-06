@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -153,7 +153,7 @@ BEGIN
     FileHeader.Machine               :=  014CX;
     FileHeader.NumberOfSections      :=  5X;
     FileHeader.TimeDateStamp         :=  UTILS.UnixTime();
-    //FileHeader.PointerToSymbolTable  :=  0;
+    (* FileHeader.PointerToSymbolTable  :=  0; *)
     FileHeader.NumberOfSymbols       :=  6;
     FileHeader.SizeOfOptionalHeader  :=  0X;
     FileHeader.Characteristics       :=  0184X;
@@ -163,7 +163,7 @@ BEGIN
     flat.VirtualAddress := 0;
     flat.SizeOfRawData := ccount;
     flat.PointerToRawData := ORD(FileHeader.NumberOfSections) * PE32.SIZE_OF_IMAGE_SECTION_HEADER + PE32.SIZE_OF_IMAGE_FILE_HEADER;
-    //flat.PointerToRelocations := 0;
+    (* flat.PointerToRelocations := 0; *)
     flat.PointerToLinenumbers := 0;
     SetNumberOfRelocations(flat, RelocCount(program));
     flat.NumberOfLinenumbers := 0X;
@@ -185,7 +185,7 @@ BEGIN
     edata.VirtualAddress := 0;
     edata.SizeOfRawData := ((ExpCount + 1) * 2 + 1) * SIZE_OF_DWORD + LENGTH(szversion) + 1 + ecount;
     edata.PointerToRawData := data.PointerToRawData + data.SizeOfRawData;
-    //edata.PointerToRelocations := 0;
+    (* edata.PointerToRelocations := 0; *)
     edata.PointerToLinenumbers := 0;
     SetNumberOfRelocations(edata, ExpCount * 2 + 1);
     edata.NumberOfLinenumbers := 0X;
@@ -196,7 +196,7 @@ BEGIN
     idata.VirtualAddress := 0;
     idata.SizeOfRawData := isize;
     idata.PointerToRawData := edata.PointerToRawData + edata.SizeOfRawData;
-    //idata.PointerToRelocations := 0;
+    (* idata.PointerToRelocations := 0; *)
     idata.PointerToLinenumbers := 0;
     SetNumberOfRelocations(idata, ICount(ImportTable, ILen));
     idata.NumberOfLinenumbers := 0X;
