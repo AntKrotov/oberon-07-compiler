@@ -36,7 +36,6 @@ VAR
     name:  INTEGER;
     types: INTEGER;
     sets:  ARRAY (MAX_SET + 1) * (MAX_SET + 1) OF INTEGER;
-    bits:  ARRAY MAX_SET + 1 OF INTEGER;
 
     dll: RECORD
         process_detach,
@@ -98,7 +97,6 @@ VAR
     i, n, k: INTEGER;
 
 BEGIN
-
     k := LEN(A) - 1;
     n := A[0];
     i := 0;
@@ -107,21 +105,13 @@ BEGIN
         INC(i)
     END;
     A[k] := n
-
 END _rot;
 
 
 PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
 BEGIN
     IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
-        IF b > MAX_SET THEN
-            b := MAX_SET
-        END;
-        IF a < 0 THEN
-            a := 0
-        END;
-
-        SYSTEM.GET((b * (MAX_SET + 1) + a) * WORD + SYSTEM.ADR(sets[0]), a)
+        SYSTEM.GET((MIN(b, MAX_SET) * (MAX_SET + 1) + MAX(a, 0)) * WORD + SYSTEM.ADR(sets[0]), a)
     ELSE
         a := 0
     END
@@ -130,14 +120,16 @@ BEGIN
 END _set;
 
 
-PROCEDURE [stdcall64] _set1* (a: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _set1* (a: INTEGER); (* {a} -> rax *)
 BEGIN
-    IF ASR(a, 6) = 0 THEN
-        SYSTEM.GET(SYSTEM.ADR(bits[0]) + a * WORD, a)
-    ELSE
-        a := 0
-    END
-    RETURN a
+    SYSTEM.CODE(
+    048H, 031H, 0C0H,         (*  xor  rax, rax               *)
+    048H, 08BH, 04DH, 010H,   (*  mov  rcx, qword [rbp + 16]  *)  (* rcx <- a *)
+    048H, 083H, 0F9H, 03FH,   (*  cmp  rcx, 63                *)
+    077H, 004H,               (*  ja   L                      *)
+    048H, 00FH, 0ABH, 0C8H    (*  bts  rax, rcx               *)
+                              (*  L:                          *)
+    )
 END _set1;
 
 
@@ -300,7 +292,6 @@ VAR
     c:    CHAR;
 
 BEGIN
-
     res := strncmp(str1, str2, MIN(len1, len2));
     IF res = minint THEN
         IF len1 > len2 THEN
@@ -334,7 +325,6 @@ VAR
     c:    WCHAR;
 
 BEGIN
-
     res := strncmpw(str1, str2, MIN(len1, len2));
     IF res = minint THEN
         IF len1 > len2 THEN
@@ -383,7 +373,6 @@ VAR
     c: CHAR;
 
 BEGIN
-
     i := 0;
     REPEAT
         str[i] := CHR(x MOD 10 + ORD("0"));
@@ -407,6 +396,7 @@ END IntToStr;
 PROCEDURE append (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
 VAR
     n1, n2, i, j: INTEGER;
+
 BEGIN
     n1 := LENGTH(s1);
     n2 := LENGTH(s2);
@@ -422,7 +412,6 @@ BEGIN
     END;
 
     s1[j] := 0X
-
 END append;
 
 
@@ -431,7 +420,6 @@ VAR
     s, temp: ARRAY 1024 OF CHAR;
 
 BEGIN
-
     s := "";
     CASE err OF
     | 1: append(s, "assertion failure")
@@ -502,26 +490,24 @@ VAR
     res: INTEGER;
 
 BEGIN
+    res := 0;
+
     CASE fdwReason OF
     |DLL_PROCESS_ATTACH:
         res := 1
     |DLL_THREAD_ATTACH:
-        res := 0;
         IF dll.thread_attach # NIL THEN
             dll.thread_attach(hinstDLL, fdwReason, lpvReserved)
         END
     |DLL_THREAD_DETACH:
-        res := 0;
         IF dll.thread_detach # NIL THEN
             dll.thread_detach(hinstDLL, fdwReason, lpvReserved)
         END
     |DLL_PROCESS_DETACH:
-        res := 0;
         IF dll.process_detach # NIL THEN
             dll.process_detach(hinstDLL, fdwReason, lpvReserved)
         END
     ELSE
-        res := 0
     END
 
     RETURN res
@@ -536,7 +522,7 @@ END _exit;
 
 PROCEDURE [stdcall64] _init* (modname: INTEGER; tcount, _types: INTEGER; code, param: INTEGER);
 VAR
-    t0, t1, i, j, k: INTEGER;
+    t0, t1, i, j: INTEGER;
 
 BEGIN
     API.init(param, code);
@@ -555,13 +541,10 @@ BEGIN
         END
     END;
 
-    k := 1;
     FOR i := 0 TO MAX_SET DO
         FOR j := 0 TO i DO
             sets[i * (MAX_SET + 1) + j] := LSR(ASR(minint, i - j), MAX_SET - i)
-        END;
-        bits[i] := k;
-        k := LSL(k, 1)
+        END
     END;
 
     name := modname;

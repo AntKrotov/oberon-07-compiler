@@ -35,7 +35,6 @@ VAR
 
     name:  INTEGER;
     types: INTEGER;
-    bits:  ARRAY MAX_SET + 1 OF INTEGER;
 
     dll: RECORD
         process_detach,
@@ -97,7 +96,6 @@ VAR
     i, n, k: INTEGER;
 
 BEGIN
-
     k := LEN(A) - 1;
     n := A[0];
     i := 0;
@@ -106,7 +104,6 @@ BEGIN
         INC(i)
     END;
     A[k] := n
-
 END _rot;
 
 
@@ -128,14 +125,16 @@ BEGIN
 END _set;
 
 
-PROCEDURE [stdcall] _set1* (a: INTEGER): INTEGER;
+PROCEDURE [stdcall] _set1* (a: INTEGER); (* {a} -> eax *)
 BEGIN
-    IF ASR(a, 5) = 0 THEN
-        SYSTEM.GET(SYSTEM.ADR(bits[0]) + a * WORD, a)
-    ELSE
-        a := 0
-    END
-    RETURN a
+    SYSTEM.CODE(
+    031H, 0C0H,         (*  xor  eax, eax              *)
+    08BH, 04DH, 008H,   (*  mov  ecx, dword [ebp + 8]  *)  (* ecx <- a *)
+    083H, 0F9H, 01FH,   (*  cmp  ecx, 31               *)
+    077H, 003H,         (*  ja   L                     *)
+    00FH, 0ABH, 0C8H    (*  bts  eax, ecx              *)
+                        (*  L:                         *)
+    )
 END _set1;
 
 
@@ -315,7 +314,6 @@ VAR
     c:    CHAR;
 
 BEGIN
-
     res := strncmp(str1, str2, MIN(len1, len2));
     IF res = minint THEN
         IF len1 > len2 THEN
@@ -349,7 +347,6 @@ VAR
     c:    WCHAR;
 
 BEGIN
-
     res := strncmpw(str1, str2, MIN(len1, len2));
     IF res = minint THEN
         IF len1 > len2 THEN
@@ -398,7 +395,6 @@ VAR
     c: CHAR;
 
 BEGIN
-
     i := 0;
     REPEAT
         str[i] := CHR(x MOD 10 + ORD("0"));
@@ -422,6 +418,7 @@ END IntToStr;
 PROCEDURE append (VAR s1: ARRAY OF CHAR; s2: ARRAY OF CHAR);
 VAR
     n1, n2, i, j: INTEGER;
+
 BEGIN
     n1 := LENGTH(s1);
     n2 := LENGTH(s2);
@@ -437,7 +434,6 @@ BEGIN
     END;
 
     s1[j] := 0X
-
 END append;
 
 
@@ -446,7 +442,6 @@ VAR
     s, temp: ARRAY 1024 OF CHAR;
 
 BEGIN
-
     s := "";
     CASE err OF
     | 1: append(s, "assertion failure")
@@ -517,26 +512,24 @@ VAR
     res: INTEGER;
 
 BEGIN
+    res := 0;
+
     CASE fdwReason OF
     |DLL_PROCESS_ATTACH:
         res := 1
     |DLL_THREAD_ATTACH:
-        res := 0;
         IF dll.thread_attach # NIL THEN
             dll.thread_attach(hinstDLL, fdwReason, lpvReserved)
         END
     |DLL_THREAD_DETACH:
-        res := 0;
         IF dll.thread_detach # NIL THEN
             dll.thread_detach(hinstDLL, fdwReason, lpvReserved)
         END
     |DLL_PROCESS_DETACH:
-        res := 0;
         IF dll.process_detach # NIL THEN
             dll.process_detach(hinstDLL, fdwReason, lpvReserved)
         END
     ELSE
-        res := 0
     END
 
     RETURN res
@@ -569,12 +562,6 @@ BEGIN
 
             SYSTEM.PUT8(i * tcount + j + types, ORD(t0 = t1))
         END
-    END;
-
-    j := 1;
-    FOR i := 0 TO MAX_SET DO
-        bits[i] := j;
-        j := LSL(j, 1)
     END;
 
     name := modname;
