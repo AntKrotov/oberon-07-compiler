@@ -65,7 +65,7 @@ CONST
     opPACK* = 134; opPACKC* = 135; opUNPK* = 136; opCOPY* = 137; opENTER* = 138; opLEAVE* = 139;
     opCALL* = 140; opSAVEP* = 141; opCALLP* = 142; opEQP* = 143; opNEP* = 144; opLEAVER* = 145;
     opGET* = 146; opSAVE16* = 147; opABS* = 148; opFABS* = 149; opFLOOR* = 150; opFLT* = 151;
-    opODD* = 152; opORD* = 153; opASR* = 154; opLSL* = 155; opROR* = 156;
+    opORD* = 153; opASR* = 154; opLSL* = 155; opROR* = 156;
     opASR1* = 157; opLSL1* = 158; opROR1* = 159; opASR2* = 160; opLSL2* = 161; opROR2* = 162;
     opPUSHP* = 163; opLADR* = 164; opTYPEGP* = 165; opIS* = 166; opPUSHF* = 167; opVADR* = 168;
     opPUSHT* = 169; opTYPEGR* = 170; opISREC* = 171; opCHKIDX* = 172; opPARAM* = 173;

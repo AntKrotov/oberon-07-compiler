@@ -1114,7 +1114,7 @@ BEGIN
             IF e.obj = eCONST THEN
                 ARITH.odd(e.value)
             ELSE
-                IL.AddCmd0(IL.opODD)
+                IL.AddCmd(IL.opMODR, 2)
             END
 
         |PROG.stORD:

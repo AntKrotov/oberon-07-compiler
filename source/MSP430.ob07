@@ -1172,10 +1172,6 @@ BEGIN
             Op2(opMOV + BW, imm(param2), dst_x(0, reg1));
             drop
 
-        |IL.opODD:
-            UnOp(reg1);
-            Op2(opAND, imm(1), reg1)
-
         |IL.opEQS .. IL.opGES:
             PushAll(4);
             PushImm((opcode - IL.opEQS) * 12);

@@ -1560,11 +1560,6 @@ BEGIN
             Tst(r1);
             SetCC(jne, r1)
 
-        |IL.opODD:
-            UnOp(r1);
-            LslImm(r1, 31);
-            LsrImm(r1, 31)
-
         |IL.opCHR:
             UnOp(r1);
             Code(0B2C0H + r1 * 9) (* uxtb r1 *)
