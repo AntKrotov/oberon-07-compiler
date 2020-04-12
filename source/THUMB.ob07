@@ -1054,7 +1054,7 @@ END divmod;
 
 PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
-    cmd: COMMAND;
+    cmd, next: COMMAND;
     opcode, param1, param2: INTEGER;
 
     r1, r2, r3: INTEGER;
@@ -1433,18 +1433,16 @@ BEGIN
 
             drop;
             cc := cond(opcode);
+            next := cmd.next(COMMAND);
 
-            IF cmd.next(COMMAND).opcode = IL.opJE THEN
-                jcc(cc, cmd.next(COMMAND).param1);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
-                jcc(inv0(cc), cmd.next(COMMAND).param1);
-                cmd := cmd.next(COMMAND)
-
+            IF next.opcode = IL.opJE THEN
+                jcc(cc, next.param1);
+                cmd := next
+            ELSIF next.opcode = IL.opJNE THEN
+                jcc(inv0(cc), next.param1);
+                cmd := next
             ELSE
-                r1 := GetAnyReg();
-                SetCC(cc, r1)
+                SetCC(cc, GetAnyReg())
             END
 
         |IL.opINCC:

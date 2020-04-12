@@ -616,7 +616,7 @@ PROCEDURE translate;
 VAR
     cmd, next: COMMAND;
 
-    opcode, param1, param2, label, L, a, n, c1, c2: INTEGER;
+    opcode, param1, param2, L, a, n, c1, c2: INTEGER;
 
     reg1, reg2: INTEGER;
 
@@ -878,17 +878,14 @@ BEGIN
 
             drop;
             cc := cond(opcode);
+            next := cmd.next(COMMAND);
 
-            IF cmd.next(COMMAND).opcode = IL.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(ORD(BITS(cc) / {0}), label);
-                cmd := cmd.next(COMMAND)
-
+            IF next.opcode = IL.opJE THEN
+                jcc(cc, next.param1);
+                cmd := next
+            ELSIF next.opcode = IL.opJNE THEN
+                jcc(ORD(BITS(cc) / {0}), next.param1);
+                cmd := next
             ELSE
                 setcc(cc, GetAnyReg())
             END

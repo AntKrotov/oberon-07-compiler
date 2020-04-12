@@ -582,9 +582,117 @@ BEGIN
 END fcmp;
 
 
+PROCEDURE movzx* (reg1, reg2, offs: INTEGER; word: BOOLEAN); (* movzx reg1, byte/word[reg2 + offs] *)
+VAR
+    b: BYTE;
+
+BEGIN
+    OutByte2(0FH, 0B6H + ORD(word));
+    IF (offs = 0) & (reg2 # ebp) THEN
+        b := 0
+    ELSE
+        b := 40H + long(offs)
+    END;
+    OutByte(b + (reg1 MOD 8) * 8 + reg2 MOD 8);
+    IF reg2 = esp THEN
+        OutByte(24H)
+    END;
+    IF b # 0 THEN
+        OutIntByte(offs)
+    END
+END movzx;
+
+
+PROCEDURE _movrm* (reg1, reg2, offs, size: INTEGER; mr: BOOLEAN);
+VAR
+    b: BYTE;
+
+BEGIN
+    IF size = 16 THEN
+        OutByte(66H)
+    END;
+    IF (reg1 >= 8) OR (reg2 >= 8) OR (size = 64) THEN
+        OutByte(40H + reg2 DIV 8 + 4 * (reg1 DIV 8) + 8 * ORD(size = 64))
+    END;
+    OutByte(8BH - 2 * ORD(mr) - ORD(size = 8));
+    IF (offs = 0) & (reg2 # ebp) THEN
+        b := 0
+    ELSE
+        b := 40H + long(offs)
+    END;
+    OutByte(b + (reg1 MOD 8) * 8 + reg2 MOD 8);
+    IF reg2 = esp THEN
+        OutByte(24H)
+    END;
+    IF b # 0 THEN
+        OutIntByte(offs)
+    END
+END _movrm;
+
+
+PROCEDURE movmr (reg1, offs, reg2: INTEGER); (* mov dword[reg1+offs], reg2_8 *)
+BEGIN
+    _movrm(reg2, reg1, offs, 32, TRUE)
+END movmr;
+
+
+PROCEDURE movrm (reg1, reg2, offs: INTEGER); (* mov reg1, dword[reg2 + offs] *)
+BEGIN
+    _movrm(reg1, reg2, offs, 32, FALSE)
+END movrm;
+
+
+PROCEDURE movmr8* (reg1, offs, reg2: INTEGER); (* mov byte[reg1+offs], reg2_8 *)
+BEGIN
+    _movrm(reg2, reg1, offs, 8, TRUE)
+END movmr8;
+
+
+PROCEDURE movrm8* (reg1, reg2, offs: INTEGER); (* mov reg1_8, byte[reg2+offs] *)
+BEGIN
+    _movrm(reg1, reg2, offs, 8, FALSE)
+END movrm8;
+
+
+PROCEDURE movmr16* (reg1, offs, reg2: INTEGER); (* mov word[reg1+offs], reg2_16 *)
+BEGIN
+    _movrm(reg2, reg1, offs, 16, TRUE)
+END movmr16;
+
+
+PROCEDURE movrm16* (reg1, reg2, offs: INTEGER); (* mov reg1_16, word[reg2+offs] *)
+BEGIN
+    _movrm(reg1, reg2, offs, 16, FALSE)
+END movrm16;
+
+
+PROCEDURE pushm* (reg, offs: INTEGER); (* push qword[reg+offs] *)
+VAR
+    b: BYTE;
+
+BEGIN
+    IF reg >= 8 THEN
+        OutByte(41H)
+    END;
+    OutByte(0FFH);
+    IF (offs = 0) & (reg # ebp) THEN
+        b := 30H
+    ELSE
+        b := 70H + long(offs)
+    END;
+    OutByte(b + reg MOD 8);
+    IF reg = esp THEN
+        OutByte(24H)
+    END;
+    IF b # 30H THEN
+        OutIntByte(offs)
+    END
+END pushm;
+
+
 PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
 VAR
-    cmd: COMMAND;
+    cmd, next: COMMAND;
 
     reg1, reg2: INTEGER;
 
@@ -772,9 +880,7 @@ BEGIN
             OutIntByte(n)
 
         |IL.opVADR, IL.opLLOAD32:
-            n := param2 * 4;
-            OutByte2(8BH, 45H + GetAnyReg() * 8 + long(n));  (* mov reg1, dword[ebp + n] *)
-            OutIntByte(n)
+            movrm(GetAnyReg(), ebp, param2 * 4)
 
         |IL.opSADR:
             reg1 := GetAnyReg();
@@ -803,15 +909,14 @@ BEGIN
         |IL.opVLOAD32:
             n := param2 * 4;
             reg1 := GetAnyReg();
-            OutByte2(8BH, 45H + reg1 * 8 + long(n));  (* mov reg1, dword[ebp + n] *)
-            OutIntByte(n);
-            OutByte2(8BH, reg1 * 9)  (* mov reg1, dword[reg1] *)
+            movrm(reg1, ebp, param2 * 4);
+            movrm(reg1, reg1, 0)
 
         |IL.opGLOAD32:
             reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
-                OutByte2(8BH, reg1 * 9)       (* mov reg1, dword[reg1] *)
+                movrm(reg1, reg1, 0)
             ELSE
                 OutByte2(08BH, 05H + reg1 * 8);  (* mov reg1, dword[_bss + param2] *)
                 Reloc(BIN.RBSS, param2)
@@ -819,59 +924,51 @@ BEGIN
 
         |IL.opLOAD32:
             UnOp(reg1);
-            OutByte2(8BH, reg1 * 9)  (* mov reg1, dword[reg1] *)
+            movrm(reg1, reg1, 0)
 
         |IL.opVLOAD8:
-            n := param2 * 4;
             reg1 := GetAnyReg();
-            OutByte2(8BH, 45H + reg1 * 8 + long(n)); (* mov reg1, dword[ebp + n] *)
-            OutIntByte(n);
-            OutByte3(0FH, 0B6H, reg1 * 9) (* movzx reg1, byte[reg1] *)
+            movrm(reg1, ebp, param2 * 4);
+            movzx(reg1, reg1, 0, FALSE)
 
         |IL.opGLOAD8:
             reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
-                OutByte3(0FH, 0B6H, reg1 * 9) (* movzx reg1, byte[reg1] *)
+                movzx(reg1, reg1, 0, FALSE)
             ELSE
                 OutByte3(00FH, 0B6H, 05H + reg1 * 8); (* movzx reg1, byte[_bss + param2] *)
                 Reloc(BIN.RBSS, param2)
             END
 
         |IL.opLLOAD8:
-            n := param2 * 4;
-            OutByte3(0FH, 0B6H, 45H + GetAnyReg() * 8 + long(n)); (* movzx reg1, byte[ebp + n] *)
-            OutIntByte(n)
+            movzx(GetAnyReg(), ebp, param2 * 4, FALSE)
 
         |IL.opLOAD8:
             UnOp(reg1);
-            OutByte3(0FH, 0B6H, reg1 * 9) (* movzx reg1, byte[reg1] *)
+            movzx(reg1, reg1, 0, FALSE)
 
         |IL.opVLOAD16:
-            n := param2 * 4;
             reg1 := GetAnyReg();
-            OutByte2(8BH, 45H + reg1 * 8 + long(n)); (* mov reg1, dword[ebp + n] *)
-            OutIntByte(n);
-            OutByte3(0FH, 0B7H, reg1 * 9) (* movzx reg1, word[reg1] *)
+            movrm(reg1, ebp, param2 * 4);
+            movzx(reg1, reg1, 0, TRUE)
 
         |IL.opGLOAD16:
             reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2);
-                OutByte3(0FH, 0B7H, reg1 * 9) (* movzx reg1, word[reg1] *)
+                movzx(reg1, reg1, 0, TRUE)
             ELSE
                 OutByte3(00FH, 0B7H, 05H + reg1 * 8);  (* movzx reg1, word[_bss + param2] *)
                 Reloc(BIN.RBSS, param2)
             END
 
         |IL.opLLOAD16:
-            n := param2 * 4;
-            OutByte3(0FH, 0B7H, 45H + GetAnyReg() * 8 + long(n)); (* movzx reg1, word[ebp + n] *)
-            OutIntByte(n)
+            movzx(GetAnyReg(), ebp, param2 * 4, TRUE)
 
         |IL.opLOAD16:
             UnOp(reg1);
-            OutByte3(0FH, 0B7H, reg1 * 9) (* movzx reg1, word[reg1] *)
+            movzx(reg1, reg1, 0, TRUE)
 
         |IL.opUMINUS:
             UnOp(reg1);
@@ -885,12 +982,29 @@ BEGIN
         |IL.opADDL, IL.opADDR:
             IF param2 # 0 THEN
                 UnOp(reg1);
-                IF param2 = 1 THEN
-                    OutByte(40H + reg1) (* inc reg1 *)
-                ELSIF param2 = -1 THEN
-                    OutByte(48H + reg1) (* dec reg1 *)
+                next := cmd.next(COMMAND);
+                CASE next.opcode OF
+                |IL.opLOAD32:
+                    movrm(reg1, reg1, param2);
+                    cmd := next
+                |IL.opLOAD16:
+                    movzx(reg1, reg1, param2, TRUE);
+                    cmd := next
+                |IL.opLOAD8:
+                    movzx(reg1, reg1, param2, FALSE);
+                    cmd := next
+                |IL.opLOAD32_PARAM:
+                    pushm(reg1, param2);
+                    drop;
+                    cmd := next
                 ELSE
-                    addrc(reg1, param2)
+                    IF param2 = 1 THEN
+                        OutByte(40H + reg1) (* inc reg1 *)
+                    ELSIF param2 = -1 THEN
+                        OutByte(48H + reg1) (* dec reg1 *)
+                    ELSE
+                        addrc(reg1, param2)
+                    END
                 END
             END
 
@@ -962,19 +1076,19 @@ BEGIN
 
         |IL.opSAVE, IL.opSAVE32:
             BinOp(reg2, reg1);
-            OutByte2(89H, reg2 * 8 + reg1); (* mov dword[reg1], reg2 *)
+            movmr(reg1, 0, reg2);
             drop;
             drop
 
         |IL.opSAVE8:
             BinOp(reg2, reg1);
-            OutByte2(88H, reg2 * 8 + reg1); (* mov byte[reg1], reg2 *)
+            movmr8(reg1, 0, reg2);
             drop;
             drop
 
         |IL.opSAVE16:
             BinOp(reg2, reg1);
-            OutByte3(66H, 89H, reg2 * 8 + reg1); (* mov word[reg1], reg2 *)
+            movmr16(reg1, 0, reg2);
             drop;
             drop
 
@@ -983,7 +1097,7 @@ BEGIN
             IF pic THEN
                 reg2 := GetAnyReg();
                 Pic(reg2, BIN.PICCODE, param2);
-                OutByte2(089H, reg2 * 8 + reg1); (* mov dword[reg1], reg2 *)
+                movmr(reg1, 0, reg2);
                 drop
             ELSE
                 OutByte2(0C7H, reg1);  (* mov dword[reg1], L *)
@@ -996,7 +1110,7 @@ BEGIN
             IF pic THEN
                 reg2 := GetAnyReg();
                 Pic(reg2, BIN.PICIMP, param2);
-                OutByte2(0FFH, 30H + reg2);   (* push dword[reg2] *)
+                pushm(reg2, 0);
                 OutByte2(08FH, reg1);         (* pop  dword[reg1] *)
                 drop
             ELSE
@@ -1019,7 +1133,7 @@ BEGIN
             reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICIMP, param2);
-                OutByte2(08BH, reg1 * 9)         (* mov reg1, dword[reg1] *)
+                movrm(reg1, reg1, 0)
             ELSE
                 OutByte2(08BH, 05H + reg1 * 8);  (* mov reg1, dword[L] *)
                 Reloc(BIN.RIMP, param2)
@@ -1063,17 +1177,14 @@ BEGIN
 
             drop;
             cc := cond(opcode);
+            next := cmd.next(COMMAND);
 
-            IF cmd.next(COMMAND).opcode = IL.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(inv0(cc), label);
-                cmd := cmd.next(COMMAND)
-
+            IF next.opcode = IL.opJE THEN
+                jcc(cc, next.param1);
+                cmd := next
+            ELSIF next.opcode = IL.opJNE THEN
+                jcc(inv0(cc), next.param1);
+                cmd := next
             ELSE
                 reg1 := GetAnyReg();
                 setcc(cc + 16, reg1);
@@ -1183,26 +1294,15 @@ BEGIN
             drop;
             drop;
 
-            CASE param2 OF
-            |1:
-                OutByte2(8AH, reg1 * 9);       (* mov reg1, byte[reg1] *)
-                OutByte2(88H, reg1 * 8 + reg2) (* mov byte[reg2], reg1 *)
-
-            |2:
-                OutByte3(66H, 8BH, reg1 * 9);       (* mov reg1, word[reg1] *)
-                OutByte3(66H, 89H, reg1 * 8 + reg2) (* mov word[reg2], reg1 *)
-
-            |4:
-                OutByte2(8BH, reg1 * 9);        (* mov reg1, dword[reg1] *)
-                OutByte2(89H, reg1 * 8 + reg2)  (* mov dword[reg2], reg1 *)
-
-            |8:
+            IF param2 # 8 THEN
+                _movrm(reg1, reg1, 0, param2 * 8, FALSE);
+                _movrm(reg1, reg2, 0, param2 * 8, TRUE)
+            ELSE
                 PushAll(0);
                 push(reg1);
                 push(reg2);
                 pushc(8);
                 CallRTL(pic, IL._move)
-
             END
 
         |IL.opSAVES:
@@ -1646,8 +1746,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(reg1);
-            reg2 := GetAnyReg();
-            OutByte3(8BH, 40H + reg2 * 8 + reg1, 0FCH)  (* mov reg2, dword[reg1 - 4] *)
+            movrm(GetAnyReg(), reg1, -4)
 
         |IL.opISREC:
             PushAll(2);
@@ -1678,7 +1777,7 @@ BEGIN
         |IL.opTYPEGD:
             UnOp(reg1);
             PushAll(0);
-            OutByte3(0FFH, 070H + reg1, 0FCH);  (* push dword[reg1 - 4] *)
+            pushm(reg1, -4);
             pushc(param2 * tcount);
             CallRTL(pic, IL._guardrec);
             GetRegA
@@ -1878,10 +1977,8 @@ BEGIN
                 Reloc(BIN.RDATA, stroffs + param2)
             END
 
-        |IL.opVADR_PARAM:
-            n := param2 * 4;
-            OutByte2(0FFH, 75H + long(n));  (* push dword[ebp + n] *)
-            OutIntByte(n)
+        |IL.opVADR_PARAM, IL.opLLOAD32_PARAM:
+            pushm(ebp, param2 * 4)
 
         |IL.opCONST_PARAM:
             pushc(param2)
@@ -1890,21 +1987,16 @@ BEGIN
             IF pic THEN
                 reg1 := GetAnyReg();
                 Pic(reg1, BIN.PICBSS, param2);
-                OutByte2(0FFH, 30H + reg1);   (* push dword[reg1] *)
+                pushm(reg1, 0);
                 drop
             ELSE
                 OutByte2(0FFH, 035H);  (* push dword[_bss + param2] *)
                 Reloc(BIN.RBSS, param2)
             END
 
-        |IL.opLLOAD32_PARAM:
-            n := param2 * 4;
-            OutByte2(0FFH, 75H + long(n));  (* push dword[ebp + n] *)
-            OutIntByte(n)
-
         |IL.opLOAD32_PARAM:
             UnOp(reg1);
-            OutByte2(0FFH, 30H + reg1);  (* push dword[reg1] *)
+            pushm(reg1, 0);
             drop
 
         |IL.opGADR_SAVEC:
@@ -1927,10 +2019,8 @@ BEGIN
             OutInt(param2)
 
         |IL.opLADR_SAVE:
-            n := param2 * 4;
             UnOp(reg1);
-            OutByte2(89H, 45H + reg1 * 8 + long(n));  (* mov dword[ebp + n], reg1 *)
-            OutIntByte(n);
+            movmr(ebp, param2 * 4, reg1);
             drop
 
         |IL.opLADR_INCC:
@@ -2011,9 +2101,9 @@ BEGIN
     IF target = TARGETS.Win32DLL THEN
         push(ebp);
         mov(ebp, esp);
-        OutByte3(0FFH, 75H, 16);  (* push dword[ebp+16] *)
-        OutByte3(0FFH, 75H, 12);  (* push dword[ebp+12] *)
-        OutByte3(0FFH, 75H, 8);   (* push dword[ebp+8]  *)
+        pushm(ebp, 16);
+        pushm(ebp, 12);
+        pushm(ebp, 8);
         CallRTL(pic, IL._dllentry);
         test(eax);
         jcc(je, dllret)

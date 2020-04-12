@@ -460,124 +460,34 @@ END neg;
 
 
 PROCEDURE movzx (reg1, reg2, offs: INTEGER; word: BOOLEAN); (* movzx reg1, byte/word[reg2 + offs] *)
-VAR
-    b: BYTE;
-
 BEGIN
     Rex(reg2, reg1);
-    OutByte2(0FH, 0B6H + ORD(word));
-    IF (offs = 0) & (reg2 # rbp) THEN
-        b := 0
-    ELSE
-        b := 40H + long(offs)
-    END;
-    OutByte(b + (reg1 MOD 8) * 8 + reg2 MOD 8);
-    IF reg2 = rsp THEN
-        OutByte(24H)
-    END;
-    IF b # 0 THEN
-        OutIntByte(offs)
-    END
+    X86.movzx(reg1, reg2, offs, word)
 END movzx;
-
-
-PROCEDURE _movrm (reg1, reg2, offs, size: INTEGER; mr: BOOLEAN);
-VAR
-    b: BYTE;
-
-BEGIN
-    IF size = 16 THEN
-        OutByte(66H)
-    END;
-    IF (reg1 >= 8) OR (reg2 >= 8) OR (size = 64) THEN
-        OutByte(40H + reg2 DIV 8 + 4 * (reg1 DIV 8) + 8 * ORD(size = 64))
-    END;
-    OutByte(8BH - 2 * ORD(mr) - ORD(size = 8));
-    IF (offs = 0) & (reg2 # rbp) THEN
-        b := 0
-    ELSE
-        b := 40H + long(offs)
-    END;
-    OutByte(b + (reg1 MOD 8) * 8 + reg2 MOD 8);
-    IF reg2 = rsp THEN
-        OutByte(24H)
-    END;
-    IF b # 0 THEN
-        OutIntByte(offs)
-    END
-END _movrm;
 
 
 PROCEDURE movmr32 (reg1, offs, reg2: INTEGER); (* mov dword[reg1+offs], reg2_32 *)
 BEGIN
-    _movrm(reg2, reg1, offs, 32, TRUE)
+    X86._movrm(reg2, reg1, offs, 32, TRUE)
 END movmr32;
 
 
 PROCEDURE movrm32 (reg1, reg2, offs: INTEGER); (* mov reg1_32, dword[reg2+offs] *)
 BEGIN
-    _movrm(reg1, reg2, offs, 32, FALSE)
+    X86._movrm(reg1, reg2, offs, 32, FALSE)
 END movrm32;
-
-
-PROCEDURE movmr8 (reg1, offs, reg2: INTEGER); (* mov byte[reg1+offs], reg2_8 *)
-BEGIN
-    _movrm(reg2, reg1, offs, 8, TRUE)
-END movmr8;
-
-
-PROCEDURE movrm8 (reg1, reg2, offs: INTEGER); (* mov reg1_8, byte[reg2+offs] *)
-BEGIN
-    _movrm(reg1, reg2, offs, 8, FALSE)
-END movrm8;
-
-
-PROCEDURE movmr16 (reg1, offs, reg2: INTEGER); (* mov word[reg1+offs], reg2_16 *)
-BEGIN
-    _movrm(reg2, reg1, offs, 16, TRUE)
-END movmr16;
-
-
-PROCEDURE movrm16 (reg1, reg2, offs: INTEGER); (* mov reg1_16, word[reg2+offs] *)
-BEGIN
-    _movrm(reg1, reg2, offs, 16, FALSE)
-END movrm16;
 
 
 PROCEDURE movmr (reg1, offs, reg2: INTEGER); (* mov qword[reg1+offs], reg2 *)
 BEGIN
-    _movrm(reg2, reg1, offs, 64, TRUE)
+    X86._movrm(reg2, reg1, offs, 64, TRUE)
 END movmr;
 
 
 PROCEDURE movrm (reg1, reg2, offs: INTEGER); (* mov reg1, qword[reg2+offs] *)
 BEGIN
-    _movrm(reg1, reg2, offs, 64, FALSE)
+    X86._movrm(reg1, reg2, offs, 64, FALSE)
 END movrm;
-
-
-PROCEDURE pushm (reg, offs: INTEGER); (* push qword[reg+offs] *)
-VAR
-    b: BYTE;
-
-BEGIN
-    IF reg >= 8 THEN
-        OutByte(41H)
-    END;
-    OutByte(0FFH);
-    IF (offs = 0) & (reg # rbp) THEN
-        b := 30H
-    ELSE
-        b := 70H + long(offs)
-    END;
-    OutByte(b + reg MOD 8);
-    IF reg = rsp THEN
-        OutByte(24H)
-    END;
-    IF b # 30H THEN
-        OutIntByte(offs)
-    END
-END pushm;
 
 
 PROCEDURE comisd (xmm1, xmm2: INTEGER); (* comisd xmm1, xmm2 *)
@@ -1400,16 +1310,13 @@ BEGIN
             drop;
             cc := X86.cond(opcode);
 
-            IF cmd.next(COMMAND).opcode = IL.opJE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(cc, label);
-                cmd := cmd.next(COMMAND)
-
-            ELSIF cmd.next(COMMAND).opcode = IL.opJNE THEN
-                label := cmd.next(COMMAND).param1;
-                jcc(X86.inv0(cc), label);
-                cmd := cmd.next(COMMAND)
-
+            next := cmd.next(COMMAND);
+            IF next.opcode = IL.opJE THEN
+                jcc(cc, next.param1);
+                cmd := next
+            ELSIF next.opcode = IL.opJNE THEN
+                jcc(X86.inv0(cc), next.param1);
+                cmd := next
             ELSE
                 reg1 := GetAnyReg();
                 setcc(cc + 16, reg1);
@@ -1645,7 +1552,7 @@ BEGIN
         |IL.opTYPEGD:
             UnOp(reg1);
             PushAll(0);
-            pushm(reg1, -8);
+            X86.pushm(reg1, -8);
             pushc(param2 * tcount);
             CallRTL(IL._guardrec);
             GetRegA
@@ -1710,13 +1617,13 @@ BEGIN
 
         |IL.opSAVE8:
             BinOp(reg2, reg1);
-            movmr8(reg1, 0, reg2);
+            X86.movmr8(reg1, 0, reg2);
             drop;
             drop
 
         |IL.opSAVE16:
             BinOp(reg2, reg1);
-            movmr16(reg1, 0, reg2);
+            X86.movmr16(reg1, 0, reg2);
             drop;
             drop
 
@@ -1794,15 +1701,39 @@ BEGIN
             END
 
         |IL.opADDL, IL.opADDR:
-            IF param2 # 0 THEN
+            IF (param2 # 0) & ~isLong(param2) THEN
                 UnOp(reg1);
-                IF param2 = 1 THEN
-                    incr(reg1)
-                ELSIF param2 = -1 THEN
-                    decr(reg1)
+                next := cmd.next(COMMAND);
+                CASE next.opcode OF
+                |IL.opLOAD64:
+                    movrm(reg1, reg1, param2);
+                    cmd := next
+                |IL.opLOAD32:
+                    movrm32(reg1, reg1, param2);
+                    shiftrc(shl, reg1, 32);
+                    shiftrc(shr, reg1, 32);
+                    cmd := next
+                |IL.opLOAD16:
+                    movzx(reg1, reg1, param2, TRUE);
+                    cmd := next
+                |IL.opLOAD8:
+                    movzx(reg1, reg1, param2, FALSE);
+                    cmd := next
+                |IL.opLOAD64_PARAM:
+                    X86.pushm(reg1, param2);
+                    drop;
+                    cmd := next
                 ELSE
-                    addrc(reg1, param2)
+                    IF param2 = 1 THEN
+                        incr(reg1)
+                    ELSIF param2 = -1 THEN
+                        decr(reg1)
+                    ELSE
+                        addrc(reg1, param2)
+                    END
                 END
+            ELSIF isLong(param2) THEN
+                addrc(reg1, param2)
             END
 
         |IL.opDIV:
@@ -2002,8 +1933,8 @@ BEGIN
             END;
             drop;
             drop;
-            _movrm(reg1, reg1, 0, param2 * 8, FALSE);
-            _movrm(reg1, reg2, 0, param2 * 8, TRUE)
+            X86._movrm(reg1, reg1, 0, param2 * 8, FALSE);
+            X86._movrm(reg1, reg2, 0, param2 * 8, TRUE)
 
         |IL.opCHKBYTE:
             BinOp(reg1, reg2);
@@ -2301,11 +2232,11 @@ BEGIN
             pushDA(stroffs + param2)
 
         |IL.opVADR_PARAM:
-            pushm(rbp, param2 * 8)
+            X86.pushm(rbp, param2 * 8)
 
         |IL.opLOAD64_PARAM:
             UnOp(reg1);
-            pushm(reg1, 0);
+            X86.pushm(reg1, 0);
             drop
 
         |IL.opLLOAD64_PARAM:
@@ -2313,7 +2244,7 @@ BEGIN
             IF reg1 # -1 THEN
                 push(reg1)
             ELSE
-                pushm(rbp, param2 * 8)
+                X86.pushm(rbp, param2 * 8)
             END
 
         |IL.opGLOAD64_PARAM:
@@ -2687,8 +2618,8 @@ PROCEDURE rsave (reg, offs, size: INTEGER);
 BEGIN
     offs := offs * 8;
     CASE size OF
-    |1: movmr8(rbp, offs, reg)
-    |2: movmr16(rbp, offs, reg)
+    |1: X86.movmr8(rbp, offs, reg)
+    |2: X86.movmr16(rbp, offs, reg)
     |4: movmr32(rbp, offs, reg)
     |8: movmr(rbp, offs, reg)
     END
