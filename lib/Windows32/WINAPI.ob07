@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
 MODULE WINAPI;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM, API;
 
 
 CONST
@@ -16,6 +16,8 @@ CONST
 
 
 TYPE
+
+    DLL_ENTRY* = API.DLL_ENTRY;
 
     STRING = ARRAY 260 OF CHAR;
 
@@ -228,6 +230,12 @@ PROCEDURE [windows-, "kernel32.dll", "AllocConsole"]
 
 PROCEDURE [windows-, "kernel32.dll", "FreeConsole"]
     FreeConsole* (): BOOLEAN;
+
+
+PROCEDURE SetDllEntry* (process_detach, thread_detach, thread_attach: DLL_ENTRY);
+BEGIN
+    API.SetDll(process_detach, thread_detach, thread_attach)
+END SetDllEntry;
 
 
 END WINAPI.

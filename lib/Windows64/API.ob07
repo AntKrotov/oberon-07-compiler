@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -14,12 +14,26 @@ CONST
 
     SectionAlignment = 1000H;
 
+    DLL_PROCESS_ATTACH = 1;
+    DLL_THREAD_ATTACH  = 2;
+    DLL_THREAD_DETACH  = 3;
+    DLL_PROCESS_DETACH = 0;
+
+
+TYPE
+
+    DLL_ENTRY* = PROCEDURE (hinstDLL, fdwReason, lpvReserved: INTEGER);
+
 
 VAR
 
     eol*:  ARRAY 3 OF CHAR;
     base*: INTEGER;
     heap:  INTEGER;
+
+    process_detach,
+    thread_detach,
+    thread_attach: DLL_ENTRY;
 
 
 PROCEDURE [windows-, "kernel32.dll", "ExitProcess"]    ExitProcess (code: INTEGER);
@@ -51,6 +65,9 @@ END _DISPOSE;
 
 PROCEDURE init* (reserved, code: INTEGER);
 BEGIN
+    process_detach := NIL;
+    thread_detach  := NIL;
+    thread_attach  := NIL;
     eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     base := code - SectionAlignment;
     heap := GetProcessHeap()
@@ -67,6 +84,47 @@ PROCEDURE exit_thread* (code: INTEGER);
 BEGIN
     ExitThread(code)
 END exit_thread;
+
+
+PROCEDURE dllentry* (hinstDLL, fdwReason, lpvReserved: INTEGER): INTEGER;
+VAR
+    res: INTEGER;
+
+BEGIN
+    res := 0;
+
+    CASE fdwReason OF
+    |DLL_PROCESS_ATTACH:
+        res := 1
+    |DLL_THREAD_ATTACH:
+        IF thread_attach # NIL THEN
+            thread_attach(hinstDLL, fdwReason, lpvReserved)
+        END
+    |DLL_THREAD_DETACH:
+        IF thread_detach # NIL THEN
+            thread_detach(hinstDLL, fdwReason, lpvReserved)
+        END
+    |DLL_PROCESS_DETACH:
+        IF process_detach # NIL THEN
+            process_detach(hinstDLL, fdwReason, lpvReserved)
+        END
+    ELSE
+    END
+
+    RETURN res
+END dllentry;
+
+
+PROCEDURE sofinit*;
+END sofinit;
+
+
+PROCEDURE SetDll* (_process_detach, _thread_detach, _thread_attach: DLL_ENTRY);
+BEGIN
+    process_detach := _process_detach;
+    thread_detach  := _thread_detach;
+    thread_attach  := _thread_attach
+END SetDll;
 
 
 END API.
