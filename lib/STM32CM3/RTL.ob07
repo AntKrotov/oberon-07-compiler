@@ -229,7 +229,6 @@ VAR
     bRes: BOOLEAN;
 
 BEGIN
-
     res := strncmp(str1, str2, MIN(len1, len2));
     IF res = 0 THEN
         res := _length(len1, str1) - _length(len2, str2)
@@ -276,7 +275,6 @@ VAR
     bRes: BOOLEAN;
 
 BEGIN
-
     res := strncmpw(str1, str2, MIN(len1, len2));
     IF res = 0 THEN
         res := _lengthw(len1, str1) - _lengthw(len2, str2)

@@ -1667,7 +1667,7 @@ BEGIN
     Code.size := Fixup(Code.address, IntVectorSize + TypesSize);
     Data.address := Code.address + Code.size;
     Data.size := CHL.Length(IL.codes.data);
-    Data.size := Data.size + ORD(ODD(Data.size));
+    Data.size := Data.size + Data.size MOD 2;
     TextSize  := Code.size + Data.size;
 
     IF Code.address + TextSize + MAX(IL.codes.dmin - Data.size, IntVectorSize + TypesSize) > 10000H  THEN
@@ -1675,7 +1675,7 @@ BEGIN
     END;
 
     Bss.address := RTL.ram + RTL.VarSize;
-    Bss.size := IL.codes.bss + ORD(ODD(IL.codes.bss));
+    Bss.size := IL.codes.bss + IL.codes.bss MOD 2;
     heap := Bss.address + Bss.size;
     stack := RTL.ram + ram;
     ASSERT(stack - heap >= minStackSize);

@@ -647,7 +647,7 @@ BEGIN
             |CODE:  INC(count)
             |LABEL: BIN.SetLabel(program, code.label, count)
             |JUMP:  INC(count, code.len); code.offset := count + ORD(code.short)
-            |RELOC: INC(count, 7 - ORD(Target.InstrSet.thumb2) * 3 + ORD(ODD(code.rel)))
+            |RELOC: INC(count, 7 - ORD(Target.InstrSet.thumb2) * 3 + code.rel MOD 2)
             END;
 
             code := code.next(ANYCODE)
@@ -897,7 +897,7 @@ VAR
 
 BEGIN
     IF Target.InstrSet.it THEN
-        Code(0BF00H + cc * 16 + ORD(~ODD(cc)) * 8 + 4); (* ite cc *)
+        Code(0BF00H + cc * 16 + ((cc + 1) MOD 2) * 8 + 4); (* ite cc *)
         MovConst(r, 1);
         MovConst(r, 0)
     ELSE

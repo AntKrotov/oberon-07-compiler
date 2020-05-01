@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -33,7 +33,7 @@ BEGIN
 END append;
 
 
-PROCEDURE reverse* (VAR s: ARRAY OF CHAR);
+PROCEDURE reverse (VAR s: ARRAY OF CHAR);
 VAR
     i, j: INTEGER;
     a, b: CHAR;
@@ -297,21 +297,21 @@ BEGIN
             u := ORD(c)
 
         |0C1X..0DFX:
-            u := LSL(ORD(c) - 0C0H, 6);
+            u := (ORD(c) - 0C0H) * 64;
             IF i + 1 < srclen THEN
                 INC(i);
-                INC(u, ORD(BITS(ORD(src[i])) * {0..5}))
+                INC(u, ORD(src[i]) MOD 64)
             END
 
         |0E1X..0EFX:
-            u := LSL(ORD(c) - 0E0H, 12);
+            u := (ORD(c) - 0E0H) * 4096;
             IF i + 1 < srclen THEN
                 INC(i);
-                INC(u, ORD(BITS(ORD(src[i])) * {0..5}) * 64)
+                INC(u, (ORD(src[i]) MOD 64) * 64)
             END;
             IF i + 1 < srclen THEN
                 INC(i);
-                INC(u, ORD(BITS(ORD(src[i])) * {0..5}))
+                INC(u, ORD(src[i]) MOD 64)
             END
 (*
         |0F1X..0F7X:

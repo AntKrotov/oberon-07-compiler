@@ -75,15 +75,20 @@ BEGIN
 END Float;
 
 
+PROCEDURE range* (i: VALUE; a, b: INTEGER): BOOLEAN;
+    RETURN (a <= i.int) & (i.int <= b)
+END range;
+
+
 PROCEDURE check* (v: VALUE): BOOLEAN;
 VAR
     res: BOOLEAN;
 
 BEGIN
     CASE v.typ OF
-    |tINTEGER: res := (UTILS.target.minInt <= v.int) & (v.int <= UTILS.target.maxInt)
-    |tCHAR:    res := (0 <= v.int) & (v.int <= 255)
-    |tWCHAR:   res := (0 <= v.int) & (v.int <= 65535)
+    |tINTEGER: res := range(v, UTILS.target.minInt, UTILS.target.maxInt)
+    |tCHAR:    res := range(v, 0, 255)
+    |tWCHAR:   res := range(v, 0, 65535)
     |tREAL:    res := (-UTILS.target.maxReal <= v.float) & (v.float <= UTILS.target.maxReal)
     END
 
@@ -196,61 +201,15 @@ END hconv;
 
 
 PROCEDURE opFloat2 (VAR a: REAL; b: REAL; op: CHAR): BOOLEAN;
-VAR
-    max: REAL;
-    res: BOOLEAN;
-
 BEGIN
-    max := UTILS.maxreal;
-
     CASE op OF
-    |"+":
-        IF (a < 0.0) & (b < 0.0) THEN
-            res := a > -max - b
-        ELSIF (a > 0.0) & (b > 0.0) THEN
-            res := a <  max - b
-        ELSE
-            res := TRUE
-        END;
-        IF res THEN
-            a := a + b
-        END
-
-    |"-":
-        IF (a < 0.0) & (b > 0.0) THEN
-            res := a > b - max
-        ELSIF (a > 0.0) & (b < 0.0) THEN
-            res := a < b + max
-        ELSE
-            res := TRUE
-        END;
-        IF res THEN
-            a := a - b
-        END
-
-    |"*":
-        IF (ABS(a) > 1.0) & (ABS(b) > 1.0) THEN
-            res := ABS(a) < max / ABS(b)
-        ELSE
-            res := TRUE
-        END;
-        IF res THEN
-            a := a * b
-        END
-
-    |"/":
-        IF ABS(b) < 1.0 THEN
-            res := ABS(a) < max * ABS(b)
-        ELSE
-            res := TRUE
-        END;
-        IF res THEN
-            a := a / b
-        END
-
+    |"+": a := a + b
+    |"-": a := a - b
+    |"*": a := a * b
+    |"/": a := a / b
     END
 
-    RETURN res
+    RETURN (-UTILS.maxreal <= a) & (a <= UTILS.maxreal) (* +inf > UTILS.maxreal *)
 END opFloat2;
 
 
@@ -663,11 +622,6 @@ BEGIN
     END;
     a.typ := tBOOLEAN
 END opBoolean;
-
-
-PROCEDURE range* (i: VALUE; a, b: INTEGER): BOOLEAN;
-    RETURN (a <= i.int) & (i.int <= b)
-END range;
 
 
 PROCEDURE less (v, v2: VALUE; VAR error: INTEGER): BOOLEAN;
