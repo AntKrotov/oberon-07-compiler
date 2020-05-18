@@ -7,13 +7,15 @@ CONST   RTLD_LAZY* = 1;
                 O_NEWFILE* = 0C2H;  (* O_RDWR | O_CREAT | O_EXCL *)
                 (* O_RDONLY=0, O_WRONLY=1, O_RDWR=2, O_CREAT=0x40, O_EXCL=0x80, O_TRUNC=0x200 *)
                 FD_SETSIZE* = 1024;   (* fd for select() must be smaller than FD_SETSIZE *)
+                BIT_DEPTH* = _unix.BIT_DEPTH;
+                LEN_FD_SET = FD_SETSIZE DIV BIT_DEPTH;
 
 TYPE
         timespec* = RECORD
                 tv_sec*, tv_usec* :INTEGER
         END;
         fd_set* = POINTER TO RECORD   (* for select() *)
-                bits* :ARRAY 16 OF SET   (* 1024 bits *)
+                bits* :ARRAY LEN_FD_SET OF SET   (* 1024 bits *)
         END;
 
 VAR
@@ -42,10 +44,10 @@ BEGIN RETURN _unix._write (fd, SYSTEM.ADR(n), 1) END writeByte;
 
 PROCEDURE FD_ZERO* (VAR selectSet :fd_set);
 VAR i :INTEGER;
-BEGIN FOR i := 0 TO 15 DO selectSet.bits[i] := {} END END FD_ZERO;
+BEGIN FOR i := 0 TO LEN_FD_SET-1 DO selectSet.bits[i] := {} END END FD_ZERO;
 
 PROCEDURE FD_SET* (fd :INTEGER; VAR selectSet :fd_set);   (* set fd bit in a select() fd_set *)
-BEGIN selectSet.bits[fd DIV 64] := selectSet.bits[fd DIV 64] + { fd MOD 64 }
+BEGIN INCL(selectSet.bits[fd DIV LEN_FD_SET], fd MOD LEN_FD_SET)
 END FD_SET;
 
 PROCEDURE select* (cnt :INTEGER; readfds, writefds, exceptfds :fd_set; timeout :timespec) :INTEGER;

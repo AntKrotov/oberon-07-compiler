@@ -22,6 +22,8 @@ CONST
         EventButtonPressed* = 84;    (* button, x, y, state *)
         EventButtonReleased* = 85;    (* button, x, y, state *)
         (* mouse button 1-5 = Left, Middle, Right, Scroll wheel up, Scroll wheel down *)
+        
+        bit64 = ORD(unix.BIT_DEPTH = 64);
 
 TYPE EventPars* = ARRAY 5 OF INTEGER;
         XEvent = RECORD
@@ -148,11 +150,17 @@ VAR type, n, ri :INTEGER;
         x, y, w, h :INTEGER;
         timeout :unix.timespec;
 BEGIN
-(* struct XEvent:
+(* struct XEvent (64-bit):
 any:   4 type   8 serial   4 send_event   8 display   8 window   8 window
 expose:   40 any   4 x, y, w, h, count
 xconfigure:   48 any   4 x, y, w, h
 xkey / xbutton / xmotion:   48 any   8 sub_window   8 time_ms   4 x, y, x_root, y_root   4 state   4 keycode/button
+*)
+(* struct XEvent (32-bit):
+any:   4 type   4 serial   4 send_event   4 display   4 window
+expose:   20 any   4 x, y, w, h, count
+xconfigure:   24 any   4 x, y, w, h
+xkey / xbutton / xmotion:   24 any   4 sub_window   4 time_ms   4 x, y, x_root, y_root   4 state   4 keycode/button
 *)
         type := 0;
         WHILE type = 0 DO
@@ -165,15 +173,15 @@ xkey / xbutton / xmotion:   48 any   8 sub_window   8 time_ms   4 x, y, x_root, 
                         XNextEvent (display, SYSTEM.ADR(event));
                         CASE readInt (event, 0) OF
                         Expose :
-                                x := readInt (event, 10); y := readInt (event, 11);
-                                w := readInt (event, 12); h := readInt (event, 13);
+                                x := readInt (event, 5 + 5 * bit64); y := readInt (event, 6 + 5 * bit64);
+                                w := readInt (event, 7 + 5 * bit64); h := readInt (event, 8 + 5 * bit64);
                                 XPutImage (display, window, gc, img, x, y, x, y, w, h);
                         | ConfigureNotify :
-                                w := readInt (event, 14); h := readInt (event, 15);
+                                w := readInt (event, 8 + 6 * bit64); h := readInt (event, 9 + 6 * bit64);
                                 IF (w # winWidth) & (h # winHeight) THEN
                                         ASSERT ((w >= 0) & (h >= 0));
                                         IF w > ScreenWidth THEN w := ScreenWidth END;
-                                        IF h > ScreenHeight THEN h := ScreenHeight END;
+                                        IF h > ScreenHeight THEN h := ScreenHeight END;                                        
                                         winWidth := w; winHeight := h;
                                         ev[0] := EventResize; ev[1] := 0; ev[2] := w; ev[3] := h; ev[4] := 0;
                                 END;
@@ -181,15 +189,15 @@ xkey / xbutton / xmotion:   48 any   8 sub_window   8 time_ms   4 x, y, x_root, 
                                 type := EventKeyPressed;
                                 x := XLookupString (SYSTEM.ADR(event), 0, 0, SYSTEM.ADR(n), 0);  (* KeySym *)
                                 IF (n = 8) OR (n = 10) OR (n >= 32) & (n <= 126) THEN ev[1] := 1 ELSE ev[1] := 0; n := 0 END;  (* isprint *)
-                                ev[2] := readInt (event, 21);  (* keycode *)
-                                ev[3] := readInt (event, 20);  (* state *)
+                                ev[2] := readInt (event, 13 + 8 * bit64); (* keycode *)
+                                ev[3] := readInt (event, 12 + 8 * bit64); (* state *)
                                 ev[4] := n;  (* KeySym *)
                         | ButtonPress :
                                 type := EventButtonPressed;
-                                ev[1] := readInt (event, 21);  (* button *)
-                                ev[2] := readInt (event, 16);  (* x *)
-                                ev[3] := readInt (event, 17);  (* y *)
-                                ev[4] := readInt (event, 20);  (* state *)
+                                ev[1] := readInt (event, 13 + 8 * bit64); (* button *)
+                                ev[2] := readInt (event, 8 + 8 * bit64);  (* x *)
+                                ev[3] := readInt (event, 9 + 8 * bit64);  (* y *)
+                                ev[4] := readInt (event, 12 + 8 * bit64); (* state *)
                         ELSE
                         END
                 END

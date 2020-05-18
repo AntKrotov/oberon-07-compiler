@@ -9,6 +9,7 @@ IMPORT SYSTEM, API;
 *)
 
 CONST   RTLD_LAZY = 1;
+        BIT_DEPTH* = API.BIT_DEPTH;
 
 VAR sym, libc, libdl :INTEGER;
 

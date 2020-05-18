@@ -13,6 +13,7 @@ IMPORT SYSTEM;
 CONST
 
     RTLD_LAZY* = 1;
+    BIT_DEPTH* = 64;
 
 
 TYPE

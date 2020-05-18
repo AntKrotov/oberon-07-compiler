@@ -2,7 +2,7 @@
 IMPORT SYSTEM, out, unix, gr;
 
 CONST
-        Side = 16;      (* nr of pixels of a field side *)
+        Side = 14;      (* nr of pixels of a field side *)
         width = 62; height = 48;        (* board size *)
         nrFields = width * height;
         BackGroundColor = 0B0B050H;
@@ -168,7 +168,7 @@ BEGIN
         Acolor := field[47*width]; field[47*width+1] := Acolor; field[46*width] := Acolor; field[46*width+1] := Acolor;
         Bcolor := field[width-1]; field[width-2] := Bcolor; field[2*width-2] := Bcolor; field[2*width-1] := Bcolor;
         base := gr.base; stride := gr.stride;
-        gr.createWindow (1048, 780);
+        gr.createWindow (1000, 700);
         screenBufSize := gr.winHeight * stride;
         stop := FALSE;
         drawAll;
