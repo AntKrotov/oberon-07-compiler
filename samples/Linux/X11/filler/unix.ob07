@@ -47,7 +47,7 @@ VAR i :INTEGER;
 BEGIN FOR i := 0 TO LEN_FD_SET-1 DO selectSet.bits[i] := {} END END FD_ZERO;
 
 PROCEDURE FD_SET* (fd :INTEGER; VAR selectSet :fd_set);   (* set fd bit in a select() fd_set *)
-BEGIN INCL(selectSet.bits[fd DIV LEN_FD_SET], fd MOD LEN_FD_SET)
+BEGIN INCL(selectSet.bits[fd DIV BIT_DEPTH], fd MOD BIT_DEPTH)
 END FD_SET;
 
 PROCEDURE select* (cnt :INTEGER; readfds, writefds, exceptfds :fd_set; timeout :timespec) :INTEGER;

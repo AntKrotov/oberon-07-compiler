@@ -64,7 +64,6 @@ VAR stop :BOOLEAN;
         ev :gr.EventPars;
         ch :CHAR;
 BEGIN
-        
         base := gr.base; stride := gr.stride;
         gr.createWindow (800, 480);
         screenBufSize := gr.winHeight * stride;
