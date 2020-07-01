@@ -17,7 +17,7 @@ IMPORT In, Out, API, Console;
 
 
 CONST
-    maxCard = 7FFFFFFFH DIV 3;
+    maxCard = ROR(-2, 1) DIV 3;
     List    = 1;
     Count   = 2;
     Max     = 3;
@@ -109,7 +109,7 @@ BEGIN
     Out.String("Iterations total = "); Out.Int(HailStone(27, Count), 1);
     Out.String(" max value = ");       Out.Int(HailStone(27, Max), 1);
     Out.Ln;
-    FindMax(1000000);
+    FindMax(100000);
     Out.String("Done.");
     Out.Ln; In.Ln;
 

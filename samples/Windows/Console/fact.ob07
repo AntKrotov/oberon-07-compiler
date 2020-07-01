@@ -18,7 +18,7 @@ IMPORT In, Out, Console;
 
 
 CONST
-    MAX_INTEGER = 2147483647;
+    MAX_INTEGER = ROR(-2, 1);
 
 
 VAR
