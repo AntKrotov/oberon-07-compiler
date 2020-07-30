@@ -2336,8 +2336,6 @@ VAR
 
     DataAdr, BssAdr, DataSize, BssSize, CodeSize: INTEGER;
 
-    File: WR.FILE;
-
 BEGIN
     IF target = TARGETS.STM32CM3 THEN
         CortexM3
@@ -2387,12 +2385,12 @@ BEGIN
         ERRORS.Error(204)
     END;
 
-    File := WR.Create(outname);
+    WR.Create(outname);
 
-    HEX.Data2(File, program.code, 0, CodeSize, high(Target.FlashAdr));
-    HEX.End(File);
+    HEX.Data2(program.code, 0, CodeSize, high(Target.FlashAdr));
+    HEX.End;
 
-    WR.Close(File);
+    WR.Close;
 
     C.StringLn("--------------------------------------------");
     C.String(  "  rom:  "); C.Int(CodeSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(CodeSize * 100 DIV rom); C.StringLn("%)");

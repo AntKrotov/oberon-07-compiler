@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -85,9 +85,6 @@ TYPE
     END;
 
 
-    FILE = WR.FILE;
-
-
 VAR
 
     dynamic: LISTS.LIST;
@@ -97,45 +94,35 @@ VAR
     hashtab, bucket, chain: CHL.INTLIST;
 
 
-PROCEDURE align (n, _align: INTEGER): INTEGER;
+PROCEDURE Write16 (w: WCHAR);
 BEGIN
-    IF n MOD _align # 0 THEN
-        n := n + _align - (n MOD _align)
-    END
-
-    RETURN n
-END align;
-
-
-PROCEDURE Write16 (file: FILE; w: WCHAR);
-BEGIN
-    WR.Write16LE(file, ORD(w))
+    WR.Write16LE(ORD(w))
 END Write16;
 
 
-PROCEDURE WritePH (file: FILE; ph: Elf32_Phdr);
+PROCEDURE WritePH (ph: Elf32_Phdr);
 BEGIN
-    WR.Write32LE(file, ph.p_type);
-    WR.Write32LE(file, ph.p_offset);
-    WR.Write32LE(file, ph.p_vaddr);
-    WR.Write32LE(file, ph.p_paddr);
-    WR.Write32LE(file, ph.p_filesz);
-    WR.Write32LE(file, ph.p_memsz);
-    WR.Write32LE(file, ph.p_flags);
-    WR.Write32LE(file, ph.p_align)
+    WR.Write32LE(ph.p_type);
+    WR.Write32LE(ph.p_offset);
+    WR.Write32LE(ph.p_vaddr);
+    WR.Write32LE(ph.p_paddr);
+    WR.Write32LE(ph.p_filesz);
+    WR.Write32LE(ph.p_memsz);
+    WR.Write32LE(ph.p_flags);
+    WR.Write32LE(ph.p_align)
 END WritePH;
 
 
-PROCEDURE WritePH64 (file: FILE; ph: Elf32_Phdr);
+PROCEDURE WritePH64 (ph: Elf32_Phdr);
 BEGIN
-    WR.Write32LE(file, ph.p_type);
-    WR.Write32LE(file, ph.p_flags);
-    WR.Write64LE(file, ph.p_offset);
-    WR.Write64LE(file, ph.p_vaddr);
-    WR.Write64LE(file, ph.p_paddr);
-    WR.Write64LE(file, ph.p_filesz);
-    WR.Write64LE(file, ph.p_memsz);
-    WR.Write64LE(file, ph.p_align)
+    WR.Write32LE(ph.p_type);
+    WR.Write32LE(ph.p_flags);
+    WR.Write64LE(ph.p_offset);
+    WR.Write64LE(ph.p_vaddr);
+    WR.Write64LE(ph.p_paddr);
+    WR.Write64LE(ph.p_filesz);
+    WR.Write64LE(ph.p_memsz);
+    WR.Write64LE(ph.p_align)
 END WritePH64;
 
 
@@ -276,8 +263,6 @@ VAR
     SizeOf: RECORD header, code, data, bss: INTEGER END;
 
     Offset: RECORD symtab, reltab, hash, strtab, dyn: INTEGER END;
-
-    File: FILE;
 
     Interpreter: ARRAY 40 OF CHAR; lenInterpreter: INTEGER;
 
@@ -494,7 +479,7 @@ BEGIN
     phdr[bss].p_flags := PF_R + PF_W;
     phdr[bss].p_align := 1000H;
 
-    fixup(program, ehdr.e_entry, phdr[data].p_vaddr + pad, align(phdr[bss].p_vaddr, 16), amd64);
+    fixup(program, ehdr.e_entry, phdr[data].p_vaddr + pad, WR.align(phdr[bss].p_vaddr, 16), amd64);
 
     item := symtab.first;
     WHILE item # NIL DO
@@ -509,146 +494,146 @@ BEGIN
         item := LISTS.getidx(dynamic, 11); item(Elf32_Dyn).d_val := BIN.GetLabel(program, fini) + ehdr.e_entry
     END;
 
-    File := WR.Create(FileName);
+    WR.Create(FileName);
 
     FOR i := 0 TO EI_NIDENT - 1 DO
-        WR.WriteByte(File, ehdr.e_ident[i])
+        WR.WriteByte(ehdr.e_ident[i])
     END;
 
-    Write16(File, ehdr.e_type);
-    Write16(File, ehdr.e_machine);
+    Write16(ehdr.e_type);
+    Write16(ehdr.e_machine);
 
-    WR.Write32LE(File, ehdr.e_version);
+    WR.Write32LE(ehdr.e_version);
     IF amd64 THEN
-        WR.Write64LE(File, ehdr.e_entry);
-        WR.Write64LE(File, ehdr.e_phoff);
-        WR.Write64LE(File, ehdr.e_shoff)
+        WR.Write64LE(ehdr.e_entry);
+        WR.Write64LE(ehdr.e_phoff);
+        WR.Write64LE(ehdr.e_shoff)
     ELSE
-        WR.Write32LE(File, ehdr.e_entry);
-        WR.Write32LE(File, ehdr.e_phoff);
-        WR.Write32LE(File, ehdr.e_shoff)
+        WR.Write32LE(ehdr.e_entry);
+        WR.Write32LE(ehdr.e_phoff);
+        WR.Write32LE(ehdr.e_shoff)
     END;
-    WR.Write32LE(File, ehdr.e_flags);
+    WR.Write32LE(ehdr.e_flags);
 
-    Write16(File, ehdr.e_ehsize);
-    Write16(File, ehdr.e_phentsize);
-    Write16(File, ehdr.e_phnum);
-    Write16(File, ehdr.e_shentsize);
-    Write16(File, ehdr.e_shnum);
-    Write16(File, ehdr.e_shstrndx);
+    Write16(ehdr.e_ehsize);
+    Write16(ehdr.e_phentsize);
+    Write16(ehdr.e_phnum);
+    Write16(ehdr.e_shentsize);
+    Write16(ehdr.e_shnum);
+    Write16(ehdr.e_shstrndx);
 
     IF amd64 THEN
-        WritePH64(File, phdr[interp]);
-        WritePH64(File, phdr[dyn]);
-        WritePH64(File, phdr[header]);
-        WritePH64(File, phdr[text]);
-        WritePH64(File, phdr[data]);
-        WritePH64(File, phdr[bss])
+        WritePH64(phdr[interp]);
+        WritePH64(phdr[dyn]);
+        WritePH64(phdr[header]);
+        WritePH64(phdr[text]);
+        WritePH64(phdr[data]);
+        WritePH64(phdr[bss])
     ELSE
-        WritePH(File, phdr[interp]);
-        WritePH(File, phdr[dyn]);
-        WritePH(File, phdr[header]);
-        WritePH(File, phdr[text]);
-        WritePH(File, phdr[data]);
-        WritePH(File, phdr[bss])
+        WritePH(phdr[interp]);
+        WritePH(phdr[dyn]);
+        WritePH(phdr[header]);
+        WritePH(phdr[text]);
+        WritePH(phdr[data]);
+        WritePH(phdr[bss])
     END;
 
     FOR i := 0 TO lenInterpreter - 1 DO
-        WR.WriteByte(File, ORD(Interpreter[i]))
+        WR.WriteByte(ORD(Interpreter[i]))
     END;
 
     i := 0;
     IF amd64 THEN
         item := dynamic.first;
         WHILE item # NIL DO
-            WR.Write64LE(File, item(Elf32_Dyn).d_tag);
-            WR.Write64LE(File, item(Elf32_Dyn).d_val);
+            WR.Write64LE(item(Elf32_Dyn).d_tag);
+            WR.Write64LE(item(Elf32_Dyn).d_val);
             item := item.next
         END;
 
         item := symtab.first;
         WHILE item # NIL DO
-            WR.Write32LE(File, item(Elf32_Sym).name);
-            WR.WriteByte(File, ORD(item(Elf32_Sym).info));
-            WR.WriteByte(File, ORD(item(Elf32_Sym).other));
-            Write16(File, item(Elf32_Sym).shndx);
-            WR.Write64LE(File, item(Elf32_Sym).value);
-            WR.Write64LE(File, item(Elf32_Sym).size);
+            WR.Write32LE(item(Elf32_Sym).name);
+            WR.WriteByte(ORD(item(Elf32_Sym).info));
+            WR.WriteByte(ORD(item(Elf32_Sym).other));
+            Write16(item(Elf32_Sym).shndx);
+            WR.Write64LE(item(Elf32_Sym).value);
+            WR.Write64LE(item(Elf32_Sym).size);
             item := item.next
         END;
 
-        WR.Write64LE(File, phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 16);
-        WR.Write32LE(File, 1);
-        WR.Write32LE(File, 1);
-        WR.Write64LE(File, 0);
-        WR.Write64LE(File, phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
-        WR.Write32LE(File, 1);
-        WR.Write32LE(File, 2);
-        WR.Write64LE(File, 0);
+        WR.Write64LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 16);
+        WR.Write32LE(1);
+        WR.Write32LE(1);
+        WR.Write64LE(0);
+        WR.Write64LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
+        WR.Write32LE(1);
+        WR.Write32LE(2);
+        WR.Write64LE(0);
 
-        WR.Write32LE(File, symCount);
-        WR.Write32LE(File, symCount);
+        WR.Write32LE(symCount);
+        WR.Write32LE(symCount);
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, CHL.GetInt(bucket, i))
+            WR.Write32LE(CHL.GetInt(bucket, i))
         END;
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, CHL.GetInt(chain, i))
+            WR.Write32LE(CHL.GetInt(chain, i))
         END;
 
-        CHL.WriteToFile(File, strtab);
-        WR.Write64LE(File, 0);
-        WR.Write64LE(File, 0)
+        CHL.WriteToFile(strtab);
+        WR.Write64LE(0);
+        WR.Write64LE(0)
 
     ELSE
         item := dynamic.first;
         WHILE item # NIL DO
-            WR.Write32LE(File, item(Elf32_Dyn).d_tag);
-            WR.Write32LE(File, item(Elf32_Dyn).d_val);
+            WR.Write32LE(item(Elf32_Dyn).d_tag);
+            WR.Write32LE(item(Elf32_Dyn).d_val);
             item := item.next
         END;
 
         item := symtab.first;
         WHILE item # NIL DO
-            WR.Write32LE(File, item(Elf32_Sym).name);
-            WR.Write32LE(File, item(Elf32_Sym).value);
-            WR.Write32LE(File, item(Elf32_Sym).size);
-            WR.WriteByte(File, ORD(item(Elf32_Sym).info));
-            WR.WriteByte(File, ORD(item(Elf32_Sym).other));
-            Write16(File, item(Elf32_Sym).shndx);
+            WR.Write32LE(item(Elf32_Sym).name);
+            WR.Write32LE(item(Elf32_Sym).value);
+            WR.Write32LE(item(Elf32_Sym).size);
+            WR.WriteByte(ORD(item(Elf32_Sym).info));
+            WR.WriteByte(ORD(item(Elf32_Sym).other));
+            Write16(item(Elf32_Sym).shndx);
             item := item.next
         END;
 
-        WR.Write32LE(File, phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
-        WR.Write32LE(File, 00000101H);
-        WR.Write32LE(File, phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 4);
-        WR.Write32LE(File, 00000201H);
+        WR.Write32LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
+        WR.Write32LE(00000101H);
+        WR.Write32LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 4);
+        WR.Write32LE(00000201H);
 
-        WR.Write32LE(File, symCount);
-        WR.Write32LE(File, symCount);
+        WR.Write32LE(symCount);
+        WR.Write32LE(symCount);
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, CHL.GetInt(bucket, i))
+            WR.Write32LE(CHL.GetInt(bucket, i))
         END;
 
         FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(File, CHL.GetInt(chain, i))
+            WR.Write32LE(CHL.GetInt(chain, i))
         END;
 
-        CHL.WriteToFile(File, strtab);
-        WR.Write32LE(File, 0);
-        WR.Write32LE(File, 0)
+        CHL.WriteToFile(strtab);
+        WR.Write32LE(0);
+        WR.Write32LE(0)
 
     END;
 
-    CHL.WriteToFile(File, program.code);
+    CHL.WriteToFile(program.code);
     WHILE pad > 0 DO
-        WR.WriteByte(File, 0);
+        WR.WriteByte(0);
         DEC(pad)
     END;
-    CHL.WriteToFile(File, program.data);
-    WR.Close(File)
+    CHL.WriteToFile(program.data);
+    WR.Close
 END write;
 
 

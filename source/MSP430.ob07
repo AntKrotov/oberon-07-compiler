@@ -1626,8 +1626,6 @@ VAR
 
     reloc: RELOC;
 
-    file: WR.FILE;
-
 BEGIN
     IdxWords.src := NOWORD;
     IdxWords.dst := NOWORD;
@@ -1733,13 +1731,13 @@ BEGIN
         PutWord(LabelOffs(IV[i]) * 2, adr)
     END;
 
-    file := WR.Create(outname);
+    WR.Create(outname);
 
-    HEX.Data(file, mem, Code.address, TextSize);
-    HEX.Data(file, mem, 10000H - IntVectorSize - TypesSize, IntVectorSize + TypesSize);
-    HEX.End(file);
+    HEX.Data(mem, Code.address, TextSize);
+    HEX.Data(mem, 10000H - IntVectorSize - TypesSize, IntVectorSize + TypesSize);
+    HEX.End;
 
-    WR.Close(file);
+    WR.Close;
 
     INC(TextSize, IntVectorSize + TypesSize);
     INC(Bss.size, minStackSize + RTL.VarSize);

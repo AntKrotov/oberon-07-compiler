@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -82,8 +82,6 @@ TYPE
 
     UNIT* = POINTER TO rUNIT;
 
-    PROGRAM* = POINTER TO rPROGRAM;
-
     TYPE_* = POINTER TO rTYPE_;
 
     FRWPTR* = POINTER TO RECORD (LISTS.ITEM)
@@ -117,7 +115,6 @@ TYPE
 
     rUNIT = RECORD (LISTS.ITEM)
 
-        program*:    PROGRAM;
         name*:       SCAN.IDENT;
         idents*:     LISTS.LIST;
         frwPointers: LISTS.LIST;
@@ -188,7 +185,7 @@ TYPE
 
     END;
 
-    rPROGRAM = RECORD
+    PROGRAM = RECORD
 
         recCount:    INTEGER;
         units*:      LISTS.LIST;
@@ -218,6 +215,7 @@ TYPE
 VAR
 
     idents: C.COLLECTION;
+    program*: PROGRAM;
 
 
 PROCEDURE NewIdent (): IDENT;
@@ -237,7 +235,7 @@ BEGIN
 END NewIdent;
 
 
-PROCEDURE getOffset* (program: PROGRAM; varIdent: IDENT): INTEGER;
+PROCEDURE getOffset* (varIdent: IDENT): INTEGER;
 VAR
     size: INTEGER;
 
@@ -281,7 +279,7 @@ BEGIN
         IF (ident.typ = idVAR) & (ident.offset = -1) THEN
             ERRORS.HintMsg(ident.name.s, ident.pos.line, ident.pos.col, 0);
             IF ident.export THEN
-                offset := getOffset(unit.program, ident)
+                offset := getOffset(ident)
             END
         END;
         ident := ident.prev(IDENT)
@@ -322,7 +320,6 @@ VAR
     item:  IDENT;
     res:   BOOLEAN;
     proc:  PROC;
-    procs: LISTS.LIST;
 
 BEGIN
     ASSERT(unit # NIL);
@@ -353,8 +350,7 @@ BEGIN
             proc.used := FALSE;
             proc.processed := FALSE;
             proc.using := LISTS.create(NIL);
-            procs := unit.program.procs;
-            LISTS.push(procs, proc);
+            LISTS.push(program.procs, proc);
             item.proc := proc
         END;
 
@@ -629,7 +625,7 @@ PROCEDURE arrcomp* (src, dst: TYPE_): BOOLEAN;
 END arrcomp;
 
 
-PROCEDURE getUnit* (program: PROGRAM; name: SCAN.IDENT): UNIT;
+PROCEDURE getUnit* (name: SCAN.IDENT): UNIT;
 VAR
     item: UNIT;
 
@@ -650,36 +646,33 @@ BEGIN
 END getUnit;
 
 
-PROCEDURE enterStTypes (unit: UNIT; program: PROGRAM);
-VAR
-    ident: IDENT;
+PROCEDURE enterStTypes (unit: UNIT);
+
+
+    PROCEDURE enter (unit: UNIT; name: SCAN.LEXSTR; type: TYPE_);
+    VAR
+        ident: IDENT;
+
+    BEGIN
+        ident := addIdent(unit, SCAN.enterid(name), idTYPE);
+        ident.type := type
+    END enter;
+
 
 BEGIN
-    ident      := addIdent(unit, SCAN.enterid("INTEGER"), idTYPE);
-    ident.type := program.stTypes.tINTEGER;
-
-    ident      := addIdent(unit, SCAN.enterid("BYTE"), idTYPE);
-    ident.type := program.stTypes.tBYTE;
-
-    ident      := addIdent(unit, SCAN.enterid("CHAR"), idTYPE);
-    ident.type := program.stTypes.tCHAR;
-
-    ident      := addIdent(unit, SCAN.enterid("SET"), idTYPE);
-    ident.type := program.stTypes.tSET;
-
-    ident      := addIdent(unit, SCAN.enterid("BOOLEAN"), idTYPE);
-    ident.type := program.stTypes.tBOOLEAN;
+    enter(unit, "INTEGER", program.stTypes.tINTEGER);
+    enter(unit, "BYTE",    program.stTypes.tBYTE);
+    enter(unit, "CHAR",    program.stTypes.tCHAR);
+    enter(unit, "SET",     program.stTypes.tSET);
+    enter(unit, "BOOLEAN", program.stTypes.tBOOLEAN);
 
     IF TARGETS.RealSize # 0 THEN
-        ident      := addIdent(unit, SCAN.enterid("REAL"), idTYPE);
-        ident.type := program.stTypes.tREAL
+        enter(unit, "REAL", program.stTypes.tREAL)
     END;
 
     IF TARGETS.BitDepth >= 32 THEN
-        ident      := addIdent(unit, SCAN.enterid("WCHAR"), idTYPE);
-        ident.type := program.stTypes.tWCHAR
+        enter(unit, "WCHAR", program.stTypes.tWCHAR)
     END
-
 END enterStTypes;
 
 
@@ -745,17 +738,15 @@ BEGIN
 END enterStProcs;
 
 
-PROCEDURE newUnit* (program: PROGRAM; name: SCAN.IDENT): UNIT;
+PROCEDURE newUnit* (name: SCAN.IDENT): UNIT;
 VAR
     unit: UNIT;
 
 BEGIN
-    ASSERT(program # NIL);
     ASSERT(name # NIL);
 
     NEW(unit);
 
-    unit.program     := program;
     unit.name        := name;
     unit.closed      := FALSE;
     unit.idents      := LISTS.create(NIL);
@@ -763,7 +754,7 @@ BEGIN
 
     ASSERT(openScope(unit, NIL));
 
-    enterStTypes(unit, program);
+    enterStTypes(unit);
     enterStProcs(unit);
 
     ASSERT(openScope(unit, NIL));
@@ -1015,7 +1006,7 @@ BEGIN
 END setParams;
 
 
-PROCEDURE enterType* (program: PROGRAM; typ, size, length: INTEGER; unit: UNIT): TYPE_;
+PROCEDURE enterType* (typ, size, length: INTEGER; unit: UNIT): TYPE_;
 VAR
     t: TYPE_;
 
@@ -1058,7 +1049,7 @@ BEGIN
 END enterType;
 
 
-PROCEDURE getType* (program: PROGRAM; typ: INTEGER): TYPE_;
+PROCEDURE getType* (typ: INTEGER): TYPE_;
 VAR
     res: TYPE_;
 
@@ -1078,7 +1069,7 @@ BEGIN
 END getType;
 
 
-PROCEDURE createSysUnit (program: PROGRAM);
+PROCEDURE createSysUnit;
 VAR
     ident: IDENT;
     unit:  UNIT;
@@ -1095,7 +1086,7 @@ VAR
 
 
 BEGIN
-    unit := newUnit(program, SCAN.enterid("$SYSTEM"));
+    unit := newUnit(SCAN.enterid("$SYSTEM"));
 
     EnterProc(unit, "ADR",    idSYSFUNC, sysADR);
     EnterProc(unit, "SIZE",   idSYSFUNC, sysSIZE);
@@ -1138,7 +1129,7 @@ BEGIN
 END createSysUnit;
 
 
-PROCEDURE DelUnused* (program: PROGRAM; DelImport: DELIMPORT);
+PROCEDURE DelUnused* (DelImport: DELIMPORT);
 VAR
     proc: PROC;
     flag: BOOLEAN;
@@ -1192,15 +1183,17 @@ BEGIN
 END DelUnused;
 
 
-PROCEDURE create* (options: OPTIONS): PROGRAM;
-VAR
-    program: PROGRAM;
+PROCEDURE ResetLocSize*;
+BEGIN
+    program.locsize := 0
+END ResetLocSize;
 
+
+PROCEDURE create* (options: OPTIONS);
 BEGIN
     idents := C.create();
 
     UTILS.SetBitDepth(TARGETS.BitDepth, TARGETS.RealSize = 8);
-    NEW(program);
 
     program.options := options;
 
@@ -1220,11 +1213,11 @@ BEGIN
     program.types := LISTS.create(NIL);
     program.procs := LISTS.create(NIL);
 
-    program.stTypes.tINTEGER := enterType(program, tINTEGER, TARGETS.WordSize, 0, NIL);
-    program.stTypes.tBYTE    := enterType(program, tBYTE,                   1, 0, NIL);
-    program.stTypes.tCHAR    := enterType(program, tCHAR,                   1, 0, NIL);
-    program.stTypes.tSET     := enterType(program, tSET,     TARGETS.WordSize, 0, NIL);
-    program.stTypes.tBOOLEAN := enterType(program, tBOOLEAN,                1, 0, NIL);
+    program.stTypes.tINTEGER := enterType(tINTEGER, TARGETS.WordSize, 0, NIL);
+    program.stTypes.tBYTE    := enterType(tBYTE,                   1, 0, NIL);
+    program.stTypes.tCHAR    := enterType(tCHAR,                   1, 0, NIL);
+    program.stTypes.tSET     := enterType(tSET,     TARGETS.WordSize, 0, NIL);
+    program.stTypes.tBOOLEAN := enterType(tBOOLEAN,                1, 0, NIL);
 
     program.stTypes.tINTEGER.align := TARGETS.WordSize;
     program.stTypes.tBYTE.align    := 1;
@@ -1233,26 +1226,24 @@ BEGIN
     program.stTypes.tBOOLEAN.align := 1;
 
     IF TARGETS.BitDepth >= 32 THEN
-        program.stTypes.tWCHAR  := enterType(program, tWCHAR,  2, 0, NIL);
-        program.stTypes.tCARD32 := enterType(program, tCARD32, 4, 0, NIL);
+        program.stTypes.tWCHAR  := enterType(tWCHAR,  2, 0, NIL);
+        program.stTypes.tCARD32 := enterType(tCARD32, 4, 0, NIL);
         program.stTypes.tWCHAR.align  := 2;
         program.stTypes.tCARD32.align := 4
     END;
 
     IF TARGETS.RealSize # 0 THEN
-        program.stTypes.tREAL := enterType(program, tREAL, TARGETS.RealSize, 0, NIL);
+        program.stTypes.tREAL := enterType(tREAL, TARGETS.RealSize, 0, NIL);
         program.stTypes.tREAL.align := TARGETS.RealSize
     END;
 
-    program.stTypes.tSTRING := enterType(program, tSTRING, TARGETS.WordSize, 0, NIL);
-    program.stTypes.tNIL    := enterType(program, tNIL,    TARGETS.WordSize, 0, NIL);
+    program.stTypes.tSTRING := enterType(tSTRING, TARGETS.WordSize, 0, NIL);
+    program.stTypes.tNIL    := enterType(tNIL,    TARGETS.WordSize, 0, NIL);
 
-    program.stTypes.tANYREC := enterType(program, tRECORD, 0, 0, NIL);
+    program.stTypes.tANYREC := enterType(tRECORD, 0, 0, NIL);
     program.stTypes.tANYREC.closed := TRUE;
 
-    createSysUnit(program)
-
-    RETURN program
+    createSysUnit
 END create;
 
 

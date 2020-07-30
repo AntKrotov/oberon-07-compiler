@@ -1384,7 +1384,7 @@ VAR
 
     BEGIN
         IF e.obj = eVAR THEN
-            offset := PROG.getOffset(PARS.program, e.ident);
+            offset := PROG.getOffset(e.ident);
             IF e.ident.global THEN
                 IL.AddCmd(IL.opGADR, offset)
             ELSE
@@ -1640,12 +1640,9 @@ END ProcCall;
 PROCEDURE expression (parser: PARS.PARSER; VAR e: PARS.EXPR);
 VAR
     pos, pos0, pos1: PARS.POSITION;
-
-    op:        INTEGER;
-    e1:        PARS.EXPR;
-    constant:  BOOLEAN;
-    operator:  ARITH.RELATION;
-    error:     INTEGER;
+    e1: PARS.EXPR;
+    op, cmp, error: INTEGER;
+    constant, eq: BOOLEAN;
 
 
     PROCEDURE relation (sym: INTEGER): BOOLEAN;
@@ -1794,12 +1791,12 @@ VAR
         IF (sym = SCAN.lxINTEGER) OR (sym = SCAN.lxHEX) OR (sym = SCAN.lxFLOAT) OR (sym = SCAN.lxCHAR) OR (sym = SCAN.lxSTRING) THEN
             e.obj := eCONST;
             e.value := parser.lex.value;
-            e.type := PROG.getType(PARS.program, e.value.typ);
+            e.type := PROG.getType(e.value.typ);
             PARS.Next(parser)
 
         ELSIF sym = SCAN.lxNIL THEN
             e.obj  := eCONST;
-            e.type := PARS.program.stTypes.tNIL;
+            e.type := PROG.program.stTypes.tNIL;
             PARS.Next(parser)
 
         ELSIF (sym = SCAN.lxTRUE) OR (sym = SCAN.lxFALSE) THEN
@@ -2066,7 +2063,7 @@ VAR
 
         WHILE AddOperator(parser.sym) DO
 
-            op  := parser.sym;
+            op := parser.sym;
             getpos(parser, pos);
             PARS.Next(parser);
 
@@ -2093,10 +2090,11 @@ VAR
             CASE op OF
             |SCAN.lxPLUS, SCAN.lxMINUS:
 
-                IF op = SCAN.lxPLUS THEN
-                    op := ORD("+")
-                ELSE
+                minus := op = SCAN.lxMINUS;
+                IF minus THEN
                     op := ORD("-")
+                ELSE
+                    op := ORD("+")
                 END;
 
                 PARS.check(isInt(e) & isInt(e1) OR isReal(e) & isReal(e1) OR isSet(e) & isSet(e1), pos, 37);
@@ -2111,29 +2109,29 @@ VAR
                 ELSE
                     IF isInt(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDL + ORD(op = ORD("-")), ARITH.Int(e.value))
+                            IL.AddCmd(IL.opADDL + ORD(minus), ARITH.Int(e.value))
                         ELSIF e1.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDR + ORD(op = ORD("-")), ARITH.Int(e1.value))
+                            IL.AddCmd(IL.opADDR + ORD(minus), ARITH.Int(e1.value))
                         ELSE
-                            IL.AddCmd0(IL.opADD  + ORD(op = ORD("-")))
+                            IL.AddCmd0(IL.opADD + ORD(minus))
                         END
                     ELSIF isReal(e) THEN
                         IF e.obj = eCONST THEN
                             IL.Float(ARITH.Float(e.value));
-                            IL.fbinop(IL.opADDFI + ORD(op = ORD("-")))
+                            IL.fbinop(IL.opADDFI + ORD(minus))
                         ELSIF e1.obj = eCONST THEN
                             IL.Float(ARITH.Float(e1.value));
-                            IL.fbinop(IL.opADDF  + ORD(op = ORD("-")))
+                            IL.fbinop(IL.opADDF + ORD(minus))
                         ELSE
-                            IL.fbinop(IL.opADDF  + ORD(op = ORD("-")))
+                            IL.fbinop(IL.opADDF + ORD(minus))
                         END
                     ELSIF isSet(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDSL + ORD(op = ORD("-")), ARITH.Int(e.value))
+                            IL.AddCmd(IL.opADDSL + ORD(minus), ARITH.Int(e.value))
                         ELSIF e1.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDSR + ORD(op = ORD("-")), ARITH.Int(e1.value))
+                            IL.AddCmd(IL.opADDSR + ORD(minus), ARITH.Int(e1.value))
                         ELSE
-                            IL.AddCmd0(IL.opADDS  + ORD(op = ORD("-")))
+                            IL.AddCmd0(IL.opADDS + ORD(minus))
                         END
                     END;
                     e.obj := eEXPR
@@ -2168,12 +2166,14 @@ VAR
 
     BEGIN
         CASE op OF
-        |SCAN.lxEQ: res := 0
-        |SCAN.lxNE: res := 1
-        |SCAN.lxLT: res := 2
-        |SCAN.lxLE: res := 3
-        |SCAN.lxGT: res := 4
-        |SCAN.lxGE: res := 5
+        |SCAN.lxEQ: res := ARITH.opEQ
+        |SCAN.lxNE: res := ARITH.opNE
+        |SCAN.lxLT: res := ARITH.opLT
+        |SCAN.lxLE: res := ARITH.opLE
+        |SCAN.lxGT: res := ARITH.opGT
+        |SCAN.lxGE: res := ARITH.opGE
+        |SCAN.lxIN: res := ARITH.opIN
+        |SCAN.lxIS: res := ARITH.opIS
         END
 
         RETURN res
@@ -2186,12 +2186,14 @@ VAR
 
     BEGIN
         CASE op OF
-        |SCAN.lxEQ: res := 0
-        |SCAN.lxNE: res := 1
-        |SCAN.lxLT: res := 4
-        |SCAN.lxLE: res := 5
-        |SCAN.lxGT: res := 2
-        |SCAN.lxGE: res := 3
+        |SCAN.lxEQ: res := ARITH.opEQ
+        |SCAN.lxNE: res := ARITH.opNE
+        |SCAN.lxLT: res := ARITH.opGT
+        |SCAN.lxLE: res := ARITH.opGE
+        |SCAN.lxGT: res := ARITH.opLT
+        |SCAN.lxGE: res := ARITH.opLE
+        |SCAN.lxIN: res := ARITH.opIN
+        |SCAN.lxIS: res := ARITH.opIS
         END
 
         RETURN res
@@ -2211,21 +2213,18 @@ VAR
     PROCEDURE strcmp (VAR e, e1: PARS.EXPR; op: INTEGER): BOOLEAN;
     VAR
         res: BOOLEAN;
+        cmp: INTEGER;
 
     BEGIN
         res := TRUE;
+        cmp := cmpcode(op);
 
         IF isString(e) & isCharArray(e1) THEN
             IL.StrAdr(String(e));
             IL.Const(strlen(e) + 1);
             IL.AddCmd0(IL.opEQS + invcmpcode(op))
 
-        ELSIF isString(e) & isCharArrayW(e1) THEN
-            IL.StrAdr(StringW(e));
-            IL.Const(utf8strlen(e) + 1);
-            IL.AddCmd0(IL.opEQSW + invcmpcode(op))
-
-        ELSIF isStringW(e) & isCharArrayW(e1) THEN
+        ELSIF (isString(e) OR isStringW(e)) & isCharArrayW(e1) THEN
             IL.StrAdr(StringW(e));
             IL.Const(utf8strlen(e) + 1);
             IL.AddCmd0(IL.opEQSW + invcmpcode(op))
@@ -2233,23 +2232,18 @@ VAR
         ELSIF isCharArray(e) & isString(e1) THEN
             IL.StrAdr(String(e1));
             IL.Const(strlen(e1) + 1);
-            IL.AddCmd0(IL.opEQS + cmpcode(op))
+            IL.AddCmd0(IL.opEQS + cmp)
 
-        ELSIF isCharArrayW(e) & isString(e1) THEN
+        ELSIF isCharArrayW(e) & (isString(e1) OR isStringW(e1)) THEN
             IL.StrAdr(StringW(e1));
             IL.Const(utf8strlen(e1) + 1);
-            IL.AddCmd0(IL.opEQSW + cmpcode(op))
-
-        ELSIF isCharArrayW(e) & isStringW(e1) THEN
-            IL.StrAdr(StringW(e1));
-            IL.Const(utf8strlen(e1) + 1);
-            IL.AddCmd0(IL.opEQSW + cmpcode(op))
+            IL.AddCmd0(IL.opEQSW + cmp)
 
         ELSIF isCharArrayW(e) & isCharArrayW(e1) THEN
-            IL.AddCmd0(IL.opEQSW + cmpcode(op))
+            IL.AddCmd0(IL.opEQSW + cmp)
 
         ELSIF isCharArray(e) & isCharArray(e1) THEN
-            IL.AddCmd0(IL.opEQS + cmpcode(op))
+            IL.AddCmd0(IL.opEQS + cmp)
 
         ELSIF isString(e) & isString(e1) THEN
             PARS.strcmp(e.value, e1.value, op)
@@ -2270,7 +2264,7 @@ BEGIN
         IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
             IL.Const(e.type.length)
         END;
-        op  := parser.sym;
+        op := parser.sym;
         getpos(parser, pos);
         PARS.Next(parser);
 
@@ -2282,56 +2276,45 @@ BEGIN
         END;
 
         constant := (e.obj = eCONST) & (e1.obj = eCONST);
-
-        CASE op OF
-        |SCAN.lxEQ: operator := "="
-        |SCAN.lxNE: operator := "#"
-        |SCAN.lxLT: operator := "<"
-        |SCAN.lxLE: operator := "<="
-        |SCAN.lxGT: operator := ">"
-        |SCAN.lxGE: operator := ">="
-        |SCAN.lxIN: operator := "IN"
-        |SCAN.lxIS: operator := ""
-        END;
-
         error := 0;
+        cmp := cmpcode(op);
 
         CASE op OF
         |SCAN.lxEQ, SCAN.lxNE:
-
+            eq := op = SCAN.lxEQ;
             IF isInt(e) & isInt(e1) OR isSet(e) & isSet(e1) OR isChar(e) & isChar(e1) OR isCharW(e) & isCharW(e1) OR
             isCharW(e) & isChar(e1) & (e1.obj = eCONST) OR isCharW(e1) & isChar(e) & (e.obj = eCONST) OR
             isCharW(e1) & (e1.obj = eCONST) & isChar(e) & (e.obj = eCONST) OR
             isCharW(e) & (e.obj = eCONST) & isChar(e1) & (e1.obj = eCONST) OR
             isPtr(e) & isPtr(e1) & (PROG.isBaseOf(e.type, e1.type) OR PROG.isBaseOf(e1.type, e.type)) THEN
                 IF constant THEN
-                    ARITH.relation(e.value, e1.value, operator, error)
+                    ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        IL.AddCmd(IL.opEQC + cmpcode(op), ARITH.Int(e.value))
+                        IL.AddCmd(IL.opEQC + cmp, ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        IL.AddCmd(IL.opEQC + cmpcode(op), ARITH.Int(e1.value))
+                        IL.AddCmd(IL.opEQC + cmp, ARITH.Int(e1.value))
                     ELSE
-                        IL.AddCmd0(IL.opEQ + cmpcode(op))
+                        IL.AddCmd0(IL.opEQ + cmp)
                     END
                 END
 
             ELSIF isStringW1(e) & isCharW(e1) THEN
-                IL.AddCmd(IL.opEQC + cmpcode(op), StrToWChar(e.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e.value.string(SCAN.IDENT).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                IL.AddCmd(IL.opEQC + cmpcode(op), StrToWChar(e1.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.IDENT).s))
 
             ELSIF isBoolean(e) & isBoolean(e1) THEN
                 IF constant THEN
-                    ARITH.relation(e.value, e1.value, operator, error)
+                    ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        BoolCmp(op = SCAN.lxEQ, ARITH.Int(e.value) # 0)
+                        BoolCmp(eq, ARITH.Int(e.value) # 0)
                     ELSIF e1.obj = eCONST THEN
-                        BoolCmp(op = SCAN.lxEQ, ARITH.Int(e1.value) # 0)
+                        BoolCmp(eq, ARITH.Int(e1.value) # 0)
                     ELSE
-                        IF op = SCAN.lxEQ THEN
+                        IF eq THEN
                             IL.AddCmd0(IL.opEQB)
                         ELSE
                             IL.AddCmd0(IL.opNEB)
@@ -2341,14 +2324,14 @@ BEGIN
 
             ELSIF isReal(e) & isReal(e1) THEN
                 IF constant THEN
-                    ARITH.relation(e.value, e1.value, operator, error)
+                    ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
                         IL.Float(ARITH.Float(e.value))
                     ELSIF e1.obj = eCONST THEN
                         IL.Float(ARITH.Float(e1.value))
                     END;
-                    IL.fcmp(IL.opEQF + cmpcode(op))
+                    IL.fcmp(IL.opEQF + cmp)
                 END
 
             ELSIF (isStringW(e) OR isCharArrayX(e)) & (isStringW(e1) OR isCharArrayX(e1)) THEN
@@ -2357,16 +2340,16 @@ BEGIN
                 END
 
             ELSIF isPtr(e) & isNil(e1) OR isNil(e) & isPtr(e1) THEN
-                IL.AddCmd0(IL.opEQC + cmpcode(op))
+                IL.AddCmd0(IL.opEQC + cmp)
 
             ELSIF isProc(e) & isNil(e1) THEN
                 IF e.obj IN {ePROC, eIMP} THEN
                     PARS.check(e.ident.global, pos0, 85);
                     constant := TRUE;
                     e.obj := eCONST;
-                    ARITH.setbool(e.value, op = SCAN.lxNE)
+                    ARITH.setbool(e.value, ~eq)
                 ELSE
-                    IL.AddCmd0(IL.opEQC + cmpcode(op))
+                    IL.AddCmd0(IL.opEQC + cmp)
                 END
 
             ELSIF isNil(e) & isProc(e1) THEN
@@ -2374,9 +2357,9 @@ BEGIN
                     PARS.check(e1.ident.global, pos1, 85);
                     constant := TRUE;
                     e.obj := eCONST;
-                    ARITH.setbool(e.value, op = SCAN.lxNE)
+                    ARITH.setbool(e.value, ~eq)
                 ELSE
-                    IL.AddCmd0(IL.opEQC + cmpcode(op))
+                    IL.AddCmd0(IL.opEQC + cmp)
                 END
 
             ELSIF isProc(e) & isProc(e1) & PROG.isTypeEq(e.type, e1.type) THEN
@@ -2389,27 +2372,27 @@ BEGIN
                 IF (e.obj IN {ePROC, eIMP}) & (e1.obj IN {ePROC, eIMP}) THEN
                     constant := TRUE;
                     e.obj := eCONST;
-                    IF op = SCAN.lxEQ THEN
+                    IF eq THEN
                         ARITH.setbool(e.value, e.ident = e1.ident)
                     ELSE
                         ARITH.setbool(e.value, e.ident # e1.ident)
                     END
                 ELSIF e.obj = ePROC THEN
-                    IL.ProcCmp(e.ident.proc.label, op = SCAN.lxEQ)
+                    IL.ProcCmp(e.ident.proc.label, eq)
                 ELSIF e1.obj = ePROC THEN
-                    IL.ProcCmp(e1.ident.proc.label, op = SCAN.lxEQ)
+                    IL.ProcCmp(e1.ident.proc.label, eq)
                 ELSIF e.obj = eIMP THEN
-                    IL.ProcImpCmp(e.ident.import, op = SCAN.lxEQ)
+                    IL.ProcImpCmp(e.ident.import, eq)
                 ELSIF e1.obj = eIMP THEN
-                    IL.ProcImpCmp(e1.ident.import, op = SCAN.lxEQ)
+                    IL.ProcImpCmp(e1.ident.import, eq)
                 ELSE
-                    IL.AddCmd0(IL.opEQ + cmpcode(op))
+                    IL.AddCmd0(IL.opEQ + cmp)
                 END
 
             ELSIF isNil(e) & isNil(e1) THEN
                 constant := TRUE;
                 e.obj := eCONST;
-                ARITH.setbool(e.value, op = SCAN.lxEQ)
+                ARITH.setbool(e.value, eq)
 
             ELSE
                 PARS.error(pos, 37)
@@ -2422,14 +2405,14 @@ BEGIN
                 isCharW(e) & (e.obj = eCONST) & isChar(e1) & (e1.obj = eCONST) THEN
 
                 IF constant THEN
-                    ARITH.relation(e.value, e1.value, operator, error)
+                    ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
                         IL.AddCmd(IL.opEQC + invcmpcode(op), ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        IL.AddCmd(IL.opEQC + cmpcode(op), ARITH.Int(e1.value))
+                        IL.AddCmd(IL.opEQC + cmp, ARITH.Int(e1.value))
                     ELSE
-                        IL.AddCmd0(IL.opEQ + cmpcode(op))
+                        IL.AddCmd0(IL.opEQ + cmp)
                     END
                 END
 
@@ -2437,20 +2420,20 @@ BEGIN
                 IL.AddCmd(IL.opEQC + invcmpcode(op), StrToWChar(e.value.string(SCAN.IDENT).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                IL.AddCmd(IL.opEQC + cmpcode(op), StrToWChar(e1.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.IDENT).s))
 
             ELSIF isReal(e) & isReal(e1) THEN
                 IF constant THEN
-                    ARITH.relation(e.value, e1.value, operator, error)
+                    ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
                         IL.Float(ARITH.Float(e.value));
                         IL.fcmp(IL.opEQF + invcmpcode(op))
                     ELSIF e1.obj = eCONST THEN
                         IL.Float(ARITH.Float(e1.value));
-                        IL.fcmp(IL.opEQF + cmpcode(op))
+                        IL.fcmp(IL.opEQF + cmp)
                     ELSE
-                        IL.fcmp(IL.opEQF + cmpcode(op))
+                        IL.fcmp(IL.opEQF + cmp)
                     END
                 END
 
@@ -2469,7 +2452,7 @@ BEGIN
                 PARS.check(ARITH.range(e.value, 0, UTILS.target.maxSet), pos0, 56)
             END;
             IF constant THEN
-                ARITH.relation(e.value, e1.value, operator, error)
+                ARITH.relation(e.value, e1.value, ARITH.opIN, error)
             ELSE
                 IF e.obj = eCONST THEN
                     IL.AddCmd(IL.opINL, ARITH.Int(e.value))
@@ -3054,7 +3037,7 @@ BEGIN
     expression(parser, e);
     PARS.check(isInt(e), pos, 76);
 
-    offset := PROG.getOffset(PARS.program, ident);
+    offset := PROG.getOffset(ident);
 
     IF ident.global THEN
         IL.AddCmd(IL.opGADR, offset)
@@ -3229,7 +3212,7 @@ VAR
 
 
 BEGIN
-    rtl := PARS.program.rtl;
+    rtl := PROG.program.rtl;
     ASSERT(rtl # NIL);
 
     getproc(rtl, "_strcmp",   IL._strcmp);
@@ -3279,13 +3262,13 @@ VAR
     ext: PARS.PATH;
 
 BEGIN
-    tINTEGER := PARS.program.stTypes.tINTEGER;
-    tBYTE    := PARS.program.stTypes.tBYTE;
-    tCHAR    := PARS.program.stTypes.tCHAR;
-    tSET     := PARS.program.stTypes.tSET;
-    tBOOLEAN := PARS.program.stTypes.tBOOLEAN;
-    tWCHAR   := PARS.program.stTypes.tWCHAR;
-    tREAL    := PARS.program.stTypes.tREAL;
+    tINTEGER := PROG.program.stTypes.tINTEGER;
+    tBYTE    := PROG.program.stTypes.tBYTE;
+    tCHAR    := PROG.program.stTypes.tCHAR;
+    tSET     := PROG.program.stTypes.tSET;
+    tBOOLEAN := PROG.program.stTypes.tBOOLEAN;
+    tWCHAR   := PROG.program.stTypes.tWCHAR;
+    tREAL    := PROG.program.stTypes.tREAL;
 
     Options := options;
     CPU := TARGETS.CPU;
@@ -3327,7 +3310,7 @@ BEGIN
 
     PARS.destroy(parser);
 
-    IF PARS.program.bss > UTILS.MAX_GLOBAL_SIZE THEN
+    IF PROG.program.bss > UTILS.MAX_GLOBAL_SIZE THEN
         ERRORS.Error(204)
     END;
 
@@ -3335,9 +3318,9 @@ BEGIN
         setrtl
     END;
 
-    PROG.DelUnused(PARS.program, IL.DelImport);
+    PROG.DelUnused(IL.DelImport);
 
-    IL.set_bss(PARS.program.bss);
+    IL.set_bss(PROG.program.bss);
 
     CASE CPU OF
     |TARGETS.cpuAMD64:   AMD64.CodeGen(outname, target, options)

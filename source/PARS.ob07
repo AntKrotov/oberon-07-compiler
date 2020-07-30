@@ -74,8 +74,6 @@ TYPE
 
 VAR
 
-    program*: PROG.PROGRAM;
-
     parsers: C.COLLECTION;
 
     lines*, modules: INTEGER;
@@ -227,7 +225,7 @@ BEGIN
 
         IF (parser.sym = SCAN.lxCOMMA) OR (parser.sym = SCAN.lxSEMI) THEN
             alias := FALSE;
-            unit := PROG.getUnit(program, name);
+            unit := PROG.getUnit(name);
 
             IF unit # NIL THEN
                 check(unit.closed, pos, 31)
@@ -250,7 +248,7 @@ BEGIN
                 unit := parser2.unit;
                 destroy(parser2)
             END;
-            IF unit = program.sysunit THEN
+            IF unit = PROG.program.sysunit THEN
                 parser.unit.sysimport := TRUE
             END;
             ident.unit := unit
@@ -431,7 +429,7 @@ VAR
                 t1 := t0;
 
                 WHILE dim > 0 DO
-                    t1 := PROG.enterType(program, PROG.tARRAY, -1, 0, parser.unit);
+                    t1 := PROG.enterType(PROG.tARRAY, -1, 0, parser.unit);
                     t1.base := t0;
                     t0 := t1;
                     DEC(dim)
@@ -509,7 +507,7 @@ BEGIN
         check1(FALSE, parser, 124)
     END;
 
-    check1(sf IN program.sysflags, parser, 125);
+    check1(sf IN PROG.program.sysflags, parser, 125);
 
     IF proc THEN
         check1(sf IN PROG.proc_flags, parser, 123)
@@ -656,7 +654,7 @@ BEGIN
         check(ARITH.check(arrLen),         pos, 39);
         check(ARITH.getInt(arrLen) > 0,    pos, 51);
 
-        t := PROG.enterType(program, PROG.tARRAY, -1, ARITH.getInt(arrLen), unit);
+        t := PROG.enterType(PROG.tARRAY, -1, ARITH.getInt(arrLen), unit);
 
         IF parser.sym = SCAN.lxCOMMA THEN
             type(parser, t.base, {comma, closed})
@@ -681,7 +679,7 @@ BEGIN
         getpos(parser, pos2);
         Next(parser);
 
-        t := PROG.enterType(program, PROG.tRECORD, 0, 0, unit);
+        t := PROG.enterType(PROG.tRECORD, 0, 0, unit);
         t.align := 1;
 
         IF parser.sym = SCAN.lxLSQUARE THEN
@@ -717,7 +715,7 @@ BEGIN
                 t.align := t.base.align
             END
         ELSE
-            t.base := program.stTypes.tANYREC
+            t.base := PROG.program.stTypes.tANYREC
         END;
 
         WHILE parser.sym = SCAN.lxIDENT DO
@@ -756,7 +754,7 @@ BEGIN
         ExpectSym(parser, SCAN.lxTO);
         Next(parser);
 
-        t := PROG.enterType(program, PROG.tPOINTER, TARGETS.AdrSize, 0, unit);
+        t := PROG.enterType(PROG.tPOINTER, TARGETS.AdrSize, 0, unit);
         t.align := TARGETS.AdrSize;
 
         getpos(parser, pos);
@@ -775,7 +773,7 @@ BEGIN
 
     ELSIF parser.sym = SCAN.lxPROCEDURE THEN
         NextPos(parser, pos);
-        t := PROG.enterType(program, PROG.tPROCEDURE, TARGETS.AdrSize, 0, unit);
+        t := PROG.enterType(PROG.tPROCEDURE, TARGETS.AdrSize, 0, unit);
         t.align := TARGETS.AdrSize;
         t.call := procflag(parser, import, FALSE);
         FormalParameters(parser, t)
@@ -835,7 +833,7 @@ BEGIN
             check(ARITH.check(ident.value), pos, 40)
         END;
         ident.typ  := PROG.idCONST;
-        ident.type := PROG.getType(program, ident.value.typ)
+        ident.type := PROG.getType(ident.value.typ)
     ELSE
         type(parser, ident.type, {})
     END;
@@ -921,14 +919,14 @@ VAR
         IF import # NIL THEN
             proc := IdentDef(parser, PROG.idIMP, name);
             proc.import := import;
-            program.procs.last(PROG.PROC).import := import
+            PROG.program.procs.last(PROG.PROC).import := import
         ELSE
             proc := IdentDef(parser, PROG.idPROC, name)
         END;
 
         check(PROG.openScope(unit, proc.proc), pos, 116);
 
-        proc.type := PROG.enterType(program, PROG.tPROCEDURE, TARGETS.AdrSize, 0, unit);
+        proc.type := PROG.enterType(PROG.tPROCEDURE, TARGETS.AdrSize, 0, unit);
         t := proc.type;
         t.align := TARGETS.AdrSize;
         t.call  := call;
@@ -1015,7 +1013,7 @@ VAR
                 b := DeclarationSequence(parser)
             END;
 
-            program.locsize := 0;
+            PROG.ResetLocSize;
             IF call IN {PROG._win64, PROG.win64} THEN
                 fparams := PROG.getFloatParamsPos(proc.type, 3, int, flt);
                 enter := IL.Enter(label, LSL(ORD(fparams), 5) + MIN(proc.type.parSize, 4))
@@ -1042,16 +1040,16 @@ VAR
             END;
 
             IF ~codeProc THEN
-                proc.proc.leave := IL.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), program.locsize,
+                proc.proc.leave := IL.Leave(t.base # NIL, (t.base # NIL) & (t.base.typ = PROG.tREAL), PROG.program.locsize,
                     t.parSize * ORD((t.call IN PROG.callee_clean_up) OR (t.call IN {PROG.systemv, PROG._systemv})));
-                enter.param2 := program.locsize;
+                enter.param2 := PROG.program.locsize;
                 checklex(parser, SCAN.lxEND)
             ELSE
                 proc.proc.leave := IL.LeaveC()
             END;
 
             IF TARGETS.CPU = TARGETS.cpuMSP430 THEN
-                check((enter.param2 * ORD(~codeProc) + proc.type.parSize) * 2 + 16 < program.options.ram, pos1, 63)
+                check((enter.param2 * ORD(~codeProc) + proc.type.parSize) * 2 + 16 < PROG.program.options.ram, pos1, 63)
             END
         END;
 
@@ -1157,7 +1155,7 @@ BEGIN
         check1(parser.lex.s = parser.modname, parser, 23)
     END;
 
-    unit := PROG.newUnit(program, parser.lex.ident);
+    unit := PROG.newUnit(parser.lex.ident);
 
     parser.unit := unit;
 
@@ -1285,7 +1283,7 @@ END create;
 
 PROCEDURE init* (options: PROG.OPTIONS);
 BEGIN
-    program := PROG.create(options);
+    PROG.create(options);
     parsers := C.create();
     lines   := 0;
     modules := 0
