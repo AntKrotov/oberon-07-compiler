@@ -130,23 +130,25 @@ PROCEDURE fixup (program: BIN.PROGRAM; text, data, bss: INTEGER; amd64: BOOLEAN)
 VAR
     reloc: BIN.RELOC;
     code:  CHL.BYTELIST;
-    L, delta, delta0: INTEGER;
+    L, delta, delta0, offset: INTEGER;
 
 BEGIN
     code := program.code;
-    delta0 := 3 - 7 * ORD(amd64);
+    delta0 := 3 - 7 * ORD(amd64) - text;
     reloc := program.rel_list.first(BIN.RELOC);
 
     WHILE reloc # NIL DO
 
-        L := BIN.get32le(code, reloc.offset);
-        delta := delta0 - reloc.offset - text;
+        offset := reloc.offset;
+        L := BIN.get32le(code, offset);
+        delta := delta0 - offset;
 
         CASE reloc.opcode OF
-        |BIN.PICDATA: BIN.put32le(code, reloc.offset, L + data + delta)
-        |BIN.PICCODE: BIN.put32le(code, reloc.offset, BIN.GetLabel(program, L) + text + delta)
-        |BIN.PICBSS:  BIN.put32le(code, reloc.offset, L + bss + delta)
+        |BIN.PICDATA: INC(delta, L + data)
+        |BIN.PICCODE: INC(delta, BIN.GetLabel(program, L) + text)
+        |BIN.PICBSS:  INC(delta, L + bss)
         END;
+        BIN.put32le(code, offset, delta);
 
         reloc := reloc.next(BIN.RELOC)
     END

@@ -7,33 +7,35 @@
 
 MODULE HEX;
 
-IMPORT WRITER, CHL := CHUNKLISTS;
+IMPORT WRITER, CHL := CHUNKLISTS, UTILS;
 
 
-PROCEDURE hexdgt (n: BYTE): BYTE;
-BEGIN
-    IF n < 10 THEN
-        n := n + ORD("0")
-    ELSE
-        n := n - 10 + ORD("A")
-    END
+VAR
 
-    RETURN n
-END hexdgt;
+    chksum: INTEGER;
 
 
 PROCEDURE Byte (byte: BYTE);
 BEGIN
-    WRITER.WriteByte(hexdgt(byte DIV 16));
-    WRITER.WriteByte(hexdgt(byte MOD 16));
-    INC(WRITER.file.chksum, byte)
+    WRITER.WriteByte(UTILS.hexdgt(byte DIV 16));
+    WRITER.WriteByte(UTILS.hexdgt(byte MOD 16));
+    INC(chksum, byte)
 END Byte;
+
+
+PROCEDURE Byte4 (a, b, c, d: BYTE);
+BEGIN
+    Byte(a);
+    Byte(b);
+    Byte(c);
+    Byte(d)
+END Byte4;
 
 
 PROCEDURE NewLine;
 BEGIN
-    Byte((-WRITER.file.chksum) MOD 256);
-    WRITER.file.chksum := 0;
+    Byte((-chksum) MOD 256);
+    chksum := 0;
     WRITER.WriteByte(0DH);
     WRITER.WriteByte(0AH)
 END NewLine;
@@ -42,7 +44,7 @@ END NewLine;
 PROCEDURE StartCode;
 BEGIN
     WRITER.WriteByte(ORD(":"));
-    WRITER.file.chksum := 0
+    chksum := 0
 END StartCode;
 
 
@@ -54,10 +56,7 @@ BEGIN
     WHILE cnt > 0 DO
         len := MIN(cnt, 16);
         StartCode;
-        Byte(len);
-        Byte(idx DIV 256);
-        Byte(idx MOD 256);
-        Byte(0);
+        Byte4(len, idx DIV 256, idx MOD 256, 0);
         FOR i := 1 TO len DO
             Byte(mem[idx]);
             INC(idx)
@@ -72,10 +71,7 @@ PROCEDURE ExtLA* (LA: INTEGER);
 BEGIN
     ASSERT((0 <= LA) & (LA <= 0FFFFH));
     StartCode;
-    Byte(2);
-    Byte(0);
-    Byte(0);
-    Byte(4);
+    Byte4(2, 0, 0, 4);
     Byte(LA DIV 256);
     Byte(LA MOD 256);
     NewLine
@@ -98,10 +94,7 @@ BEGIN
         END;
         len := MIN(cnt, 16);
         StartCode;
-        Byte(len);
-        Byte(offset DIV 256);
-        Byte(offset MOD 256);
-        Byte(0);
+        Byte4(len, offset DIV 256, offset MOD 256, 0);
         FOR i := 1 TO len DO
             Byte(CHL.GetByte(mem, idx));
             INC(idx);
@@ -116,10 +109,7 @@ END Data2;
 PROCEDURE End*;
 BEGIN
     StartCode;
-    Byte(0);
-    Byte(0);
-    Byte(0);
-    Byte(1);
+    Byte4(0, 0, 0, 1);
     NewLine
 END End;
 

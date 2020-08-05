@@ -229,6 +229,18 @@ BEGIN
 END Log2;
 
 
+PROCEDURE hexdgt* (n: BYTE): BYTE;
+BEGIN
+    IF n < 10 THEN
+        INC(n, ORD("0"))
+    ELSE
+        INC(n, ORD("A") - 10)
+    END
+
+    RETURN n
+END hexdgt;
+
+
 PROCEDURE init (VAR days: DAYS);
 VAR
     i, j, n0, n1: INTEGER;

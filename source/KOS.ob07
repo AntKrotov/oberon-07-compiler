@@ -73,7 +73,7 @@ BEGIN
     CHL.SetInt(ImportTable, i, 0);
     CHL.SetInt(ImportTable, i + 1, 0);
     INC(len);
-    size := size + CHL.Length(program.import)
+    INC(size, CHL.Length(program.import))
 END Import;
 
 
@@ -88,7 +88,7 @@ CONST
 VAR
     header: HEADER;
 
-    base, text, data, idata, bss: INTEGER;
+    base, text, data, idata, bss, offset: INTEGER;
 
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
@@ -132,41 +132,43 @@ BEGIN
     reloc := program.rel_list.first(BIN.RELOC);
     WHILE reloc # NIL DO
 
-        L := BIN.get32le(code, reloc.offset);
-        delta := 3 - reloc.offset - text;
+        offset := reloc.offset;
+        L := BIN.get32le(code, offset);
+        delta := 3 - offset - text;
 
         CASE reloc.opcode OF
 
         |BIN.RIMP:
               iproc := BIN.GetIProc(program, L);
-              BIN.put32le(code, reloc.offset, idata + iproc.label)
+              delta := idata + iproc.label
 
         |BIN.RBSS:
-              BIN.put32le(code, reloc.offset, L + bss)
+              delta := L + bss
 
         |BIN.RDATA:
-              BIN.put32le(code, reloc.offset, L + data)
+              delta := L + data
 
         |BIN.RCODE:
-              BIN.put32le(code, reloc.offset, BIN.GetLabel(program, L) + text)
+              delta := BIN.GetLabel(program, L) + text
 
         |BIN.PICDATA:
-              BIN.put32le(code, reloc.offset, L + data + delta)
+              INC(delta, L + data)
 
         |BIN.PICCODE:
-              BIN.put32le(code, reloc.offset, BIN.GetLabel(program, L) + text + delta)
+              INC(delta, BIN.GetLabel(program, L) + text)
 
         |BIN.PICBSS:
-              BIN.put32le(code, reloc.offset, L + bss + delta)
+              INC(delta, L + bss)
 
         |BIN.PICIMP:
               iproc := BIN.GetIProc(program, L);
-              BIN.put32le(code, reloc.offset, idata + iproc.label + delta)
+              INC(delta, idata + iproc.label)
 
         |BIN.IMPTAB:
-              BIN.put32le(code, reloc.offset, idata + delta)
+              INC(delta, idata)
 
         END;
+        BIN.put32le(code, offset, delta);
 
         reloc := reloc.next(BIN.RELOC)
     END;

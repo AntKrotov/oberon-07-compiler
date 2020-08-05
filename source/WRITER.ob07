@@ -13,13 +13,13 @@ IMPORT FILES, ERRORS, UTILS;
 VAR
 
     counter*: INTEGER;
-    file*: FILES.FILE;
+    file: FILES.FILE;
 
 
 PROCEDURE align* (n, _align: INTEGER): INTEGER;
 BEGIN
     IF n MOD _align # 0 THEN
-        n := n + _align - (n MOD _align)
+        INC(n, _align - (n MOD _align))
     END
 
     RETURN n

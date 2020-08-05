@@ -38,18 +38,20 @@ END WriteReloc;
 
 PROCEDURE Reloc (program: BIN.PROGRAM);
 VAR
-    reloc: BIN.RELOC;
+    reloc:  BIN.RELOC;
+    offset: INTEGER;
 
 BEGIN
     reloc := program.rel_list.first(BIN.RELOC);
     WHILE reloc # NIL DO
 
+        offset := reloc.offset;
         CASE reloc.opcode OF
         |BIN.RIMP,
-         BIN.IMPTAB: WriteReloc(reloc.offset, 4, 6)
-        |BIN.RBSS:   WriteReloc(reloc.offset, 5, 6)
-        |BIN.RDATA:  WriteReloc(reloc.offset, 2, 6)
-        |BIN.RCODE:  WriteReloc(reloc.offset, 1, 6)
+         BIN.IMPTAB: WriteReloc(offset, 4, 6)
+        |BIN.RBSS:   WriteReloc(offset, 5, 6)
+        |BIN.RDATA:  WriteReloc(offset, 2, 6)
+        |BIN.RCODE:  WriteReloc(offset, 1, 6)
         END;
 
         reloc := reloc.next(BIN.RELOC)
@@ -62,6 +64,7 @@ VAR
     reloc:   BIN.RELOC;
     iproc:   BIN.IMPRT;
     res, L:  INTEGER;
+    offset:  INTEGER;
     code:    CHL.BYTELIST;
 
 BEGIN
@@ -71,16 +74,17 @@ BEGIN
     WHILE reloc # NIL DO
 
         INC(res);
+        offset := reloc.offset;
 
         IF reloc.opcode = BIN.RIMP THEN
-            L := BIN.get32le(code, reloc.offset);
+            L := BIN.get32le(code, offset);
             iproc := BIN.GetIProc(program, L);
-            BIN.put32le(code, reloc.offset, iproc.label)
+            BIN.put32le(code, offset, iproc.label)
         END;
 
         IF reloc.opcode = BIN.RCODE THEN
-            L := BIN.get32le(code, reloc.offset);
-            BIN.put32le(code, reloc.offset, BIN.GetLabel(program, L))
+            L := BIN.get32le(code, offset);
+            BIN.put32le(code, offset, BIN.GetLabel(program, L))
         END;
 
         reloc := reloc.next(BIN.RELOC)
