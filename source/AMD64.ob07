@@ -1194,6 +1194,10 @@ BEGIN
                 movsdrm(xmm, rbp, n);
                 cmd := next
             ELSE
+                IF (next.opcode = IL.opADDR) & ~isLong(n + next.param2) THEN
+                    INC(n, next.param2);
+                    cmd := next
+                END;
                 reg1 := GetAnyReg();
                 Rex(0, reg1);
                 OutByte2(8DH, 45H + long(n) + (reg1 MOD 8) * 8); (* lea reg1, qword[rbp+n] *)
@@ -1201,6 +1205,11 @@ BEGIN
             END
 
         |IL.opGADR:
+            next := cmd.next(COMMAND);
+            IF (next.opcode = IL.opADDR) & ~isLong(param2 + next.param2) THEN
+                INC(param2, next.param2);
+                cmd := next
+            END;
             lea(GetAnyReg(), param2, sBSS)
 
         |IL.opVADR:

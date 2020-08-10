@@ -866,6 +866,11 @@ BEGIN
         |IL.opNOP:
 
         |IL.opGADR:
+            next := cmd.next(COMMAND);
+            IF next.opcode = IL.opADDR THEN
+                INC(param2, next.param2);
+                cmd := next
+            END;
             reg1 := GetAnyReg();
             IF pic THEN
                 Pic(reg1, BIN.PICBSS, param2)
@@ -875,7 +880,12 @@ BEGIN
             END
 
         |IL.opLADR:
+            next := cmd.next(COMMAND);
             n := param2 * 4;
+            IF next.opcode = IL.opADDR THEN
+                INC(n, next.param2);
+                cmd := next
+            END;
             OutByte2(8DH, 45H + GetAnyReg() * 8 + long(n));  (* lea reg1, dword[ebp + n] *)
             OutIntByte(n)
 
