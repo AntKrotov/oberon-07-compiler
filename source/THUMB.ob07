@@ -1092,7 +1092,7 @@ BEGIN
 
         |IL.opCALLP:
             UnOp(r1);
-            AddImm8(r1, 1);
+            AddImm8(r1, 1); (* Thumb mode *)
             gen5(3, TRUE, FALSE, r1, 0); (* blx r1 *)
             drop;
             ASSERT(R.top = -1)
@@ -1487,7 +1487,7 @@ BEGIN
             END;
             drop
 
-        |IL.opADDL, IL.opADDR:
+        |IL.opADDC:
             UnOp(r1);
             AddConst(r1, param2)
 
@@ -1761,7 +1761,7 @@ BEGIN
             gen4(14, r2, r1); (* bic r1, r2 *)
             drop
 
-        |IL.opADDSL, IL.opADDSR:
+        |IL.opADDSC:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
             gen4(12, r2, r1); (* orr r1, r2 *)
@@ -2014,7 +2014,7 @@ BEGIN
             CallRTL(IL._fdivi, 2);
             GetRegA
 
-        |IL.opADDF, IL.opADDFI:
+        |IL.opADDF:
             PushAll(2);
             CallRTL(IL._fadd, 2);
             GetRegA

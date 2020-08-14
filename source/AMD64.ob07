@@ -19,8 +19,8 @@ CONST
 
     rcx = REG.R1;
     rdx = REG.R2;
-    r8 = REG.R8;
-    r9 = REG.R9;
+    r8  = REG.R8;
+    r9  = REG.R9;
 
     rsp = 4;
     rbp = 5;
@@ -96,24 +96,19 @@ BEGIN
 END OutInt;
 
 
-PROCEDURE isByte (n: INTEGER): BOOLEAN;
-    RETURN (-128 <= n) & (n <= 127)
-END isByte;
-
-
 PROCEDURE short (n: INTEGER): INTEGER;
-    RETURN 2 * ORD(isByte(n))
+    RETURN 2 * ORD(X86.isByte(n))
 END short;
 
 
 PROCEDURE long (n: INTEGER): INTEGER;
-    RETURN 40H * ORD(~isByte(n))
+    RETURN 40H * ORD(~X86.isByte(n))
 END long;
 
 
 PROCEDURE OutIntByte (n: INTEGER);
 BEGIN
-    IF isByte(n) THEN
+    IF X86.isByte(n) THEN
         OutByte(n MOD 256)
     ELSE
         OutInt(n)
@@ -211,7 +206,12 @@ END sub;
 
 PROCEDURE xchg (reg1, reg2: INTEGER); (* xchg reg1, reg2 *)
 BEGIN
-    oprr(87H, reg1, reg2)
+    IF rax IN {reg1, reg2} THEN
+        Rex(reg1 + reg2, 0);
+        OutByte(90H + (reg1 + reg2) MOD 8)
+    ELSE
+        oprr(87H, reg1, reg2)
+    END
 END xchg;
 
 
@@ -383,8 +383,7 @@ BEGIN
         oprlongc(reg, n, oprr)
     ELSE
         Rex(reg, 0);
-        OutByte2(81H + short(n), op + reg MOD 8);
-        OutIntByte(n)
+        X86.oprc(op, reg, n)
     END
 END oprc;
 
@@ -440,7 +439,7 @@ BEGIN
         push(reg2);
         drop
     ELSE
-        OutByte(68H + short(n)); OutIntByte(n) (* push n *)
+        X86.pushc(n)
     END
 END pushc;
 
@@ -551,21 +550,6 @@ PROCEDURE jcc (cc, label: INTEGER); (* jcc label *)
 BEGIN
     X86.jcc(cc, label)
 END jcc;
-
-
-PROCEDURE jmp (label: INTEGER); (* jmp label *)
-BEGIN
-    X86.jmp(label)
-END jmp;
-
-
-PROCEDURE setcc (cc, reg: INTEGER); (* setcc reg8 *)
-BEGIN
-    IF reg >= 8 THEN
-        OutByte(41H)
-    END;
-    OutByte3(0FH, cc, 0C0H + reg MOD 8)
-END setcc;
 
 
 PROCEDURE shiftrc (op, reg, n: INTEGER);
@@ -829,7 +813,7 @@ BEGIN
         cc := setnc
     END;
     OutByte2(7AH, 3 + reg DIV 8); (* jp L *)
-    setcc(cc, reg);
+    X86.setcc(cc, reg)
     (* L: *)
 END fcmp;
 
@@ -859,7 +843,7 @@ BEGIN
         CASE opcode OF
 
         |IL.opJMP:
-            jmp(param1)
+            X86.jmp(param1)
 
         |IL.opCALL, IL.opWIN64CALL, IL.opSYSVCALL:
             REG.Store(R);
@@ -907,7 +891,7 @@ BEGIN
 
         |IL.opONERR:
             pushc(param2);
-            jmp(param1)
+            X86.jmp(param1)
 
         |IL.opPUSHC:
             pushc(param2)
@@ -1137,9 +1121,8 @@ BEGIN
             IF reg2 # -1 THEN
                 mov(reg1, reg2)
             ELSE
-                n := param2 * 8;
                 xor(reg1, reg1);
-                movrm32(reg1, rbp, n)
+                movrm32(reg1, rbp, param2 * 8)
             END
 
         |IL.opGLOAD64:
@@ -1194,7 +1177,7 @@ BEGIN
                 movsdrm(xmm, rbp, n);
                 cmd := next
             ELSE
-                IF (next.opcode = IL.opADDR) & ~isLong(n + next.param2) THEN
+                IF (next.opcode = IL.opADDC) & ~isLong(n + next.param2) THEN
                     INC(n, next.param2);
                     cmd := next
                 END;
@@ -1206,7 +1189,7 @@ BEGIN
 
         |IL.opGADR:
             next := cmd.next(COMMAND);
-            IF (next.opcode = IL.opADDR) & ~isLong(param2 + next.param2) THEN
+            IF (next.opcode = IL.opADDC) & ~isLong(param2 + next.param2) THEN
                 INC(param2, next.param2);
                 cmd := next
             END;
@@ -1328,7 +1311,7 @@ BEGIN
                 cmd := next
             ELSE
                 reg1 := GetAnyReg();
-                setcc(cc + 16, reg1);
+                X86.setcc(cc + 16, reg1);
                 andrc(reg1, 1)
             END
 
@@ -1397,11 +1380,11 @@ BEGIN
             cmprc(reg1, 64);
             jcc(jb, L);
             xor(reg1, reg1);
-            jmp(label);
+            X86.jmp(label);
             X86.SetLabel(L);
             Rex(reg2, reg1);
             OutByte3(0FH, 0A3H, 0C0H + 8 * (reg1 MOD 8) + reg2 MOD 8); (* bt reg2, reg1 *)
-            setcc(setc, reg1);
+            X86.setcc(setc, reg1);
             andrc(reg1, 1);
             X86.SetLabel(label);
             drop
@@ -1411,19 +1394,19 @@ BEGIN
             Rex(reg1, 0);
             OutByte2(0FH, 0BAH); (* bt reg1, param2 *)
             OutByte2(0E0H + reg1 MOD 8, param2);
-            setcc(setc, reg1);
+            X86.setcc(setc, reg1);
             andrc(reg1, 1)
 
         |IL.opNOT:
             UnOp(reg1);
             test(reg1);
-            setcc(sete, reg1);
+            X86.setcc(sete, reg1);
             andrc(reg1, 1)
 
         |IL.opORD:
             UnOp(reg1);
             test(reg1);
-            setcc(setne, reg1);
+            X86.setcc(setne, reg1);
             andrc(reg1, 1)
 
         |IL.opABS:
@@ -1448,9 +1431,9 @@ BEGIN
             X86.SetLabel(label);
             cmprr(reg1, reg2);
             IF opcode = IL.opEQB THEN
-                setcc(sete, reg1)
+                X86.setcc(sete, reg1)
             ELSE
-                setcc(setne, reg1)
+                X86.setcc(setne, reg1)
             END;
             andrc(reg1, 1)
 
@@ -1462,7 +1445,7 @@ BEGIN
             UnOp(reg1);
             xorrc(reg1, param2)
 
-        |IL.opADDSL, IL.opADDSR:
+        |IL.opADDSC:
             UnOp(reg1);
             orrc(reg1, param2)
 
@@ -1697,19 +1680,18 @@ BEGIN
 
         |IL.opSUBR, IL.opSUBL:
             UnOp(reg1);
-            n := param2;
-            IF n = 1 THEN
+            IF param2 = 1 THEN
                 decr(reg1)
-            ELSIF n = -1 THEN
+            ELSIF param2 = -1 THEN
                 incr(reg1)
-            ELSIF n # 0 THEN
-                subrc(reg1, n)
+            ELSIF param2 # 0 THEN
+                subrc(reg1, param2)
             END;
             IF opcode = IL.opSUBL THEN
                 neg(reg1)
             END
 
-        |IL.opADDL, IL.opADDR:
+        |IL.opADDC:
             IF (param2 # 0) & ~isLong(param2) THEN
                 UnOp(reg1);
                 next := cmd.next(COMMAND);
@@ -2017,8 +1999,8 @@ BEGIN
             reg1 := GetAnyReg();
 
             CASE opcode OF
-            |IL.opEQP, IL.opEQIP: setcc(sete,  reg1)
-            |IL.opNEP, IL.opNEIP: setcc(setne, reg1)
+            |IL.opEQP, IL.opEQIP: X86.setcc(sete,  reg1)
+            |IL.opNEP, IL.opNEIP: X86.setcc(setne, reg1)
             END;
 
             andrc(reg1, 1)
@@ -2088,7 +2070,7 @@ BEGIN
             DEC(xmm);
             drop
 
-        |IL.opADDF, IL.opADDFI:
+        |IL.opADDF:
             opxx(58H, xmm - 1, xmm);
             DEC(xmm)
 
@@ -2319,16 +2301,15 @@ BEGIN
                 reg2 := GetAnyReg();
                 lea(reg2, param1, sBSS);
                 movmr(reg2, 0, reg1);
-                drop;
                 drop
             ELSE
                 reg2 := GetAnyReg();
                 lea(reg2, param1, sBSS);
                 Rex(reg2, 0);
                 OutByte2(0C7H, reg2 MOD 8); (* mov qword[reg2], param2 *)
-                OutInt(param2);
-                drop
-            END
+                OutInt(param2)
+            END;
+            drop
 
         |IL.opLADR_SAVE:
             UnOp(reg1);
@@ -2440,7 +2421,7 @@ BEGIN
                 oprr2(0FH, 0ABH + 8 * ORD(opcode = IL.opLADR_EXCL), reg2, reg1) (* bts/btr reg2, reg1 *)
             ELSE
                 n := param2 * 8;
-                OutByte2(73H, 5 + 3 * ORD(~isByte(n))); (* jnb L *)
+                OutByte2(73H, 5 + 3 * ORD(~X86.isByte(n))); (* jnb L *)
                 Rex(0, reg1);
                 OutByte3(0FH, 0ABH + 8 * ORD(opcode = IL.opLADR_EXCL), 45H + long(n) + 8 * (reg1 MOD 8));
                 OutIntByte(n) (* bts/btr qword[rbp+n], reg1 *)

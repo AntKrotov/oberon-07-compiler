@@ -356,7 +356,7 @@ VAR
 
     Size: RECORD
 
-        Code, Data, Bss, Stack, Import, Reloc, Export: INTEGER
+        Code, Data, Bss, Import, Reloc, Export: INTEGER
 
     END;
 
@@ -472,7 +472,6 @@ BEGIN
     Size.Code  := CHL.Length(program.code);
     Size.Data  := CHL.Length(program.data);
     Size.Bss   := program.bss;
-    Size.Stack := program.stack;
 
     IF dll THEN
         BaseAddress := 10000000H
@@ -523,8 +522,8 @@ BEGIN
     OptionalHeader.CheckSum                     :=  0;
     OptionalHeader.Subsystem                    :=  WCHR((2 + ORD(console)) * ORD(~dll));
     OptionalHeader.DllCharacteristics           :=  0040X;
-    OptionalHeader.SizeOfStackReserve           :=  Size.Stack;
-    OptionalHeader.SizeOfStackCommit            :=  Size.Stack DIV 16;
+    OptionalHeader.SizeOfStackReserve           :=  100000H;
+    OptionalHeader.SizeOfStackCommit            :=  10000H;
     OptionalHeader.SizeOfHeapReserve            :=  100000H;
     OptionalHeader.SizeOfHeapCommit             :=  10000H;
     OptionalHeader.LoaderFlags                  :=  0;

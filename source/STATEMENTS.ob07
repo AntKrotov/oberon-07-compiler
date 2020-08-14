@@ -1474,7 +1474,7 @@ BEGIN
             e.obj := eVPAR
         END;
         IF field.offset # 0 THEN
-            IL.AddCmd(IL.opADDR, field.offset)
+            IL.AddCmd(IL.opADDC, field.offset)
         END;
         PARS.Next(parser);
         e.ident := NIL
@@ -1492,7 +1492,7 @@ BEGIN
                 IF e.type.length > 0 THEN
                     PARS.check(ARITH.range(idx.value, 0, e.type.length - 1), pos, 83);
                     IF ARITH.Int(idx.value) > 0 THEN
-                        IL.AddCmd(IL.opADDR, ARITH.Int(idx.value) * e.type.base.size)
+                        IL.AddCmd(IL.opADDC, ARITH.Int(idx.value) * e.type.base.size)
                     END
                 ELSE
                     PARS.check(ARITH.range(idx.value, 0, UTILS.target.maxInt), pos, 83);
@@ -1749,9 +1749,9 @@ VAR
                     ARITH.opSet(e.value, e1.value, "+")
                 ELSE
                     IF e.obj = eCONST THEN
-                        IL.AddCmd(IL.opADDSL, ARITH.Int(e.value))
+                        IL.AddCmd(IL.opADDSC, ARITH.Int(e.value))
                     ELSIF e1.obj = eCONST THEN
-                        IL.AddCmd(IL.opADDSR, ARITH.Int(e1.value))
+                        IL.AddCmd(IL.opADDSC, ARITH.Int(e1.value))
                     ELSE
                         IL.AddCmd0(IL.opADDS)
                     END;
@@ -2109,16 +2109,16 @@ VAR
                 ELSE
                     IF isInt(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDL + ORD(minus), ARITH.Int(e.value))
+                            IL.AddCmd(IL.opADDC - ORD(minus), ARITH.Int(e.value))
                         ELSIF e1.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDR + ORD(minus), ARITH.Int(e1.value))
+                            IL.AddCmd(IL.opADDC + ORD(minus), ARITH.Int(e1.value))
                         ELSE
                             IL.AddCmd0(IL.opADD + ORD(minus))
                         END
                     ELSIF isReal(e) THEN
                         IF e.obj = eCONST THEN
                             IL.Float(ARITH.Float(e.value));
-                            IL.fbinop(IL.opADDFI + ORD(minus))
+                            IL.fbinop(IL.opADDF - ORD(minus))
                         ELSIF e1.obj = eCONST THEN
                             IL.Float(ARITH.Float(e1.value));
                             IL.fbinop(IL.opADDF + ORD(minus))
@@ -2127,9 +2127,9 @@ VAR
                         END
                     ELSIF isSet(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDSL + ORD(minus), ARITH.Int(e.value))
+                            IL.AddCmd(IL.opADDSC - ORD(minus), ARITH.Int(e.value))
                         ELSIF e1.obj = eCONST THEN
-                            IL.AddCmd(IL.opADDSR + ORD(minus), ARITH.Int(e1.value))
+                            IL.AddCmd(IL.opADDSC + ORD(minus), ARITH.Int(e1.value))
                         ELSE
                             IL.AddCmd0(IL.opADDS + ORD(minus))
                         END

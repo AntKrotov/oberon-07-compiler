@@ -819,7 +819,7 @@ BEGIN
             Op2(opADD, reg2 * 256, reg1);
             drop
 
-        |IL.opADDL, IL.opADDR:
+        |IL.opADDC:
             IF param2 # 0 THEN
                 UnOp(reg1);
                 Op2(opADD, imm(param2), reg1)
@@ -958,6 +958,11 @@ BEGIN
             drop;
             Op2(opMOV + bw(param2 = 1), src_x(param1, SR), dst_x(0, reg2))
 
+        |IL.opCHKBYTE:
+            BinOp(reg1, reg2);
+            Op2(opCMP, imm(256), reg1);
+            jcc(jb, param1)
+
         |IL.opCHKIDX:
             UnOp(reg1);
             Op2(opCMP, imm(param2), reg1);
@@ -1079,7 +1084,7 @@ BEGIN
             Op2(opBIC, reg2 * 256, reg1);
             drop
 
-        |IL.opADDSL, IL.opADDSR:
+        |IL.opADDSC:
             UnOp(reg1);
             Op2(opBIS, imm(param2), reg1)
 
@@ -1188,11 +1193,6 @@ BEGIN
 
             INCL(R.regs, reg1);
             ASSERT(REG.GetReg(R, reg1))
-
-        |IL.opCHKBYTE:
-            BinOp(reg1, reg2);
-            Op2(opCMP, imm(256), reg1);
-            jcc(jb, param1)
 
         |IL.opLSL, IL.opASR, IL.opROR, IL.opLSR:
             PushAll(2);
