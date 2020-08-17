@@ -215,13 +215,11 @@ END GetArg;
 
 PROCEDURE FileRead* (F: INTEGER; VAR Buffer: ARRAY OF CHAR; bytes: INTEGER): INTEGER;
 VAR
-    res, n: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    IF _ReadFile(F, SYSTEM.ADR(Buffer[0]), bytes, n, NIL) = 0 THEN
+    IF _ReadFile(F, SYSTEM.ADR(Buffer[0]), bytes, res, NIL) = 0 THEN
         res := -1
-    ELSE
-        res := n
     END
 
     RETURN res
@@ -230,13 +228,11 @@ END FileRead;
 
 PROCEDURE FileWrite* (F: INTEGER; Buffer: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
-    res, n: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    IF _WriteFile(F, SYSTEM.ADR(Buffer[0]), bytes, n, NIL) = 0 THEN
+    IF _WriteFile(F, SYSTEM.ADR(Buffer[0]), bytes, res, NIL) = 0 THEN
         res := -1
-    ELSE
-        res := n
     END
 
     RETURN res

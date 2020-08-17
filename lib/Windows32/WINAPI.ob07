@@ -60,38 +60,41 @@ TYPE
 
     TSecurityAttributes* = RECORD
 
-        nLength*:               INTEGER;
+        nLength*:               SYSTEM.CARD32;
         lpSecurityDescriptor*:  INTEGER;
-        bInheritHandle*:        INTEGER
+        bInheritHandle*:        SYSTEM.CARD32 (* BOOL *)
 
     END;
 
     TFileTime* = RECORD
 
         dwLowDateTime*,
-        dwHighDateTime*: INTEGER
+        dwHighDateTime*: SYSTEM.CARD32
 
     END;
 
     TWin32FindData* = RECORD
 
-        dwFileAttributes*:    SET;
+        dwFileAttributes*:    SYSTEM.CARD32;
         ftCreationTime*:      TFileTime;
         ftLastAccessTime*:    TFileTime;
         ftLastWriteTime*:     TFileTime;
-        nFileSizeHigh*:       INTEGER;
-        nFileSizeLow*:        INTEGER;
-        dwReserved0*:         INTEGER;
-        dwReserved1*:         INTEGER;
+        nFileSizeHigh*:       SYSTEM.CARD32;
+        nFileSizeLow*:        SYSTEM.CARD32;
+        dwReserved0*:         SYSTEM.CARD32;
+        dwReserved1*:         SYSTEM.CARD32;
         cFileName*:           STRING;
-        cAlternateFileName*:  ARRAY 14 OF CHAR
+        cAlternateFileName*:  ARRAY 14 OF CHAR;
+        dwFileType*:          SYSTEM.CARD32;
+        dwCreatorType*:       SYSTEM.CARD32;
+        wFinderFlags*:        WCHAR
 
     END;
 
     OFSTRUCT* = RECORD
 
-        cBytes*:      CHAR;
-        fFixedDisk*:  CHAR;
+        cBytes*:      BYTE;
+        fFixedDisk*:  BYTE;
         nErrCode*:    WCHAR;
         Reserved1*:   WCHAR;
         Reserved2*:   WCHAR;
@@ -105,8 +108,8 @@ TYPE
 
         Internal*:      INTEGER;
         InternalHigh*:  INTEGER;
-        Offset*:        INTEGER;
-        OffsetHigh*:    INTEGER;
+        Offset*:        SYSTEM.CARD32;
+        OffsetHigh*:    SYSTEM.CARD32;
         hEvent*:        INTEGER
 
     END;

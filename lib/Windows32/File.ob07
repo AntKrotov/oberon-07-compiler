@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019, Anton Krotov
+    Copyright (c) 2019-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -20,12 +20,14 @@ PROCEDURE Exists* (FName: ARRAY OF CHAR): BOOLEAN;
 VAR
     FindData: WINAPI.TWin32FindData;
     Handle:   INTEGER;
+    attr:     SET;
 
 BEGIN
     Handle := WINAPI.FindFirstFile(SYSTEM.ADR(FName[0]), FindData);
     IF Handle # -1 THEN
         WINAPI.FindClose(Handle);
-        IF 4 IN FindData.dwFileAttributes THEN
+        SYSTEM.GET(SYSTEM.ADR(FindData.dwFileAttributes), attr);
+        IF 4 IN attr THEN
             Handle := -1
         END
     END
@@ -65,13 +67,11 @@ END Seek;
 
 PROCEDURE Read* (F, Buffer, Count: INTEGER): INTEGER;
 VAR
-    res, n: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    IF WINAPI.ReadFile(F, Buffer, Count, SYSTEM.ADR(n), NIL) = 0 THEN
+    IF WINAPI.ReadFile(F, Buffer, Count, SYSTEM.ADR(res), NIL) = 0 THEN
         res := -1
-    ELSE
-        res := n
     END
 
     RETURN res
@@ -80,13 +80,11 @@ END Read;
 
 PROCEDURE Write* (F, Buffer, Count: INTEGER): INTEGER;
 VAR
-    res, n: INTEGER;
+    res: INTEGER;
 
 BEGIN
-    IF WINAPI.WriteFile(F, Buffer, Count, SYSTEM.ADR(n), NIL) = 0 THEN
+    IF WINAPI.WriteFile(F, Buffer, Count, SYSTEM.ADR(res), NIL) = 0 THEN
         res := -1
-    ELSE
-        res := n
     END
 
     RETURN res

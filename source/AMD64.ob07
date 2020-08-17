@@ -1121,9 +1121,10 @@ BEGIN
             IF reg2 # -1 THEN
                 mov(reg1, reg2)
             ELSE
-                xor(reg1, reg1);
                 movrm32(reg1, rbp, param2 * 8)
-            END
+            END;
+            shiftrc(shl, reg1, 32);
+            shiftrc(shr, reg1, 32)
 
         |IL.opGLOAD64:
             reg1 := GetAnyReg();
@@ -1142,9 +1143,10 @@ BEGIN
 
         |IL.opGLOAD32:
             reg1 := GetAnyReg();
-            xor(reg1, reg1);
             lea(reg1, param2, sBSS);
-            movrm32(reg1, reg1, 0)
+            movrm32(reg1, reg1, 0);
+            shiftrc(shl, reg1, 32);
+            shiftrc(shr, reg1, 32)
 
         |IL.opVLOAD64:
             reg1 := GetAnyReg();
@@ -1160,9 +1162,10 @@ BEGIN
         |IL.opVLOAD32:
             reg1 := GetAnyReg();
             reg2 := GetAnyReg();
-            xor(reg1, reg1);
             movrm(reg2, rbp, param2 * 8);
             movrm32(reg1, reg2, 0);
+            shiftrc(shl, reg1, 32);
+            shiftrc(shr, reg1, 32);
             drop
 
         |IL.opLADR:
@@ -2248,16 +2251,13 @@ BEGIN
         |IL.opCONST_PARAM:
             pushc(param2)
 
-        |IL.opGLOAD32_PARAM:
-            reg1 := GetAnyReg();
-            xor(reg1, reg1);
-            lea(reg1, param2, sBSS);
-            movrm32(reg1, reg1, 0);
-            push(reg1);
-            drop
-
-        |IL.opLOAD32_PARAM:
-            UnOp(reg1);
+        |IL.opGLOAD32_PARAM, IL.opLOAD32_PARAM:
+            IF opcode = IL.opGLOAD32_PARAM THEN
+                reg1 := GetAnyReg();
+                lea(reg1, param2, sBSS)
+            ELSE
+                UnOp(reg1)
+            END;
             movrm32(reg1, reg1, 0);
             shiftrc(shl, reg1, 32);
             shiftrc(shr, reg1, 32);
@@ -2266,13 +2266,14 @@ BEGIN
 
         |IL.opLLOAD32_PARAM:
             reg1 := GetAnyReg();
-            xor(reg1, reg1);
             reg2 := GetVarReg(param2);
             IF reg2 # -1 THEN
                 mov(reg1, reg2)
             ELSE
                 movrm32(reg1, rbp, param2 * 8)
             END;
+            shiftrc(shl, reg1, 32);
+            shiftrc(shr, reg1, 32);
             push(reg1);
             drop
 

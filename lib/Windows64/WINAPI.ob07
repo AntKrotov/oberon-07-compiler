@@ -60,23 +60,41 @@ TYPE
 
     TSecurityAttributes* = RECORD
 
-        nLength*:               INTEGER;
+        nLength*:               SYSTEM.CARD32;
         lpSecurityDescriptor*:  INTEGER;
-        bInheritHandle*:        INTEGER
+        bInheritHandle*:        SYSTEM.CARD32 (* BOOL *)
 
     END;
 
     TFileTime* = RECORD
 
         dwLowDateTime*,
-        dwHighDateTime*: INTEGER
+        dwHighDateTime*: SYSTEM.CARD32
+
+    END;
+
+    TWin32FindData* = RECORD
+
+        dwFileAttributes*:    SYSTEM.CARD32;
+        ftCreationTime*:      TFileTime;
+        ftLastAccessTime*:    TFileTime;
+        ftLastWriteTime*:     TFileTime;
+        nFileSizeHigh*:       SYSTEM.CARD32;
+        nFileSizeLow*:        SYSTEM.CARD32;
+        dwReserved0*:         SYSTEM.CARD32;
+        dwReserved1*:         SYSTEM.CARD32;
+        cFileName*:           STRING;
+        cAlternateFileName*:  ARRAY 14 OF CHAR;
+        dwFileType*:          SYSTEM.CARD32;
+        dwCreatorType*:       SYSTEM.CARD32;
+        wFinderFlags*:        WCHAR
 
     END;
 
     OFSTRUCT* = RECORD
 
-        cBytes*:      CHAR;
-        fFixedDisk*:  CHAR;
+        cBytes*:      BYTE;
+        fFixedDisk*:  BYTE;
         nErrCode*:    WCHAR;
         Reserved1*:   WCHAR;
         Reserved2*:   WCHAR;
@@ -90,8 +108,8 @@ TYPE
 
         Internal*:      INTEGER;
         InternalHigh*:  INTEGER;
-        Offset*:        INTEGER;
-        OffsetHigh*:    INTEGER;
+        Offset*:        SYSTEM.CARD32;
+        OffsetHigh*:    SYSTEM.CARD32;
         hEvent*:        INTEGER
 
     END;
@@ -160,6 +178,55 @@ PROCEDURE [windows-, "kernel32.dll", "FreeConsole"]
 PROCEDURE [windows-, "kernel32.dll", "GetLocalTime"]
     GetLocalTime* (T: TSystemTime);
 
+PROCEDURE [windows-, "kernel32.dll", "RemoveDirectoryA"]
+    RemoveDirectory* (lpPathName: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "GetFileAttributesA"]
+    GetFileAttributes* (lpPathName: INTEGER): SET;
+
+PROCEDURE [windows-, "kernel32.dll", "CreateDirectoryA"]
+    CreateDirectory* (lpPathName: INTEGER; lpSecurityAttributes: PSecurityAttributes): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "FindFirstFileA"]
+    FindFirstFile* (lpFileName: INTEGER; lpFindFileData: TWin32FindData): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "DeleteFileA"]
+    DeleteFile* (lpFileName: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "FindClose"]
+    FindClose* (hFindFile: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "CreateFileA"]
+    CreateFile* (
+        lpFileName, dwDesiredAccess, dwShareMode: INTEGER;
+        lpSecurityAttributes: PSecurityAttributes;
+        dwCreationDisposition, dwFlagsAndAttributes, hTemplateFile: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "OpenFile"]
+    OpenFile* (lpFileName: INTEGER; lpReOpenBuff: OFSTRUCT; uStyle: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "SetFilePointer"]
+    SetFilePointer* (hFile, lDistanceToMove, lpDistanceToMoveHigh, dwMoveMethod: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "ReadConsoleA"]
+    ReadConsole* (hConsoleInput, lpBuffer, nNumberOfCharsToRead, lpNumberOfCharsRead, lpReserved: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "WriteConsoleW"]
+    WriteConsoleW* (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "kernel32.dll", "WriteConsoleA"]
+    WriteConsole* (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "user32.dll", "MessageBoxA"]
+    MessageBoxA* (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "user32.dll", "MessageBoxW"]
+    MessageBox* (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
+
+PROCEDURE [windows-, "user32.dll", "CreateWindowExA"]
+    CreateWindowEx* (
+        dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y,
+        nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam: INTEGER): INTEGER;
 
 PROCEDURE SetDllEntry* (process_detach, thread_detach, thread_attach: DLL_ENTRY);
 BEGIN
