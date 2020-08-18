@@ -149,11 +149,11 @@ UTF-8 с BOM-сигнатурой.
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 1)
 
-        PROCEDURE GET16(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET16(a: INTEGER; VAR x: INTEGER, SET, WCHAR, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 2)
 
-        PROCEDURE GET32(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET32(a: INTEGER; VAR x: INTEGER, SET, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 4)
 

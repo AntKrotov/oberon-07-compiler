@@ -874,6 +874,8 @@ BEGIN
             |PROG.sysGET32: size := 4
             END;
 
+            PARS.check(size <= e2.type.size, pos, 66);
+
             IF e.obj = eCONST THEN
                 IL.AddCmd2(IL.opGETC, ARITH.Int(e.value), size)
             ELSE
@@ -923,10 +925,11 @@ BEGIN
                 END;
                 IL.setlast(endcall.prev(IL.COMMAND));
                 CASE proc OF
-                |PROG.sysPUT8:  IL.SysPut(1)
-                |PROG.sysPUT16: IL.SysPut(2)
-                |PROG.sysPUT32: IL.SysPut(4)
-                END
+                |PROG.sysPUT8:  size := 1
+                |PROG.sysPUT16: size := 2
+                |PROG.sysPUT32: size := 4
+                END;
+                IL.SysPut(size)
 
             END;
             IL.popBegEnd(begcall, endcall)
