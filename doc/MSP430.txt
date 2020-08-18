@@ -112,21 +112,25 @@ UTF-8 с BOM-сигнатурой.
                 T - тип-запись или тип-указатель,
                 возвращает номер типа в таблице типов-записей
 
+        PROCEDURE MOVE(Source, Dest, n: INTEGER)
+                Копирует n байт памяти из Source в Dest,
+                области Source и Dest не могут перекрываться
+
         PROCEDURE GET(a: INTEGER;
                 VAR v: любой основной тип, PROCEDURE, POINTER)
                 v := Память[a]
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR)
-                Память[a] := младшие 8 бит (x)
+        PROCEDURE GET8(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR)
+                Эквивалентно
+                SYSTEM.MOVE(a, SYSTEM.ADR(x), 1)
 
         PROCEDURE PUT(a: INTEGER; x: любой основной тип, PROCEDURE, POINTER)
                 Память[a] := x;
                 Если x: BYTE, то значение x будет расширено до 16 бит,
                 для записи байтов использовать SYSTEM.PUT8
 
-        PROCEDURE MOVE(Source, Dest, n: INTEGER)
-                Копирует n байт памяти из Source в Dest,
-                области Source и Dest не могут перекрываться
+        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR)
+                Память[a] := младшие 8 бит (x)
 
         PROCEDURE CODE(word1, word2,... : INTEGER)
                 Вставка машинного кода,

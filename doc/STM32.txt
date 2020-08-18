@@ -108,9 +108,25 @@ UTF-8 с BOM-сигнатурой.
         PROCEDURE INF(): REAL
                 возвращает специальное вещественное значение "бесконечность"
 
+        PROCEDURE MOVE(Source, Dest, n: INTEGER)
+                Копирует n байт памяти из Source в Dest,
+                области Source и Dest не могут перекрываться
+
         PROCEDURE GET(a: INTEGER;
                 VAR v: любой основной тип, PROCEDURE, POINTER)
                 v := Память[a]
+
+        PROCEDURE GET8(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+                Эквивалентно
+                SYSTEM.MOVE(a, SYSTEM.ADR(x), 1)
+
+        PROCEDURE GET16(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+                Эквивалентно
+                SYSTEM.MOVE(a, SYSTEM.ADR(x), 2)
+
+        PROCEDURE GET32(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+                Эквивалентно
+                SYSTEM.MOVE(a, SYSTEM.ADR(x), 4)
 
         PROCEDURE PUT(a: INTEGER; x: любой основной тип, PROCEDURE, POINTER)
                 Память[a] := x;
@@ -118,15 +134,14 @@ UTF-8 с BOM-сигнатурой.
                 до 32 бит, для записи байтов использовать SYSTEM.PUT8,
                 для WCHAR -- SYSTEM.PUT16
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR)
+        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 8 бит (x)
 
-        PROCEDURE PUT16(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR)
+        PROCEDURE PUT16(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 16 бит (x)
 
-        PROCEDURE MOVE(Source, Dest, n: INTEGER)
-                Копирует n байт памяти из Source в Dest,
-                области Source и Dest не могут перекрываться
+        PROCEDURE PUT32(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+                Память[a] := младшие 32 бит (x)
 
         PROCEDURE CODE(hword1, hword2,... : INTEGER)
                 Вставка машинного кода,
@@ -134,6 +149,8 @@ UTF-8 с BOM-сигнатурой.
                 например:
                 SYSTEM.CODE(0BF30H) (* wfi *)
 
+  Также, в модуле SYSTEM определен тип CARD32 (4 байта). Для типа CARD32 не
+допускаются никакие явные операции, за исключением присваивания.
 
   Функции псевдомодуля SYSTEM нельзя использовать в константных выражениях.
 

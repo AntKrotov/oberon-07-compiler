@@ -24,7 +24,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 32;
+    vMinor* = 33;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
@@ -119,7 +119,37 @@ END splitf;
 
 
 PROCEDURE d2s* (x: REAL): INTEGER;
-    RETURN HOST.d2s(x)
+VAR
+    h, l, s, e: INTEGER;
+
+BEGIN
+    e := splitf(x, l, h);
+
+    s := ASR(h, 31) MOD 2;
+    e := (h DIV 100000H) MOD 2048;
+    IF e <= 896 THEN
+        h := (h MOD 100000H) * 8 + (l DIV 20000000H) MOD 8 + 800000H;
+        REPEAT
+            h := h DIV 2;
+            INC(e)
+        UNTIL e = 897;
+        e := 896;
+        l := (h MOD 8) * 20000000H;
+        h := h DIV 8
+    ELSIF (1151 <= e) & (e < 2047) THEN
+        e := 1151;
+        h := 0;
+        l := 0
+    ELSIF e = 2047 THEN
+        e := 1151;
+        IF (h MOD 100000H # 0) OR (BITS(l) * {0..31} # {}) THEN
+            h := 80000H;
+            l := 0
+        END
+    END;
+    DEC(e, 896)
+
+    RETURN LSL(s, 31) + LSL(e, 23) + (h MOD 100000H) * 8 + (l DIV 20000000H) MOD 8
 END d2s;
 
 

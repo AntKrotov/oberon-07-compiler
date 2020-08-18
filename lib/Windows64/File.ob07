@@ -26,7 +26,7 @@ BEGIN
     Handle := WINAPI.FindFirstFile(SYSTEM.ADR(FName[0]), FindData);
     IF Handle # -1 THEN
         WINAPI.FindClose(Handle);
-        SYSTEM.GET(SYSTEM.ADR(FindData.dwFileAttributes), attr);
+        SYSTEM.GET32(SYSTEM.ADR(FindData.dwFileAttributes), attr);
         IF 4 IN attr THEN
             Handle := -1
         END

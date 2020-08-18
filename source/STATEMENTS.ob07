@@ -651,6 +651,7 @@ VAR
     pos:    PARS.POSITION;
     proc,
     label,
+    size,
     n, i:   INTEGER;
     code:   ARITH.VALUE;
     wchar,
@@ -853,18 +854,30 @@ BEGIN
             IL.AddCmd(IL.opCOPYS, e1.type.base.size);
             IL.popBegEnd(begcall, endcall)
 
-        |PROG.sysGET:
+        |PROG.sysGET, PROG.sysGET8, PROG.sysGET16, PROG.sysGET32:
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
             PARS.checklex(parser, SCAN.lxCOMMA);
             NextPos(parser, pos);
             parser.designator(parser, e2);
             PARS.check(isVar(e2), pos, 93);
-            PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66);
-            IF e.obj = eCONST THEN
-                IL.AddCmd2(IL.opGETC, ARITH.Int(e.value), e2.type.size)
+            IF proc = PROG.sysGET THEN
+                PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66)
             ELSE
-                IL.AddCmd(IL.opGET, e2.type.size)
+                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66)
+            END;
+
+            CASE proc OF
+            |PROG.sysGET:   size := e2.type.size
+            |PROG.sysGET8:  size := 1
+            |PROG.sysGET16: size := 2
+            |PROG.sysGET32: size := 4
+            END;
+
+            IF e.obj = eCONST THEN
+                IL.AddCmd2(IL.opGETC, ARITH.Int(e.value), size)
+            ELSE
+                IL.AddCmd(IL.opGET, size)
             END
 
         |PROG.sysPUT, PROG.sysPUT8, PROG.sysPUT16, PROG.sysPUT32:

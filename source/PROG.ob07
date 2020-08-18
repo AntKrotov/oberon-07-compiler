@@ -35,12 +35,12 @@ CONST
     stPACK* = 17;  stUNPK* = 18;  sysADR*   = 19;  sysSIZE* = 20;
     sysGET* = 21;  sysPUT* = 22;
 
-    stDISPOSE* = 23;  stLSR*     = 24;  stBITS*  = 25;  sysCODE*  = 26;
-    sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*   = 29;  stMAX*    = 30;
-    sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY* = 33;  sysINF*   = 34;
-    sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*  = 37;  stWCHR*   = 38;
-    sysWSADR*  = 39;  sysPUT32*  = 40;  (*sysNOP*  = 41;  sysEINT*  = 42;
-    sysDINT*   = 43;*)
+    stDISPOSE* = 23;  stLSR*     = 24;  stBITS*   = 25;  sysCODE*  = 26;
+    sysMOVE*   = 27;  stLENGTH*  = 28;  stMIN*    = 29;  stMAX*    = 30;
+    sysSADR*   = 31;  sysTYPEID* = 32;  sysCOPY*  = 33;  sysINF*   = 34;
+    sysPUT8*   = 35;  sysPUT16*  = 36;  stCOPY*   = 37;  stWCHR*   = 38;
+    sysWSADR*  = 39;  sysPUT32*  = 40;  (*sysNOP*   = 41;  sysEINT*  = 42;
+    sysDINT*   = 43;*)sysGET8*   = 44;  sysGET16* = 45;  sysGET32* = 46;
 
     default32* =  2;
     stdcall*   =  4;  _stdcall*   = stdcall + 1;
@@ -1094,8 +1094,9 @@ BEGIN
     EnterProc(unit, "TYPEID", idSYSFUNC, sysTYPEID);
 
     EnterProc(unit, "GET",    idSYSPROC, sysGET);
-    EnterProc(unit, "PUT8",   idSYSPROC, sysPUT8);
+    EnterProc(unit, "GET8",   idSYSPROC, sysGET8);
     EnterProc(unit, "PUT",    idSYSPROC, sysPUT);
+    EnterProc(unit, "PUT8",   idSYSPROC, sysPUT8);
     EnterProc(unit, "CODE",   idSYSPROC, sysCODE);
     EnterProc(unit, "MOVE",   idSYSPROC, sysMOVE);
            (*
@@ -1115,8 +1116,10 @@ BEGIN
 
     IF TARGETS.BitDepth >= 32 THEN
         EnterProc(unit, "WSADR",  idSYSFUNC, sysWSADR);
-        EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
         EnterProc(unit, "PUT16",  idSYSPROC, sysPUT16);
+        EnterProc(unit, "PUT32",  idSYSPROC, sysPUT32);
+        EnterProc(unit, "GET16",  idSYSPROC, sysGET16);
+        EnterProc(unit, "GET32",  idSYSPROC, sysGET32);
 
         ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
         ident.type := program.stTypes.tCARD32;
