@@ -1,0 +1,76 @@
+﻿(* ************************************
+   Генератор какбыслучайных чисел,
+   Линейный конгруэнтный метод,
+   алгоритм Лемера.
+   Вадим Исаев, 2020
+   -------------------------------
+   Generator pseudorandom numbers,
+   Linear congruential generator,
+   Algorithm by D. H. Lehmer.
+   Vadim Isaev, 2020
+*************************************** *)
+
+MODULE Rand;
+
+IMPORT HOST, Math, MathExt;
+
+CONST
+  RAND_MAX = 2147483647;
+
+VAR
+  seed: INTEGER;
+
+PROCEDURE Randomize* ();
+BEGIN
+  seed := HOST.GetTickCount();
+END Randomize;
+
+(* Целые какбыслучайные числа до RAND_MAX *)
+PROCEDURE RandomI* (): INTEGER;
+CONST
+  a = 630360016;
+BEGIN
+  seed := (a * seed) MOD RAND_MAX;
+
+  RETURN seed
+END RandomI;
+
+
+
+(* Какбыслучайные числа с плавающей запятой от 0 до 1 *)
+PROCEDURE RandomR* (): REAL;
+BEGIN
+  RETURN FLT(RandomI()) / FLT(RAND_MAX)
+END RandomR;
+
+(* Какбыслучайное число в диапазоне от 0 до l.
+   Return a random number in a range 0 ... l *)
+PROCEDURE RandomITo* (aTo: INTEGER): INTEGER;
+BEGIN
+  RETURN FLOOR(RandomR() * FLT(aTo))
+END RandomITo;
+
+(* Какбыслучайное число в диапазоне.
+   Return a random number in a range *)
+PROCEDURE RandomIRange* (aFrom, aTo: INTEGER): INTEGER;
+BEGIN
+  RETURN FLOOR(RandomR() * FLT(aTo - aFrom)) + aFrom
+END RandomIRange;
+
+(* Какбыслучайное число. Распределение Гаусса *)
+PROCEDURE RandG* (mean, stddev: REAL): REAL;
+VAR
+  U, S: REAL;
+BEGIN
+  S := -1.0;
+  WHILE S<1.0 DO
+    U := 2.0*RandomR()-1.0;
+    S := MathExt.sqrr(U)+MathExt.sqrr(2.0*RandomR()-1.0);
+  END;
+
+  RETURN Math.sqrt(-2.0*Math.ln(S)/S)*U*stddev+mean
+END RandG;
+
+BEGIN
+  seed := 654321;
+END Rand.
