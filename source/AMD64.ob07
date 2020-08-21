@@ -2476,7 +2476,8 @@ BEGIN
         push(rcx);
         CallRTL(IL._dllentry);
         test(rax);
-        jcc(je, dllret)
+        jcc(je, dllret);
+        pushc(0)
     ELSIF target = TARGETS.Linux64 THEN
         push(rsp)
     ELSE

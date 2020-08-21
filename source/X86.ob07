@@ -2148,7 +2148,8 @@ BEGIN
         pushm(ebp, 8);
         CallRTL(pic, IL._dllentry);
         test(eax);
-        jcc(je, dllret)
+        jcc(je, dllret);
+        pushc(0)
     ELSIF target = TARGETS.KolibriOSDLL THEN
         SetLabel(dllinit);
         OutByte(68H);  (* push IMPORT *)
