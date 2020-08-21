@@ -265,6 +265,10 @@ BEGIN
 END FileOpen;
 
 
+PROCEDURE chmod* (FName: ARRAY OF CHAR);
+END chmod;
+
+
 PROCEDURE OutChar* (c: CHAR);
 VAR
     count: INTEGER;

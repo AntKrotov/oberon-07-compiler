@@ -7,7 +7,7 @@
 
 MODULE ELF;
 
-IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS;
+IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PE32, UTILS;
 
 
 CONST
@@ -126,35 +126,6 @@ BEGIN
 END WritePH64;
 
 
-PROCEDURE fixup (program: BIN.PROGRAM; text, data, bss: INTEGER; amd64: BOOLEAN);
-VAR
-    reloc: BIN.RELOC;
-    code:  CHL.BYTELIST;
-    L, delta, delta0, offset: INTEGER;
-
-BEGIN
-    code := program.code;
-    delta0 := 3 - 7 * ORD(amd64) - text;
-    reloc := program.rel_list.first(BIN.RELOC);
-
-    WHILE reloc # NIL DO
-
-        offset := reloc.offset;
-        L := BIN.get32le(code, offset);
-        delta := delta0 - offset;
-
-        CASE reloc.opcode OF
-        |BIN.PICDATA: INC(delta, L + data)
-        |BIN.PICCODE: INC(delta, BIN.GetLabel(program, L) + text)
-        |BIN.PICBSS:  INC(delta, L + bss)
-        END;
-        BIN.put32le(code, offset, delta);
-
-        reloc := reloc.next(BIN.RELOC)
-    END
-END fixup;
-
-
 PROCEDURE NewDyn (tag, val: INTEGER);
 VAR
     dyn: Elf32_Dyn;
@@ -260,17 +231,19 @@ VAR
     ehdr: Elf32_Ehdr;
     phdr: ARRAY 16 OF Elf32_Phdr;
 
-    i, BaseAdr, offset, pad, VA, symCount: INTEGER;
+    i, BaseAdr, DynAdr, offset, pad, VA, symCount: INTEGER;
 
     SizeOf: RECORD header, code, data, bss: INTEGER END;
 
-    Offset: RECORD symtab, reltab, hash, strtab, dyn: INTEGER END;
+    Offset: RECORD symtab, reltab, hash, strtab: INTEGER END;
 
     Interpreter: ARRAY 40 OF CHAR; lenInterpreter: INTEGER;
 
     item: LISTS.ITEM;
 
     Name: ARRAY 2048 OF CHAR;
+
+    Address: PE32.VIRTUAL_ADDR;
 
 BEGIN
     dynamic := LISTS.create(NIL);
@@ -376,8 +349,8 @@ BEGIN
 
     symCount := LISTS.count(symtab);
 
-    bucket  := CHL.CreateIntList();
-    chain   := CHL.CreateIntList();
+    bucket := CHL.CreateIntList();
+    chain  := CHL.CreateIntList();
 
     FOR i := 1 TO symCount DO
         CHL.PushInt(bucket, 0);
@@ -418,12 +391,12 @@ BEGIN
     Offset.hash   := Offset.reltab + (8 + 16 * ORD(amd64)) * 2;
     Offset.strtab := Offset.hash + (symCount * 2 + 2) * 4;
 
-    Offset.dyn := phdr[dyn].p_offset;
+    DynAdr := phdr[dyn].p_offset + BaseAdr;
 
-    item := LISTS.getidx(dynamic, 1); item(Elf32_Dyn).d_val := Offset.strtab + Offset.dyn + BaseAdr;
-    item := LISTS.getidx(dynamic, 3); item(Elf32_Dyn).d_val := Offset.symtab + Offset.dyn + BaseAdr;
-    item := LISTS.getidx(dynamic, 5); item(Elf32_Dyn).d_val := Offset.reltab + Offset.dyn + BaseAdr;
-    item := LISTS.getidx(dynamic, 8); item(Elf32_Dyn).d_val := Offset.hash   + Offset.dyn + BaseAdr;
+    item := LISTS.getidx(dynamic, 1); item(Elf32_Dyn).d_val := Offset.strtab + DynAdr;
+    item := LISTS.getidx(dynamic, 3); item(Elf32_Dyn).d_val := Offset.symtab + DynAdr;
+    item := LISTS.getidx(dynamic, 5); item(Elf32_Dyn).d_val := Offset.reltab + DynAdr;
+    item := LISTS.getidx(dynamic, 8); item(Elf32_Dyn).d_val := Offset.hash   + DynAdr;
 
     phdr[dyn].p_filesz := Offset.strtab + CHL.Length(strtab) + 8 + 8 * ORD(amd64);
     phdr[dyn].p_memsz  := phdr[dyn].p_filesz;
@@ -481,7 +454,12 @@ BEGIN
     phdr[bss].p_flags := PF_R + PF_W;
     phdr[bss].p_align := 1000H;
 
-    fixup(program, ehdr.e_entry, phdr[data].p_vaddr + pad, WR.align(phdr[bss].p_vaddr, 16), amd64);
+    Address.Code   := ehdr.e_entry;
+    Address.Data   := phdr[data].p_vaddr + pad;
+    Address.Bss    := WR.align(phdr[bss].p_vaddr, 16);
+    Address.Import := 0;
+
+    PE32.fixup(program, Address, amd64);
 
     item := symtab.first;
     WHILE item # NIL DO
@@ -564,11 +542,11 @@ BEGIN
             item := item.next
         END;
 
-        WR.Write64LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 16);
+        WR.Write64LE(phdr[dyn].p_filesz + DynAdr - 16);
         WR.Write32LE(1);
         WR.Write32LE(1);
         WR.Write64LE(0);
-        WR.Write64LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
+        WR.Write64LE(phdr[dyn].p_filesz + DynAdr - 8);
         WR.Write32LE(1);
         WR.Write32LE(2);
         WR.Write64LE(0);
@@ -607,9 +585,9 @@ BEGIN
             item := item.next
         END;
 
-        WR.Write32LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 8);
+        WR.Write32LE(phdr[dyn].p_filesz + DynAdr - 8);
         WR.Write32LE(00000101H);
-        WR.Write32LE(phdr[dyn].p_filesz + Offset.dyn + BaseAdr - 4);
+        WR.Write32LE(phdr[dyn].p_filesz + DynAdr - 4);
         WR.Write32LE(00000201H);
 
         WR.Write32LE(symCount);
@@ -626,7 +604,6 @@ BEGIN
         CHL.WriteToFile(strtab);
         WR.Write32LE(0);
         WR.Write32LE(0)
-
     END;
 
     CHL.WriteToFile(program.code);
@@ -635,7 +612,8 @@ BEGIN
         DEC(pad)
     END;
     CHL.WriteToFile(program.data);
-    WR.Close
+    WR.Close;
+    UTILS.chmod(FileName)
 END write;
 
 

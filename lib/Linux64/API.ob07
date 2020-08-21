@@ -44,6 +44,7 @@ VAR
     fread*         : PROCEDURE [linux] (buffer, bytes, blocks, file: INTEGER): INTEGER;
     fopen*         : PROCEDURE [linux] (fname, fmode: INTEGER): INTEGER;
     fclose*        : PROCEDURE [linux] (file: INTEGER): INTEGER;
+    chmod*         : PROCEDURE [linux] (fname: INTEGER; mode: SET): INTEGER;
 
     clock_gettime* : PROCEDURE [linux] (clock_id: INTEGER; VAR tp: TP): INTEGER;
     time*          : PROCEDURE [linux] (ptr: INTEGER): INTEGER;
@@ -128,6 +129,7 @@ BEGIN
     GetProcAdr(libc, "fread", SYSTEM.ADR(fread));
     GetProcAdr(libc, "fopen", SYSTEM.ADR(fopen));
     GetProcAdr(libc, "fclose", SYSTEM.ADR(fclose));
+    GetProcAdr(libc, "chmod", SYSTEM.ADR(chmod));
     GetProcAdr(libc, "time", SYSTEM.ADR(time));
 
     librt := dlopen(SYSTEM.SADR("librt.so.1"), RTLD_LAZY);

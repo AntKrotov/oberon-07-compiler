@@ -24,7 +24,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 33;
+    vMinor* = 34;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
@@ -88,6 +88,12 @@ END FileClose;
 PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
     RETURN HOST.FileOpen(FName)
 END FileOpen;
+
+
+PROCEDURE chmod* (FName: ARRAY OF CHAR);
+BEGIN
+    HOST.chmod(FName)
+END chmod;
 
 
 PROCEDURE GetArg* (i: INTEGER; VAR str: ARRAY OF CHAR);

@@ -2136,9 +2136,9 @@ VAR
     reg1, entry, L, dcount: INTEGER;
 
 BEGIN
-
     entry := NewLabel();
     SetLabel(entry);
+    dcount := CHL.Length(IL.codes.data);
 
     IF target = TARGETS.Win32DLL THEN
         push(ebp);
@@ -2150,17 +2150,14 @@ BEGIN
         test(eax);
         jcc(je, dllret)
     ELSIF target = TARGETS.KolibriOSDLL THEN
-        SetLabel(dllinit)
-    END;
-
-    IF target = TARGETS.KolibriOS THEN
+        SetLabel(dllinit);
+        OutByte(68H);  (* push IMPORT *)
+        Reloc(BIN.IMPTAB, 0)
+    ELSIF target = TARGETS.KolibriOS THEN
         reg1 := GetAnyReg();
         Pic(reg1, BIN.IMPTAB, 0);
         push(reg1);    (* push IMPORT *)
         drop
-    ELSIF target = TARGETS.KolibriOSDLL THEN
-        OutByte(68H);  (* push IMPORT *)
-        Reloc(BIN.IMPTAB, 0)
     ELSIF target = TARGETS.Linux32 THEN
         push(esp)
     ELSE
@@ -2171,33 +2168,19 @@ BEGIN
         reg1 := GetAnyReg();
         Pic(reg1, BIN.PICCODE, entry);
         push(reg1);    (* push CODE *)
-        drop
-    ELSE
-        OutByte(68H);  (* push CODE *)
-        Reloc(BIN.RCODE, entry)
-    END;
-
-    IF pic THEN
-        reg1 := GetAnyReg();
         Pic(reg1, BIN.PICDATA, 0);
         push(reg1);    (* push _data *)
-        drop
-    ELSE
-        OutByte(68H);  (* push _data *)
-        Reloc(BIN.RDATA, 0)
-    END;
-
-    dcount := CHL.Length(IL.codes.data);
-
-    pushc(tcount);
-
-    IF pic THEN
-        reg1 := GetAnyReg();
+        pushc(tcount);
         Pic(reg1, BIN.PICDATA, tcount * 4 + dcount);
         push(reg1);    (* push _data + tcount * 4 + dcount *)
         drop
     ELSE
+        OutByte(68H);  (* push CODE *)
+        Reloc(BIN.RCODE, entry);
         OutByte(68H);  (* push _data *)
+        Reloc(BIN.RDATA, 0);
+        pushc(tcount);
+        OutByte(68H);  (* push _data + tcount * 4 + dcount *)
         Reloc(BIN.RDATA, tcount * 4 + dcount)
     END;
 

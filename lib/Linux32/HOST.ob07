@@ -109,6 +109,14 @@ BEGIN
 END FileClose;
 
 
+PROCEDURE chmod* (FName: ARRAY OF CHAR);
+VAR
+    res: INTEGER;
+BEGIN
+    res := API.chmod(SYSTEM.ADR(FName[0]), {0, 2..8}) (* rwxrwxr-x *)
+END chmod;
+
+
 PROCEDURE FileOpen* (FName: ARRAY OF CHAR): INTEGER;
     RETURN API.fopen(SYSTEM.ADR(FName[0]), SYSTEM.SADR("rb"))
 END FileOpen;

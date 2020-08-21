@@ -273,6 +273,10 @@ BEGIN
 END FileOpen;
 
 
+PROCEDURE chmod* (FName: ARRAY OF CHAR);
+END chmod;
+
+
 PROCEDURE GetTickCount* (): INTEGER;
     RETURN K.sysfunc2(26, 9)
 END GetTickCount;
