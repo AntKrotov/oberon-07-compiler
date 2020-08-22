@@ -42,13 +42,13 @@ CONST
     sysWSADR*  = 39;  sysPUT32*  = 40;  (*sysNOP*   = 41;  sysEINT*  = 42;
     sysDINT*   = 43;*)sysGET8*   = 44;  sysGET16* = 45;  sysGET32* = 46;
 
-    default32* =  2;
+    default32* =  2;  _default32* = default32 + 1;
     stdcall*   =  4;  _stdcall*   = stdcall + 1;
     ccall*     =  6;  _ccall*     = ccall + 1;
     ccall16*   =  8;  _ccall16*   = ccall16 + 1;
     win64*     = 10;  _win64*     = win64 + 1;
     stdcall64* = 12;  _stdcall64* = stdcall64 + 1;
-    default64* = 14;
+    default64* = 14;  _default64* = default64 + 1;
     systemv*   = 16;  _systemv*   = systemv + 1;
     default16* = 18;
     code*      = 20;  _code*      = code + 1;
@@ -57,12 +57,12 @@ CONST
 
     callee_clean_up* = {default32, stdcall, _stdcall, default64, stdcall64, _stdcall64};
 
-    sf_stdcall* = 0; sf_stdcall64* = 1; sf_ccall*   = 2; sf_ccall16* = 3;
-    sf_win64*   = 4; sf_systemv*   = 5; sf_windows* = 6; sf_linux*   = 7;
-    sf_code*    = 8;
-    sf_noalign* = 9;
+    sf_stdcall* =  0; sf_stdcall64* = 1; sf_ccall*   = 2; sf_ccall16* = 3;
+    sf_win64*   =  4; sf_systemv*   = 5; sf_windows* = 6; sf_linux*   = 7;
+    sf_code*    =  8; sf_oberon*    = 9;
+    sf_noalign* = 10;
 
-    proc_flags* = {sf_stdcall, sf_stdcall64, sf_ccall, sf_ccall16, sf_win64, sf_systemv, sf_windows, sf_linux, sf_code};
+    proc_flags* = {sf_stdcall, sf_stdcall64, sf_ccall, sf_ccall16, sf_win64, sf_systemv, sf_windows, sf_linux, sf_code, sf_oberon};
     rec_flags*  = {sf_noalign};
 
     STACK_FRAME = 2;
@@ -1201,11 +1201,11 @@ BEGIN
     program.options := options;
 
     CASE TARGETS.OS OF
-    |TARGETS.osWIN32:    program.sysflags := {sf_windows, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
-    |TARGETS.osLINUX32:  program.sysflags := {sf_linux, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
-    |TARGETS.osKOS:      program.sysflags := {sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
-    |TARGETS.osWIN64:    program.sysflags := {sf_windows, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
-    |TARGETS.osLINUX64:  program.sysflags := {sf_linux, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
+    |TARGETS.osWIN32:    program.sysflags := {sf_oberon, sf_windows, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+    |TARGETS.osLINUX32:  program.sysflags := {sf_oberon, sf_linux, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+    |TARGETS.osKOS:      program.sysflags := {sf_oberon, sf_stdcall, sf_ccall, sf_ccall16, sf_noalign}
+    |TARGETS.osWIN64:    program.sysflags := {sf_oberon, sf_windows, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
+    |TARGETS.osLINUX64:  program.sysflags := {sf_oberon, sf_linux, sf_stdcall64, sf_win64, sf_systemv, sf_noalign}
     |TARGETS.osNONE:     program.sysflags := {sf_code}
     END;
 

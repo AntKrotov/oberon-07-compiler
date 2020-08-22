@@ -182,7 +182,6 @@ BEGIN
         |SCAN.lxSEMI:    err := 24
         |SCAN.lxRETURN:  err := 38
         |SCAN.lxMODULE:  err := 21
-        |SCAN.lxSTRING:  err := 66
         END;
 
         check1(FALSE, parser, err)
@@ -501,6 +500,8 @@ BEGIN
         sf := PROG.sf_linux
     ELSIF parser.lex.s = "code" THEN
         sf := PROG.sf_code
+    ELSIF parser.lex.s = "oberon" THEN
+        sf := PROG.sf_oberon
     ELSIF parser.lex.s = "noalign" THEN
         sf := PROG.sf_noalign
     ELSE
@@ -530,6 +531,12 @@ BEGIN
         res := PROG.systemv
     |PROG.sf_code:
         res := PROG.code
+    |PROG.sf_oberon:
+        IF TARGETS.OS IN {TARGETS.osWIN32, TARGETS.osLINUX32, TARGETS.osKOS} THEN
+            res := PROG.default32
+        ELSIF TARGETS.OS IN {TARGETS.osWIN64, TARGETS.osLINUX64} THEN
+            res := PROG.default64
+        END
     |PROG.sf_windows:
         IF TARGETS.OS = TARGETS.osWIN32 THEN
             res := PROG.stdcall
@@ -556,8 +563,26 @@ VAR
     dll, proc: SCAN.LEXSTR;
     pos: POSITION;
 
-BEGIN
 
+    PROCEDURE getStr (parser: PARSER; VAR name: SCAN.LEXSTR);
+    VAR
+        pos: POSITION;
+        str: ARITH.VALUE;
+
+    BEGIN
+        getpos(parser, pos);
+        ConstExpression(parser, str);
+        IF str.typ = ARITH.tSTRING THEN
+            name := str.string(SCAN.IDENT).s
+        ELSIF str.typ = ARITH.tCHAR THEN
+            ARITH.charToStr(str, name)
+        ELSE
+            check(FALSE, pos, 117)
+        END
+    END getStr;
+
+
+BEGIN
     import := NIL;
 
     IF parser.sym = SCAN.lxLSQUARE THEN
@@ -570,19 +595,17 @@ BEGIN
             Next(parser);
             INC(call)
         END;
-        IF ~isProc THEN
-            checklex(parser, SCAN.lxRSQUARE)
-        END;
-        IF parser.sym = SCAN.lxCOMMA THEN
-            ExpectSym(parser, SCAN.lxSTRING);
-            dll := parser.lex.s;
-            STRINGS.UpCase(dll);
-            ExpectSym(parser, SCAN.lxCOMMA);
-            ExpectSym(parser, SCAN.lxSTRING);
-            proc := parser.lex.s;
+
+        IF isProc & (parser.sym = SCAN.lxCOMMA) THEN
             Next(parser);
+            getStr(parser, dll);
+            STRINGS.UpCase(dll);
+            checklex(parser, SCAN.lxCOMMA);
+            Next(parser);
+            getStr(parser, proc);
             import := IL.AddImp(dll, proc)
         END;
+
         checklex(parser, SCAN.lxRSQUARE);
         Next(parser)
     ELSE
@@ -919,6 +942,9 @@ VAR
         IF import # NIL THEN
             proc := IdentDef(parser, PROG.idIMP, name);
             proc.import := import;
+            IF import.name = "" THEN
+                import.name := name.s
+            END;
             PROG.program.procs.last(PROG.PROC).import := import
         ELSE
             proc := IdentDef(parser, PROG.idPROC, name)

@@ -12,6 +12,8 @@ IMPORT SYSTEM;
 
 CONST
 
+    eol* = 0AX;
+
     RTLD_LAZY* = 1;
     BIT_DEPTH* = 64;
 
@@ -24,7 +26,6 @@ TYPE
 
 VAR
 
-    eol*: ARRAY 2 OF CHAR;
     MainParam*: INTEGER;
 
     libc*, librt*: INTEGER;
@@ -112,7 +113,6 @@ BEGIN
     SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER) * 2, dlopen);
     SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER),     dlsym);
     MainParam := sp;
-    eol := 0AX;
 
     libc := dlopen(SYSTEM.SADR("libc.so.6"), RTLD_LAZY);
     GetProcAdr(libc, "malloc", SYSTEM.ADR(malloc));

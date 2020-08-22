@@ -14,6 +14,7 @@ CONST
 
     slash* = "/";
     OS* = "KOS";
+    eol* = 0DX + 0AX;
 
     bit_depth* = RTL.bit_depth;
     maxint* = RTL.maxint;
@@ -54,8 +55,6 @@ VAR
 
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
     argc*: INTEGER;
-
-    eol*: ARRAY 3 OF CHAR;
 
     maxreal*: REAL;
 
@@ -503,7 +502,6 @@ END d2s;
 
 
 BEGIN
-    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     maxreal := 1.9;
     PACK(maxreal, 1023);
     Console := API.import;

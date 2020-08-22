@@ -2038,6 +2038,7 @@ VAR
         pos: PARS.POSITION;
         op:  INTEGER;
         e1:  PARS.EXPR;
+        s, s1: SCAN.LEXSTR;
 
         plus, minus: BOOLEAN;
 
@@ -2113,13 +2114,34 @@ VAR
                     op := ORD("+")
                 END;
 
-                PARS.check(isInt(e) & isInt(e1) OR isReal(e) & isReal(e1) OR isSet(e) & isSet(e1), pos, 37);
+                PARS.check(isInt(e) & isInt(e1) OR isReal(e) & isReal(e1) OR isSet(e) & isSet(e1) OR isString(e) & isString(e1) & ~minus, pos, 37);
                 IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
 
-                   CASE e.value.typ OF
-                   |ARITH.tINTEGER: PARS.check(ARITH.opInt(e.value, e1.value, CHR(op)),   pos, 39)
-                   |ARITH.tREAL:    PARS.check(ARITH.opFloat(e.value, e1.value, CHR(op)), pos, 40)
-                   |ARITH.tSET:     ARITH.opSet(e.value, e1.value, CHR(op))
+                    CASE e.value.typ OF
+                    |ARITH.tINTEGER:
+                        PARS.check(ARITH.opInt(e.value, e1.value, CHR(op)),   pos, 39)
+
+                    |ARITH.tREAL:
+                        PARS.check(ARITH.opFloat(e.value, e1.value, CHR(op)), pos, 40)
+
+                    |ARITH.tSET:
+                        ARITH.opSet(e.value, e1.value, CHR(op))
+
+                    |ARITH.tCHAR, ARITH.tSTRING:
+                        IF e.value.typ = ARITH.tCHAR THEN
+                            ARITH.charToStr(e.value, s)
+                        ELSE
+                            s := e.value.string(SCAN.IDENT).s
+                        END;
+                        IF e1.value.typ = ARITH.tCHAR THEN
+                            ARITH.charToStr(e1.value, s1)
+                        ELSE
+                            s1 := e1.value.string(SCAN.IDENT).s
+                        END;
+                        PARS.check(ARITH.concat(s, s1), pos, 5);
+                        e.value.string := SCAN.enterid(s);
+                        e.value.typ := ARITH.tSTRING;
+                        e.type := PROG.program.stTypes.tSTRING
                    END
 
                 ELSE

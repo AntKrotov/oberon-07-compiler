@@ -12,6 +12,8 @@ IMPORT SYSTEM, K := KOSAPI;
 
 CONST
 
+    eol* = 0DX + 0AX;
+
     MAX_SIZE  = 16 * 400H;
     HEAP_SIZE =  1 * 100000H;
 
@@ -35,7 +37,6 @@ VAR
 
     import*, multi: BOOLEAN;
 
-    eol*:  ARRAY 3 OF CHAR;
     base*: INTEGER;
 
 
@@ -284,10 +285,11 @@ PROCEDURE imp_error;
 BEGIN
     OutString("import error: ");
     IF K.imp_error.error = 1 THEN
-        OutString("can't load "); OutString(K.imp_error.lib)
+        OutString("can't load '"); OutString(K.imp_error.lib)
     ELSIF K.imp_error.error = 2 THEN
-        OutString("not found "); OutString(K.imp_error.proc); OutString(" in "); OutString(K.imp_error.lib)
+        OutString("not found '"); OutString(K.imp_error.proc); OutString("' in '"); OutString(K.imp_error.lib)
     END;
+    OutString("'");
     OutLn
 END imp_error;
 
@@ -295,7 +297,6 @@ END imp_error;
 PROCEDURE init* (_import, code: INTEGER);
 BEGIN
     multi := FALSE;
-    eol[0] := 0DX; eol[1] := 0AX; eol[2] := 0X;
     base := code - SizeOfHeader;
     K.sysfunc2(68, 11);
     InitializeCriticalSection(CriticalSection);

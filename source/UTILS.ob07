@@ -13,6 +13,7 @@ IMPORT HOST;
 CONST
 
     slash* = HOST.slash;
+    eol* = HOST.eol;
 
     bit_depth* = HOST.bit_depth;
     maxint* = HOST.maxint;
@@ -24,7 +25,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 34;
+    vMinor* = 35;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
@@ -40,8 +41,6 @@ TYPE
 VAR
 
     time*: INTEGER;
-
-    eol*:  ARRAY 3 OF CHAR;
 
     maxreal*: REAL;
 
@@ -291,7 +290,6 @@ END init;
 
 BEGIN
     time := GetTickCount();
-    COPY(HOST.eol, eol);
     maxreal := HOST.maxreal;
     init(days)
 END UTILS.

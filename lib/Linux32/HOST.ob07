@@ -14,6 +14,7 @@ CONST
 
     slash* = "/";
     OS* = "LINUX";
+    eol* = 0AX;
 
     bit_depth* = RTL.bit_depth;
     maxint* = RTL.maxint;
@@ -23,8 +24,6 @@ CONST
 VAR
 
     argc: INTEGER;
-
-    eol*: ARRAY 2 OF CHAR;
 
     maxreal*: REAL;
 
@@ -202,7 +201,6 @@ END d2s;
 
 
 BEGIN
-    eol := 0AX;
     maxreal := 1.9;
     PACK(maxreal, 1023);
     SYSTEM.GET(API.MainParam, argc)

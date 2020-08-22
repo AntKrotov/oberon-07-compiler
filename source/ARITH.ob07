@@ -761,6 +761,20 @@ BEGIN
 END setInt;
 
 
+PROCEDURE concat* (VAR s: ARRAY OF CHAR; s1: ARRAY OF CHAR): BOOLEAN;
+VAR
+    res: BOOLEAN;
+
+BEGIN
+    res := LENGTH(s) + LENGTH(s1) < LEN(s);
+    IF res THEN
+        STRINGS.append(s, s1)
+    END
+
+    RETURN res
+END concat;
+
+
 PROCEDURE init;
 VAR
     i: INTEGER;
