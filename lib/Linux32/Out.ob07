@@ -1,5 +1,5 @@
 ﻿(*
-    Copyright 2013, 2014, 2017, 2018, 2019 Anton Krotov
+    Copyright 2013, 2014, 2017-2020 Anton Krotov
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -17,7 +17,7 @@
 
 MODULE Out;
 
-IMPORT sys := SYSTEM, API;
+IMPORT sys := SYSTEM, Libdl;
 
 CONST
 
@@ -25,12 +25,19 @@ CONST
 
 VAR
 
-  Realp: PROCEDURE (x: REAL; width: INTEGER);
+    Realp: PROCEDURE (x: REAL; width: INTEGER);
+
+    libc, stdout: INTEGER;
+
+    fwrite: PROCEDURE [linux] (buffer, bytes, blocks, file: INTEGER): INTEGER;
 
 
-PROCEDURE Char*(x: CHAR);
+PROCEDURE Char* (c: CHAR);
+VAR
+    res: INTEGER;
+
 BEGIN
-    API.putc(x)
+    res := fwrite(sys.ADR(c), 1, 1, stdout)
 END Char;
 
 
@@ -274,4 +281,18 @@ END FixReal;
 PROCEDURE Open*;
 END Open;
 
+PROCEDURE GetSym (lib: INTEGER; name: ARRAY OF CHAR; VarAdr: INTEGER);
+VAR
+    sym: INTEGER;
+
+BEGIN
+    sym := Libdl.sym(lib, name);
+    ASSERT(sym # 0);
+    sys.PUT(VarAdr, sym)
+END GetSym;
+
+BEGIN
+    libc := Libdl.open("libc.so.6", Libdl.LAZY);
+    GetSym(libc, "fwrite", sys.ADR(fwrite));
+    GetSym(libc, "stdout", sys.ADR(stdout)); sys.GET(stdout - sys.SIZE(INTEGER), stdout);
 END Out.

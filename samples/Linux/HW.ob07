@@ -1,10 +1,11 @@
 ﻿MODULE HW;
 
-IMPORT SYSTEM, LINAPI, Libdl;
+IMPORT SYSTEM, Libdl, Args;
 
 
 VAR
 
+    libc: INTEGER;
     puts: PROCEDURE [linux] (pStr: INTEGER);
 
 
@@ -24,16 +25,16 @@ BEGIN
 
     OutStringLn("");
     i := 0;
-    WHILE i < LINAPI.argc DO
-        LINAPI.GetArg(i, s);
+    WHILE i < Args.argc DO
+        Args.GetArg(i, s);
         INC(i);
         OutStringLn(s)
     END;
 
     OutStringLn("");
     i := 0;
-    WHILE i < LINAPI.envc DO
-        LINAPI.GetEnv(i, s);
+    WHILE i < Args.envc DO
+        Args.GetEnv(i, s);
         INC(i);
         OutStringLn(s)
     END;
@@ -44,7 +45,8 @@ END main;
 
 
 BEGIN
-    SYSTEM.PUT(SYSTEM.ADR(puts), Libdl.sym(LINAPI.libc, "puts"));
+    libc := Libdl.open("libc.so.6", Libdl.LAZY);
+    SYSTEM.PUT(SYSTEM.ADR(puts), Libdl.sym(libc, "puts"));
     ASSERT(puts # NIL);
     main
 END HW.

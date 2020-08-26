@@ -146,11 +146,13 @@ UTF-8 с BOM-сигнатурой.
                 VAR v: любой основной тип, PROCEDURE, POINTER)
                 v := Память[a]
 
-        PROCEDURE GET8(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET8(a: INTEGER;
+                       VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 1)
 
-        PROCEDURE GET16(a: INTEGER; VAR x: INTEGER, SET, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET16(a: INTEGER;
+                        VAR x: INTEGER, SET, WCHAR, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 2)
 
@@ -164,13 +166,16 @@ UTF-8 с BOM-сигнатурой.
                 до 32 бит, для записи байтов использовать SYSTEM.PUT8,
                 для WCHAR -- SYSTEM.PUT16
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT8(a: INTEGER;
+                       x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 8 бит (x)
 
-        PROCEDURE PUT16(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT16(a: INTEGER;
+                        x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 16 бит (x)
 
-        PROCEDURE PUT32(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT32(a: INTEGER;
+                        x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 32 бит (x)
 
         PROCEDURE COPY(VAR Source: любой тип; VAR Dest: любой тип; n: INTEGER)
@@ -357,6 +362,8 @@ Oberon-реализациях выполнение такой операции �
         Вызов транслируется так:
                 Proc(SYSTEM.TYPEID(Rec), SYSTEM.ADR(x))
 
+  Скрытые параметры необходимо учитывать при связи с внешними приложениями.
+
 ------------------------------------------------------------------------------
         Модуль RTL
 
@@ -379,8 +386,11 @@ Oberon-реализациях выполнение такой операции �
 
   Разрешается экспортировать только процедуры. Для этого, процедура должна
 находиться в главном модуле программы, и ее имя должно быть отмечено символом
-экспорта ("*"). KolibriOS DLL всегда экспортируют идентификаторы "version"
-(версия программы) и "lib_init" - адрес процедуры инициализации DLL:
+экспорта ("*"). Нельзя экспортировать процедуры, которые импортированы из
+других dll-библиотек.
+
+  KolibriOS DLL всегда экспортируют идентификаторы "version" (версия
+программы) и "lib_init" - адрес процедуры инициализации DLL:
 
         PROCEDURE [stdcall] lib_init (): INTEGER
 

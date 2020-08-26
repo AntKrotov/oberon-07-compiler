@@ -117,11 +117,13 @@ UTF-8 с BOM-сигнатурой.
                 VAR v: любой основной тип, PROCEDURE, POINTER)
                 v := Память[a]
 
-        PROCEDURE GET8(a: INTEGER; VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET8(a: INTEGER;
+                       VAR x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 1)
 
-        PROCEDURE GET16(a: INTEGER; VAR x: INTEGER, SET, WCHAR, SYSTEM.CARD32)
+        PROCEDURE GET16(a: INTEGER;
+                        VAR x: INTEGER, SET, WCHAR, SYSTEM.CARD32)
                 Эквивалентно
                 SYSTEM.MOVE(a, SYSTEM.ADR(x), 2)
 
@@ -135,13 +137,16 @@ UTF-8 с BOM-сигнатурой.
                 до 32 бит, для записи байтов использовать SYSTEM.PUT8,
                 для WCHAR -- SYSTEM.PUT16
 
-        PROCEDURE PUT8(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT8(a: INTEGER;
+                       x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 8 бит (x)
 
-        PROCEDURE PUT16(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT16(a: INTEGER;
+                        x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 16 бит (x)
 
-        PROCEDURE PUT32(a: INTEGER; x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
+        PROCEDURE PUT32(a: INTEGER;
+                        x: INTEGER, SET, BYTE, CHAR, WCHAR, SYSTEM.CARD32)
                 Память[a] := младшие 32 бит (x)
 
         PROCEDURE CODE(hword1, hword2,... : INTEGER)

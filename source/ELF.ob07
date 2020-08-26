@@ -410,12 +410,12 @@ BEGIN
     phdr[header].p_offset := offset;
     phdr[header].p_vaddr := BaseAdr;
     phdr[header].p_paddr := BaseAdr;
-    phdr[header].p_filesz := 244 + 156 * ORD(amd64) + lenInterpreter + phdr[dyn].p_filesz;
+    phdr[header].p_filesz := SizeOf.header + lenInterpreter + phdr[dyn].p_filesz;
     phdr[header].p_memsz  := phdr[header].p_filesz;
     phdr[header].p_flags := PF_R + PF_W;
     phdr[header].p_align := 1000H;
 
-    offset := offset + phdr[header].p_filesz;
+    INC(offset, phdr[header].p_filesz);
     VA := BaseAdr + offset + 1000H;
 
     phdr[text].p_type := 1;
@@ -429,7 +429,7 @@ BEGIN
 
     ehdr.e_entry := phdr[text].p_vaddr;
 
-    offset := offset + phdr[text].p_filesz;
+    INC(offset, phdr[text].p_filesz);
     VA := BaseAdr + offset + 2000H;
     pad := (16 - VA MOD 16) MOD 16;
 
@@ -442,7 +442,7 @@ BEGIN
     phdr[data].p_flags := PF_R + PF_W;
     phdr[data].p_align := 1000H;
 
-    offset := offset + phdr[data].p_filesz;
+    INC(offset, phdr[data].p_filesz);
     VA := BaseAdr + offset + 3000H;
 
     phdr[bss].p_type := 1;
@@ -522,7 +522,6 @@ BEGIN
         WR.WriteByte(ORD(Interpreter[i]))
     END;
 
-    i := 0;
     IF amd64 THEN
         item := dynamic.first;
         WHILE item # NIL DO
@@ -549,21 +548,6 @@ BEGIN
         WR.Write64LE(phdr[dyn].p_filesz + DynAdr - 8);
         WR.Write32LE(1);
         WR.Write32LE(2);
-        WR.Write64LE(0);
-
-        WR.Write32LE(symCount);
-        WR.Write32LE(symCount);
-
-        FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(CHL.GetInt(bucket, i))
-        END;
-
-        FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(CHL.GetInt(chain, i))
-        END;
-
-        CHL.WriteToFile(strtab);
-        WR.Write64LE(0);
         WR.Write64LE(0)
 
     ELSE
@@ -588,23 +572,30 @@ BEGIN
         WR.Write32LE(phdr[dyn].p_filesz + DynAdr - 8);
         WR.Write32LE(00000101H);
         WR.Write32LE(phdr[dyn].p_filesz + DynAdr - 4);
-        WR.Write32LE(00000201H);
+        WR.Write32LE(00000201H)
 
-        WR.Write32LE(symCount);
-        WR.Write32LE(symCount);
-
-        FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(CHL.GetInt(bucket, i))
-        END;
-
-        FOR i := 0 TO symCount - 1 DO
-            WR.Write32LE(CHL.GetInt(chain, i))
-        END;
-
-        CHL.WriteToFile(strtab);
-        WR.Write32LE(0);
-        WR.Write32LE(0)
     END;
+    
+    WR.Write32LE(symCount);
+    WR.Write32LE(symCount);
+
+    FOR i := 0 TO symCount - 1 DO
+        WR.Write32LE(CHL.GetInt(bucket, i))
+    END;
+
+    FOR i := 0 TO symCount - 1 DO
+        WR.Write32LE(CHL.GetInt(chain, i))
+    END;
+
+    CHL.WriteToFile(strtab);
+        
+    IF amd64 THEN
+        WR.Write64LE(0);
+        WR.Write64LE(0)
+    ELSE
+        WR.Write32LE(0);
+        WR.Write32LE(0)    
+    END;    
 
     CHL.WriteToFile(program.code);
     WHILE pad > 0 DO

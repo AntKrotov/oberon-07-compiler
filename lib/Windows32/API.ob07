@@ -44,9 +44,8 @@ PROCEDURE [windows-, KERNEL, ""] ExitProcess (code: INTEGER);
 PROCEDURE [windows-, KERNEL, ""] ExitThread (code: INTEGER);
 PROCEDURE [windows-, KERNEL, ""] GetProcessHeap (): INTEGER;
 PROCEDURE [windows-, KERNEL, ""] HeapAlloc (hHeap, dwFlags, dwBytes: INTEGER): INTEGER;
-PROCEDURE [windows-, KERNEL, ""] HeapFree(hHeap, dwFlags, lpMem: INTEGER);
-
-PROCEDURE [windows-, USER, ""] MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
+PROCEDURE [windows-, KERNEL, ""] HeapFree (hHeap, dwFlags, lpMem: INTEGER);
+PROCEDURE [windows-, USER,   ""] MessageBoxA (hWnd, lpText, lpCaption, uType: INTEGER): INTEGER;
 
 
 PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
