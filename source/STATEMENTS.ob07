@@ -358,7 +358,17 @@ BEGIN
 END CheckRange;
 
 
-PROCEDURE assign (e: PARS.EXPR; VarType: PROG.TYPE_; line: INTEGER): BOOLEAN;
+PROCEDURE Float (parser: PARS.PARSER; e: PARS.EXPR);
+VAR
+    pos: PARS.POSITION;
+
+BEGIN
+    getpos(parser, pos);
+    IL.Float(ARITH.Float(e.value), pos.line, pos.col)
+END Float;
+
+
+PROCEDURE assign (parser: PARS.PARSER; e: PARS.EXPR; VarType: PROG.TYPE_; line: INTEGER): BOOLEAN;
 VAR
     res:   BOOLEAN;
     label: INTEGER;
@@ -414,7 +424,7 @@ BEGIN
             END
         ELSIF isReal(e) & (VarType = tREAL) THEN
             IF e.obj = eCONST THEN
-                IL.Float(ARITH.Float(e.value))
+                Float(parser, e)
             END;
             IL.savef(e.obj = eCONST)
         ELSIF isChar(e) & (VarType = tCHAR) THEN
@@ -592,8 +602,8 @@ BEGIN
             PARS.check(assigncomp(e, p.type), pos, 66);
             IF e.obj = eCONST THEN
                 IF e.type = tREAL THEN
-                    IL.Float(ARITH.Float(e.value));
-                    IL.pushf
+                    Float(parser, e);
+                    IL.AddCmd0(IL.opPUSHF)
                 ELSIF e.type.typ = PROG.tNIL THEN
                     IL.Const(0);
                     IL.Param1
@@ -626,7 +636,7 @@ BEGIN
                 IL.PushImpProc(e.ident.import);
                 IL.Param1
             ELSIF isExpr(e) & (e.type = tREAL) THEN
-                IL.pushf
+                IL.AddCmd0(IL.opPUSHF)
             ELSE
                 IF (p.type = tBYTE) & (e.type = tINTEGER) & (chkBYTE IN Options.checking) THEN
                     CheckRange(256, pos.line, errBYTE)
@@ -899,7 +909,7 @@ BEGIN
                 PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66);
                 IF e2.obj = eCONST THEN
                     IF e2.type = tREAL THEN
-                        IL.Float(ARITH.Float(e2.value));
+                        Float(parser, e2);
                         IL.setlast(endcall.prev(IL.COMMAND));
                         IL.savef(FALSE)
                     ELSE
@@ -1079,7 +1089,7 @@ BEGIN
             IF e.obj = eCONST THEN
                 PARS.check(ARITH.floor(e.value), pos, 39)
             ELSE
-                IL.floor
+                IL.AddCmd0(IL.opFLOOR)
             END
 
         |PROG.stFLT:
@@ -1089,7 +1099,7 @@ BEGIN
             IF e.obj = eCONST THEN
                 ARITH.flt(e.value)
             ELSE
-                PARS.check(IL.flt(), pos, 41)
+                IL.AddCmd2(IL.opFLT, pos.line, pos.col)
             END
 
         |PROG.stLEN:
@@ -1202,7 +1212,7 @@ BEGIN
             e.type := tINTEGER
 
         |PROG.sysINF:
-            PARS.check(IL.inf(), pos, 41);
+            IL.AddCmd2(IL.opINF, pos.line, pos.col);
             e.obj := eEXPR;
             e.type := tREAL
 
@@ -1585,7 +1595,7 @@ BEGIN
 END designator;
 
 
-PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG.TYPE_; isfloat: BOOLEAN; VAR fregs: INTEGER; parser: PARS.PARSER; pos: PARS.POSITION; CallStat: BOOLEAN);
+PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG.TYPE_; isfloat: BOOLEAN; parser: PARS.PARSER; pos: PARS.POSITION; CallStat: BOOLEAN);
 VAR
     cconv,
     parSize,
@@ -1610,7 +1620,7 @@ BEGIN
         fparSize := 0
     END;
     IL.setlast(begcall);
-    fregs := IL.precall(isfloat);
+    IL.AddCmd(IL.opPRECALL, ORD(isfloat));
 
     IF cconv IN {PROG._ccall16, PROG.ccall16} THEN
         IL.AddCmd(IL.opALIGN16, parSize)
@@ -1643,11 +1653,14 @@ BEGIN
         IL.AddCmd(IL.opCLEANUP, parSize)
     END;
 
-    IF ~CallStat THEN
+    IF CallStat THEN
+        IL.AddCmd0(IL.opRES);
+        IL.drop
+    ELSE
         IF isfloat THEN
-            PARS.check(IL.resf(fregs), pos, 41)
+            IL.AddCmd2(IL.opRESF, pos.line, pos.col)
         ELSE
-            IL.res(fregs)
+            IL.AddCmd0(IL.opRES)
         END
     END
 END ProcCall;
@@ -1786,14 +1799,13 @@ VAR
         pos:      PARS.POSITION;
         e1:       PARS.EXPR;
         isfloat:  BOOLEAN;
-        fregs:    INTEGER;
 
 
         PROCEDURE LoadVar (e: PARS.EXPR; parser: PARS.PARSER; pos: PARS.POSITION);
         BEGIN
             IF ~(e.type.typ IN {PROG.tRECORD, PROG.tARRAY}) THEN
                 IF e.type = tREAL THEN
-                    PARS.check(IL.loadf(), pos, 41)
+                    IL.AddCmd2(IL.opLOADF, pos.line, pos.col)
                 ELSE
                     IL.load(e.type.size)
                 END
@@ -1839,9 +1851,9 @@ VAR
                 PARS.check(e.type # NIL, pos, 59);
                 isfloat := e.type = tREAL;
                 IF e1.obj IN {ePROC, eIMP} THEN
-                    ProcCall(e1, e1.ident.type, isfloat, fregs, parser, pos, FALSE)
+                    ProcCall(e1, e1.ident.type, isfloat, parser, pos, FALSE)
                 ELSIF isExpr(e1) THEN
-                    ProcCall(e1, e1.type, isfloat, fregs, parser, pos, FALSE)
+                    ProcCall(e1, e1.type, isfloat, parser, pos, FALSE)
                 END
             END;
             IL.popBegEnd(begcall, endcall)
@@ -1927,11 +1939,11 @@ VAR
                         END
                     ELSIF isReal(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e.value))
+                            Float(parser, e)
                         ELSIF e1.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e1.value))
+                            Float(parser, e1)
                         END;
-                        IL.fbinop(IL.opMULF)
+                        IL.AddCmd0(IL.opMULF)
                     ELSIF isSet(e) THEN
                         IF e.obj = eCONST THEN
                             IL.AddCmd(IL.opMULSC, ARITH.Int(e.value))
@@ -1959,13 +1971,13 @@ VAR
                 ELSE
                     IF isReal(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e.value));
-                            IL.fbinop(IL.opDIVFI)
+                            Float(parser, e);
+                            IL.AddCmd0(IL.opDIVFI)
                         ELSIF e1.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e1.value));
-                            IL.fbinop(IL.opDIVF)
+                            Float(parser, e1);
+                            IL.AddCmd0(IL.opDIVF)
                         ELSE
-                            IL.fbinop(IL.opDIVF)
+                            IL.AddCmd0(IL.opDIVF)
                         END
                     ELSIF isSet(e) THEN
                         IF e.obj = eCONST THEN
@@ -2155,13 +2167,13 @@ VAR
                         END
                     ELSIF isReal(e) THEN
                         IF e.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e.value));
-                            IL.fbinop(IL.opADDF - ORD(minus))
+                            Float(parser, e);
+                            IL.AddCmd0(IL.opADDF - ORD(minus))
                         ELSIF e1.obj = eCONST THEN
-                            IL.Float(ARITH.Float(e1.value));
-                            IL.fbinop(IL.opADDF + ORD(minus))
+                            Float(parser, e1);
+                            IL.AddCmd0(IL.opADDF + ORD(minus))
                         ELSE
-                            IL.fbinop(IL.opADDF + ORD(minus))
+                            IL.AddCmd0(IL.opADDF + ORD(minus))
                         END
                     ELSIF isSet(e) THEN
                         IF e.obj = eCONST THEN
@@ -2365,11 +2377,11 @@ BEGIN
                     ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        IL.Float(ARITH.Float(e.value))
+                        Float(parser, e)
                     ELSIF e1.obj = eCONST THEN
-                        IL.Float(ARITH.Float(e1.value))
+                        Float(parser, e1)
                     END;
-                    IL.fcmp(IL.opEQF + cmp)
+                    IL.AddCmd0(IL.opEQF + cmp)
                 END
 
             ELSIF (isStringW(e) OR isCharArrayX(e)) & (isStringW(e1) OR isCharArrayX(e1)) THEN
@@ -2465,13 +2477,13 @@ BEGIN
                     ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
                     IF e.obj = eCONST THEN
-                        IL.Float(ARITH.Float(e.value));
-                        IL.fcmp(IL.opEQF + invcmpcode(op))
+                        Float(parser, e);
+                        IL.AddCmd0(IL.opEQF + invcmpcode(op))
                     ELSIF e1.obj = eCONST THEN
-                        IL.Float(ARITH.Float(e1.value));
-                        IL.fcmp(IL.opEQF + cmp)
+                        Float(parser, e1);
+                        IL.AddCmd0(IL.opEQF + cmp)
                     ELSE
-                        IL.fcmp(IL.opEQF + cmp)
+                        IL.AddCmd0(IL.opEQF + cmp)
                     END
                 END
 
@@ -2541,7 +2553,6 @@ VAR
     pos:   PARS.POSITION;
     line:  INTEGER;
     call:  BOOLEAN;
-    fregs: INTEGER;
 
 BEGIN
     getpos(parser, pos);
@@ -2562,7 +2573,7 @@ BEGIN
 
         IL.setlast(endcall.prev(IL.COMMAND));
 
-        PARS.check(assign(e1, e.type, line), pos, 91);
+        PARS.check(assign(parser, e1, e.type, line), pos, 91);
         IF e1.obj = ePROC THEN
             PARS.check(e1.ident.global, pos, 85)
         END;
@@ -2588,9 +2599,9 @@ BEGIN
 
     IF call THEN
         IF e.obj IN {ePROC, eIMP} THEN
-            ProcCall(e, e.ident.type, FALSE, fregs, parser, pos, TRUE)
+            ProcCall(e, e.ident.type, FALSE, parser, pos, TRUE)
         ELSIF isExpr(e) THEN
-            ProcCall(e, e.type, FALSE, fregs, parser, pos, TRUE)
+            ProcCall(e, e.type, FALSE, parser, pos, TRUE)
         END
     END;
 
@@ -2956,8 +2967,7 @@ VAR
     PROCEDURE TableT (node: AVL.NODE);
     BEGIN
         IF node # NIL THEN
-            IL.caset(node.data(CASE_LABEL).range.a, node.data(CASE_LABEL).variant);
-
+            IL.AddCmd2(IL.opCASET, node.data(CASE_LABEL).variant, node.data(CASE_LABEL).range.a);
             TableT(node.left);
             TableT(node.right)
         END
@@ -3201,7 +3211,7 @@ BEGIN
     IF res THEN
         IF e.obj = eCONST THEN
             IF e.type = tREAL THEN
-                IL.Float(ARITH.Float(e.value))
+                Float(parser, e)
             ELSIF e.type.typ = PROG.tNIL THEN
                 IL.Const(0)
             ELSE
@@ -3214,10 +3224,6 @@ BEGIN
             IL.PushProc(e.ident.proc.label)
         ELSIF e.obj = eIMP THEN
             IL.PushImpProc(e.ident.import)
-        END;
-
-        IF e.type = tREAL THEN
-            IL.retf
         END
     END
 

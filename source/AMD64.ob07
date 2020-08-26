@@ -8,7 +8,7 @@
 MODULE AMD64;
 
 IMPORT IL, BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PATHS, PROG, TARGETS,
-       REG, C := CONSOLE, UTILS, S := STRINGS, PE32, ELF, X86;
+       REG, C := CONSOLE, UTILS, S := STRINGS, PE32, ELF, X86, ERRORS;
 
 
 CONST
@@ -27,6 +27,8 @@ CONST
     rsi = 6;
     rdi = 7;
 
+    MAX_XMM = 5;
+
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H;
 
     sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
@@ -37,6 +39,8 @@ CONST
     sDATA = BIN.PICDATA;
     sBSS  = BIN.PICBSS;
     sIMP  = BIN.PICIMP;
+
+    FPR_ERR = 41;
 
 
 TYPE
@@ -64,6 +68,8 @@ VAR
 
     Win64RegPar: ARRAY 4 OF INTEGER;
     SystemVRegPar: ARRAY 6 OF INTEGER;
+
+    Xmm: ARRAY 1000 OF INTEGER;
 
 
 PROCEDURE OutByte (b: BYTE);
@@ -830,6 +836,8 @@ VAR
 
     regVar: BOOLEAN;
 
+    fname: PATHS.PATH;
+
 BEGIN
     xmm := -1;
     cmd := commands.first(COMMAND);
@@ -841,6 +849,9 @@ BEGIN
         opcode := cmd.opcode;
 
         CASE opcode OF
+
+        |IL.opFNAME:
+            fname := cmd(IL.FNAMECMD).fname
 
         |IL.opJMP:
             X86.jmp(param1)
@@ -897,18 +908,18 @@ BEGIN
             pushc(param2)
 
         |IL.opPRECALL:
-            n := param2;
-            IF (param1 # 0) & (n # 0) THEN
+            PushAll(0);
+            IF (param2 # 0) & (xmm >= 0) THEN
                 subrc(rsp, 8)
             END;
-            WHILE n > 0 DO
+            INC(Xmm[0]);
+            Xmm[Xmm[0]] := xmm + 1;
+            WHILE xmm >= 0 DO
                 subrc(rsp, 8);
                 movsdmr(rsp, 0, xmm);
-                DEC(xmm);
-                DEC(n)
+                DEC(xmm)
             END;
-            ASSERT(xmm = -1);
-            PushAll(0)
+            ASSERT(xmm = -1)
 
         |IL.opWIN64ALIGN16:
             ASSERT(rax IN R.regs);
@@ -929,11 +940,15 @@ BEGIN
         |IL.opRESF:
             ASSERT(xmm = -1);
             INC(xmm);
-            n := param2;
+            n := Xmm[Xmm[0]]; DEC(Xmm[0]);
             IF n > 0 THEN
-                movsdmr(rsp, n * 8, xmm);
+                movsdmr(rsp, n * 8, 0);
                 DEC(xmm);
                 INC(n)
+            END;
+
+            IF xmm + n > MAX_XMM THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
             END;
 
             WHILE n > 0 DO
@@ -945,8 +960,9 @@ BEGIN
 
         |IL.opRES:
             ASSERT(R.top = -1);
+            ASSERT(xmm = -1);
             GetRegA;
-            n := param2;
+            n := Xmm[Xmm[0]]; DEC(Xmm[0]);
             WHILE n > 0 DO
                 INC(xmm);
                 movsdrm(xmm, rsp, 0);
@@ -1172,11 +1188,15 @@ BEGIN
             n := param2 * 8;
             next := cmd.next(COMMAND);
             IF (next.opcode = IL.opSAVEF) OR (next.opcode = IL.opSAVEFI) THEN
+                ASSERT(xmm >= 0);
                 movsdmr(rbp, n, xmm);
                 DEC(xmm);
                 cmd := next
             ELSIF next.opcode = IL.opLOADF THEN
                 INC(xmm);
+                IF xmm > MAX_XMM THEN
+                    ERRORS.ErrorMsg(fname, next.param1, next.param2, FPR_ERR)
+                END;
                 movsdrm(xmm, rbp, n);
                 cmd := next
             ELSE
@@ -2050,10 +2070,14 @@ BEGIN
         |IL.opLOADF:
             UnOp(reg1);
             INC(xmm);
+            IF xmm > MAX_XMM THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             movsdrm(xmm, reg1, 0);
             drop
 
         |IL.opPUSHF:
+            ASSERT(xmm >= 0);
             subrc(rsp, 8);
             movsdmr(rsp, 0, xmm);
             DEC(xmm)
@@ -2061,6 +2085,9 @@ BEGIN
         |IL.opCONSTF:
             float := cmd.float;
             INC(xmm);
+            IF xmm > MAX_XMM THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs + Numbers_Count * 8, sDATA);
             movsdrm(xmm, reg1, 0);
@@ -2068,38 +2095,46 @@ BEGIN
             NewNumber(UTILS.splitf(float, a, b))
 
         |IL.opSAVEF, IL.opSAVEFI:
+            ASSERT(xmm >= 0);
             UnOp(reg1);
             movsdmr(reg1, 0, xmm);
             DEC(xmm);
             drop
 
         |IL.opADDF:
+            ASSERT(xmm >= 1);
             opxx(58H, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opSUBF:
+            ASSERT(xmm >= 1);
             opxx(5CH, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opSUBFI:
+            ASSERT(xmm >= 1);
             opxx(5CH, xmm, xmm - 1);
             opxx(10H, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opMULF:
+            ASSERT(xmm >= 1);
             opxx(59H, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opDIVF:
+            ASSERT(xmm >= 1);
             opxx(5EH, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opDIVFI:
+            ASSERT(xmm >= 1);
             opxx(5EH, xmm, xmm - 1);
             opxx(10H, xmm - 1, xmm);
             DEC(xmm)
 
         |IL.opUMINF:
+            ASSERT(xmm >= 0);
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs, sDATA);
             OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); (* xorpd xmm, xmmword[reg1] *)
@@ -2107,6 +2142,7 @@ BEGIN
             drop
 
         |IL.opFABS:
+            ASSERT(xmm >= 0);
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs + 16, sDATA);
             OutByte3(66H, 40H + reg1 DIV 8 + (xmm DIV 8) * 4, 0FH); (* andpd xmm, xmmword[reg1] *)
@@ -2116,11 +2152,15 @@ BEGIN
         |IL.opFLT:
             UnOp(reg1);
             INC(xmm);
+            IF xmm > MAX_XMM THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             OutByte(0F2H); Rex(reg1, xmm); OutByte(0FH); (* cvtsi2sd xmm, reg1 *)
             OutByte2(2AH, 0C0H + (xmm MOD 8) * 8 + reg1 MOD 8);
             drop
 
         |IL.opFLOOR:
+            ASSERT(xmm >= 0);
             reg1 := GetAnyReg();
             subrc(rsp, 8);
             OutByte3(00FH, 0AEH, 05CH); OutByte2(024H, 004H);                       (* stmxcsr dword[rsp+4];                              *)
@@ -2135,11 +2175,15 @@ BEGIN
             DEC(xmm)
 
         |IL.opEQF .. IL.opGEF:
+            ASSERT(xmm >= 1);
             fcmp(opcode, xmm);
             DEC(xmm, 2)
 
         |IL.opINF:
             INC(xmm);
+            IF xmm > MAX_XMM THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             reg1 := GetAnyReg();
             lea(reg1, Numbers_Offs + 32, sDATA);
             movsdrm(xmm, reg1, 0);
@@ -2621,6 +2665,7 @@ VAR
     path, modname, ext: PATHS.PATH;
 
 BEGIN
+    Xmm[0] := 0;
     tcount := CHL.Length(IL.codes.types);
 
     Win64RegPar[0] := rcx;

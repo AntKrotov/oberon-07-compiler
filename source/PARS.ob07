@@ -1204,6 +1204,10 @@ BEGIN
     END;
     CONSOLE.Ln;
 
+    IF TARGETS.CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
+        IL.fname(parser.fname)
+    END;
+
     label := IL.NewLabel();
     IL.AddJmpCmd(IL.opJMP, label);
 

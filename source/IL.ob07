@@ -7,7 +7,7 @@
 
 MODULE IL;
 
-IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, TARGETS;
+IMPORT LISTS, SCAN, STRINGS, CHL := CHUNKLISTS, C := COLLECTIONS, TARGETS, PATHS;
 
 
 CONST
@@ -79,6 +79,7 @@ CONST
     opSAVE16C* = 213; opWCHR* = 214; opHANDLER* = 215;
 
     opSYSVCALL* = 216; opSYSVCALLI* = 217; opSYSVCALLP* = 218; opSYSVALIGN16* = 219; opWIN64ALIGN16* = 220;
+    opFNAME* = 221;
 
 
     opSADR_PARAM* = -1; opLOAD64_PARAM* = -2; opLLOAD64_PARAM* = -3; opGLOAD64_PARAM* = -4;
@@ -149,6 +150,12 @@ TYPE
 
     END;
 
+    FNAMECMD* = POINTER TO RECORD (COMMAND)
+
+        fname*: PATHS.PATH
+
+    END;
+
     CMDSTACK = POINTER TO RECORD
 
         data: ARRAY 1000 OF COMMAND;
@@ -199,7 +206,6 @@ TYPE
         charoffs:   ARRAY 256 OF INTEGER;
         wcharoffs:  ARRAY 65536 OF INTEGER;
 
-        fregs:      INTEGER;
         wstr:       ARRAY 4*1024 OF WCHAR
     END;
 
@@ -208,7 +214,7 @@ VAR
 
     codes*: CODES;
     little: BOOLEAN;
-    numRegsFloat, CPU: INTEGER;
+    CPU: INTEGER;
 
     commands, variables: C.COLLECTION;
 
@@ -684,14 +690,6 @@ BEGIN
 END New;
 
 
-PROCEDURE fcmp* (opcode: INTEGER);
-BEGIN
-    AddCmd(opcode, 0);
-    DEC(codes.fregs, 2);
-    ASSERT(codes.fregs >= 0)
-END fcmp;
-
-
 PROCEDURE not*;
 VAR
     prev: COMMAND;
@@ -899,42 +897,8 @@ BEGIN
         AddCmd0(opSAVEFI)
     ELSE
         AddCmd0(opSAVEF)
-    END;
-    DEC(codes.fregs);
-    ASSERT(codes.fregs >= 0)
+    END
 END savef;
-
-
-PROCEDURE pushf*;
-BEGIN
-    AddCmd0(opPUSHF);
-    DEC(codes.fregs);
-    ASSERT(codes.fregs >= 0)
-END pushf;
-
-
-PROCEDURE loadf* (): BOOLEAN;
-BEGIN
-    AddCmd0(opLOADF);
-    INC(codes.fregs)
-    RETURN codes.fregs < numRegsFloat
-END loadf;
-
-
-PROCEDURE inf* (): BOOLEAN;
-BEGIN
-    AddCmd0(opINF);
-    INC(codes.fregs)
-    RETURN codes.fregs < numRegsFloat
-END inf;
-
-
-PROCEDURE fbinop* (opcode: INTEGER);
-BEGIN
-    AddCmd0(opcode);
-    DEC(codes.fregs);
-    ASSERT(codes.fregs > 0)
-END fbinop;
 
 
 PROCEDURE saves* (offset, length: INTEGER);
@@ -951,22 +915,6 @@ BEGIN
         AddCmd0(opABS)
     END
 END abs;
-
-
-PROCEDURE floor*;
-BEGIN
-    AddCmd0(opFLOOR);
-    DEC(codes.fregs);
-    ASSERT(codes.fregs >= 0)
-END floor;
-
-
-PROCEDURE flt* (): BOOLEAN;
-BEGIN
-    AddCmd0(opFLT);
-    INC(codes.fregs)
-    RETURN codes.fregs < numRegsFloat
-END flt;
 
 
 PROCEDURE shift_minmax* (op: CHAR);
@@ -1014,7 +962,7 @@ BEGIN
 END len;
 
 
-PROCEDURE Float* (r: REAL);
+PROCEDURE Float* (r: REAL; line, col: INTEGER);
 VAR
     cmd: COMMAND;
 
@@ -1022,43 +970,10 @@ BEGIN
     cmd := NewCmd();
     cmd.opcode := opCONSTF;
     cmd.float := r;
-    insert(codes.last, cmd);
-    INC(codes.fregs);
-    ASSERT(codes.fregs <= numRegsFloat)
+    cmd.param1 := line;
+    cmd.param2 := col;
+    insert(codes.last, cmd)
 END Float;
-
-
-PROCEDURE precall* (flt: BOOLEAN): INTEGER;
-VAR
-    res: INTEGER;
-BEGIN
-    res := codes.fregs;
-    AddCmd2(opPRECALL, ORD(flt), res);
-    codes.fregs := 0
-    RETURN res
-END precall;
-
-
-PROCEDURE resf* (fregs: INTEGER): BOOLEAN;
-BEGIN
-    AddCmd(opRESF, fregs);
-    codes.fregs := fregs + 1
-    RETURN codes.fregs < numRegsFloat
-END resf;
-
-
-PROCEDURE res* (fregs: INTEGER);
-BEGIN
-    AddCmd(opRES, fregs);
-    codes.fregs := fregs
-END res;
-
-
-PROCEDURE retf*;
-BEGIN
-    DEC(codes.fregs);
-    ASSERT(codes.fregs = 0)
-END retf;
 
 
 PROCEDURE drop*;
@@ -1086,10 +1001,16 @@ BEGIN
 END case;
 
 
-PROCEDURE caset* (a, label: INTEGER);
+PROCEDURE fname* (name: PATHS.PATH);
+VAR
+    cmd: FNAMECMD;
+
 BEGIN
-    AddCmd2(opCASET, label, a)
-END caset;
+    NEW(cmd);
+    cmd.opcode := opFNAME;
+    cmd.fname := name;
+    insert(codes.last, cmd)
+END fname;
 
 
 PROCEDURE AddExp* (label: INTEGER; name: SCAN.LEXSTR);
@@ -1169,12 +1090,6 @@ BEGIN
 
     CPU := pCPU;
     little := TRUE;
-    CASE CPU OF
-    |TARGETS.cpuAMD64:  numRegsFloat := 6
-    |TARGETS.cpuX86:    numRegsFloat := 8
-    |TARGETS.cpuMSP430: numRegsFloat := 0
-    |TARGETS.cpuTHUMB:  numRegsFloat := 256
-    END;
 
     NEW(codes.begcall);
     codes.begcall.top := -1;
@@ -1193,8 +1108,6 @@ BEGIN
     AddRec(0);
 
     codes.lcount := 0;
-
-    codes.fregs := 0;
 
     FOR i := 0 TO LEN(codes.charoffs) - 1 DO
         codes.charoffs[i] := -1

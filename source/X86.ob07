@@ -8,7 +8,7 @@
 MODULE X86;
 
 IMPORT IL, REG, UTILS, LISTS, BIN, PE32, KOS, MSCOFF, ELF, PROG,
-       CHL := CHUNKLISTS, PATHS, TARGETS;
+       CHL := CHUNKLISTS, PATHS, TARGETS, ERRORS;
 
 
 CONST
@@ -22,12 +22,16 @@ CONST
     esp = 4;
     ebp = 5;
 
+    MAX_FR = 7;
+
     sete = 94H; setne = 95H; setl = 9CH; setge = 9DH; setle = 9EH; setg = 9FH; setc = 92H; setnc = 93H;
 
     je = 84H; jne = 85H; jl = 8CH; jge = 8DH; jle = 8EH; jg = 8FH; jb = 82H; jnb = 83H;
 
 
     CODECHUNK = 8;
+
+    FPR_ERR = 41;
 
 
 TYPE
@@ -91,6 +95,8 @@ VAR
     CodeList: LISTS.LIST;
 
     tcount: INTEGER;
+
+    FR: ARRAY 1000 OF INTEGER;
 
 
 PROCEDURE OutByte* (n: BYTE);
@@ -722,7 +728,7 @@ PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
 VAR
     cmd, next: COMMAND;
 
-    reg1, reg2: INTEGER;
+    reg1, reg2, fr: INTEGER;
 
     n, a, b, label, cc: INTEGER;
 
@@ -730,8 +736,12 @@ VAR
 
     float: REAL;
 
+    fname: PATHS.PATH;
+
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
+
+    fr := -1;
 
     WHILE cmd # NIL DO
 
@@ -741,6 +751,9 @@ BEGIN
         opcode := cmd.opcode;
 
         CASE opcode OF
+
+        |IL.opFNAME:
+            fname := cmd(IL.FNAMECMD).fname
 
         |IL.opJMP:
             jmp(param1)
@@ -766,16 +779,18 @@ BEGIN
             ASSERT(R.top = -1)
 
         |IL.opPRECALL:
-            n := param2;
-            IF (param1 # 0) & (n # 0) THEN
+            PushAll(0);
+            IF (param2 # 0) & (fr >= 0) THEN
                 subrc(esp, 8)
             END;
-            WHILE n > 0 DO
+            INC(FR[0]);
+            FR[FR[0]] := fr + 1;
+            WHILE fr >= 0 DO
                 subrc(esp, 8);
                 OutByte3(0DDH, 01CH, 024H); (* fstp qword[esp] *)
-                DEC(n)
+                DEC(fr)
             END;
-            PushAll(0)
+            ASSERT(fr = -1)
 
         |IL.opALIGN16:
             ASSERT(eax IN R.regs);
@@ -789,25 +804,35 @@ BEGIN
 
         |IL.opRES:
             ASSERT(R.top = -1);
+            ASSERT(fr = -1);
             GetRegA;
-            n := param2;
+            n := FR[FR[0]]; DEC(FR[0]);
             WHILE n > 0 DO
                 OutByte3(0DDH, 004H, 024H); (* fld qword[esp] *)
                 addrc(esp, 8);
+                INC(fr);
                 DEC(n)
             END
 
         |IL.opRESF:
-            n := param2;
+            ASSERT(fr = -1);
+            INC(fr);
+            n := FR[FR[0]]; DEC(FR[0]);
             IF n > 0 THEN
                 OutByte3(0DDH, 5CH + long(n * 8), 24H);
                 OutIntByte(n * 8); (* fstp qword[esp + n*8] *)
+                DEC(fr);
                 INC(n)
+            END;
+
+            IF fr + n > MAX_FR THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
             END;
 
             WHILE n > 0 DO
                 OutByte3(0DDH, 004H, 024H); (* fld qword[esp] *)
                 addrc(esp, 8);
+                INC(fr);
                 DEC(n)
             END
 
@@ -843,6 +868,12 @@ BEGIN
             END;
 
             ASSERT(R.top = -1);
+
+            IF opcode = IL.opLEAVEF THEN
+                DEC(fr)
+            END;
+
+            ASSERT(fr = -1);
 
             IF param1 > 0 THEN
                 mov(esp, ebp)
@@ -1866,15 +1897,25 @@ BEGIN
             drop
 
         |IL.opPUSHF:
+            ASSERT(fr >= 0);
+            DEC(fr);
             subrc(esp, 8);
             OutByte3(0DDH, 01CH, 024H)    (* fstp qword[esp] *)
 
         |IL.opLOADF:
+            INC(fr);
+            IF fr > MAX_FR THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             UnOp(reg1);
             OutByte2(0DDH, reg1);         (* fld qword[reg1] *)
             drop
 
         |IL.opCONSTF:
+            INC(fr);
+            IF fr > MAX_FR THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             float := cmd.float;
             IF float = 0.0 THEN
                 OutByte2(0D9H, 0EEH)      (* fldz *)
@@ -1892,35 +1933,55 @@ BEGIN
             END
 
         |IL.opSAVEF, IL.opSAVEFI:
+            ASSERT(fr >= 0);
+            DEC(fr);
             UnOp(reg1);
             OutByte2(0DDH, 018H + reg1); (* fstp qword[reg1] *)
             drop
 
         |IL.opADDF:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0C1H)  (* faddp st1, st *)
 
         |IL.opSUBF:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0E9H)  (* fsubp st1, st *)
 
         |IL.opSUBFI:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0E1H)  (* fsubrp st1, st *)
 
         |IL.opMULF:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0C9H)  (* fmulp st1, st *)
 
         |IL.opDIVF:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0F9H)  (* fdivp st1, st *)
 
         |IL.opDIVFI:
+            ASSERT(fr >= 1);
+            DEC(fr);
             OutByte2(0DEH, 0F1H)  (* fdivrp st1, st *)
 
         |IL.opUMINF:
+            ASSERT(fr >= 0);
             OutByte2(0D9H, 0E0H)  (* fchs *)
 
         |IL.opFABS:
+            ASSERT(fr >= 0);
             OutByte2(0D9H, 0E1H)  (* fabs *)
 
         |IL.opFLT:
+            INC(fr);
+            IF fr > MAX_FR THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             UnOp(reg1);
             push(reg1);
             OutByte3(0DBH, 004H, 024H); (* fild dword[esp] *)
@@ -1928,6 +1989,8 @@ BEGIN
             drop
 
         |IL.opFLOOR:
+            ASSERT(fr >= 0);
+            DEC(fr);
             subrc(esp, 8);
             OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 004H);                   (* fstcw word[esp+4]                    *)
             OutByte2(09BH, 0D9H); OutByte3(07CH, 024H, 006H);                   (* fstcw word[esp+6]                    *)
@@ -1941,18 +2004,24 @@ BEGIN
             addrc(esp, 4)
 
         |IL.opEQF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(sete, al)
                                         (* L: *)
 
         |IL.opNEF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(setne, al)
                                         (* L: *)
 
         |IL.opLTF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 00EH);       (* jp L *)
             setcc(setc, al);
@@ -1963,6 +2032,8 @@ BEGIN
                                         (* L: *)
 
         |IL.opGTF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 00FH);       (* jp L *)
             setcc(setc, al);
@@ -1973,12 +2044,16 @@ BEGIN
                                         (* L: *)
 
         |IL.opLEF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 003H);       (* jp L *)
             setcc(setnc, al)
                                         (* L: *)
 
         |IL.opGEF:
+            ASSERT(fr >= 1);
+            DEC(fr, 2);
             fcmp;
             OutByte2(07AH, 010H);       (* jp L *)
             setcc(setc, al);
@@ -1990,6 +2065,10 @@ BEGIN
                                         (* L: *)
 
         |IL.opINF:
+            INC(fr);
+            IF fr > MAX_FR THEN
+                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+            END;
             pushc(7FF00000H);
             pushc(0);
             OutByte3(0DDH, 004H, 024H);  (* fld qword[esp] *)
@@ -2126,8 +2205,8 @@ BEGIN
     END;
 
     ASSERT(R.pushed = 0);
-    ASSERT(R.top = -1)
-
+    ASSERT(R.top = -1);
+    ASSERT(fr = -1)
 END translate;
 
 
@@ -2296,6 +2375,7 @@ VAR
     opt: PROG.OPTIONS;
 
 BEGIN
+    FR[0] := 0;
     tcount := CHL.Length(IL.codes.types);
 
     opt := options;
