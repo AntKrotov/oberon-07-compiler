@@ -1,0 +1,36 @@
+(*
+	BSD 2-Clause License, prospero78su
+
+	For build on lin64:
+	  ./Compiler "source/test/writerTest.ob07" linux64exe -out "./writerTest" -stk 2
+*)
+
+MODULE writerTest;
+
+IMPORT Out,
+   mWrt := WRITER;
+
+VAR
+   error*: INTEGER;
+   align : INTEGER;
+   ar : ARRAY 10 OF BYTE;
+
+PROCEDURE TestCreate();
+   BEGIN
+      mWrt.Create("test.txt")
+   END TestCreate;
+
+BEGIN
+   error := 0;
+   TestCreate();
+   align := mWrt.align(4, 6);
+   IF align # 6 THEN
+      INC(error);
+      Out.String("ОШИБКА выравнивание # 6, "); Out.Int(align, 2);Out.Ln()
+   END;
+   mWrt.WriteByte(56);
+   mWrt.WriteByte(57);
+   mWrt.Write(ar, 10);
+   //mWrt.Write(ar, 11); TODO: а надо бы сделать код возвращаемой ошибки
+   mWrt.Close()
+END writerTest.

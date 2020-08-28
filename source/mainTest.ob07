@@ -9,7 +9,8 @@ MODULE mainTest;
 
 IMPORT Out,
    mT1 := collectionsTest,
-   mT2 := consoleTest;
+   mT2 := consoleTest,
+   mT3 := writerTest;
 
 VAR
    error:INTEGER;
@@ -19,6 +20,7 @@ BEGIN
    Out.String("Начало тестов");Out.Ln();
    error := error + mT1.error;
    error := error + mT2.error;
+   error := error + mT3.error;
    IF error # 0 THEN
       Out.String("Тесты провалены. Всего ошибок: "); Out.Int(error, 2); Out.Ln()
    ELSE
