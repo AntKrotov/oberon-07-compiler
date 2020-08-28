@@ -2,13 +2,14 @@
 	BSD 2-Clause License, prospero78su
 
 	For build on lin64:
-	  ./Compiler "source/test/mainTest.ob07" linux64exe -out "./mainTest" -stk 2
+	  ./Compiler "source/mainTest.ob07" linux64exe -out "./mainTest" -stk 2
 *)
 
 MODULE mainTest;
 
 IMPORT Out,
-   mT1 := collectionsTest;
+   mT1 := collectionsTest,
+   mT2 := consoleTest;
 
 VAR
    error:INTEGER;
@@ -17,6 +18,7 @@ BEGIN
    error := 0;
    Out.String("Начало тестов");Out.Ln();
    error := error + mT1.error;
+   error := error + mT2.error;
    IF error # 0 THEN
       Out.String("Тесты провалены. Всего ошибок: "); Out.Int(error, 2); Out.Ln()
    ELSE

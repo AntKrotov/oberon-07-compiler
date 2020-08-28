@@ -2,7 +2,7 @@
 	BSD 2-Clause License, prospero78su
 
 	For build on lin64:
-	  ./Compiler "source/test/collectionsTest.ob07" linux64exe -out "./collectionsTest" -stk 2
+	  ./Compiler "source/collectionsTest.ob07" linux64exe -out "./collectionsTest" -stk 2
 *)
 
 MODULE collectionsTest;

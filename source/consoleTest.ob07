@@ -1,0 +1,24 @@
+(*
+	BSD 2-Clause License, prospero78su
+
+	For build on lin64:
+	  ./Compiler "source/test/consoleTest.ob07" linux64exe -out "./consoleTest" -stk 2
+*)
+
+MODULE consoleTest;
+
+IMPORT mOut:=Out,
+   mCons:=CONSOLE;
+
+VAR
+   error* : INTEGER;
+
+BEGIN
+   error := 0;
+   mCons.StringLn("test ");
+   mCons.Int(1);
+   mCons.Hex(2, 3);  
+   mCons.Int2(3);
+   mCons.IntLn(4);
+   mCons.Int2Ln(5);  
+END consoleTest.
