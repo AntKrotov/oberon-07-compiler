@@ -13,17 +13,17 @@ IMPORT mClt:=COLLECTIONS,
 VAR
 	clt : mClt.COLLECTION;
 	item1, item2 : mClt.ITEM;
-	test: BOOLEAN;
+	error*: INTEGER;
 
 PROCEDURE TestCreate();
 	BEGIN
 		clt := mClt.create();
 		IF clt = NIL THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestCreate(): ОШИБКА коллекция не создана");mOut.Ln()
 		END;
 		IF clt.len # 0 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestCreate(): ОШИБКА длина коллекции # 0");mOut.Ln()
 		END;
 	END TestCreate;
@@ -34,13 +34,13 @@ PROCEDURE TestPush();
 		NEW(item1);
 		mClt.push(clt, item1);
 		IF clt.len # 1 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPush(): ОШИБКА неправильный размер коллекции");mOut.Ln()
 		END;
 		NEW(item2);
 		mClt.push(clt, item2);
 		IF clt.len # 2 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPush(): ОШИБКА неправильный размер коллекции");mOut.Ln()
 		END;
 	END TestPush;
@@ -51,44 +51,39 @@ PROCEDURE TestPop();
 	BEGIN
 		item:=mClt.pop(clt);
 		IF clt.len # 1 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА неправильный размер коллекции");mOut.Ln()
 		END;
 		IF item # item2 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА при извлечении из коллекции коллекции");mOut.Ln()
 		END;
 
 		item:=mClt.pop(clt);
 		IF clt.len # 0 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА неправильный размер коллекции");mOut.Ln()
 		END;
 		IF item # item1 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА при извлечении из коллекции коллекции");mOut.Ln()
 		END;
 
 		item:=mClt.pop(clt);
 		IF clt.len # 0 THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА неправильный размер коллекции");mOut.Ln()
 		END;
 		IF item # NIL THEN
-			test := FALSE;
+			INC(error);
 			mOut.String("TestPop(): ОШИБКА при извлечении из коллекции коллекции");mOut.Ln()
 		END;
-		
+
 	END TestPop;
 
 BEGIN
-	test := TRUE;
+	error := 0;
 	TestCreate();
 	TestPush();
 	TestPop();
-	IF ~test THEN
-		mOut.String("ОШИБКА тест коллекции провален");mOut.Ln()
-	ELSE
-		mOut.String("ОК тест коллекции пройден");mOut.Ln()
-	END;
 END collectionsTest.

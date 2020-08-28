@@ -1,0 +1,26 @@
+(*
+	BSD 2-Clause License, prospero78su
+
+	For build on lin64:
+	  ./Compiler "source/test/mainTest.ob07" linux64exe -out "./mainTest" -stk 2
+*)
+
+MODULE mainTest;
+
+IMPORT Out,
+   mT1 := collectionsTest;
+
+VAR
+   error:INTEGER;
+
+BEGIN
+   error := 0;
+   Out.String("Начало тестов");Out.Ln();
+   error := error + mT1.error;
+   IF error # 0 THEN
+      Out.String("Тесты провалены. Всего ошибок: "); Out.Int(error, 2); Out.Ln()
+   ELSE
+      Out.String("Тесты пройдены. Ошибок 0");Out.Ln()
+   END;
+   Out.String("Конец тестов");Out.Ln();
+END mainTest.
