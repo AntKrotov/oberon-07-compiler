@@ -19,7 +19,7 @@ TYPE
     COLLECTION* = POINTER TO RECORD
 
         last: ITEM;
-		  len*: INTEGER
+		  len*:INTEGER
 
     END;
 
