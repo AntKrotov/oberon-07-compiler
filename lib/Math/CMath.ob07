@@ -7,7 +7,7 @@
 
 MODULE CMath;
 
-IMPORT SYSTEM, Math, MathExt, Out;
+IMPORT Math, Out;
 
 TYPE
   complex* = POINTER TO RECORD
@@ -303,7 +303,7 @@ END CExp;
 PROCEDURE CLn* (z: complex): complex;
 BEGIN
   result.re := Math.ln(CMod(z));
-  result.im := MathExt.arctan2(z.im, z.re);
+  result.im := Math.arctan2(z.im, z.re);
 
   RETURN result
 END CLn;

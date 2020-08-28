@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -166,7 +166,7 @@ PROCEDURE number (text: TXT.TEXT; VAR lex: LEX);
 VAR
     c: CHAR;
     hex: BOOLEAN;
-    error: INTEGER;
+    error, sym: INTEGER;
 
 BEGIN
     c := text.peak;
@@ -174,7 +174,7 @@ BEGIN
 
     error := 0;
 
-    lex.sym := lxINTEGER;
+    sym := lxINTEGER;
     hex := FALSE;
 
     WHILE S.digit(c) DO
@@ -191,26 +191,26 @@ BEGIN
     IF c = "H" THEN
         putchar(lex, c);
         TXT.next(text);
-        lex.sym := lxHEX
+        sym := lxHEX
 
     ELSIF c = "X" THEN
         putchar(lex, c);
         TXT.next(text);
-        lex.sym := lxCHAR
+        sym := lxCHAR
 
     ELSIF c = "." THEN
 
         IF hex THEN
-            lex.sym := lxERROR01
+            sym := lxERROR01
         ELSE
 
             c := nextc(text);
 
             IF c # "." THEN
                 putchar(lex, ".");
-                lex.sym := lxFLOAT
+                sym := lxFLOAT
             ELSE
-                lex.sym := lxINTEGER;
+                sym := lxINTEGER;
                 text.peak := 7FX;
                 upto := TRUE
             END;
@@ -235,7 +235,7 @@ BEGIN
                         c := nextc(text)
                     END
                 ELSE
-                    lex.sym := lxERROR02
+                    sym := lxERROR02
                 END
 
             END
@@ -243,31 +243,32 @@ BEGIN
         END
 
     ELSIF hex THEN
-        lex.sym := lxERROR01
+        sym := lxERROR01
 
     END;
 
-    IF lex.over & (lex.sym >= 0) THEN
-        lex.sym := lxERROR07
+    IF lex.over & (sym >= 0) THEN
+        sym := lxERROR07
     END;
 
-    IF lex.sym = lxINTEGER THEN
+    IF sym = lxINTEGER THEN
         ARITH.iconv(lex.s, lex.value, error)
-    ELSIF (lex.sym = lxHEX) OR (lex.sym = lxCHAR) THEN
+    ELSIF (sym = lxHEX) OR (sym = lxCHAR) THEN
         ARITH.hconv(lex.s, lex.value, error)
-    ELSIF lex.sym = lxFLOAT THEN
+    ELSIF sym = lxFLOAT THEN
         ARITH.fconv(lex.s, lex.value, error)
     END;
 
     CASE error OF
     |0:
-    |1: lex.sym := lxERROR08
-    |2: lex.sym := lxERROR09
-    |3: lex.sym := lxERROR10
-    |4: lex.sym := lxERROR11
-    |5: lex.sym := lxERROR12
-    END
+    |1: sym := lxERROR08
+    |2: sym := lxERROR09
+    |3: sym := lxERROR10
+    |4: sym := lxERROR11
+    |5: sym := lxERROR12
+    END;
 
+    lex.sym := sym
 END number;
 
 
@@ -349,115 +350,120 @@ END comment;
 
 
 PROCEDURE delimiter (text: TXT.TEXT; VAR lex: LEX; c: CHAR);
+VAR
+    sym: INTEGER;
+
 BEGIN
     putchar(lex, c);
     c := nextc(text);
 
     CASE lex.s[0] OF
     |"+":
-        lex.sym := lxPLUS
+        sym := lxPLUS
 
     |"-":
-        lex.sym := lxMINUS
+        sym := lxMINUS
 
     |"*":
-        lex.sym := lxMUL
+        sym := lxMUL
 
     |"/":
-        lex.sym := lxSLASH;
+        sym := lxSLASH;
 
         IF c = "/" THEN
-            lex.sym := lxCOMMENT;
+            sym := lxCOMMENT;
             REPEAT
                 TXT.next(text)
             UNTIL text.eol OR text.eof
         END
 
     |"~":
-        lex.sym := lxNOT
+        sym := lxNOT
 
     |"&":
-        lex.sym := lxAND
+        sym := lxAND
 
     |".":
-        lex.sym := lxPOINT;
+        sym := lxPOINT;
 
         IF c = "." THEN
-            lex.sym := lxRANGE;
+            sym := lxRANGE;
             putchar(lex, c);
             TXT.next(text)
         END
 
     |",":
-        lex.sym := lxCOMMA
+        sym := lxCOMMA
 
     |";":
-        lex.sym := lxSEMI
+        sym := lxSEMI
 
     |"|":
-        lex.sym := lxBAR
+        sym := lxBAR
 
     |"(":
-        lex.sym := lxLROUND;
+        sym := lxLROUND;
 
         IF c = "*" THEN
-            lex.sym := lxCOMMENT;
+            sym := lxCOMMENT;
             TXT.next(text);
             comment(text)
         END
 
     |"[":
-        lex.sym := lxLSQUARE
+        sym := lxLSQUARE
 
     |"{":
-        lex.sym := lxLCURLY
+        sym := lxLCURLY
 
     |"^":
-        lex.sym := lxCARET
+        sym := lxCARET
 
     |"=":
-        lex.sym := lxEQ
+        sym := lxEQ
 
     |"#":
-        lex.sym := lxNE
+        sym := lxNE
 
     |"<":
-        lex.sym := lxLT;
+        sym := lxLT;
 
         IF c = "=" THEN
-            lex.sym := lxLE;
+            sym := lxLE;
             putchar(lex, c);
             TXT.next(text)
         END
 
     |">":
-        lex.sym := lxGT;
+        sym := lxGT;
 
         IF c = "=" THEN
-            lex.sym := lxGE;
+            sym := lxGE;
             putchar(lex, c);
             TXT.next(text)
         END
 
     |":":
-        lex.sym := lxCOLON;
+        sym := lxCOLON;
 
         IF c = "=" THEN
-            lex.sym := lxASSIGN;
+            sym := lxASSIGN;
             putchar(lex, c);
             TXT.next(text)
         END
 
     |")":
-        lex.sym := lxRROUND
+        sym := lxRROUND
 
     |"]":
-        lex.sym := lxRSQUARE
+        sym := lxRSQUARE
 
     |"}":
-        lex.sym := lxRCURLY
+        sym := lxRCURLY
 
-    END
+    END;
+
+    lex.sym := sym
 
 END delimiter;
 

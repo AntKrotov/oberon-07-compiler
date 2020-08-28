@@ -98,6 +98,8 @@ VAR
 
     FR: ARRAY 1000 OF INTEGER;
 
+    fname: PATHS.PATH;
+
 
 PROCEDURE OutByte* (n: BYTE);
 VAR
@@ -736,8 +738,6 @@ VAR
 
     float: REAL;
 
-    fname: PATHS.PATH;
-
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
 
@@ -751,9 +751,6 @@ BEGIN
         opcode := cmd.opcode;
 
         CASE opcode OF
-
-        |IL.opFNAME:
-            fname := cmd(IL.FNAMECMD).fname
 
         |IL.opJMP:
             jmp(param1)
@@ -802,31 +799,25 @@ BEGIN
             END;
             push(eax)
 
-        |IL.opRES:
+        |IL.opRESF, IL.opRES:
             ASSERT(R.top = -1);
             ASSERT(fr = -1);
-            GetRegA;
             n := FR[FR[0]]; DEC(FR[0]);
-            WHILE n > 0 DO
-                OutByte3(0DDH, 004H, 024H); (* fld qword[esp] *)
-                addrc(esp, 8);
+
+            IF opcode = IL.opRESF THEN
                 INC(fr);
-                DEC(n)
-            END
+                IF n > 0 THEN
+                    OutByte3(0DDH, 5CH + long(n * 8), 24H);
+                    OutIntByte(n * 8); (* fstp qword[esp + n*8] *)
+                    DEC(fr);
+                    INC(n)
+                END;
 
-        |IL.opRESF:
-            ASSERT(fr = -1);
-            INC(fr);
-            n := FR[FR[0]]; DEC(FR[0]);
-            IF n > 0 THEN
-                OutByte3(0DDH, 5CH + long(n * 8), 24H);
-                OutIntByte(n * 8); (* fstp qword[esp + n*8] *)
-                DEC(fr);
-                INC(n)
-            END;
-
-            IF fr + n > MAX_FR THEN
-                ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+                IF fr + n > MAX_FR THEN
+                    ERRORS.ErrorMsg(fname, param1, param2, FPR_ERR)
+                END
+            ELSE
+                GetRegA
             END;
 
             WHILE n > 0 DO
@@ -2196,6 +2187,9 @@ BEGIN
             OutByte3(0FH, 0BAH, 6DH + long(n) + 8 * ORD(opcode = IL.opLADR_EXCLC)); (* bts(r) dword[ebp + n], param2 *)
             OutIntByte(n);
             OutByte(param2)
+
+        |IL.opFNAME:
+            fname := cmd(IL.FNAMECMD).fname
 
         |IL.opLOOP, IL.opENDLOOP:
 

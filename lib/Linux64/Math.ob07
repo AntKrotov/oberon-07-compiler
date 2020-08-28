@@ -48,6 +48,16 @@ BEGIN
 END sqrt;
 
 
+PROCEDURE sqri* (x: INTEGER): INTEGER;
+    RETURN x * x
+END sqri;
+
+
+PROCEDURE sqrr* (x: REAL): REAL;
+    RETURN x * x
+END sqrr;
+
+
 PROCEDURE exp* (x: REAL): REAL;
 CONST
     c1 =  0.693359375E0;
@@ -135,6 +145,40 @@ BEGIN
     ASSERT(base > ZERO)
     RETURN exp(exponent * ln(base))
 END power;
+
+
+PROCEDURE ipower* (base: REAL; exponent: INTEGER): REAL;
+VAR
+    i: INTEGER;
+    a: REAL;
+
+BEGIN
+    a := 1.0;
+
+    IF base # 0.0 THEN
+        IF exponent # 0 THEN
+            IF exponent < 0 THEN
+                base := 1.0 / base
+            END;
+            i := ABS(exponent);
+            WHILE i > 0 DO
+                WHILE ~ODD(i) DO
+                    i := LSR(i, 1);
+                    base := sqrr(base)
+                END;
+                DEC(i);
+                a := a * base
+            END
+        ELSE
+            a := 1.0
+        END
+    ELSE
+        ASSERT(exponent > 0);
+        a := 0.0
+    END
+
+    RETURN a
+END ipower;
 
 
 PROCEDURE log* (base, x: REAL): REAL;
@@ -226,7 +270,7 @@ BEGIN
 END tan;
 
 
-PROCEDURE arctan2 (xn, xd: REAL): REAL;
+PROCEDURE arctan2* (y, x: REAL): REAL;
 CONST
     P0 = 0.216062307897242551884E+3;  P1 = 0.3226620700132512059245E+3;
     P2 = 0.13270239816397674701E+3;   P3 = 0.1288838303415727934E+2;
@@ -236,28 +280,28 @@ CONST
 
 VAR
     atan, z, z2, p, q: REAL;
-    xnExp, xdExp, Quadrant: INTEGER;
+    yExp, xExp, Quadrant: INTEGER;
 
 BEGIN
-    IF ABS(xd) < miny THEN
-        ASSERT(ABS(xn) >= miny);
+    IF ABS(x) < miny THEN
+        ASSERT(ABS(y) >= miny);
         atan := piByTwo
     ELSE
-        z := xn;
-        UNPK(z, xnExp);
-        z := xd;
-        UNPK(z, xdExp);
+        z := y;
+        UNPK(z, yExp);
+        z := x;
+        UNPK(z, xExp);
 
-        IF xnExp - xdExp >= expoMax - 3 THEN
+        IF yExp - xExp >= expoMax - 3 THEN
             atan := piByTwo
-        ELSIF xnExp - xdExp < expoMin + 3 THEN
+        ELSIF yExp - xExp < expoMin + 3 THEN
             atan := ZERO
         ELSE
-            IF ABS(xn) > ABS(xd) THEN
-                z := ABS(xd / xn);
+            IF ABS(y) > ABS(x) THEN
+                z := ABS(x / y);
                 Quadrant := 2
             ELSE
-                z := ABS(xn / xd);
+                z := ABS(y / x);
                 Quadrant := 0
             END;
 
@@ -283,12 +327,12 @@ BEGIN
             END
         END;
 
-        IF xd < ZERO THEN
+        IF x < ZERO THEN
             atan := pi - atan
         END
     END;
 
-    IF xn < ZERO THEN
+    IF y < ZERO THEN
         atan := -atan
     END
 
@@ -393,6 +437,38 @@ BEGIN
 
     RETURN res
 END fact;
+
+
+PROCEDURE DegToRad* (x: REAL): REAL;
+    RETURN x * (pi / 180.0)
+END DegToRad;
+
+
+PROCEDURE RadToDeg* (x: REAL): REAL;
+    RETURN x * (180.0 / pi)
+END RadToDeg;
+
+
+(* Return hypotenuse of triangle *)
+PROCEDURE hypot* (x, y: REAL): REAL;
+VAR
+    a: REAL;
+
+BEGIN
+    x := ABS(x);
+    y := ABS(y);
+    IF x > y THEN
+        a := x * sqrt(1.0 + sqrr(y / x))
+    ELSE
+        IF x > 0.0 THEN
+            a := y * sqrt(1.0 + sqrr(x / y))
+        ELSE
+            a := y
+        END
+    END
+
+    RETURN a
+END hypot;
 
 
 BEGIN

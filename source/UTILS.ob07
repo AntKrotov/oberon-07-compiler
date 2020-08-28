@@ -25,7 +25,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 36;
+    vMinor* = 37;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
