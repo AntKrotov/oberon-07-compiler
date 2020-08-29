@@ -228,7 +228,7 @@ END StrToFloat;
 PROCEDURE String*(VAR s: ARRAY OF CHAR);
 VAR count, i: INTEGER; str: STRING;
 BEGIN
-  WINAPI.ReadConsole(hConsoleInput, sys.ADR(str[0]), 256, sys.ADR(count), 0);
+  WINAPI.ReadConsoleA(hConsoleInput, sys.ADR(str[0]), 256, sys.ADR(count), 0);
   IF (str[count - 1] = 0AX) & (str[count - 2] = 0DX) THEN
     DEC(count, 2)
   END;

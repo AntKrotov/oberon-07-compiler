@@ -1,5 +1,5 @@
 ﻿(*
-    Copyright 2013, 2014, 2017, 2018, 2019 Anton Krotov
+    Copyright 2013, 2014, 2017-2020 Anton Krotov
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -43,13 +43,13 @@ VAR
   Realp: PROCEDURE (x: REAL; width: INTEGER);
 
 
-PROCEDURE [windows-, "kernel32.dll", "GetStdHandle"]
+PROCEDURE [windows-, "kernel32.dll", ""]
     GetStdHandle (nStdHandle: INTEGER): INTEGER;
 
-PROCEDURE [windows-, "kernel32.dll", "WriteFile"]
+PROCEDURE [windows-, "kernel32.dll", ""]
     WriteFile (hFile, Buffer, nNumberOfBytesToRead, lpNumberOfBytesRead: INTEGER; lpOverlapped: POverlapped): INTEGER;
 
-PROCEDURE [windows-, "kernel32.dll", "WriteConsoleW"]
+PROCEDURE [windows-, "kernel32.dll", ""]
     WriteConsoleW (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
 
 

@@ -23,7 +23,7 @@ VAR
     attr:     SET;
 
 BEGIN
-    Handle := WINAPI.FindFirstFile(SYSTEM.ADR(FName[0]), FindData);
+    Handle := WINAPI.FindFirstFileA(SYSTEM.ADR(FName[0]), FindData);
     IF Handle # -1 THEN
         WINAPI.FindClose(Handle);
         SYSTEM.GET32(SYSTEM.ADR(FindData.dwFileAttributes), attr);
@@ -37,12 +37,12 @@ END Exists;
 
 
 PROCEDURE Delete* (FName: ARRAY OF CHAR): BOOLEAN;
-    RETURN WINAPI.DeleteFile(SYSTEM.ADR(FName[0])) # 0
+    RETURN WINAPI.DeleteFileA(SYSTEM.ADR(FName[0])) # 0
 END Delete;
 
 
 PROCEDURE Create* (FName: ARRAY OF CHAR): INTEGER;
-    RETURN WINAPI.CreateFile(SYSTEM.ADR(FName[0]), 0C0000000H, 0, NIL, 2, 80H, 0)
+    RETURN WINAPI.CreateFileA(SYSTEM.ADR(FName[0]), 0C0000000H, 0, NIL, 2, 80H, 0)
 END Create;
 
 
@@ -118,7 +118,7 @@ END Load;
 
 
 PROCEDURE RemoveDir* (DirName: ARRAY OF CHAR): BOOLEAN;
-    RETURN WINAPI.RemoveDirectory(SYSTEM.ADR(DirName[0])) # 0
+    RETURN WINAPI.RemoveDirectoryA(SYSTEM.ADR(DirName[0])) # 0
 END RemoveDir;
 
 
@@ -127,13 +127,13 @@ VAR
     Code: SET;
 
 BEGIN
-    Code := WINAPI.GetFileAttributes(SYSTEM.ADR(DirName[0]))
+    Code := WINAPI.GetFileAttributesA(SYSTEM.ADR(DirName[0]))
     RETURN (Code # {0..31}) & (4 IN Code)
 END ExistsDir;
 
 
 PROCEDURE CreateDir* (DirName: ARRAY OF CHAR): BOOLEAN;
-    RETURN WINAPI.CreateDirectory(SYSTEM.ADR(DirName[0]), NIL) # 0
+    RETURN WINAPI.CreateDirectoryA(SYSTEM.ADR(DirName[0]), NIL) # 0
 END CreateDir;
 
 
