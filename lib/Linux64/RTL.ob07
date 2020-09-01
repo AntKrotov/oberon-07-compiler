@@ -396,7 +396,7 @@ BEGIN
 END append;
 
 
-PROCEDURE [stdcall64] _error* (module, err, line: INTEGER);
+PROCEDURE [stdcall64] _error* (modnum, module, err, line: INTEGER);
 VAR
     s, temp: ARRAY 1024 OF CHAR;
 

@@ -131,10 +131,10 @@ VAR
 BEGIN
     SCAN.Next(parser.scanner, parser.lex);
     errno := parser.lex.error;
-    IF (errno = 0) & (TARGETS.CPU = TARGETS.cpuMSP430) THEN
-        IF parser.lex.sym = SCAN.lxFLOAT THEN
+    IF errno = 0 THEN
+        IF (TARGETS.RealSize = 0) & (parser.lex.sym = SCAN.lxFLOAT) THEN
             errno := -SCAN.lxERROR13
-        ELSIF (parser.lex.sym = SCAN.lxCHAR) & (parser.lex.value.typ = ARITH.tWCHAR) THEN
+        ELSIF (TARGETS.BitDepth = 16) & (parser.lex.sym = SCAN.lxCHAR) & (parser.lex.value.typ = ARITH.tWCHAR) THEN
             errno := -SCAN.lxERROR10
         END
     END;
@@ -611,10 +611,10 @@ BEGIN
     ELSE
         CASE TARGETS.BitDepth OF
         |16: call := PROG.default16
-        |32: IF TARGETS.target = TARGETS.STM32CM3 THEN
-                 call := PROG.ccall
-             ELSE
+        |32: IF TARGETS.CPU = TARGETS.cpuX86 THEN
                  call := PROG.default32
+             ELSE
+                 call := PROG.ccall
              END
         |64: call := PROG.default64
         END
@@ -1007,10 +1007,11 @@ VAR
                 getpos(parser, pos2);
                 ConstExpression(parser, code);
                 check(code.typ = ARITH.tINTEGER, pos2, 43);
-                IF TARGETS.CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
-                    check(ARITH.range(code, 0, 255), pos2, 42)
-                ELSIF TARGETS.CPU = TARGETS.cpuTHUMB THEN
-                    check(ARITH.range(code, 0, 65535), pos2, 110)
+                IF TARGETS.WordSize > TARGETS.InstrSize THEN
+                    CASE TARGETS.InstrSize OF
+                    |1: check(ARITH.range(code, 0, 255), pos, 42)
+                    |2: check(ARITH.range(code, 0, 65535), pos, 110)
+                    END
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
                 comma := parser.sym = SCAN.lxCOMMA;
@@ -1195,9 +1196,7 @@ BEGIN
     INC(modules);
 
     CONSOLE.String("compiling ");
-    IF TARGETS.CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuMSP430} THEN
-        CONSOLE.String("("); CONSOLE.Int(modules); CONSOLE.String(") ")
-    END;
+    CONSOLE.String("("); CONSOLE.Int(modules); CONSOLE.String(") ");
     CONSOLE.String(unit.name.s);
     IF parser.unit.sysimport THEN
         CONSOLE.String(" (SYSTEM)")
@@ -1217,9 +1216,7 @@ BEGIN
     IL.SetLabel(errlabel);
     IL.StrAdr(name);
     IL.Param1;
-    IF TARGETS.CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuMSP430} THEN
-        IL.AddCmd(IL.opPUSHC, modules)
-    END;
+    IL.AddCmd(IL.opPUSHC, modules);
     IL.AddCmd0(IL.opERR);
 
     FOR errno := 1 TO LEN(IL.codes.errlabels) - 1 DO

@@ -213,7 +213,6 @@ TYPE
 VAR
 
     codes*: CODES;
-    little: BOOLEAN;
     CPU: INTEGER;
 
     commands, variables: C.COLLECTION;
@@ -345,7 +344,7 @@ BEGIN
 
     i := 0;
     WHILE i < n DO
-        IF little THEN
+        IF TARGETS.LittleEndian THEN
             PutByte(ORD(codes.wstr[i]) MOD 256);
             PutByte(ORD(codes.wstr[i]) DIV 256)
         ELSE
@@ -375,7 +374,7 @@ BEGIN
             INC(res)
         END;
 
-        IF little THEN
+        IF TARGETS.LittleEndian THEN
             PutByte(c MOD 256);
             PutByte(c DIV 256)
         ELSE
@@ -1089,7 +1088,6 @@ BEGIN
     variables := C.create();
 
     CPU := pCPU;
-    little := TRUE;
 
     NEW(codes.begcall);
     codes.begcall.top := -1;

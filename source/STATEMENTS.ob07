@@ -987,10 +987,11 @@ BEGIN
                 getpos(parser, pos);
                 PARS.ConstExpression(parser, code);
                 PARS.check(code.typ = ARITH.tINTEGER, pos, 43);
-                IF CPU IN {TARGETS.cpuX86, TARGETS.cpuAMD64} THEN
-                    PARS.check(ARITH.range(code, 0, 255), pos, 42)
-                ELSIF CPU = TARGETS.cpuTHUMB THEN
-                    PARS.check(ARITH.range(code, 0, 65535), pos, 110)
+                IF TARGETS.WordSize > TARGETS.InstrSize THEN
+                    CASE TARGETS.InstrSize OF
+                    |1: PARS.check(ARITH.range(code, 0, 255), pos, 42)
+                    |2: PARS.check(ARITH.range(code, 0, 65535), pos, 110)
+                    END
                 END;
                 IL.AddCmd(IL.opCODE, ARITH.getInt(code));
                 comma := parser.sym = SCAN.lxCOMMA;
@@ -3295,6 +3296,8 @@ BEGIN
         getproc(rtl, "_flt",   IL._flt);
         getproc(rtl, "_pack",  IL._pack);
         getproc(rtl, "_unpk",  IL._unpk)
+    ELSE
+        getproc(rtl, "_error", IL._error)
     END
 
 END setrtl;
