@@ -3329,7 +3329,7 @@ BEGIN
 
     IL.init(CPU);
 
-    IF CPU # TARGETS.cpuMSP430 THEN
+    IF TARGETS.RTL THEN
         parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
         IF parser.open(parser, UTILS.RTL_NAME) THEN
             parser.parse(parser);
@@ -3361,7 +3361,7 @@ BEGIN
         ERRORS.Error(204)
     END;
 
-    IF CPU # TARGETS.cpuMSP430 THEN
+    IF TARGETS.RTL THEN
         setrtl
     END;
 

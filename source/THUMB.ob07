@@ -784,8 +784,9 @@ END mov;
 
 PROCEDURE xchg (r1, r2: INTEGER);
 BEGIN
-    push(r1); push(r2);
-    pop(r1); pop(r2)
+    push(r1);
+    mov(r1, r2);
+    pop(r2)
 END xchg;
 
 

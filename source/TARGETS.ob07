@@ -32,6 +32,8 @@ CONST
 
     noDISPOSE = {MSP430, STM32CM3};
 
+    noRTL = {MSP430};
+
 
 TYPE
 
@@ -57,7 +59,7 @@ VAR
 
     target*, CPU*, BitDepth*, OS*, RealSize*, WordSize*, AdrSize*, InstrSize*: INTEGER;
     ComLinePar*, LibDir*, FileExt*: STRING;
-    Import*, Dispose*, Dll*, LittleEndian*: BOOLEAN;
+    Import*, Dispose*, RTL*, Dll*, LittleEndian*: BOOLEAN;
 
 
 PROCEDURE Enter (idx, CPU, RealSize, OS: INTEGER; ComLinePar, LibDir, FileExt: STRING);
@@ -98,6 +100,7 @@ BEGIN
 
         Import := OS IN {osWIN32, osWIN64, osKOS};
         Dispose := ~(target IN noDISPOSE);
+        RTL := ~(target IN noRTL);
         Dll := target IN {Linux32SO, Linux64SO, Win32DLL, Win64DLL, KolibriOSDLL};
         WordSize := BitDepth DIV 8;
         AdrSize  := WordSize

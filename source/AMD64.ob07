@@ -2039,9 +2039,8 @@ BEGIN
             drop
 
         |IL.opCLEANUP:
-            n := param2 * 8;
-            IF n # 0 THEN
-                addrc(rsp, n)
+            IF param2 # 0 THEN
+                addrc(rsp, param2 * 8)
             END
 
         |IL.opPOPSP:

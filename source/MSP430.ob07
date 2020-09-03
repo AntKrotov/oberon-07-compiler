@@ -421,8 +421,7 @@ END mov;
 PROCEDURE xchg (reg1, reg2: INTEGER);
 BEGIN
     Push(reg1);
-    Push(reg2);
-    Pop(reg1);
+    mov(reg1, reg2);
     Pop(reg2)
 END xchg;
 

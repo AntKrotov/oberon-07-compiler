@@ -899,9 +899,8 @@ BEGIN
             END
 
         |IL.opCLEANUP:
-            n := param2 * 4;
-            IF n # 0 THEN
-                addrc(esp, n)
+            IF param2 # 0 THEN
+                addrc(esp, param2 * 4)
             END
 
         |IL.opPOPSP:
