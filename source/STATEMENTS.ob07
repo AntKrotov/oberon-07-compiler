@@ -2650,7 +2650,9 @@ BEGIN
         PARS.Next(parser);
         parser.StatSeq(parser);
 
-        IL.AddJmpCmd(IL.opJMP, L);
+        IF ~if OR (parser.sym # SCAN.lxEND) THEN
+            IL.AddJmpCmd(IL.opJMP, L)
+        END;
         IL.SetLabel(label)
 
     UNTIL parser.sym # SCAN.lxELSIF;
