@@ -966,7 +966,6 @@ BEGIN
             drop
 
         |IL.opVLOAD32:
-            n := param2 * 4;
             reg1 := GetAnyReg();
             movrm(reg1, ebp, param2 * 4);
             movrm(reg1, reg1, 0)

@@ -1,0 +1,91 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2020, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE In;
+
+IMPORT SYSTEM, Libdl;
+
+
+CONST
+
+    MAX_LEN = 10240;
+
+
+TYPE
+
+    STRING = ARRAY MAX_LEN + 4 OF CHAR;
+
+
+VAR
+
+    Done*: BOOLEAN;
+    s: STRING;
+
+    libc: INTEGER;
+
+    sscanf: PROCEDURE [linux] (buf: INTEGER; fmt: INTEGER; x: INTEGER): INTEGER;
+    gets:   PROCEDURE [linux] (buf: INTEGER);
+
+
+PROCEDURE String* (VAR str: ARRAY OF CHAR);
+BEGIN
+    gets(SYSTEM.ADR(s[0]));
+    COPY(s, str);
+    str[LEN(str) - 1] := 0X;
+    Done := TRUE
+END String;
+
+
+PROCEDURE Int* (VAR x: INTEGER);
+BEGIN
+    String(s);
+    Done := sscanf(SYSTEM.ADR(s[0]), SYSTEM.SADR("%lld"), SYSTEM.ADR(x)) = 1
+END Int;
+
+
+PROCEDURE Real* (VAR x: REAL);
+BEGIN
+    String(s);
+    Done := sscanf(SYSTEM.ADR(s[0]), SYSTEM.SADR("%lf"), SYSTEM.ADR(x)) = 1
+END Real;
+
+
+PROCEDURE Char* (VAR x: CHAR);
+BEGIN
+    String(s);
+    x := s[0];
+    Done := TRUE
+END Char;
+
+
+PROCEDURE Ln*;
+BEGIN
+    String(s);
+    Done := TRUE
+END Ln;
+
+
+PROCEDURE Open*;
+BEGIN
+    Done := TRUE
+END Open;
+
+
+PROCEDURE init;
+BEGIN
+    libc := Libdl.open("libc.so.6", Libdl.LAZY);
+    ASSERT(libc # 0);
+    SYSTEM.PUT(SYSTEM.ADR(sscanf), Libdl.sym(libc, "sscanf"));
+    ASSERT(sscanf # NIL);
+    SYSTEM.PUT(SYSTEM.ADR(gets), Libdl.sym(libc, "gets"));
+    ASSERT(gets # NIL);
+END init;
+
+
+BEGIN
+    init
+END In.
