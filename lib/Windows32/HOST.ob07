@@ -13,7 +13,6 @@ IMPORT SYSTEM, RTL;
 CONST
 
     slash* = "\";
-    OS* = "WINDOWS";
     eol* = 0DX + 0AX;
 
     bit_depth* = RTL.bit_depth;
@@ -60,19 +59,6 @@ TYPE
 
     END;
 
-    TSystemTime = RECORD
-
-        Year,
-        Month,
-        DayOfWeek,
-        Day,
-        Hour,
-        Min,
-        Sec,
-        MSec:  WCHAR
-
-    END;
-
 
 VAR
 
@@ -115,11 +101,11 @@ PROCEDURE [windows-, "kernel32.dll", "OpenFile"]
 PROCEDURE [windows-, "kernel32.dll", "GetCurrentDirectoryA"]
     _GetCurrentDirectory (nBufferLength, lpBuffer: INTEGER): INTEGER;
 
-PROCEDURE [windows-, "kernel32.dll", "GetSystemTime"]
-    _GetSystemTime (T: TSystemTime);
-
 PROCEDURE [windows-, "kernel32.dll", "ExitProcess"]
     _ExitProcess (code: INTEGER);
+
+PROCEDURE [ccall, "msvcrt.dll", "time"]
+    _time (ptr: INTEGER): INTEGER;
 
 
 PROCEDURE ExitProcess* (code: INTEGER);
@@ -291,23 +277,8 @@ PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
 END isRelative;
 
 
-PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
-VAR
-    T: TSystemTime;
-
-BEGIN
-    _GetSystemTime(T);
-    year  := ORD(T.Year);
-    month := ORD(T.Month);
-    day   := ORD(T.Day);
-    hour  := ORD(T.Hour);
-    min   := ORD(T.Min);
-    sec   := ORD(T.Sec)
-END now;
-
-
 PROCEDURE UnixTime* (): INTEGER;
-    RETURN 0
+    RETURN _time(0)
 END UnixTime;
 
 

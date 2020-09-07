@@ -17,10 +17,10 @@ VAR
 
 PROCEDURE [ccall, "msvcrt.dll", "printf"] printf1 (fmt: INTEGER; x: INTEGER);
 PROCEDURE [ccall, "msvcrt.dll", "printf"] printf2 (fmt: INTEGER; width, x: INTEGER);
-PROCEDURE [ccall, "msvcrt.dll", "printf"] printf3 (fmt: INTEGER; width, prec: INTEGER; x: REAL);
+PROCEDURE [ccall, "msvcrt.dll", "printf"] printf3 (fmt: INTEGER; width, precision: INTEGER; x: REAL);
 
-PROCEDURE [windows-, "kernel32.dll", ""]
-    WriteConsoleW (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER): INTEGER;
+PROCEDURE [windows, "kernel32.dll", ""]
+    WriteConsoleW (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER);
 
 PROCEDURE [windows, "kernel32.dll", ""]
     GetStdHandle (nStdHandle: INTEGER): INTEGER;
@@ -33,17 +33,14 @@ END Char;
 
 
 PROCEDURE StringW* (s: ARRAY OF WCHAR);
-VAR
-    count: INTEGER;
-
 BEGIN
-    WriteConsoleW(hConsoleOutput, SYSTEM.ADR(s[0]), LENGTH(s), SYSTEM.ADR(count), 0)
+    WriteConsoleW(hConsoleOutput, SYSTEM.ADR(s[0]), LENGTH(s), 0, 0)
 END StringW;
 
 
 PROCEDURE String* (s: ARRAY OF CHAR);
 BEGIN
-    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s))
+    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s[0]))
 END String;
 
 
@@ -65,9 +62,9 @@ BEGIN
 END Real;
 
 
-PROCEDURE FixReal* (x: REAL; width, p: INTEGER);
+PROCEDURE FixReal* (x: REAL; width, precision: INTEGER);
 BEGIN
-    printf3(SYSTEM.SADR("%*.*f"), width, p, x)
+    printf3(SYSTEM.SADR("%*.*f"), width, precision, x)
 END FixReal;
 
 

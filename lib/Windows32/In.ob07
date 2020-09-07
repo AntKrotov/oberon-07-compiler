@@ -15,19 +15,14 @@ CONST
     MAX_LEN = 1024;
 
 
-TYPE
-
-    STRING = ARRAY MAX_LEN + 4 OF CHAR;
-
-
 VAR
 
     Done*: BOOLEAN;
     hConsoleInput: INTEGER;
-    s: STRING;
+    s: ARRAY MAX_LEN + 4 OF CHAR;
 
 
-PROCEDURE [ccall,   "msvcrt.dll",   ""] sscanf (buf: INTEGER; fmt: INTEGER; x: INTEGER): INTEGER;
+PROCEDURE [ccall,   "msvcrt.dll",   ""] sscanf (buf: INTEGER; fmt: INTEGER; adr: INTEGER): INTEGER;
 PROCEDURE [windows, "kernel32.dll", ""] GetStdHandle (nStdHandle: INTEGER): INTEGER;
 PROCEDURE [windows, "kernel32.dll", ""] ReadConsoleA (hConsoleInput, lpBuffer, nNumberOfCharsToRead, lpNumberOfCharsRead, lpReserved: INTEGER);
 
@@ -65,15 +60,13 @@ END Real;
 PROCEDURE Char* (VAR x: CHAR);
 BEGIN
     String(s);
-    x := s[0];
-    Done := TRUE
+    x := s[0]
 END Char;
 
 
 PROCEDURE Ln*;
 BEGIN
-    String(s);
-    Done := TRUE
+    String(s)
 END Ln;
 
 

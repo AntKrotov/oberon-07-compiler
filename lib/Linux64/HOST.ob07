@@ -13,7 +13,6 @@ IMPORT SYSTEM, API, RTL;
 CONST
 
     slash* = "/";
-    OS* = "LINUX";
     eol* = 0AX;
 
     bit_depth* = RTL.bit_depth;
@@ -168,10 +167,6 @@ END GetTickCount;
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
     RETURN path[0] # slash
 END isRelative;
-
-
-PROCEDURE now* (VAR year, month, day, hour, min, sec: INTEGER);
-END now;
 
 
 PROCEDURE UnixTime* (): INTEGER;

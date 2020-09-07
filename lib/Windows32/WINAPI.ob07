@@ -16,6 +16,7 @@ CONST
 
     KERNEL = "kernel32.dll";
     USER   = "user32.dll";
+    MSVCRT = "msvcrt.dll";
 
 
 TYPE
@@ -56,6 +57,20 @@ TYPE
         Min*,
         Sec*,
         MSec*:  WCHAR
+
+    END;
+
+    tm* = RECORD
+
+        sec*,
+        min*,
+        hour*,
+        mday*,
+        mon*,
+        year*,
+        wday*,
+        yday*,
+        isdst*: SYSTEM.CARD32
 
     END;
 
@@ -194,6 +209,10 @@ PROCEDURE [windows-, USER,   ""] MessageBoxW* (hWnd, lpText, lpCaption, uType: I
 PROCEDURE [windows-, USER,   ""] CreateWindowExA* (
         dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y,
         nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam: INTEGER): INTEGER;
+
+PROCEDURE [ccall-,   MSVCRT, ""] time* (ptr: INTEGER): INTEGER;
+
+PROCEDURE [ccall-,   MSVCRT, ""] mktime* (time: tm): INTEGER;
 
 
 PROCEDURE SetDllEntry* (process_detach, thread_detach, thread_attach: DLL_ENTRY);

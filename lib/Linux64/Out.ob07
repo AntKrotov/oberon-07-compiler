@@ -12,11 +12,9 @@ IMPORT SYSTEM, Libdl;
 
 VAR
 
-    libc: INTEGER;
-
     printf1: PROCEDURE [linux] (fmt: INTEGER; x: INTEGER);
     printf2: PROCEDURE [linux] (fmt: INTEGER; width, x: INTEGER);
-    printf3: PROCEDURE [linux] (fmt: INTEGER; width, prec, x: INTEGER);
+    printf3: PROCEDURE [linux] (fmt: INTEGER; width, precision, x: INTEGER);
 
 
 PROCEDURE Char* (x: CHAR);
@@ -27,7 +25,7 @@ END Char;
 
 PROCEDURE String* (s: ARRAY OF CHAR);
 BEGIN
-    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s))
+    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s[0]))
 END String;
 
 
@@ -59,9 +57,9 @@ BEGIN
 END Real;
 
 
-PROCEDURE FixReal* (x: REAL; width, p: INTEGER);
+PROCEDURE FixReal* (x: REAL; width, precision: INTEGER);
 BEGIN
-    printf3(SYSTEM.SADR("%*.*f"), width, p, intval(x))
+    printf3(SYSTEM.SADR("%*.*f"), width, precision, intval(x))
 END FixReal;
 
 
@@ -71,7 +69,7 @@ END Open;
 
 PROCEDURE init;
 VAR
-    printf: INTEGER;
+    libc, printf: INTEGER;
 
 BEGIN
     libc := Libdl.open("libc.so.6", Libdl.LAZY);

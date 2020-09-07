@@ -15,19 +15,12 @@ CONST
     MAX_LEN = 10240;
 
 
-TYPE
-
-    STRING = ARRAY MAX_LEN + 4 OF CHAR;
-
-
 VAR
 
     Done*: BOOLEAN;
-    s: STRING;
+    s: ARRAY MAX_LEN + 4 OF CHAR;
 
-    libc: INTEGER;
-
-    sscanf: PROCEDURE [linux] (buf: INTEGER; fmt: INTEGER; x: INTEGER): INTEGER;
+    sscanf: PROCEDURE [linux] (buf: INTEGER; fmt: INTEGER; adr: INTEGER): INTEGER;
     gets:   PROCEDURE [linux] (buf: INTEGER);
 
 
@@ -57,15 +50,13 @@ END Real;
 PROCEDURE Char* (VAR x: CHAR);
 BEGIN
     String(s);
-    x := s[0];
-    Done := TRUE
+    x := s[0]
 END Char;
 
 
 PROCEDURE Ln*;
 BEGIN
-    String(s);
-    Done := TRUE
+    String(s)
 END Ln;
 
 
@@ -76,6 +67,9 @@ END Open;
 
 
 PROCEDURE init;
+VAR
+    libc: INTEGER;
+
 BEGIN
     libc := Libdl.open("libc.so.6", Libdl.LAZY);
     ASSERT(libc # 0);
