@@ -24,13 +24,15 @@ CONST
     Linux64*      = 11;
     Linux64SO*    = 12;
     STM32CM3*     = 13;
+    RVM32I*       = 14;
 
     cpuX86* = 0; cpuAMD64* = 1; cpuMSP430* = 2; cpuTHUMB* = 3;
+    cpuRVM32I* = 4;
 
     osNONE*    = 0;  osWIN32*   = 1;  osWIN64* = 2;
     osLINUX32* = 3;  osLINUX64* = 4;  osKOS*   = 5;
 
-    noDISPOSE = {MSP430, STM32CM3};
+    noDISPOSE = {MSP430, STM32CM3, RVM32I};
 
     noRTL = {MSP430};
 
@@ -49,9 +51,9 @@ TYPE
 
 VAR
 
-    Targets*: ARRAY 14 OF TARGET;
+    Targets*: ARRAY 15 OF TARGET;
 
-    CPUs: ARRAY 4 OF
+    CPUs: ARRAY 5 OF
         RECORD
             BitDepth, InstrSize: INTEGER;
             LittleEndian: BOOLEAN
@@ -123,6 +125,7 @@ BEGIN
     EnterCPU(cpuAMD64,  64, 1, TRUE);
     EnterCPU(cpuMSP430, 16, 2, TRUE);
     EnterCPU(cpuTHUMB,  32, 2, TRUE);
+    EnterCPU(cpuRVM32I, 32, 4, TRUE);
 
     Enter( MSP430,        cpuMSP430,  0,  osNONE,     "msp430",      "MSP430",     ".hex");
     Enter( Win32C,        cpuX86,     8,  osWIN32,    "win32con",    "Windows32",  ".exe");
@@ -138,4 +141,5 @@ BEGIN
     Enter( Linux64,       cpuAMD64,   8,  osLINUX64,  "linux64exe",  "Linux64",    "");
     Enter( Linux64SO,     cpuAMD64,   8,  osLINUX64,  "linux64so",   "Linux64",    ".so");
     Enter( STM32CM3,      cpuTHUMB,   4,  osNONE,     "stm32cm3",    "STM32CM3",   ".hex");
+    Enter( RVM32I,        cpuRVM32I,  4,  osNONE,     "rvm32i",      "RVM32I",     ".bin");
 END TARGETS.

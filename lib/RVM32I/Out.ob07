@@ -1,0 +1,269 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2016, 2018, 2020, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE Out;
+
+IMPORT HOST, SYSTEM;
+
+
+CONST
+
+    d = 1.0 - 5.0E-12;
+
+
+VAR
+
+    Realp: PROCEDURE (x: REAL; width: INTEGER);
+
+
+PROCEDURE Char* (c: CHAR);
+BEGIN
+    HOST.OutChar(c)
+END Char;
+
+
+PROCEDURE String* (s: ARRAY OF CHAR);
+VAR
+    i, n: INTEGER;
+
+BEGIN
+    n := LENGTH(s) - 1;
+    FOR i := 0 TO n DO
+        Char(s[i])
+    END
+END String;
+
+
+PROCEDURE Int* (x, width: INTEGER);
+VAR
+    i, a: INTEGER;
+    str: ARRAY 12 OF CHAR;
+
+BEGIN
+    IF x = 80000000H THEN
+        COPY("-2147483648", str);
+        DEC(width, 11)
+    ELSE
+        i := 0;
+        IF x < 0 THEN
+            x := -x;
+            i := 1;
+            str[0] := "-"
+        END;
+
+        a := x;
+        REPEAT
+            INC(i);
+            a := a DIV 10
+        UNTIL a = 0;
+
+        str[i] := 0X;
+        DEC(width, i);
+
+        REPEAT
+            DEC(i);
+            str[i] := CHR(x MOD 10 + ORD("0"));
+            x := x DIV 10
+        UNTIL x = 0
+    END;
+
+    WHILE width > 0 DO
+        Char(20X);
+        DEC(width)
+    END;
+
+    String(str)
+END Int;
+
+
+PROCEDURE IsNan (x: REAL): BOOLEAN;
+    RETURN x # x
+END IsNan;
+
+
+PROCEDURE IsInf (x: REAL): BOOLEAN;
+    RETURN ABS(x) = SYSTEM.INF()
+END IsInf;
+
+
+PROCEDURE OutInf (x: REAL; width: INTEGER);
+VAR
+    s: ARRAY 5 OF CHAR;
+
+BEGIN
+    DEC(width, 4);
+    IF x # x THEN
+        s := " Nan"
+    ELSIF x = SYSTEM.INF() THEN
+        s := "+Inf"
+    ELSIF x = -SYSTEM.INF() THEN
+        s := "-Inf"
+    END;
+
+    WHILE width > 0 DO
+        Char(20X);
+        DEC(width)
+    END;
+
+    String(s)
+END OutInf;
+
+
+PROCEDURE Ln*;
+BEGIN
+    Char(0DX);
+    Char(0AX)
+END Ln;
+
+
+PROCEDURE _FixReal(x: REAL; width, p: INTEGER);
+VAR e, len, i: INTEGER; y: REAL; minus: BOOLEAN;
+BEGIN
+  IF IsNan(x) OR IsInf(x) THEN
+    OutInf(x, width)
+  ELSIF p < 0 THEN
+    Realp(x, width)
+  ELSE
+    len := 0;
+    minus := FALSE;
+    IF x < 0.0 THEN
+      minus := TRUE;
+      INC(len);
+      x := ABS(x)
+    END;
+    e := 0;
+    WHILE x >= 10.0 DO
+      x := x / 10.0;
+      INC(e)
+    END;
+    IF e >= 0 THEN
+      len := len + e + p + 1;
+      IF x > 9.0 + d THEN
+        INC(len)
+      END;
+      IF p > 0 THEN
+        INC(len)
+      END
+    ELSE
+      len := len + p + 2
+    END;
+    FOR i := 1 TO width - len DO
+      Char(" ")
+    END;
+    IF minus THEN
+      Char("-")
+    END;
+    y := x;
+    WHILE (y < 1.0) & (y # 0.0) DO
+      y := y * 10.0;
+      DEC(e)
+    END;
+    IF e < 0 THEN
+      IF x - FLT(FLOOR(x)) > d THEN
+        Char("1");
+        x := 0.0
+      ELSE
+        Char("0");
+        x := x * 10.0
+      END
+    ELSE
+      WHILE e >= 0 DO
+        IF x - FLT(FLOOR(x)) > d THEN
+          IF x > 9.0 THEN
+            String("10")
+          ELSE
+            Char(CHR(FLOOR(x) + ORD("0") + 1))
+          END;
+          x := 0.0
+        ELSE
+          Char(CHR(FLOOR(x) + ORD("0")));
+          x := (x - FLT(FLOOR(x))) * 10.0
+        END;
+        DEC(e)
+      END
+    END;
+    IF p > 0 THEN
+      Char(".")
+    END;
+    WHILE p > 0 DO
+      IF x - FLT(FLOOR(x)) > d THEN
+        Char(CHR(FLOOR(x) + ORD("0") + 1));
+        x := 0.0
+      ELSE
+        Char(CHR(FLOOR(x) + ORD("0")));
+        x := (x - FLT(FLOOR(x))) * 10.0
+      END;
+      DEC(p)
+    END
+  END
+END _FixReal;
+
+PROCEDURE Real*(x: REAL; width: INTEGER);
+VAR e, n, i: INTEGER; minus: BOOLEAN;
+BEGIN
+  IF IsNan(x) OR IsInf(x) THEN
+    OutInf(x, width)
+  ELSE
+    e := 0;
+    n := 0;
+    IF width > 22 THEN
+      n := width - 22;
+      width := 22
+    ELSIF width < 8 THEN
+      width := 8
+    END;
+    width := width - 4;
+    IF x < 0.0 THEN
+      x := -x;
+      minus := TRUE
+    ELSE
+      minus := FALSE
+    END;
+    WHILE x >= 10.0 DO
+      x := x / 10.0;
+      INC(e)
+    END;
+    WHILE (x < 1.0) & (x # 0.0) DO
+      x := x * 10.0;
+      DEC(e)
+    END;
+    IF x > 9.0 + d THEN
+      x := 1.0;
+      INC(e)
+    END;
+    FOR i := 1 TO n DO
+      Char(" ")
+    END;
+    IF minus THEN
+      x := -x
+    END;
+    Realp := Real;
+    _FixReal(x, width, width - 3);
+    Char("E");
+    IF e >= 0 THEN
+      Char("+")
+    ELSE
+      Char("-");
+      e := ABS(e)
+    END;
+    IF e < 10 THEN
+      Char("0")
+    END;
+    Int(e, 0)
+  END
+END Real;
+
+PROCEDURE FixReal*(x: REAL; width, p: INTEGER);
+BEGIN
+  Realp := Real;
+  _FixReal(x, width, p)
+END FixReal;
+
+PROCEDURE Open*;
+END Open;
+
+END Out.

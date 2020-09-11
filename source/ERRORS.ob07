@@ -211,6 +211,7 @@ BEGIN
     |205: Error1("not enough parameters")
     |206: Error1("bad parameter <target>")
     |207: Error3('inputfile name extension must be "', UTILS.FILE_EXT, '"')
+    |208: Error1("not enough RAM")
     END
 END Error;
 
