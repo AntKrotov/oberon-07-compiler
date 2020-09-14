@@ -148,7 +148,7 @@ BEGIN
     KOS.Import(program, 0, ImportTable, ILen, LibCount, isize);
     ExpCount := LISTS.count(program.exp_list);
 
-    icount := CHL.Length(program.import);
+    icount := CHL.Length(program._import);
     dcount := CHL.Length(program.data);
     ccount := CHL.Length(program.code);
     ecount := CHL.Length(program.export);
@@ -254,7 +254,7 @@ BEGIN
         WR.Write32LE(CHL.GetInt(ImportTable, i))
     END;
 
-    CHL.WriteToFile(program.import);
+    CHL.WriteToFile(program._import);
 
     Reloc(program);
 

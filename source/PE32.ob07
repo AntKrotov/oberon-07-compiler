@@ -179,15 +179,15 @@ END Export;
 
 PROCEDURE GetProcCount (lib: BIN.IMPRT): INTEGER;
 VAR
-    import: BIN.IMPRT;
-    res:    INTEGER;
+    imp: BIN.IMPRT;
+    res: INTEGER;
 
 BEGIN
     res := 0;
-    import := lib.next(BIN.IMPRT);
-    WHILE (import # NIL) & (import.label # 0) DO
+    imp := lib.next(BIN.IMPRT);
+    WHILE (imp # NIL) & (imp.label # 0) DO
         INC(res);
-        import := import.next(BIN.IMPRT)
+        imp := imp.next(BIN.IMPRT)
     END
 
     RETURN res
@@ -196,7 +196,7 @@ END GetProcCount;
 
 PROCEDURE GetImportSize (imp_list: LISTS.LIST): INTEGER;
 VAR
-    import: BIN.IMPRT;
+    imp: BIN.IMPRT;
     proccnt: INTEGER;
     procoffs: INTEGER;
     OriginalCurrentThunk,
@@ -205,33 +205,33 @@ VAR
 BEGIN
     libcnt  := 0;
     proccnt := 0;
-    import  := imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-        IF import.label = 0 THEN
+    imp  := imp_list.first(BIN.IMPRT);
+    WHILE imp # NIL DO
+        IF imp.label = 0 THEN
             INC(libcnt)
         ELSE
             INC(proccnt)
         END;
-        import := import.next(BIN.IMPRT)
+        imp := imp.next(BIN.IMPRT)
     END;
 
     procoffs := 0;
 
-    import  := imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-        IF import.label = 0 THEN
-            import.OriginalFirstThunk := procoffs;
-            import.FirstThunk := procoffs + (GetProcCount(import) + 1);
-            OriginalCurrentThunk := import.OriginalFirstThunk;
-            CurrentThunk := import.FirstThunk;
-            procoffs := procoffs + (GetProcCount(import) + 1) * 2
+    imp  := imp_list.first(BIN.IMPRT);
+    WHILE imp # NIL DO
+        IF imp.label = 0 THEN
+            imp.OriginalFirstThunk := procoffs;
+            imp.FirstThunk := procoffs + (GetProcCount(imp) + 1);
+            OriginalCurrentThunk := imp.OriginalFirstThunk;
+            CurrentThunk := imp.FirstThunk;
+            INC(procoffs, (GetProcCount(imp) + 1) * 2)
         ELSE
-            import.OriginalFirstThunk := OriginalCurrentThunk;
-            import.FirstThunk := CurrentThunk;
+            imp.OriginalFirstThunk := OriginalCurrentThunk;
+            imp.FirstThunk := CurrentThunk;
             INC(OriginalCurrentThunk);
             INC(CurrentThunk)
         END;
-        import := import.next(BIN.IMPRT)
+        imp := imp.next(BIN.IMPRT)
     END
 
     RETURN (libcnt + 1) * 5 * SIZE_OF_DWORD + (proccnt + libcnt) * 2 * SizeOfWord
@@ -363,7 +363,7 @@ VAR
 
     Address: VIRTUAL_ADDR;
 
-    import:       BIN.IMPRT;
+    _import:      BIN.IMPRT;
     ImportTable:  CHL.INTLIST;
 
     ExportDir:  IMAGE_EXPORT_DIRECTORY;
@@ -548,7 +548,7 @@ BEGIN
     Size.Import := GetImportSize(program.imp_list);
 
     InitSection(SectionHeaders[3], ".idata", SHC_data);
-    SectionHeaders[3].VirtualSize      := Size.Import + CHL.Length(program.import);
+    SectionHeaders[3].VirtualSize      := Size.Import + CHL.Length(program._import);
     SectionHeaders[3].VirtualAddress   := WR.align(SectionHeaders[2].VirtualAddress + SectionHeaders[2].VirtualSize, SectionAlignment);
     SectionHeaders[3].SizeOfRawData    := WR.align(SectionHeaders[3].VirtualSize, FileAlignment);
     SectionHeaders[3].PointerToRawData := SectionHeaders[2].PointerToRawData + SectionHeaders[2].SizeOfRawData;
@@ -630,17 +630,17 @@ BEGIN
     END;
 
     i := 0;
-    import := program.imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-        IF import.label = 0 THEN
-            CHL.SetInt(ImportTable, i + 0, import.OriginalFirstThunk * SizeOfWord + SectionHeaders[3].VirtualAddress + n * SIZE_OF_DWORD);
+    _import := program.imp_list.first(BIN.IMPRT);
+    WHILE _import # NIL DO
+        IF _import.label = 0 THEN
+            CHL.SetInt(ImportTable, i + 0, _import.OriginalFirstThunk * SizeOfWord + SectionHeaders[3].VirtualAddress + n * SIZE_OF_DWORD);
             CHL.SetInt(ImportTable, i + 1, 0);
             CHL.SetInt(ImportTable, i + 2, 0);
-            CHL.SetInt(ImportTable, i + 3, import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress);
-            CHL.SetInt(ImportTable, i + 4, import.FirstThunk * SizeOfWord + SectionHeaders[3].VirtualAddress + n * SIZE_OF_DWORD);
+            CHL.SetInt(ImportTable, i + 3, _import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress);
+            CHL.SetInt(ImportTable, i + 4, _import.FirstThunk * SizeOfWord + SectionHeaders[3].VirtualAddress + n * SIZE_OF_DWORD);
             i := i + 5
         END;
-        import := import.next(BIN.IMPRT)
+        _import := _import.next(BIN.IMPRT)
     END;
 
     CHL.SetInt(ImportTable, i + 0, 0);
@@ -649,14 +649,14 @@ BEGIN
     CHL.SetInt(ImportTable, i + 3, 0);
     CHL.SetInt(ImportTable, i + 4, 0);
 
-    import := program.imp_list.first(BIN.IMPRT);
-    WHILE import # NIL DO
-        IF import.label # 0 THEN
-            temp := import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress - 2;
-            CHL.SetInt(ImportTable, import.OriginalFirstThunk + n, temp);
-            CHL.SetInt(ImportTable, import.FirstThunk + n,         temp)
+    _import := program.imp_list.first(BIN.IMPRT);
+    WHILE _import # NIL DO
+        IF _import.label # 0 THEN
+            temp := _import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress - 2;
+            CHL.SetInt(ImportTable, _import.OriginalFirstThunk + n, temp);
+            CHL.SetInt(ImportTable, _import.FirstThunk + n,         temp)
         END;
-        import := import.next(BIN.IMPRT)
+        _import := _import.next(BIN.IMPRT)
     END;
 
     FOR i := 0 TO n - 1 DO
@@ -671,7 +671,7 @@ BEGIN
         END
     END;
 
-    CHL.WriteToFile(program.import);
+    CHL.WriteToFile(program._import);
     WR.Padding(FileAlignment);
 
     IF dll THEN

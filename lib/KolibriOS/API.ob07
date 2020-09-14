@@ -35,7 +35,7 @@ VAR
 
     CriticalSection: CRITICAL_SECTION;
 
-    import*, multi: BOOLEAN;
+    _import*, multi: BOOLEAN;
 
     base*: INTEGER;
 
@@ -294,15 +294,15 @@ BEGIN
 END imp_error;
 
 
-PROCEDURE init* (_import, code: INTEGER);
+PROCEDURE init* (import_, code: INTEGER);
 BEGIN
     multi := FALSE;
     base := code - SizeOfHeader;
     K.sysfunc2(68, 11);
     InitializeCriticalSection(CriticalSection);
     K._init;
-    import := (K.dll_Load(_import) = 0) & (K.imp_error.error = 0);
-    IF ~import THEN
+    _import := (K.dll_Load(import_) = 0) & (K.imp_error.error = 0);
+    IF ~_import THEN
         imp_error
     END
 END init;

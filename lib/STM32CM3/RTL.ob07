@@ -35,12 +35,12 @@ END _fmul;
 
 
 PROCEDURE _fdiv* (b, a: INTEGER): INTEGER;
-    RETURN F.div(b, a)
+    RETURN F._div(b, a)
 END _fdiv;
 
 
 PROCEDURE _fdivi* (b, a: INTEGER): INTEGER;
-    RETURN F.div(a, b)
+    RETURN F._div(a, b)
 END _fdivi;
 
 
@@ -333,37 +333,37 @@ END _new;
 
 PROCEDURE _guard* (t, p: INTEGER): BOOLEAN;
 VAR
-    type: INTEGER;
+    _type: INTEGER;
 
 BEGIN
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        SYSTEM.GET(p - WORD, type);
-        WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * WORD, type)
+        SYSTEM.GET(p - WORD, _type);
+        WHILE (_type # t) & (_type # 0) DO
+            SYSTEM.GET(Types + _type * WORD, _type)
         END
     ELSE
-        type := t
+        _type := t
     END
 
-    RETURN type = t
+    RETURN _type = t
 END _guard;
 
 
 PROCEDURE _is* (t, p: INTEGER): BOOLEAN;
 VAR
-    type: INTEGER;
+    _type: INTEGER;
 
 BEGIN
-    type := 0;
+    _type := 0;
     IF p # 0 THEN
-        SYSTEM.GET(p - WORD, type);
-        WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * WORD, type)
+        SYSTEM.GET(p - WORD, _type);
+        WHILE (_type # t) & (_type # 0) DO
+            SYSTEM.GET(Types + _type * WORD, _type)
         END
     END
 
-    RETURN type = t
+    RETURN _type = t
 END _is;
 
 

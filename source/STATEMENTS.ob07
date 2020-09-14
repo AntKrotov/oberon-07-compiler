@@ -48,7 +48,7 @@ TYPE
 
         variant, self: INTEGER;
 
-        type: PROG.TYPE_;
+        _type: PROG._TYPE;
 
         prev: CASE_LABEL
 
@@ -75,7 +75,7 @@ VAR
 
     CPU: INTEGER;
 
-    tINTEGER, tBYTE, tCHAR, tWCHAR, tSET, tBOOLEAN, tREAL: PROG.TYPE_;
+    tINTEGER, tBYTE, tCHAR, tWCHAR, tSET, tBOOLEAN, tREAL: PROG._TYPE;
 
 
 PROCEDURE isExpr (e: PARS.EXPR): BOOLEAN;
@@ -89,17 +89,17 @@ END isVar;
 
 
 PROCEDURE isBoolean (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tBOOLEAN)
+    RETURN isExpr(e) & (e._type = tBOOLEAN)
 END isBoolean;
 
 
 PROCEDURE isInteger (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tINTEGER)
+    RETURN isExpr(e) & (e._type = tINTEGER)
 END isInteger;
 
 
 PROCEDURE isByte (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tBYTE)
+    RETURN isExpr(e) & (e._type = tBYTE)
 END isByte;
 
 
@@ -109,42 +109,42 @@ END isInt;
 
 
 PROCEDURE isReal (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tREAL)
+    RETURN isExpr(e) & (e._type = tREAL)
 END isReal;
 
 
 PROCEDURE isSet (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tSET)
+    RETURN isExpr(e) & (e._type = tSET)
 END isSet;
 
 
 PROCEDURE isString (e: PARS.EXPR): BOOLEAN;
-    RETURN (e.obj = eCONST) & (e.type.typ IN {PROG.tSTRING, PROG.tCHAR})
+    RETURN (e.obj = eCONST) & (e._type.typ IN {PROG.tSTRING, PROG.tCHAR})
 END isString;
 
 
 PROCEDURE isStringW (e: PARS.EXPR): BOOLEAN;
-    RETURN (e.obj = eCONST) & (e.type.typ IN {PROG.tSTRING, PROG.tCHAR, PROG.tWCHAR})
+    RETURN (e.obj = eCONST) & (e._type.typ IN {PROG.tSTRING, PROG.tCHAR, PROG.tWCHAR})
 END isStringW;
 
 
 PROCEDURE isChar (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tCHAR)
+    RETURN isExpr(e) & (e._type = tCHAR)
 END isChar;
 
 
 PROCEDURE isCharW (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type = tWCHAR)
+    RETURN isExpr(e) & (e._type = tWCHAR)
 END isCharW;
 
 
 PROCEDURE isPtr (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tPOINTER)
+    RETURN isExpr(e) & (e._type.typ = PROG.tPOINTER)
 END isPtr;
 
 
 PROCEDURE isRec (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tRECORD)
+    RETURN isExpr(e) & (e._type.typ = PROG.tRECORD)
 END isRec;
 
 
@@ -154,27 +154,27 @@ END isRecPtr;
 
 
 PROCEDURE isArr (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tARRAY)
+    RETURN isExpr(e) & (e._type.typ = PROG.tARRAY)
 END isArr;
 
 
 PROCEDURE isProc (e: PARS.EXPR): BOOLEAN;
-    RETURN isExpr(e) & (e.type.typ = PROG.tPROCEDURE) OR (e.obj IN {ePROC, eIMP})
+    RETURN isExpr(e) & (e._type.typ = PROG.tPROCEDURE) OR (e.obj IN {ePROC, eIMP})
 END isProc;
 
 
 PROCEDURE isNil (e: PARS.EXPR): BOOLEAN;
-    RETURN e.type.typ = PROG.tNIL
+    RETURN e._type.typ = PROG.tNIL
 END isNil;
 
 
 PROCEDURE isCharArray (e: PARS.EXPR): BOOLEAN;
-    RETURN isArr(e) & (e.type.base = tCHAR)
+    RETURN isArr(e) & (e._type.base = tCHAR)
 END isCharArray;
 
 
 PROCEDURE isCharArrayW (e: PARS.EXPR): BOOLEAN;
-    RETURN isArr(e) & (e.type.base = tWCHAR)
+    RETURN isArr(e) & (e._type.base = tWCHAR)
 END isCharArrayW;
 
 
@@ -204,7 +204,7 @@ VAR
 
 BEGIN
     ASSERT(isString(e));
-    IF e.type = tCHAR THEN
+    IF e._type = tCHAR THEN
         res := 1
     ELSE
         res := LENGTH(e.value.string(SCAN.IDENT).s)
@@ -237,7 +237,7 @@ VAR
 
 BEGIN
     ASSERT(isStringW(e));
-    IF e.type.typ IN {PROG.tCHAR, PROG.tWCHAR} THEN
+    IF e._type.typ IN {PROG.tCHAR, PROG.tWCHAR} THEN
         res := 1
     ELSE
         res := _length(e.value.string(SCAN.IDENT).s)
@@ -261,14 +261,14 @@ PROCEDURE isStringW1 (e: PARS.EXPR): BOOLEAN;
 END isStringW1;
 
 
-PROCEDURE assigncomp (e: PARS.EXPR; t: PROG.TYPE_): BOOLEAN;
+PROCEDURE assigncomp (e: PARS.EXPR; t: PROG._TYPE): BOOLEAN;
 VAR
     res: BOOLEAN;
 
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
 
-        IF t = e.type THEN
+        IF t = e._type THEN
             res := TRUE
         ELSIF isInt(e) & (t.typ IN {PROG.tBYTE, PROG.tINTEGER}) THEN
             IF (e.obj = eCONST) & (t = tBYTE) THEN
@@ -279,10 +279,10 @@ BEGIN
         ELSIF
             (e.obj = eCONST) & isChar(e) & (t = tWCHAR)
             OR isStringW1(e) & (t = tWCHAR)
-            OR PROG.isBaseOf(t, e.type)
-            OR ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(t, e.type)
+            OR PROG.isBaseOf(t, e._type)
+            OR ~PROG.isOpenArray(t) & ~PROG.isOpenArray(e._type) & PROG.isTypeEq(t, e._type)
             OR isNil(e) & (t.typ IN {PROG.tPOINTER, PROG.tPROCEDURE})
-            OR PROG.arrcomp(e.type, t)
+            OR PROG.arrcomp(e._type, t)
             OR isString(e) & (t.typ = PROG.tARRAY) & (t.base = tCHAR) & (t.length > strlen(e))
             OR isStringW(e) & (t.typ = PROG.tARRAY) & (t.base = tWCHAR) & (t.length > utf8strlen(e))
         THEN
@@ -331,9 +331,9 @@ BEGIN
         END;
         offset := string.offsetW
     ELSE
-        IF e.type.typ IN {PROG.tWCHAR, PROG.tCHAR} THEN
+        IF e._type.typ IN {PROG.tWCHAR, PROG.tCHAR} THEN
             offset := IL.putstrW1(ARITH.Int(e.value))
-        ELSE (* e.type.typ = PROG.tSTRING *)
+        ELSE (* e._type.typ = PROG.tSTRING *)
             string := e.value.string(SCAN.IDENT);
             IF string.offsetW = -1 THEN
                 string.offsetW := IL.putstrW(string.s);
@@ -368,7 +368,7 @@ BEGIN
 END Float;
 
 
-PROCEDURE assign (parser: PARS.PARSER; e: PARS.EXPR; VarType: PROG.TYPE_; line: INTEGER): BOOLEAN;
+PROCEDURE assign (parser: PARS.PARSER; e: PARS.EXPR; VarType: PROG._TYPE; line: INTEGER): BOOLEAN;
 VAR
     res:   BOOLEAN;
     label: INTEGER;
@@ -376,7 +376,7 @@ VAR
 BEGIN
     IF isExpr(e) OR (e.obj IN {ePROC, eIMP}) THEN
         res := TRUE;
-        IF PROG.arrcomp(e.type, VarType) THEN
+        IF PROG.arrcomp(e._type, VarType) THEN
 
             IF ~PROG.isOpenArray(VarType) THEN
                 IL.Const(VarType.length)
@@ -443,19 +443,19 @@ BEGIN
             ELSE
                 IL.AddCmd0(IL.opSAVE16)
             END
-        ELSIF PROG.isBaseOf(VarType, e.type) THEN
+        ELSIF PROG.isBaseOf(VarType, e._type) THEN
             IF VarType.typ = PROG.tPOINTER THEN
                 IL.AddCmd0(IL.opSAVE)
             ELSE
                 IL.AddCmd(IL.opCOPY, VarType.size)
             END
-        ELSIF (e.type.typ = PROG.tCARD32) & (VarType.typ = PROG.tCARD32) THEN
+        ELSIF (e._type.typ = PROG.tCARD32) & (VarType.typ = PROG.tCARD32) THEN
             IL.AddCmd0(IL.opSAVE32)
-        ELSIF ~PROG.isOpenArray(VarType) & ~PROG.isOpenArray(e.type) & PROG.isTypeEq(VarType, e.type) THEN
+        ELSIF ~PROG.isOpenArray(VarType) & ~PROG.isOpenArray(e._type) & PROG.isTypeEq(VarType, e._type) THEN
             IF e.obj = ePROC THEN
                 IL.AssignProc(e.ident.proc.label)
             ELSIF e.obj = eIMP THEN
-                IL.AssignImpProc(e.ident.import)
+                IL.AssignImpProc(e.ident._import)
             ELSE
                 IF VarType.typ = PROG.tPROCEDURE THEN
                     IL.AddCmd0(IL.opSAVE)
@@ -491,11 +491,11 @@ VAR
 
     PROCEDURE arrcomp (e: PARS.EXPR; p: PROG.PARAM): BOOLEAN;
     VAR
-        t1, t2: PROG.TYPE_;
+        t1, t2: PROG._TYPE;
 
     BEGIN
-        t1 := p.type;
-        t2 := e.type;
+        t1 := p._type;
+        t2 := e._type;
         WHILE (t2.typ = PROG.tARRAY) & PROG.isOpenArray(t1) DO
             t1 := t1.base;
             t2 := t2.base
@@ -505,7 +505,7 @@ VAR
     END arrcomp;
 
 
-    PROCEDURE ArrLen (t: PROG.TYPE_; n: INTEGER): INTEGER;
+    PROCEDURE ArrLen (t: PROG._TYPE; n: INTEGER): INTEGER;
     VAR
         res: INTEGER;
 
@@ -520,7 +520,7 @@ VAR
     END ArrLen;
 
 
-    PROCEDURE OpenArray (t, t2: PROG.TYPE_);
+    PROCEDURE OpenArray (t, t2: PROG._TYPE);
     VAR
         n, d1, d2: INTEGER;
 
@@ -557,8 +557,8 @@ BEGIN
     IF p.vPar THEN
 
         PARS.check(isVar(e), pos, 93);
-        IF p.type.typ = PROG.tRECORD THEN
-            PARS.check(PROG.isBaseOf(p.type, e.type), pos, 66);
+        IF p._type.typ = PROG.tRECORD THEN
+            PARS.check(PROG.isBaseOf(p._type, e._type), pos, 66);
             IF e.obj = eVREC THEN
                 IF e.ident # NIL THEN
                     IL.AddCmd(IL.opVADR, e.ident.offset - 1)
@@ -566,30 +566,30 @@ BEGIN
                     IL.AddCmd0(IL.opPUSHT)
                 END
             ELSE
-                IL.Const(e.type.num)
+                IL.Const(e._type.num)
             END;
             IL.AddCmd(IL.opPARAM, 2)
-        ELSIF PROG.isOpenArray(p.type) THEN
+        ELSIF PROG.isOpenArray(p._type) THEN
             PARS.check(arrcomp(e, p), pos, 66);
-            OpenArray(e.type, p.type)
+            OpenArray(e._type, p._type)
         ELSE
-            PARS.check(PROG.isTypeEq(e.type, p.type), pos, 66);
+            PARS.check(PROG.isTypeEq(e._type, p._type), pos, 66);
             IL.Param1
         END;
         PARS.check(~e.readOnly, pos, 94)
 
     ELSE
         PARS.check(isExpr(e) OR isProc(e), pos, 66);
-        IF PROG.isOpenArray(p.type) THEN
-            IF e.type.typ = PROG.tARRAY THEN
+        IF PROG.isOpenArray(p._type) THEN
+            IF e._type.typ = PROG.tARRAY THEN
                 PARS.check(arrcomp(e, p), pos, 66);
-                OpenArray(e.type, p.type)
-            ELSIF isString(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tCHAR) THEN
+                OpenArray(e._type, p._type)
+            ELSIF isString(e) & (p._type.typ = PROG.tARRAY) & (p._type.base = tCHAR) THEN
                 IL.StrAdr(String(e));
                 IL.Param1;
                 IL.Const(strlen(e) + 1);
                 IL.Param1
-            ELSIF isStringW(e) & (p.type.typ = PROG.tARRAY) & (p.type.base = tWCHAR) THEN
+            ELSIF isStringW(e) & (p._type.typ = PROG.tARRAY) & (p._type.base = tWCHAR) THEN
                 IL.StrAdr(StringW(e));
                 IL.Param1;
                 IL.Const(utf8strlen(e) + 1);
@@ -598,31 +598,31 @@ BEGIN
                 PARS.error(pos, 66)
             END
         ELSE
-            PARS.check(~PROG.isOpenArray(e.type), pos, 66);
-            PARS.check(assigncomp(e, p.type), pos, 66);
+            PARS.check(~PROG.isOpenArray(e._type), pos, 66);
+            PARS.check(assigncomp(e, p._type), pos, 66);
             IF e.obj = eCONST THEN
-                IF e.type = tREAL THEN
+                IF e._type = tREAL THEN
                     Float(parser, e);
                     IL.AddCmd0(IL.opPUSHF)
-                ELSIF e.type.typ = PROG.tNIL THEN
+                ELSIF e._type.typ = PROG.tNIL THEN
                     IL.Const(0);
                     IL.Param1
-                ELSIF isStringW1(e) & (p.type = tWCHAR) THEN
+                ELSIF isStringW1(e) & (p._type = tWCHAR) THEN
                     IL.Const(StrToWChar(e.value.string(SCAN.IDENT).s));
                     IL.Param1
-                ELSIF (e.type.typ = PROG.tSTRING) OR
-                      (e.type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p.type.typ = PROG.tARRAY) & (p.type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
-                    IF p.type.base = tCHAR THEN
+                ELSIF (e._type.typ = PROG.tSTRING) OR
+                      (e._type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p._type.typ = PROG.tARRAY) & (p._type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
+                    IF p._type.base = tCHAR THEN
                         stroffs := String(e);
                         IL.StrAdr(stroffs);
-                        IF (CPU = TARGETS.cpuMSP430) & (p.type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
+                        IF (CPU = TARGETS.cpuMSP430) & (p._type.size - strlen(e) - 1 > MSP430.IntVectorSize) THEN
                             ERRORS.WarningMsg(pos.line, pos.col, 0)
                         END
                     ELSE (* WCHAR *)
                         stroffs := StringW(e);
                         IL.StrAdr(stroffs)
                     END;
-                    IL.set_dmin(stroffs + p.type.size);
+                    IL.set_dmin(stroffs + p._type.size);
                     IL.Param1
                 ELSE
                     LoadConst(e);
@@ -633,12 +633,12 @@ BEGIN
                 IL.PushProc(e.ident.proc.label);
                 IL.Param1
             ELSIF e.obj = eIMP THEN
-                IL.PushImpProc(e.ident.import);
+                IL.PushImpProc(e.ident._import);
                 IL.Param1
-            ELSIF isExpr(e) & (e.type = tREAL) THEN
+            ELSIF isExpr(e) & (e._type = tREAL) THEN
                 IL.AddCmd0(IL.opPUSHF)
             ELSE
-                IF (p.type = tBYTE) & (e.type = tINTEGER) & (chkBYTE IN Options.checking) THEN
+                IF (p._type = tBYTE) & (e._type = tINTEGER) & (chkBYTE IN Options.checking) THEN
                     CheckRange(256, pos.line, errBYTE)
                 END;
                 IL.Param1
@@ -735,7 +735,7 @@ BEGIN
         |PROG.stINC, PROG.stDEC:
             IL.pushBegEnd(begcall, endcall);
             varparam(parser, pos, isInt, TRUE, e);
-            IF e.type = tINTEGER THEN
+            IF e._type = tINTEGER THEN
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
                     IL.setlast(begcall);
@@ -750,7 +750,7 @@ BEGIN
                 ELSE
                     IL.AddCmd(IL.opINCC, ORD(proc = PROG.stINC) * 2 - 1)
                 END
-            ELSE  (* e.type = tBYTE *)
+            ELSE  (* e._type = tBYTE *)
                 IF parser.sym = SCAN.lxCOMMA THEN
                     NextPos(parser, pos);
                     IL.setlast(begcall);
@@ -788,9 +788,9 @@ BEGIN
         |PROG.stNEW:
             varparam(parser, pos, isPtr, TRUE, e);
             IF CPU = TARGETS.cpuMSP430 THEN
-                PARS.check(e.type.base.size + 16 < Options.ram, pos, 63)
+                PARS.check(e._type.base.size + 16 < Options.ram, pos, 63)
             END;
-            IL.New(e.type.base.size, e.type.base.num)
+            IL.New(e._type.base.size, e._type.base.num)
 
         |PROG.stDISPOSE:
             varparam(parser, pos, isPtr, TRUE, e);
@@ -826,8 +826,8 @@ BEGIN
                 PARS.error(pos, 66)
             END;
 
-            IF isCharArrayX(e) & ~PROG.isOpenArray(e.type) THEN
-                IL.Const(e.type.length)
+            IF isCharArrayX(e) & ~PROG.isOpenArray(e._type) THEN
+                IL.Const(e._type.length)
             END;
 
             PARS.checklex(parser, SCAN.lxCOMMA);
@@ -843,11 +843,11 @@ BEGIN
                     varparam(parser, pos, isCharArray, TRUE, e1)
                 END;
 
-                wchar := e1.type.base = tWCHAR
+                wchar := e1._type.base = tWCHAR
             END;
 
-            IF ~PROG.isOpenArray(e1.type) THEN
-                IL.Const(e1.type.length)
+            IF ~PROG.isOpenArray(e1._type) THEN
+                IL.Const(e1._type.length)
             END;
 
             IL.setlast(endcall.prev(IL.COMMAND));
@@ -861,7 +861,7 @@ BEGIN
                     IL.Const(strlen(e) + 1)
                 END
             END;
-            IL.AddCmd(IL.opCOPYS, e1.type.base.size);
+            IL.AddCmd(IL.opCOPYS, e1._type.base.size);
             IL.popBegEnd(begcall, endcall)
 
         |PROG.sysGET, PROG.sysGET8, PROG.sysGET16, PROG.sysGET32:
@@ -872,19 +872,19 @@ BEGIN
             parser.designator(parser, e2);
             PARS.check(isVar(e2), pos, 93);
             IF proc = PROG.sysGET THEN
-                PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66)
+                PARS.check(e2._type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66)
             ELSE
-                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66)
+                PARS.check(e2._type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66)
             END;
 
             CASE proc OF
-            |PROG.sysGET:   size := e2.type.size
+            |PROG.sysGET:   size := e2._type.size
             |PROG.sysGET8:  size := 1
             |PROG.sysGET16: size := 2
             |PROG.sysGET32: size := 4
             END;
 
-            PARS.check(size <= e2.type.size, pos, 66);
+            PARS.check(size <= e2._type.size, pos, 66);
 
             IF e.obj = eCONST THEN
                 IL.AddCmd2(IL.opGETC, ARITH.Int(e.value), size)
@@ -906,30 +906,30 @@ BEGIN
             PARS.check(isExpr(e2), pos, 66);
 
             IF proc = PROG.sysPUT THEN
-                PARS.check(e2.type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66);
+                PARS.check(e2._type.typ IN PROG.BASICTYPES + {PROG.tPOINTER, PROG.tPROCEDURE}, pos, 66);
                 IF e2.obj = eCONST THEN
-                    IF e2.type = tREAL THEN
+                    IF e2._type = tREAL THEN
                         Float(parser, e2);
                         IL.setlast(endcall.prev(IL.COMMAND));
                         IL.savef(FALSE)
                     ELSE
                         LoadConst(e2);
                         IL.setlast(endcall.prev(IL.COMMAND));
-                        IL.SysPut(e2.type.size)
+                        IL.SysPut(e2._type.size)
                     END
                 ELSE
                     IL.setlast(endcall.prev(IL.COMMAND));
-                    IF e2.type = tREAL THEN
+                    IF e2._type = tREAL THEN
                         IL.savef(FALSE)
-                    ELSIF e2.type = tBYTE THEN
+                    ELSIF e2._type = tBYTE THEN
                         IL.SysPut(tINTEGER.size)
                     ELSE
-                        IL.SysPut(e2.type.size)
+                        IL.SysPut(e2._type.size)
                     END
                 END
 
             ELSIF (proc = PROG.sysPUT8) OR (proc = PROG.sysPUT16) OR (proc = PROG.sysPUT32) THEN
-                PARS.check(e2.type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66);
+                PARS.check(e2._type.typ IN {PROG.tINTEGER, PROG.tBYTE, PROG.tCHAR, PROG.tSET, PROG.tWCHAR, PROG.tCARD32}, pos, 66);
                 IF e2.obj = eCONST THEN
                     LoadConst(e2)
                 END;
@@ -966,7 +966,7 @@ BEGIN
             FOR i := 1 TO 2 DO
                 parser.designator(parser, e);
                 PARS.check(isVar(e), pos, 93);
-                n := PROG.Dim(e.type);
+                n := PROG.Dim(e._type);
                 WHILE n > 0 DO
                     IL.drop;
                     DEC(n)
@@ -1018,7 +1018,7 @@ BEGIN
         END;
 
         e.obj := eEXPR;
-        e.type := NIL
+        e._type := NIL
 
     ELSIF e.obj IN {eSTFUNC, eSYSFUNC} THEN
 
@@ -1039,7 +1039,7 @@ BEGIN
             NextPos(parser, pos);
             PExpression(parser, e2);
             PARS.check(isInt(e2), pos, 66);
-            e.type := tINTEGER;
+            e._type := tINTEGER;
             IF (e.obj = eCONST) & (e2.obj = eCONST) THEN
                 ASSERT(ARITH.opInt(e.value, e2.value, shift_minmax(proc)))
             ELSE
@@ -1056,7 +1056,7 @@ BEGIN
         |PROG.stCHR:
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
-            e.type := tCHAR;
+            e._type := tCHAR;
             IF e.obj = eCONST THEN
                 ARITH.setChar(e.value, ARITH.getInt(e.value));
                 PARS.check(ARITH.check(e.value), pos, 107)
@@ -1071,7 +1071,7 @@ BEGIN
         |PROG.stWCHR:
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
-            e.type := tWCHAR;
+            e._type := tWCHAR;
             IF e.obj = eCONST THEN
                 ARITH.setWChar(e.value, ARITH.getInt(e.value));
                 PARS.check(ARITH.check(e.value), pos, 101)
@@ -1086,7 +1086,7 @@ BEGIN
         |PROG.stFLOOR:
             PExpression(parser, e);
             PARS.check(isReal(e), pos, 66);
-            e.type := tINTEGER;
+            e._type := tINTEGER;
             IF e.obj = eCONST THEN
                 PARS.check(ARITH.floor(e.value), pos, 39)
             ELSE
@@ -1096,7 +1096,7 @@ BEGIN
         |PROG.stFLT:
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
-            e.type := tREAL;
+            e._type := tREAL;
             IF e.obj = eCONST THEN
                 ARITH.flt(e.value)
             ELSE
@@ -1106,38 +1106,38 @@ BEGIN
         |PROG.stLEN:
             cmd1 := IL.getlast();
             varparam(parser, pos, isArr, FALSE, e);
-            IF e.type.length > 0 THEN
+            IF e._type.length > 0 THEN
                 cmd2 := IL.getlast();
                 IL.delete2(cmd1.next, cmd2);
                 IL.setlast(cmd1);
-                ASSERT(ARITH.setInt(e.value, e.type.length));
+                ASSERT(ARITH.setInt(e.value, e._type.length));
                 e.obj := eCONST
             ELSE
-                IL.len(PROG.Dim(e.type))
+                IL.len(PROG.Dim(e._type))
             END;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         |PROG.stLENGTH:
             PExpression(parser, e);
             IF isCharArray(e) THEN
-                IF e.type.length > 0 THEN
-                    IL.Const(e.type.length)
+                IF e._type.length > 0 THEN
+                    IL.Const(e._type.length)
                 END;
                 IL.AddCmd0(IL.opLENGTH)
             ELSIF isCharArrayW(e) THEN
-                IF e.type.length > 0 THEN
-                    IL.Const(e.type.length)
+                IF e._type.length > 0 THEN
+                    IL.Const(e._type.length)
                 END;
                 IL.AddCmd0(IL.opLENGTHW)
             ELSE
                 PARS.error(pos, 66);
             END;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         |PROG.stODD:
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
-            e.type := tBOOLEAN;
+            e._type := tBOOLEAN;
             IF e.obj = eCONST THEN
                 ARITH.odd(e.value)
             ELSE
@@ -1158,7 +1158,7 @@ BEGIN
                     IL.AddCmd0(IL.opORD)
                 END
             END;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         |PROG.stBITS:
             PExpression(parser, e);
@@ -1166,12 +1166,12 @@ BEGIN
             IF e.obj = eCONST THEN
                 ARITH.bits(e.value)
             END;
-            e.type := tSET
+            e._type := tSET
 
         |PROG.sysADR:
             parser.designator(parser, e);
             IF isVar(e) THEN
-               n := PROG.Dim(e.type);
+               n := PROG.Dim(e._type);
                WHILE n > 0 DO
                     IL.drop;
                     DEC(n)
@@ -1179,50 +1179,50 @@ BEGIN
             ELSIF e.obj = ePROC THEN
                 IL.PushProc(e.ident.proc.label)
             ELSIF e.obj = eIMP THEN
-                IL.PushImpProc(e.ident.import)
+                IL.PushImpProc(e.ident._import)
             ELSE
                 PARS.error(pos, 108)
             END;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         |PROG.sysSADR:
             PExpression(parser, e);
             PARS.check(isString(e), pos, 66);
             IL.StrAdr(String(e));
-            e.type := tINTEGER;
+            e._type := tINTEGER;
             e.obj := eEXPR
 
         |PROG.sysWSADR:
             PExpression(parser, e);
             PARS.check(isStringW(e), pos, 66);
             IL.StrAdr(StringW(e));
-            e.type := tINTEGER;
+            e._type := tINTEGER;
             e.obj := eEXPR
 
         |PROG.sysTYPEID:
             PExpression(parser, e);
             PARS.check(e.obj = eTYPE, pos, 68);
-            IF e.type.typ = PROG.tRECORD THEN
-                ASSERT(ARITH.setInt(e.value, e.type.num))
-            ELSIF  e.type.typ = PROG.tPOINTER THEN
-                ASSERT(ARITH.setInt(e.value, e.type.base.num))
+            IF e._type.typ = PROG.tRECORD THEN
+                ASSERT(ARITH.setInt(e.value, e._type.num))
+            ELSIF  e._type.typ = PROG.tPOINTER THEN
+                ASSERT(ARITH.setInt(e.value, e._type.base.num))
             ELSE
                 PARS.error(pos, 52)
             END;
             e.obj := eCONST;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         |PROG.sysINF:
             IL.AddCmd2(IL.opINF, pos.line, pos.col);
             e.obj := eEXPR;
-            e.type := tREAL
+            e._type := tREAL
 
         |PROG.sysSIZE:
             PExpression(parser, e);
             PARS.check(e.obj = eTYPE, pos, 68);
-            ASSERT(ARITH.setInt(e.value, e.type.size));
+            ASSERT(ARITH.setInt(e.value, e._type.size));
             e.obj := eCONST;
-            e.type := tINTEGER
+            e._type := tINTEGER
 
         END
 
@@ -1242,7 +1242,7 @@ END stProc;
 
 PROCEDURE ActualParameters (parser: PARS.PARSER; VAR e: PARS.EXPR);
 VAR
-    proc:  PROG.TYPE_;
+    proc:  PROG._TYPE;
     param: LISTS.ITEM;
     e1:    PARS.EXPR;
     pos:   PARS.POSITION;
@@ -1251,7 +1251,7 @@ BEGIN
     ASSERT(parser.sym = SCAN.lxLROUND);
 
     IF (e.obj IN {ePROC, eIMP}) OR isExpr(e) THEN
-        proc := e.type;
+        proc := e._type;
         PARS.check1(proc.typ = PROG.tPROCEDURE, parser, 86);
         PARS.Next(parser);
 
@@ -1278,7 +1278,7 @@ BEGIN
         PARS.Next(parser);
 
         e.obj := eEXPR;
-        e.type := proc.base
+        e._type := proc.base
 
     ELSIF e.obj IN {eSTPROC, eSTFUNC, eSYSPROC, eSYSFUNC} THEN
         stProc(parser, e)
@@ -1291,14 +1291,14 @@ END ActualParameters;
 
 PROCEDURE qualident (parser: PARS.PARSER; VAR e: PARS.EXPR);
 VAR
-    ident:  PROG.IDENT;
-    import: BOOLEAN;
-    pos:    PARS.POSITION;
+    ident: PROG.IDENT;
+    imp:   BOOLEAN;
+    pos:   PARS.POSITION;
 
 BEGIN
     PARS.checklex(parser, SCAN.lxIDENT);
     getpos(parser, pos);
-    import := FALSE;
+    imp := FALSE;
     ident := PROG.getIdent(parser.unit, parser.lex.ident, FALSE);
     PARS.check1(ident # NIL, parser, 48);
     IF ident.typ = PROG.idMODULE THEN
@@ -1306,7 +1306,7 @@ BEGIN
         PARS.ExpectSym(parser, SCAN.lxIDENT);
         ident := PROG.getIdent(ident.unit, parser.lex.ident, FALSE);
         PARS.check1((ident # NIL) & ident.export, parser, 48);
-        import := TRUE
+        imp := TRUE
     END;
     PARS.Next(parser);
 
@@ -1316,44 +1316,48 @@ BEGIN
     CASE ident.typ OF
     |PROG.idCONST:
         e.obj   := eCONST;
-        e.type  := ident.type;
+        e._type := ident._type;
         e.value := ident.value
     |PROG.idTYPE:
-        e.obj  := eTYPE;
-        e.type := ident.type
+        e.obj   := eTYPE;
+        e._type := ident._type
     |PROG.idVAR:
-        e.obj  := eVAR;
-        e.type := ident.type;
-        e.readOnly := import
+        e.obj   := eVAR;
+        e._type := ident._type;
+        e.readOnly := imp
     |PROG.idPROC:
         e.obj   := ePROC;
-        e.type  := ident.type
+        e._type := ident._type
     |PROG.idIMP:
         e.obj   := eIMP;
-        e.type  := ident.type
+        e._type := ident._type
     |PROG.idVPAR:
-        e.type := ident.type;
-        IF e.type.typ = PROG.tRECORD THEN
+        e._type := ident._type;
+        IF e._type.typ = PROG.tRECORD THEN
             e.obj := eVREC
         ELSE
             e.obj := eVPAR
         END
     |PROG.idPARAM:
-        e.obj  := ePARAM;
-        e.type := ident.type;
-        e.readOnly := (e.type.typ IN {PROG.tRECORD, PROG.tARRAY})
+        e.obj := ePARAM;
+        e._type := ident._type;
+        e.readOnly := (e._type.typ IN {PROG.tRECORD, PROG.tARRAY})
     |PROG.idSTPROC:
         e.obj    := eSTPROC;
+        e._type  := ident._type;
         e.stproc := ident.stproc
     |PROG.idSTFUNC:
         e.obj    := eSTFUNC;
+        e._type  := ident._type;
         e.stproc := ident.stproc
     |PROG.idSYSPROC:
         e.obj    := eSYSPROC;
+        e._type  := ident._type;
         e.stproc := ident.stproc
     |PROG.idSYSFUNC:
         PARS.check(~parser.constexp, pos, 109);
         e.obj    := eSYSFUNC;
+        e._type  := ident._type;
         e.stproc := ident.stproc
     |PROG.idNONE:
         PARS.error(pos, 115)
@@ -1372,7 +1376,7 @@ VAR
 
 BEGIN
     IF load THEN
-        IL.load(e.type.size)
+        IL.load(e._type.size)
     END;
 
     IF chkPTR IN Options.checking THEN
@@ -1400,7 +1404,7 @@ VAR
             offset, n: INTEGER;
         BEGIN
             offset := e.ident.offset;
-            n := PROG.Dim(e.type);
+            n := PROG.Dim(e._type);
             WHILE n >= 0 DO
                 IL.AddCmd(IL.opVADR, offset);
                 DEC(offset);
@@ -1418,15 +1422,15 @@ VAR
                 IL.AddCmd(IL.opLADR, -offset)
             END
         ELSIF e.obj = ePARAM THEN
-            IF (e.type.typ = PROG.tRECORD) OR ((e.type.typ = PROG.tARRAY) & (e.type.length > 0)) THEN
+            IF (e._type.typ = PROG.tRECORD) OR ((e._type.typ = PROG.tARRAY) & (e._type.length > 0)) THEN
                 IL.AddCmd(IL.opVADR, e.ident.offset)
-            ELSIF PROG.isOpenArray(e.type) THEN
+            ELSIF PROG.isOpenArray(e._type) THEN
                 OpenArray(e)
             ELSE
                 IL.AddCmd(IL.opLADR, e.ident.offset)
             END
         ELSIF e.obj IN {eVPAR, eVREC} THEN
-            IF PROG.isOpenArray(e.type) THEN
+            IF PROG.isOpenArray(e._type) THEN
                 OpenArray(e)
             ELSE
                 IL.AddCmd(IL.opVADR, e.ident.offset)
@@ -1438,7 +1442,7 @@ VAR
     PROCEDURE OpenIdx (parser: PARS.PARSER; pos: PARS.POSITION; e: PARS.EXPR);
     VAR
         label, offset, n, k: INTEGER;
-        type: PROG.TYPE_;
+        _type: PROG._TYPE;
 
     BEGIN
 
@@ -1451,11 +1455,11 @@ VAR
             IL.AddCmd(IL.opCHKIDX2, -1)
         END;
 
-        type := PROG.OpenBase(e.type);
-        IF type.size # 1 THEN
-            IL.AddCmd(IL.opMULC, type.size)
+        _type := PROG.OpenBase(e._type);
+        IF _type.size # 1 THEN
+            IL.AddCmd(IL.opMULC, _type.size)
         END;
-        n := PROG.Dim(e.type) - 1;
+        n := PROG.Dim(e._type) - 1;
         k := n;
         WHILE n > 0 DO
             IL.AddCmd0(IL.opMUL);
@@ -1485,18 +1489,18 @@ BEGIN
 
     WHILE parser.sym = SCAN.lxPOINT DO
         getpos(parser, pos);
-        PARS.check1(isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}), parser, 73);
-        IF e.type.typ = PROG.tPOINTER THEN
+        PARS.check1(isExpr(e) & (e._type.typ IN {PROG.tRECORD, PROG.tPOINTER}), parser, 73);
+        IF e._type.typ = PROG.tPOINTER THEN
             deref(pos, e, TRUE, errPTR)
         END;
         PARS.ExpectSym(parser, SCAN.lxIDENT);
-        IF e.type.typ = PROG.tPOINTER THEN
-            e.type := e.type.base;
+        IF e._type.typ = PROG.tPOINTER THEN
+            e._type := e._type.base;
             e.readOnly := FALSE
         END;
-        field := PROG.getField(e.type, parser.lex.ident, parser.unit);
+        field := PROG.getField(e._type, parser.lex.ident, parser.unit);
         PARS.check1(field # NIL, parser, 74);
-        e.type := field.type;
+        e._type := field._type;
         IF e.obj = eVREC THEN
             e.obj := eVPAR
         END;
@@ -1516,10 +1520,10 @@ BEGIN
             PARS.check(isInt(idx), pos, 76);
 
             IF idx.obj = eCONST THEN
-                IF e.type.length > 0 THEN
-                    PARS.check(ARITH.range(idx.value, 0, e.type.length - 1), pos, 83);
+                IF e._type.length > 0 THEN
+                    PARS.check(ARITH.range(idx.value, 0, e._type.length - 1), pos, 83);
                     IF ARITH.Int(idx.value) > 0 THEN
-                        IL.AddCmd(IL.opADDC, ARITH.Int(idx.value) * e.type.base.size)
+                        IL.AddCmd(IL.opADDC, ARITH.Int(idx.value) * e._type.base.size)
                     END
                 ELSE
                     PARS.check(ARITH.range(idx.value, 0, UTILS.target.maxInt), pos, 83);
@@ -1527,12 +1531,12 @@ BEGIN
                     OpenIdx(parser, pos, e)
                 END
             ELSE
-                IF e.type.length > 0 THEN
+                IF e._type.length > 0 THEN
                     IF chkIDX IN Options.checking THEN
-                        CheckRange(e.type.length, pos.line, errIDX)
+                        CheckRange(e._type.length, pos.line, errIDX)
                     END;
-                    IF e.type.base.size # 1 THEN
-                        IL.AddCmd(IL.opMULC, e.type.base.size)
+                    IF e._type.base.size # 1 THEN
+                        IL.AddCmd(IL.opMULC, e._type.base.size)
                     END;
                     IL.AddCmd0(IL.opADD)
                 ELSE
@@ -1540,7 +1544,7 @@ BEGIN
                 END
             END;
 
-            e.type := e.type.base
+            e._type := e._type.base
 
         UNTIL parser.sym # SCAN.lxCOMMA;
 
@@ -1552,41 +1556,41 @@ BEGIN
         getpos(parser, pos);
         PARS.check1(isPtr(e), parser, 77);
         deref(pos, e, TRUE, errPTR);
-        e.type := e.type.base;
+        e._type := e._type.base;
         e.readOnly := FALSE;
         PARS.Next(parser);
         e.ident := NIL;
         e.obj := eVREC
 
-    ELSIF (parser.sym = SCAN.lxLROUND) & isExpr(e) & (e.type.typ IN {PROG.tRECORD, PROG.tPOINTER}) DO
+    ELSIF (parser.sym = SCAN.lxLROUND) & isExpr(e) & (e._type.typ IN {PROG.tRECORD, PROG.tPOINTER}) DO
 
-        IF e.type.typ = PROG.tRECORD THEN
+        IF e._type.typ = PROG.tRECORD THEN
             PARS.check1(e.obj = eVREC, parser, 78)
         END;
         NextPos(parser, pos);
         qualident(parser, t);
         PARS.check(t.obj = eTYPE, pos, 79);
 
-        IF e.type.typ = PROG.tRECORD THEN
-            PARS.check(t.type.typ = PROG.tRECORD, pos, 80);
+        IF e._type.typ = PROG.tRECORD THEN
+            PARS.check(t._type.typ = PROG.tRECORD, pos, 80);
             IF chkGUARD IN Options.checking THEN
                 IF e.ident = NIL THEN
-                    IL.TypeGuard(IL.opTYPEGD, t.type.num, pos.line, errGUARD)
+                    IL.TypeGuard(IL.opTYPEGD, t._type.num, pos.line, errGUARD)
                 ELSE
                     IL.AddCmd(IL.opVADR, e.ident.offset - 1);
-                    IL.TypeGuard(IL.opTYPEGR, t.type.num, pos.line, errGUARD)
+                    IL.TypeGuard(IL.opTYPEGR, t._type.num, pos.line, errGUARD)
                 END
             END;
         ELSE
-            PARS.check(t.type.typ = PROG.tPOINTER, pos, 81);
+            PARS.check(t._type.typ = PROG.tPOINTER, pos, 81);
             IF chkGUARD IN Options.checking THEN
-                IL.TypeGuard(IL.opTYPEGP, t.type.base.num, pos.line, errGUARD)
+                IL.TypeGuard(IL.opTYPEGP, t._type.base.num, pos.line, errGUARD)
             END
         END;
 
-        PARS.check(PROG.isBaseOf(e.type, t.type), pos, 82);
+        PARS.check(PROG.isBaseOf(e._type, t._type), pos, 82);
 
-        e.type := t.type;
+        e._type := t._type;
 
         PARS.checklex(parser, SCAN.lxRROUND);
         PARS.Next(parser)
@@ -1596,7 +1600,7 @@ BEGIN
 END designator;
 
 
-PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG.TYPE_; isfloat: BOOLEAN; parser: PARS.PARSER; pos: PARS.POSITION; CallStat: BOOLEAN);
+PROCEDURE ProcCall (e: PARS.EXPR; procType: PROG._TYPE; isfloat: BOOLEAN; parser: PARS.PARSER; pos: PARS.POSITION; CallStat: BOOLEAN);
 VAR
     cconv,
     parSize,
@@ -1633,7 +1637,7 @@ BEGIN
     IL.setlast(endcall.prev(IL.COMMAND));
 
     IF e.obj = eIMP THEN
-        IL.CallImp(e.ident.import, callconv, fparSize)
+        IL.CallImp(e.ident._import, callconv, fparSize)
     ELSIF e.obj = ePROC THEN
         IL.Call(e.ident.proc.label, callconv, fparSize)
     ELSIF isExpr(e) THEN
@@ -1728,7 +1732,7 @@ VAR
             END
         END;
 
-        e.type := tSET;
+        e._type := tSET;
 
         IF (e1.obj = eCONST) & (e2.obj = eCONST) THEN
             ARITH.constrSet(e.value, e1.value, e2.value);
@@ -1759,7 +1763,7 @@ VAR
         ASSERT(parser.sym = SCAN.lxLCURLY);
 
         e.obj := eCONST;
-        e.type := tSET;
+        e._type := tSET;
         ARITH.emptySet(e.value);
 
         PARS.Next(parser);
@@ -1804,11 +1808,11 @@ VAR
 
         PROCEDURE LoadVar (e: PARS.EXPR; parser: PARS.PARSER; pos: PARS.POSITION);
         BEGIN
-            IF ~(e.type.typ IN {PROG.tRECORD, PROG.tARRAY}) THEN
-                IF e.type = tREAL THEN
+            IF ~(e._type.typ IN {PROG.tRECORD, PROG.tARRAY}) THEN
+                IF e._type = tREAL THEN
                     IL.AddCmd2(IL.opLOADF, pos.line, pos.col)
                 ELSE
-                    IL.load(e.type.size)
+                    IL.load(e._type.size)
                 END
             END
         END LoadVar;
@@ -1820,18 +1824,18 @@ VAR
         IF (sym = SCAN.lxINTEGER) OR (sym = SCAN.lxHEX) OR (sym = SCAN.lxFLOAT) OR (sym = SCAN.lxCHAR) OR (sym = SCAN.lxSTRING) THEN
             e.obj := eCONST;
             e.value := parser.lex.value;
-            e.type := PROG.getType(e.value.typ);
+            e._type := PROG.getType(e.value.typ);
             PARS.Next(parser)
 
         ELSIF sym = SCAN.lxNIL THEN
             e.obj  := eCONST;
-            e.type := PROG.program.stTypes.tNIL;
+            e._type := PROG.program.stTypes.tNIL;
             PARS.Next(parser)
 
         ELSIF (sym = SCAN.lxTRUE) OR (sym = SCAN.lxFALSE) THEN
             e.obj := eCONST;
             ARITH.setbool(e.value, sym = SCAN.lxTRUE);
-            e.type := tBOOLEAN;
+            e._type := tBOOLEAN;
             PARS.Next(parser)
 
         ELSIF sym = SCAN.lxLCURLY THEN
@@ -1849,12 +1853,12 @@ VAR
             IF parser.sym = SCAN.lxLROUND THEN
                 e1 := e;
                 ActualParameters(parser, e);
-                PARS.check(e.type # NIL, pos, 59);
-                isfloat := e.type = tREAL;
+                PARS.check(e._type # NIL, pos, 59);
+                isfloat := e._type = tREAL;
                 IF e1.obj IN {ePROC, eIMP} THEN
-                    ProcCall(e1, e1.ident.type, isfloat, parser, pos, FALSE)
+                    ProcCall(e1, e1.ident._type, isfloat, parser, pos, FALSE)
                 ELSIF isExpr(e1) THEN
-                    ProcCall(e1, e1.type, isfloat, parser, pos, FALSE)
+                    ProcCall(e1, e1._type, isfloat, parser, pos, FALSE)
                 END
             END;
             IL.popBegEnd(begcall, endcall)
@@ -2154,7 +2158,7 @@ VAR
                         PARS.check(ARITH.concat(s, s1), pos, 5);
                         e.value.string := SCAN.enterid(s);
                         e.value.typ := ARITH.tSTRING;
-                        e.type := PROG.program.stTypes.tSTRING
+                        e._type := PROG.program.stTypes.tSTRING
                    END
 
                 ELSE
@@ -2312,8 +2316,8 @@ BEGIN
     getpos(parser, pos0);
     SimpleExpression(parser, e);
     IF relation(parser.sym) THEN
-        IF (isCharArray(e) OR isCharArrayW(e)) & (e.type.length # 0) THEN
-            IL.Const(e.type.length)
+        IF (isCharArray(e) OR isCharArrayW(e)) & (e._type.length # 0) THEN
+            IL.Const(e._type.length)
         END;
         op := parser.sym;
         getpos(parser, pos);
@@ -2322,8 +2326,8 @@ BEGIN
         getpos(parser, pos1);
         SimpleExpression(parser, e1);
 
-        IF (isCharArray(e1) OR isCharArrayW(e1)) & (e1.type.length # 0) THEN
-            IL.Const(e1.type.length)
+        IF (isCharArray(e1) OR isCharArrayW(e1)) & (e1._type.length # 0) THEN
+            IL.Const(e1._type.length)
         END;
 
         constant := (e.obj = eCONST) & (e1.obj = eCONST);
@@ -2337,7 +2341,7 @@ BEGIN
             isCharW(e) & isChar(e1) & (e1.obj = eCONST) OR isCharW(e1) & isChar(e) & (e.obj = eCONST) OR
             isCharW(e1) & (e1.obj = eCONST) & isChar(e) & (e.obj = eCONST) OR
             isCharW(e) & (e.obj = eCONST) & isChar(e1) & (e1.obj = eCONST) OR
-            isPtr(e) & isPtr(e1) & (PROG.isBaseOf(e.type, e1.type) OR PROG.isBaseOf(e1.type, e.type)) THEN
+            isPtr(e) & isPtr(e1) & (PROG.isBaseOf(e._type, e1._type) OR PROG.isBaseOf(e1._type, e._type)) THEN
                 IF constant THEN
                     ARITH.relation(e.value, e1.value, cmp, error)
                 ELSE
@@ -2413,7 +2417,7 @@ BEGIN
                     IL.AddCmd0(IL.opEQC + cmp)
                 END
 
-            ELSIF isProc(e) & isProc(e1) & PROG.isTypeEq(e.type, e1.type) THEN
+            ELSIF isProc(e) & isProc(e1) & PROG.isTypeEq(e._type, e1._type) THEN
                 IF e.obj = ePROC THEN
                     PARS.check(e.ident.global, pos0, 85)
                 END;
@@ -2433,9 +2437,9 @@ BEGIN
                 ELSIF e1.obj = ePROC THEN
                     IL.ProcCmp(e1.ident.proc.label, eq)
                 ELSIF e.obj = eIMP THEN
-                    IL.ProcImpCmp(e.ident.import, eq)
+                    IL.ProcImpCmp(e.ident._import, eq)
                 ELSIF e1.obj = eIMP THEN
-                    IL.ProcImpCmp(e1.ident.import, eq)
+                    IL.ProcImpCmp(e1.ident._import, eq)
                 ELSE
                     IL.AddCmd0(IL.opEQ + cmp)
                 END
@@ -2520,25 +2524,25 @@ BEGIN
 
             IF isRec(e) THEN
                 PARS.check(e.obj = eVREC, pos0, 78);
-                PARS.check(e1.type.typ = PROG.tRECORD, pos1, 80);
+                PARS.check(e1._type.typ = PROG.tRECORD, pos1, 80);
                 IF e.ident = NIL THEN
-                    IL.TypeCheck(e1.type.num)
+                    IL.TypeCheck(e1._type.num)
                 ELSE
                     IL.AddCmd(IL.opVADR, e.ident.offset - 1);
-                    IL.TypeCheckRec(e1.type.num)
+                    IL.TypeCheckRec(e1._type.num)
                 END
             ELSE
-                PARS.check(e1.type.typ = PROG.tPOINTER, pos1, 81);
-                IL.TypeCheck(e1.type.base.num)
+                PARS.check(e1._type.typ = PROG.tPOINTER, pos1, 81);
+                IL.TypeCheck(e1._type.base.num)
             END;
 
-            PARS.check(PROG.isBaseOf(e.type, e1.type), pos1, 82)
+            PARS.check(PROG.isBaseOf(e._type, e1._type), pos1, 82)
 
         END;
 
         ASSERT(error = 0);
 
-        e.type := tBOOLEAN;
+        e._type := tBOOLEAN;
 
         IF ~constant THEN
             e.obj := eEXPR
@@ -2574,7 +2578,7 @@ BEGIN
 
         IL.setlast(endcall.prev(IL.COMMAND));
 
-        PARS.check(assign(parser, e1, e.type, line), pos, 91);
+        PARS.check(assign(parser, e1, e._type, line), pos, 91);
         IF e1.obj = ePROC THEN
             PARS.check(e1.ident.global, pos, 85)
         END;
@@ -2584,7 +2588,7 @@ BEGIN
     ELSIF parser.sym = SCAN.lxLROUND THEN
         e1 := e;
         ActualParameters(parser, e1);
-        PARS.check((e1.type = NIL) OR ODD(e.type.call), pos, 92);
+        PARS.check((e1._type = NIL) OR ODD(e._type.call), pos, 92);
         call := TRUE
     ELSE
         IF e.obj IN {eSYSPROC, eSTPROC} THEN
@@ -2592,17 +2596,17 @@ BEGIN
             call := FALSE
         ELSE
             PARS.check(isProc(e), pos, 86);
-            PARS.check((e.type.base = NIL) OR ODD(e.type.call), pos, 92);
-            PARS.check1(e.type.params.first = NIL, parser, 64);
+            PARS.check((e._type.base = NIL) OR ODD(e._type.call), pos, 92);
+            PARS.check1(e._type.params.first = NIL, parser, 64);
             call := TRUE
         END
     END;
 
     IF call THEN
         IF e.obj IN {ePROC, eIMP} THEN
-            ProcCall(e, e.ident.type, FALSE, parser, pos, TRUE)
+            ProcCall(e, e.ident._type, FALSE, parser, pos, TRUE)
         ELSIF isExpr(e) THEN
-            ProcCall(e, e.type, FALSE, parser, pos, TRUE)
+            ProcCall(e, e._type, FALSE, parser, pos, TRUE)
         END
     END;
 
@@ -2610,7 +2614,7 @@ BEGIN
 END ElementaryStatement;
 
 
-PROCEDURE IfStatement (parser: PARS.PARSER; if: BOOLEAN);
+PROCEDURE IfStatement (parser: PARS.PARSER; _if: BOOLEAN);
 VAR
     e:   PARS.EXPR;
     pos: PARS.POSITION;
@@ -2620,7 +2624,7 @@ VAR
 BEGIN
     L := IL.NewLabel();
 
-    IF ~if THEN
+    IF ~_if THEN
         IL.AddCmd0(IL.opLOOP);
         IL.SetLabel(L)
     END;
@@ -2641,7 +2645,7 @@ BEGIN
             IL.AddJmpCmd(IL.opJNE, label)
         END;
 
-        IF if THEN
+        IF _if THEN
             PARS.checklex(parser, SCAN.lxTHEN)
         ELSE
             PARS.checklex(parser, SCAN.lxDO)
@@ -2650,14 +2654,14 @@ BEGIN
         PARS.Next(parser);
         parser.StatSeq(parser);
 
-        IF ~if OR (parser.sym # SCAN.lxEND) THEN
+        IF ~_if OR (parser.sym # SCAN.lxEND) THEN
             IL.AddJmpCmd(IL.opJMP, L)
         END;
         IL.SetLabel(label)
 
     UNTIL parser.sym # SCAN.lxELSIF;
 
-    IF if THEN
+    IF _if THEN
         IF parser.sym = SCAN.lxELSE THEN
             PARS.Next(parser);
             parser.StatSeq(parser)
@@ -2667,7 +2671,7 @@ BEGIN
 
     PARS.checklex(parser, SCAN.lxEND);
 
-    IF ~if THEN
+    IF ~_if THEN
         IL.AddCmd0(IL.opENDLOOP)
     END;
 
@@ -2759,7 +2763,7 @@ VAR
     pos: PARS.POSITION;
 
 
-    PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR type: PROG.TYPE_): INTEGER;
+    PROCEDURE Label (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR _type: PROG._TYPE): INTEGER;
     VAR
         a:     INTEGER;
         label: PARS.EXPR;
@@ -2768,7 +2772,7 @@ VAR
 
     BEGIN
         getpos(parser, pos);
-        type := NIL;
+        _type := NIL;
 
         IF isChar(caseExpr) THEN
             PARS.ConstExpression(parser, value);
@@ -2789,25 +2793,25 @@ VAR
         ELSIF isRecPtr(caseExpr) THEN
             qualident(parser, label);
             PARS.check(label.obj = eTYPE, pos, 79);
-            PARS.check(PROG.isBaseOf(caseExpr.type, label.type), pos, 99);
+            PARS.check(PROG.isBaseOf(caseExpr._type, label._type), pos, 99);
             IF isRec(caseExpr) THEN
-                a := label.type.num
+                a := label._type.num
             ELSE
-                a := label.type.base.num
+                a := label._type.base.num
             END;
-            type := label.type
+            _type := label._type
         END
 
         RETURN a
     END Label;
 
 
-    PROCEDURE CheckType (node: AVL.NODE; type: PROG.TYPE_; parser: PARS.PARSER; pos: PARS.POSITION);
+    PROCEDURE CheckType (node: AVL.NODE; _type: PROG._TYPE; parser: PARS.PARSER; pos: PARS.POSITION);
     BEGIN
         IF node # NIL THEN
-            PARS.check(~(PROG.isBaseOf(node.data(CASE_LABEL).type, type) OR PROG.isBaseOf(type, node.data(CASE_LABEL).type)), pos, 100);
-            CheckType(node.left, type, parser, pos);
-            CheckType(node.right, type, parser, pos)
+            PARS.check(~(PROG.isBaseOf(node.data(CASE_LABEL)._type, _type) OR PROG.isBaseOf(_type, node.data(CASE_LABEL)._type)), pos, 100);
+            CheckType(node.left, _type, parser, pos);
+            CheckType(node.right, _type, parser, pos)
         END
     END CheckType;
 
@@ -2833,12 +2837,12 @@ VAR
         label.self := IL.NewLabel();
 
         getpos(parser, pos1);
-        range.a := Label(parser, caseExpr, label.type);
+        range.a := Label(parser, caseExpr, label._type);
 
         IF parser.sym = SCAN.lxRANGE THEN
             PARS.check1(~isRecPtr(caseExpr), parser, 53);
             NextPos(parser, pos);
-            range.b := Label(parser, caseExpr, label.type);
+            range.b := Label(parser, caseExpr, label._type);
             PARS.check(range.a <= range.b, pos, 103)
         ELSE
             range.b := range.a
@@ -2847,7 +2851,7 @@ VAR
         label.range := range;
 
         IF isRecPtr(caseExpr) THEN
-            CheckType(tree, label.type, parser, pos1)
+            CheckType(tree, label._type, parser, pos1)
         END;
         tree := AVL.insert(tree, label, LabelCmp, newnode, node);
         PARS.check(newnode, pos1, 100)
@@ -2878,10 +2882,10 @@ VAR
     END CaseLabelList;
 
 
-    PROCEDURE case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; end: INTEGER);
+    PROCEDURE _case (parser: PARS.PARSER; caseExpr: PARS.EXPR; VAR tree: AVL.NODE; _end: INTEGER);
     VAR
         sym:     INTEGER;
-        t:       PROG.TYPE_;
+        t:       PROG._TYPE;
         variant: INTEGER;
         node:    AVL.NODE;
         last:    IL.COMMAND;
@@ -2894,8 +2898,8 @@ VAR
             PARS.checklex(parser, SCAN.lxCOLON);
             PARS.Next(parser);
             IF isRecPtr(caseExpr) THEN
-                t := caseExpr.type;
-                caseExpr.ident.type := node.data(CASE_LABEL).type
+                t := caseExpr._type;
+                caseExpr.ident._type := node.data(CASE_LABEL)._type
             END;
 
             last := IL.getlast();
@@ -2906,16 +2910,16 @@ VAR
             END;
 
             parser.StatSeq(parser);
-            IL.AddJmpCmd(IL.opJMP, end);
+            IL.AddJmpCmd(IL.opJMP, _end);
 
             IF isRecPtr(caseExpr) THEN
-                caseExpr.ident.type := t
+                caseExpr.ident._type := t
             END
         END
-    END case;
+    END _case;
 
 
-    PROCEDURE Table (node: AVL.NODE; else: INTEGER);
+    PROCEDURE Table (node: AVL.NODE; _else: INTEGER);
     VAR
         L, R: INTEGER;
         range: RANGE;
@@ -2932,14 +2936,14 @@ VAR
             IF left # NIL THEN
                 L := left.data(CASE_LABEL).self
             ELSE
-                L := else
+                L := _else
             END;
 
             right := node.right;
             IF right # NIL THEN
                 R := right.data(CASE_LABEL).self
             ELSE
-                R := else
+                R := _else
             END;
 
             last := IL.getlast();
@@ -2953,7 +2957,7 @@ VAR
             IL.setlast(v.cmd);
 
             IL.SetLabel(node.data(CASE_LABEL).self);
-            IL.case(range.a, range.b, L, R);
+            IL._case(range.a, range.b, L, R);
             IF v.processed THEN
                 IL.AddJmpCmd(IL.opJMP, node.data(CASE_LABEL).variant)
             END;
@@ -2961,8 +2965,8 @@ VAR
 
             IL.setlast(last);
 
-            Table(left, else);
-            Table(right, else)
+            Table(left, _else);
+            Table(right, _else)
         END
     END Table;
 
@@ -2979,31 +2983,31 @@ VAR
 
     PROCEDURE ParseCase (parser: PARS.PARSER; e: PARS.EXPR; pos: PARS.POSITION);
     VAR
-        table, end, else: INTEGER;
+        table, _end, _else: INTEGER;
         tree: AVL.NODE;
         item: LISTS.ITEM;
 
     BEGIN
         LISTS.push(CaseVariants, NewVariant(0, NIL));
-        end   := IL.NewLabel();
-        else  := IL.NewLabel();
+        _end  := IL.NewLabel();
+        _else := IL.NewLabel();
         table := IL.NewLabel();
         IL.AddCmd(IL.opSWITCH, ORD(isRecPtr(e)));
         IL.AddJmpCmd(IL.opJMP, table);
 
         tree := NIL;
 
-        case(parser, e, tree, end);
+        _case(parser, e, tree, _end);
         WHILE parser.sym = SCAN.lxBAR DO
             PARS.Next(parser);
-            case(parser, e, tree, end)
+            _case(parser, e, tree, _end)
         END;
 
-        IL.SetLabel(else);
+        IL.SetLabel(_else);
         IF parser.sym = SCAN.lxELSE THEN
             PARS.Next(parser);
             parser.StatSeq(parser);
-            IL.AddJmpCmd(IL.opJMP, end)
+            IL.AddJmpCmd(IL.opJMP, _end)
         ELSE
             IL.OnError(pos.line, errCASE)
         END;
@@ -3014,14 +3018,14 @@ VAR
         IF isRecPtr(e) THEN
             IL.SetLabel(table);
             TableT(tree);
-            IL.AddJmpCmd(IL.opJMP, else)
+            IL.AddJmpCmd(IL.opJMP, _else)
         ELSE
             tree.data(CASE_LABEL).self := table;
-            Table(tree, else)
+            Table(tree, _else)
         END;
 
         AVL.destroy(tree, DestroyLabel);
-        IL.SetLabel(end);
+        IL.SetLabel(_end);
         IL.AddCmd0(IL.opENDSW);
 
         REPEAT
@@ -3082,7 +3086,7 @@ BEGIN
     ident := PROG.getIdent(parser.unit, parser.lex.ident, TRUE);
     PARS.check1(ident # NIL, parser, 48);
     PARS.check1(ident.typ = PROG.idVAR, parser, 93);
-    PARS.check1(ident.type = tINTEGER, parser, 97);
+    PARS.check1(ident._type = tINTEGER, parser, 97);
     PARS.ExpectSym(parser, SCAN.lxASSIGN);
     NextPos(parser, pos);
     expression(parser, e);
@@ -3109,7 +3113,7 @@ BEGIN
     ELSE
         IL.AddCmd(IL.opLADR, -offset)
     END;
-    IL.load(ident.type.size);
+    IL.load(ident._type.size);
 
     PARS.checklex(parser, SCAN.lxTO);
     NextPos(parser, pos2);
@@ -3205,7 +3209,7 @@ BEGIN
 END StatSeq;
 
 
-PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG.TYPE_; pos: PARS.POSITION): BOOLEAN;
+PROCEDURE chkreturn (parser: PARS.PARSER; e: PARS.EXPR; t: PROG._TYPE; pos: PARS.POSITION): BOOLEAN;
 VAR
     res: BOOLEAN;
 
@@ -3213,20 +3217,20 @@ BEGIN
     res := assigncomp(e, t);
     IF res THEN
         IF e.obj = eCONST THEN
-            IF e.type = tREAL THEN
+            IF e._type = tREAL THEN
                 Float(parser, e)
-            ELSIF e.type.typ = PROG.tNIL THEN
+            ELSIF e._type.typ = PROG.tNIL THEN
                 IL.Const(0)
             ELSE
                 LoadConst(e)
             END
-        ELSIF (e.type = tINTEGER) & (t = tBYTE) & (chkBYTE IN Options.checking) THEN
+        ELSIF (e._type = tINTEGER) & (t = tBYTE) & (chkBYTE IN Options.checking) THEN
             CheckRange(256, pos.line, errBYTE)
         ELSIF e.obj = ePROC THEN
             PARS.check(e.ident.global, pos, 85);
             IL.PushProc(e.ident.proc.label)
         ELSIF e.obj = eIMP THEN
-            IL.PushImpProc(e.ident.import)
+            IL.PushImpProc(e.ident._import)
         END
     END
 
@@ -3246,8 +3250,8 @@ VAR
     BEGIN
         id := PROG.getIdent(rtl, SCAN.enterid(name), FALSE);
 
-        IF (id # NIL) & (id.import # NIL) THEN
-            IL.set_rtl(idx, -id.import(IL.IMPORT_PROC).label);
+        IF (id # NIL) & (id._import # NIL) THEN
+            IL.set_rtl(idx, -id._import(IL.IMPORT_PROC).label);
             id.proc.used := TRUE
         ELSIF (id # NIL) & (id.proc # NIL) THEN
             IL.set_rtl(idx, id.proc.label);

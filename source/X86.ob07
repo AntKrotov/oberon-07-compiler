@@ -2283,7 +2283,7 @@ VAR
     dcount, i: INTEGER;
 
 
-    PROCEDURE import (imp: LISTS.LIST);
+    PROCEDURE _import (imp: LISTS.LIST);
     VAR
         lib:  IL.IMPORT_LIB;
         proc: IL.IMPORT_PROC;
@@ -2301,7 +2301,7 @@ VAR
             lib := lib.next(IL.IMPORT_LIB)
         END
 
-    END import;
+    END _import;
 
 
 BEGIN
@@ -2353,7 +2353,7 @@ BEGIN
         exp := exp.next(IL.EXPORT_PROC)
     END;
 
-    import(IL.codes.import);
+    _import(IL.codes._import);
 
     IL.set_bss(MAX(IL.codes.bss, MAX(IL.codes.dmin - CHL.Length(IL.codes.data), 4)));
 

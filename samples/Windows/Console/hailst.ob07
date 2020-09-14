@@ -33,7 +33,7 @@ BEGIN
 END HALT;
 
 
-PROCEDURE HailStone(start, type: INTEGER): INTEGER;
+PROCEDURE HailStone(start, _type: INTEGER): INTEGER;
 VAR
     n, max, count, res: INTEGER;
     exit: BOOLEAN;
@@ -44,7 +44,7 @@ BEGIN
     max := n;
     exit := FALSE;
     WHILE exit # TRUE DO
-        IF type = List THEN
+        IF _type = List THEN
             Out.Int (n, 12);
             IF count MOD 6 = 0 THEN Out.Ln END
         END;
@@ -72,7 +72,7 @@ BEGIN
             exit := TRUE
         END
     END;
-    IF type = Max THEN res := max ELSE res := count END
+    IF _type = Max THEN res := max ELSE res := count END
 
     RETURN res
 END HailStone;

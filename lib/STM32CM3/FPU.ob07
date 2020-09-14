@@ -329,7 +329,7 @@ BEGIN
 END mul;
 
 
-PROCEDURE div* (b, a: INTEGER): INTEGER;
+PROCEDURE _div* (b, a: INTEGER): INTEGER;
 VAR
     r: INTEGER;
 
@@ -361,7 +361,7 @@ BEGIN
     END
 
     RETURN r
-END div;
+END _div;
 
 
 PROCEDURE cmp* (op, b, a: INTEGER): BOOLEAN;

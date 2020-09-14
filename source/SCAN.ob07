@@ -88,7 +88,7 @@ VAR
 
     NewIdent: IDENT;
 
-    upto: BOOLEAN;
+    upto, LowerCase: BOOLEAN;
 
 
 PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
@@ -536,7 +536,7 @@ BEGIN
 END close;
 
 
-PROCEDURE init;
+PROCEDURE init* (lower: BOOLEAN);
 VAR
     i: INTEGER;
     delim: ARRAY 23 OF CHAR;
@@ -545,15 +545,23 @@ VAR
     PROCEDURE enterkw (key: INTEGER; kw: LEXSTR);
     VAR
         id: IDENT;
+        upper: LEXSTR;
 
     BEGIN
-        id := enterid(kw);
+        IF LowerCase THEN
+            id := enterid(kw);
+            id.key := key
+        END;
+        upper := kw;
+        S.UpCase(upper);
+        id := enterid(upper);
         id.key := key
     END enterkw;
 
 
 BEGIN
     upto := FALSE;
+    LowerCase := lower;
 
     FOR i := 0 TO 255 DO
         delimiters[i] := FALSE
@@ -573,43 +581,41 @@ BEGIN
 
     idents := NIL;
 
-    enterkw(lxARRAY, "ARRAY");
-    enterkw(lxBEGIN, "BEGIN");
-    enterkw(lxBY, "BY");
-    enterkw(lxCASE, "CASE");
-    enterkw(lxCONST, "CONST");
-    enterkw(lxDIV, "DIV");
-    enterkw(lxDO, "DO");
-    enterkw(lxELSE, "ELSE");
-    enterkw(lxELSIF, "ELSIF");
-    enterkw(lxEND, "END");
-    enterkw(lxFALSE, "FALSE");
-    enterkw(lxFOR, "FOR");
-    enterkw(lxIF, "IF");
-    enterkw(lxIMPORT, "IMPORT");
-    enterkw(lxIN, "IN");
-    enterkw(lxIS, "IS");
-    enterkw(lxMOD, "MOD");
-    enterkw(lxMODULE, "MODULE");
-    enterkw(lxNIL, "NIL");
-    enterkw(lxOF, "OF");
-    enterkw(lxOR, "OR");
-    enterkw(lxPOINTER, "POINTER");
-    enterkw(lxPROCEDURE, "PROCEDURE");
-    enterkw(lxRECORD, "RECORD");
-    enterkw(lxREPEAT, "REPEAT");
-    enterkw(lxRETURN, "RETURN");
-    enterkw(lxTHEN, "THEN");
-    enterkw(lxTO, "TO");
-    enterkw(lxTRUE, "TRUE");
-    enterkw(lxTYPE, "TYPE");
-    enterkw(lxUNTIL, "UNTIL");
-    enterkw(lxVAR, "VAR");
-    enterkw(lxWHILE, "WHILE")
+    enterkw(lxARRAY, "array");
+    enterkw(lxBEGIN, "begin");
+    enterkw(lxBY, "by");
+    enterkw(lxCASE, "case");
+    enterkw(lxCONST, "const");
+    enterkw(lxDIV, "div");
+    enterkw(lxDO, "do");
+    enterkw(lxELSE, "else");
+    enterkw(lxELSIF, "elsif");
+    enterkw(lxEND, "end");
+    enterkw(lxFALSE, "false");
+    enterkw(lxFOR, "for");
+    enterkw(lxIF, "if");
+    enterkw(lxIMPORT, "import");
+    enterkw(lxIN, "in");
+    enterkw(lxIS, "is");
+    enterkw(lxMOD, "mod");
+    enterkw(lxMODULE, "module");
+    enterkw(lxNIL, "nil");
+    enterkw(lxOF, "of");
+    enterkw(lxOR, "or");
+    enterkw(lxPOINTER, "pointer");
+    enterkw(lxPROCEDURE, "procedure");
+    enterkw(lxRECORD, "record");
+    enterkw(lxREPEAT, "repeat");
+    enterkw(lxRETURN, "return");
+    enterkw(lxTHEN, "then");
+    enterkw(lxTO, "to");
+    enterkw(lxTRUE, "true");
+    enterkw(lxTYPE, "type");
+    enterkw(lxUNTIL, "until");
+    enterkw(lxVAR, "var");
+    enterkw(lxWHILE, "while")
 
 END init;
 
 
-BEGIN
-    init
 END SCAN.

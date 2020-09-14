@@ -194,7 +194,7 @@ TYPE
         endcall:    CMDSTACK;
         commands*:  LISTS.LIST;
         export*:    LISTS.LIST;
-        import*:    LISTS.LIST;
+        _import*:   LISTS.LIST;
         types*:     CHL.INTLIST;
         data*:      CHL.BYTELIST;
         dmin*:      INTEGER;
@@ -411,19 +411,19 @@ BEGIN
 END pop;
 
 
-PROCEDURE pushBegEnd* (VAR beg, end: COMMAND);
+PROCEDURE pushBegEnd* (VAR beg, _end: COMMAND);
 BEGIN
     push(codes.begcall, beg);
-    push(codes.endcall, end);
+    push(codes.endcall, _end);
     beg := codes.last;
-    end := beg.next(COMMAND)
+    _end := beg.next(COMMAND)
 END pushBegEnd;
 
 
-PROCEDURE popBegEnd* (VAR beg, end: COMMAND);
+PROCEDURE popBegEnd* (VAR beg, _end: COMMAND);
 BEGIN
     beg := pop(codes.begcall);
-    end := pop(codes.endcall)
+    _end := pop(codes.endcall)
 END popBegEnd;
 
 
@@ -981,7 +981,7 @@ BEGIN
 END drop;
 
 
-PROCEDURE case* (a, b, L, R: INTEGER);
+PROCEDURE _case* (a, b, L, R: INTEGER);
 VAR
     cmd: COMMAND;
 
@@ -997,7 +997,7 @@ BEGIN
         AddCmd2(opCASEL, a, L);
         AddCmd2(opCASER, b, R)
     END
-END case;
+END _case;
 
 
 PROCEDURE fname* (name: PATHS.PATH);
@@ -1030,7 +1030,7 @@ VAR
     p:   IMPORT_PROC;
 
 BEGIN
-    lib := codes.import.first(IMPORT_LIB);
+    lib := codes._import.first(IMPORT_LIB);
     WHILE (lib # NIL) & (lib.name # dll) DO
         lib := lib.next(IMPORT_LIB)
     END;
@@ -1039,7 +1039,7 @@ BEGIN
         NEW(lib);
         lib.name := dll;
         lib.procs := LISTS.create(NIL);
-        LISTS.push(codes.import, lib)
+        LISTS.push(codes._import, lib)
     END;
 
     p := lib.procs.first(IMPORT_PROC);
@@ -1072,7 +1072,7 @@ BEGIN
         lib := imp(IMPORT_PROC).lib;
         LISTS.delete(lib.procs, imp);
         IF lib.procs.first = NIL THEN
-            LISTS.delete(codes.import, lib)
+            LISTS.delete(codes._import, lib)
         END
     END
 END DelImport;
@@ -1095,7 +1095,7 @@ BEGIN
     codes.endcall.top := -1;
     codes.commands := LISTS.create(NIL);
     codes.export   := LISTS.create(NIL);
-    codes.import   := LISTS.create(NIL);
+    codes._import  := LISTS.create(NIL);
     codes.types    := CHL.CreateIntList();
     codes.data     := CHL.CreateByteList();
 

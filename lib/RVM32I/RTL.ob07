@@ -25,13 +25,9 @@ VAR
     Heap, Types, TypesCount: INTEGER;
 
 
-PROCEDURE [code] sp (): INTEGER
-    22, 0, 4;  (*  MOV R0, SP  *)
-
-
-PROCEDURE _error* (modnum, module, err, line: INTEGER);
+PROCEDURE _error* (modnum, _module, err, line: INTEGER);
 BEGIN
-    Trap.trap(modnum, module, err, line)
+    Trap.trap(modnum, _module, err, line)
 END _error;
 
 
@@ -41,12 +37,12 @@ END _fmul;
 
 
 PROCEDURE _fdiv* (b, a: INTEGER): INTEGER;
-    RETURN F.div(b, a)
+    RETURN F._div(b, a)
 END _fdiv;
 
 
 PROCEDURE _fdivi* (b, a: INTEGER): INTEGER;
-    RETURN F.div(a, b)
+    RETURN F._div(a, b)
 END _fdivi;
 
 
@@ -323,7 +319,7 @@ END _strcpy;
 
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
 BEGIN
-    IF Heap + size < sp() - 64 THEN
+    IF Heap + size < Trap.sp() - 64 THEN
         p := Heap + WORD;
         REPEAT
             SYSTEM.PUT(Heap, t);
@@ -339,37 +335,37 @@ END _new;
 
 PROCEDURE _guard* (t, p: INTEGER): BOOLEAN;
 VAR
-    type: INTEGER;
+    _type: INTEGER;
 
 BEGIN
     SYSTEM.GET(p, p);
     IF p # 0 THEN
-        SYSTEM.GET(p - WORD, type);
-        WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * WORD, type)
+        SYSTEM.GET(p - WORD, _type);
+        WHILE (_type # t) & (_type # 0) DO
+            SYSTEM.GET(Types + _type * WORD, _type)
         END
     ELSE
-        type := t
+        _type := t
     END
 
-    RETURN type = t
+    RETURN _type = t
 END _guard;
 
 
 PROCEDURE _is* (t, p: INTEGER): BOOLEAN;
 VAR
-    type: INTEGER;
+    _type: INTEGER;
 
 BEGIN
-    type := 0;
+    _type := 0;
     IF p # 0 THEN
-        SYSTEM.GET(p - WORD, type);
-        WHILE (type # t) & (type # 0) DO
-            SYSTEM.GET(Types + type * WORD, type)
+        SYSTEM.GET(p - WORD, _type);
+        WHILE (_type # t) & (_type # 0) DO
+            SYSTEM.GET(Types + _type * WORD, _type)
         END
     END
 
-    RETURN type = t
+    RETURN _type = t
 END _is;
 
 

@@ -10,6 +10,10 @@ MODULE Trap;
 IMPORT SYSTEM;
 
 
+PROCEDURE [code] sp* (): INTEGER
+    22, 0, 4;  (*  MOV R0, SP  *)
+
+
 PROCEDURE [code] syscall* (ptr: INTEGER)
     22, 0, 4,  (*  MOV      R0, SP  *)
     27, 0, 4,  (*  ADD      R0,  4  *)
@@ -93,7 +97,7 @@ BEGIN
 END Int;
 
 
-PROCEDURE trap* (modnum, module, err, line: INTEGER);
+PROCEDURE trap* (modnum, _module, err, line: INTEGER);
 VAR
     s: ARRAY 32 OF CHAR;
 
@@ -114,7 +118,7 @@ BEGIN
 
     Ln;
     String("error ("); Int(err); String("): "); String(s); Ln;
-    String("module: "); PString(module); Ln;
+    String("module: "); PString(_module); Ln;
     String("line: "); Int(line); Ln;
 
     SYSTEM.CODE(0, 0, 0)  (*  STOP  *)

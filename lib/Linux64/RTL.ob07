@@ -385,7 +385,7 @@ BEGIN
 END append;
 
 
-PROCEDURE [stdcall64] _error* (modnum, module, err, line: INTEGER);
+PROCEDURE [stdcall64] _error* (modnum, _module, err, line: INTEGER);
 VAR
     s, temp: ARRAY 1024 OF CHAR;
 
@@ -404,7 +404,7 @@ BEGIN
     |11: s := "BYTE out of range"
     END;
 
-    append(s, API.eol + "module: "); PCharToStr(module, temp); append(s, temp);
+    append(s, API.eol + "module: "); PCharToStr(_module, temp); append(s, temp);
     append(s, API.eol + "line: ");   IntToStr(line, temp);     append(s, temp);
 
     API.DebugMsg(SYSTEM.ADR(s[0]), name);

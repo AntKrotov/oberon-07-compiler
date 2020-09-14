@@ -194,10 +194,10 @@ BEGIN
 END and;
 
 
-PROCEDURE or (reg1, reg2: INTEGER); (* or reg1, reg2 *)
+PROCEDURE _or (reg1, reg2: INTEGER); (* or reg1, reg2 *)
 BEGIN
     oprr(09H, reg1, reg2)
-END or;
+END _or;
 
 
 PROCEDURE add (reg1, reg2: INTEGER); (* add reg1, reg2 *)
@@ -418,7 +418,7 @@ END andrc;
 
 PROCEDURE orrc (reg, n: INTEGER); (* or reg, n *)
 BEGIN
-    oprc(0C8H, reg, n, or)
+    oprc(0C8H, reg, n, _or)
 END orrc;
 
 
@@ -1845,7 +1845,7 @@ BEGIN
 
         |IL.opADDS:
             BinOp(reg1, reg2);
-            or(reg1, reg2);
+            _or(reg1, reg2);
             drop
 
         |IL.opSUBS:
@@ -2191,7 +2191,7 @@ BEGIN
             and(reg2, reg1);
             pop(reg1);
 
-            or(reg2, reg1);
+            _or(reg2, reg1);
             pop(reg1);
             movmr(reg1, 0, reg2);
             drop;
@@ -2234,7 +2234,7 @@ BEGIN
             push(reg2);
             lea(reg2, Numbers_Offs + 48, sDATA); (* {52..61} *)
             movrm(reg2, reg2, 0);
-            or(reg1, reg2);
+            _or(reg1, reg2);
             pop(reg2);
 
             Rex(reg1, 0);
@@ -2538,7 +2538,7 @@ VAR
     exp: IL.EXPORT_PROC;
 
 
-    PROCEDURE import (imp: LISTS.LIST);
+    PROCEDURE _import (imp: LISTS.LIST);
     VAR
         lib:  IL.IMPORT_LIB;
         proc: IL.IMPORT_PROC;
@@ -2556,7 +2556,7 @@ VAR
             lib := lib.next(IL.IMPORT_LIB)
         END
 
-    END import;
+    END _import;
 
 
 BEGIN
@@ -2609,7 +2609,7 @@ BEGIN
         exp := exp.next(IL.EXPORT_PROC)
     END;
 
-    import(IL.codes.import)
+    _import(IL.codes._import)
 END epilog;
 
 

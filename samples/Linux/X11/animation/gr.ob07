@@ -22,7 +22,7 @@ CONST
         EventButtonPressed* = 84;    (* button, x, y, state *)
         EventButtonReleased* = 85;    (* button, x, y, state *)
         (* mouse button 1-5 = Left, Middle, Right, Scroll wheel up, Scroll wheel down *)
-        
+
         bit64 = ORD(unix.BIT_DEPTH = 64);
 
 TYPE EventPars* = ARRAY 5 OF INTEGER;
@@ -145,7 +145,7 @@ END readInt;
 
 
 PROCEDURE nextEvent* (msTimeOut :INTEGER; VAR ev :EventPars);
-VAR type, n, ri :INTEGER;
+VAR _type, n, ri :INTEGER;
         event :XEvent;
         x, y, w, h :INTEGER;
         timeout :unix.timespec;
@@ -162,14 +162,14 @@ expose:   20 any   4 x, y, w, h, count
 xconfigure:   24 any   4 x, y, w, h
 xkey / xbutton / xmotion:   24 any   4 sub_window   4 time_ms   4 x, y, x_root, y_root   4 state   4 keycode/button
 *)
-        type := 0;
-        WHILE type = 0 DO
+        _type := 0;
+        WHILE _type = 0 DO
                 IF (msTimeOut > 0) & (XPending(display) = 0) THEN
                         timeout.tv_sec := msTimeOut DIV 1000; timeout.tv_usec := (msTimeOut MOD 1000) * 1000;
                         ri := unix.select (connectionNr + 1, readX11, NIL, NIL, timeout); ASSERT (ri # -1);
-                        IF ri = 0 THEN type := EventTimeOut; ev[1] := 0; ev[2] := 0; ev[3] := 0; ev[4] := 0 END;
+                        IF ri = 0 THEN _type := EventTimeOut; ev[1] := 0; ev[2] := 0; ev[3] := 0; ev[4] := 0 END;
                 END;
-                IF type = 0 THEN
+                IF _type = 0 THEN
                         XNextEvent (display, SYSTEM.ADR(event));
                         CASE readInt (event, 0) OF
                         Expose :
@@ -181,19 +181,19 @@ xkey / xbutton / xmotion:   24 any   4 sub_window   4 time_ms   4 x, y, x_root, 
                                 IF (w # winWidth) & (h # winHeight) THEN
                                         ASSERT ((w >= 0) & (h >= 0));
                                         IF w > ScreenWidth THEN w := ScreenWidth END;
-                                        IF h > ScreenHeight THEN h := ScreenHeight END;                                        
+                                        IF h > ScreenHeight THEN h := ScreenHeight END;
                                         winWidth := w; winHeight := h;
                                         ev[0] := EventResize; ev[1] := 0; ev[2] := w; ev[3] := h; ev[4] := 0;
                                 END;
                         | KeyPress :
-                                type := EventKeyPressed;
+                                _type := EventKeyPressed;
                                 x := XLookupString (SYSTEM.ADR(event), 0, 0, SYSTEM.ADR(n), 0);  (* KeySym *)
                                 IF (n = 8) OR (n = 10) OR (n >= 32) & (n <= 126) THEN ev[1] := 1 ELSE ev[1] := 0; n := 0 END;  (* isprint *)
                                 ev[2] := readInt (event, 13 + 8 * bit64); (* keycode *)
                                 ev[3] := readInt (event, 12 + 8 * bit64); (* state *)
                                 ev[4] := n;  (* KeySym *)
                         | ButtonPress :
-                                type := EventButtonPressed;
+                                _type := EventButtonPressed;
                                 ev[1] := readInt (event, 13 + 8 * bit64); (* button *)
                                 ev[2] := readInt (event, 8 + 8 * bit64);  (* x *)
                                 ev[3] := readInt (event, 9 + 8 * bit64);  (* y *)
@@ -202,7 +202,7 @@ xkey / xbutton / xmotion:   24 any   4 sub_window   4 time_ms   4 x, y, x_root, 
                         END
                 END
         END;
-        ev[0] := type
+        ev[0] := _type
 END nextEvent;
 
 
