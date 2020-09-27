@@ -7,7 +7,7 @@
 
 MODULE File;
 
-IMPORT SYSTEM, WINAPI;
+IMPORT SYSTEM, WINAPI, API;
 
 
 CONST
@@ -102,11 +102,10 @@ BEGIN
     IF F # -1 THEN
         Size := Seek(F, 0, SEEK_END);
         n    := Seek(F, 0, SEEK_BEG);
-        res  := WINAPI.GlobalAlloc(64, Size);
+        res  := API._NEW(Size);
         IF (res = 0) OR (Read(F, res, Size) # Size) THEN
             IF res # 0 THEN
-                WINAPI.GlobalFree(Size);
-                res := 0;
+                res := API._DISPOSE(res);
                 Size := 0
             END
         END;

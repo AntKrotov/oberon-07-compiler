@@ -153,19 +153,18 @@ VAR
 
     msdos:           ARRAY 128 OF BYTE;
     SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
-    Relocations:     LISTS.LIST;
     libcnt:          INTEGER;
     SizeOfWord:      INTEGER;
 
 
-PROCEDURE Export (program: BIN.PROGRAM; DataRVA: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
+PROCEDURE Export (program: BIN.PROGRAM; name: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
 BEGIN
 
     ExportDir.Characteristics        :=  0;
     ExportDir.TimeDateStamp          :=  FileHeader.TimeDateStamp;
     ExportDir.MajorVersion           :=  0X;
     ExportDir.MinorVersion           :=  0X;
-    ExportDir.Name                   :=  program.modname + DataRVA;
+    ExportDir.Name                   :=  name;
     ExportDir.Base                   :=  0;
     ExportDir.NumberOfFunctions      :=  LISTS.count(program.exp_list);
     ExportDir.NumberOfNames          :=  ExportDir.NumberOfFunctions;
@@ -452,9 +451,11 @@ VAR
     END WriteOptHeader;
 
 
-    PROCEDURE InitSection (VAR section: IMAGE_SECTION_HEADER; Name: NAME; Characteristics: DWORD);
+    PROCEDURE InitSection (VAR section: IMAGE_SECTION_HEADER; Name: NAME; VirtualSize: INTEGER; Characteristics: DWORD);
     BEGIN
         section.Name                  :=  Name;
+        section.VirtualSize           :=  VirtualSize;
+        section.SizeOfRawData         :=  WR.align(VirtualSize, FileAlignment);
         section.PointerToRelocations  :=  0;
         section.PointerToLinenumbers  :=  0;
         section.NumberOfRelocations   :=  0X;
@@ -465,7 +466,6 @@ VAR
 
 BEGIN
     SizeOfWord := SIZE_OF_DWORD * (ORD(amd64) + 1);
-    Relocations := LISTS.create(NIL);
 
     Size.Code  := CHL.Length(program.code);
     Size.Data  := CHL.Length(program.data);
@@ -527,30 +527,28 @@ BEGIN
     OptionalHeader.LoaderFlags                  :=  0;
     OptionalHeader.NumberOfRvaAndSizes          :=  IMAGE_NUMBEROF_DIRECTORY_ENTRIES;
 
-    InitSection(SectionHeaders[0], ".text", SHC_text);
-    SectionHeaders[0].VirtualSize      := Size.Code;
+    FOR i := 0 TO IMAGE_NUMBEROF_DIRECTORY_ENTRIES - 1 DO
+        OptionalHeader.DataDirectory[i].VirtualAddress := 0;
+        OptionalHeader.DataDirectory[i].Size := 0
+    END;
+
+    InitSection(SectionHeaders[0], ".text", Size.Code, SHC_text);
     SectionHeaders[0].VirtualAddress   := SectionAlignment;
-    SectionHeaders[0].SizeOfRawData    := WR.align(Size.Code, FileAlignment);
     SectionHeaders[0].PointerToRawData := OptionalHeader.SizeOfHeaders;
 
-    InitSection(SectionHeaders[1], ".data", SHC_data);
-    SectionHeaders[1].VirtualSize      := Size.Data;
+    InitSection(SectionHeaders[1], ".data", Size.Data, SHC_data);
     SectionHeaders[1].VirtualAddress   := WR.align(SectionHeaders[0].VirtualAddress + SectionHeaders[0].VirtualSize, SectionAlignment);
-    SectionHeaders[1].SizeOfRawData    := WR.align(Size.Data, FileAlignment);
     SectionHeaders[1].PointerToRawData := SectionHeaders[0].PointerToRawData + SectionHeaders[0].SizeOfRawData;
 
-    InitSection(SectionHeaders[2], ".bss", SHC_bss);
-    SectionHeaders[2].VirtualSize      := Size.Bss;
+    InitSection(SectionHeaders[2], ".bss", Size.Bss, SHC_bss);
     SectionHeaders[2].VirtualAddress   := WR.align(SectionHeaders[1].VirtualAddress + SectionHeaders[1].VirtualSize, SectionAlignment);
-    SectionHeaders[2].SizeOfRawData    := 0;
     SectionHeaders[2].PointerToRawData := SectionHeaders[1].PointerToRawData + SectionHeaders[1].SizeOfRawData;
+    SectionHeaders[2].SizeOfRawData    := 0;
 
     Size.Import := GetImportSize(program.imp_list);
 
-    InitSection(SectionHeaders[3], ".idata", SHC_data);
-    SectionHeaders[3].VirtualSize      := Size.Import + CHL.Length(program._import);
+    InitSection(SectionHeaders[3], ".idata", Size.Import + CHL.Length(program._import), SHC_data);
     SectionHeaders[3].VirtualAddress   := WR.align(SectionHeaders[2].VirtualAddress + SectionHeaders[2].VirtualSize, SectionAlignment);
-    SectionHeaders[3].SizeOfRawData    := WR.align(SectionHeaders[3].VirtualSize, FileAlignment);
     SectionHeaders[3].PointerToRawData := SectionHeaders[2].PointerToRawData + SectionHeaders[2].SizeOfRawData;
 
     Address.Code   := SectionHeaders[0].VirtualAddress + OptionalHeader.ImageBase;
@@ -561,21 +559,12 @@ BEGIN
     fixup(program, Address, amd64);
 
     IF dll THEN
-        Size.Export := Export(program, SectionHeaders[1].VirtualAddress, ExportDir);
+        Size.Export := Export(program, SectionHeaders[1].VirtualAddress + program.modname, ExportDir);
 
-        InitSection(SectionHeaders[4], ".edata", SHC_data);
-        SectionHeaders[4].VirtualSize      := Size.Export + CHL.Length(program.export);
+        InitSection(SectionHeaders[4], ".edata", Size.Export + CHL.Length(program.export), SHC_data);
         SectionHeaders[4].VirtualAddress   := WR.align(SectionHeaders[3].VirtualAddress + SectionHeaders[3].VirtualSize, SectionAlignment);
-        SectionHeaders[4].SizeOfRawData    := WR.align(SectionHeaders[4].VirtualSize, FileAlignment);
         SectionHeaders[4].PointerToRawData := SectionHeaders[3].PointerToRawData + SectionHeaders[3].SizeOfRawData;
-    END;
 
-    FOR i := 0 TO IMAGE_NUMBEROF_DIRECTORY_ENTRIES - 1 DO
-        OptionalHeader.DataDirectory[i].VirtualAddress := 0;
-        OptionalHeader.DataDirectory[i].Size := 0
-    END;
-
-    IF dll THEN
         OptionalHeader.DataDirectory[0].VirtualAddress := SectionHeaders[4].VirtualAddress;
         OptionalHeader.DataDirectory[0].Size := SectionHeaders[4].VirtualSize
     END;
@@ -583,12 +572,9 @@ BEGIN
     OptionalHeader.DataDirectory[1].VirtualAddress := SectionHeaders[3].VirtualAddress;
     OptionalHeader.DataDirectory[1].Size := SectionHeaders[3].VirtualSize;
 
-    FOR i := 0 TO ORD(FileHeader.NumberOfSections) - 1 DO
+    FOR i := 1 TO ORD(FileHeader.NumberOfSections) - 1 DO
         INC(OptionalHeader.SizeOfInitializedData, SectionHeaders[i].SizeOfRawData)
     END;
-
-    DEC(OptionalHeader.SizeOfInitializedData, SectionHeaders[0].SizeOfRawData);
-    DEC(OptionalHeader.SizeOfInitializedData, SectionHeaders[2].SizeOfRawData);
 
     OptionalHeader.SizeOfUninitializedData := WR.align(SectionHeaders[2].VirtualSize, FileAlignment);
 
@@ -638,7 +624,7 @@ BEGIN
             CHL.SetInt(ImportTable, i + 2, 0);
             CHL.SetInt(ImportTable, i + 3, _import.nameoffs + Size.Import + SectionHeaders[3].VirtualAddress);
             CHL.SetInt(ImportTable, i + 4, _import.FirstThunk * SizeOfWord + SectionHeaders[3].VirtualAddress + n * SIZE_OF_DWORD);
-            i := i + 5
+            INC(i, 5)
         END;
         _import := _import.next(BIN.IMPRT)
     END;

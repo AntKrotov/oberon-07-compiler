@@ -31,14 +31,14 @@ CONST
 
     opVLOAD32* = 60; opGLOAD32* = 61;
 
-    opJNE* = 62; opJE* = 63;
+    opJZ* = 62; opJNZ* = 63;
 
     opSAVE32* = 64; opLLOAD8* = 65;
 
     opCONSTF* = 66; opLOADF* = 67; opSAVEF* = 68; opMULF* = 69; opDIVF* = 70; opDIVFI* = 71;
     opUMINF* = 72; opSAVEFI* = 73; opSUBFI* = 74; opADDF* = 75; opSUBF* = 76;
 
-    opACC* = 77; opJG* = 78;
+    opJNZ1* = 77; opJG* = 78;
     opINCCB* = 79; opDECCB* = 80; opINCB* = 81; opDECB* = 82;
 
     opCASEL* = 83; opCASER* = 84; opCASELR* = 85;
@@ -70,16 +70,16 @@ CONST
 
     opCHR* = 180; opENDSW* = 181; opLEAVEF* = 182; opCLEANUP* = 183; opMOVE* = 184;
     opLSR* = 185; opLSR1* = 186; opLSR2* = 187;
-    opMIN* = 188; opMINC* = 189; opMAX* = 190; opMAXC* = 191; opJNZ* = 192;
-    opEQB* = 193; opNEB* = 194; opINF* = 195; opJZ* = 196; opVLOAD8* = 197; opGLOAD8* = 198;
+    opMIN* = 188; opMINC* = 189; opMAX* = 190; opMAXC* = 191; opSYSVALIGN16* = 192;
+    opEQB* = 193; opNEB* = 194; opINF* = 195; opWIN64ALIGN16* = 196; opVLOAD8* = 197; opGLOAD8* = 198;
     opLLOAD16* = 199; opVLOAD16* = 200; opGLOAD16* = 201;
     opLOAD64* = 202; opLLOAD64* = 203; opVLOAD64* = 204; opGLOAD64* = 205; opSAVE64* = 206;
 
     opTYPEGD* = 207; opCALLI* = 208; opPUSHIP* = 209; opSAVEIP* = 210; opEQIP* = 211; opNEIP* = 212;
     opSAVE16C* = 213; opWCHR* = 214; opHANDLER* = 215;
 
-    opSYSVCALL* = 216; opSYSVCALLI* = 217; opSYSVCALLP* = 218; opSYSVALIGN16* = 219; opWIN64ALIGN16* = 220;
-    opFNAME* = 221;
+    opSYSVCALL* = 216; opSYSVCALLI* = 217; opSYSVCALLP* = 218; opFNAME* = 219;
+    opAND* = 220; opOR* = 221;
 
 
     opSADR_PARAM* = -1; opLOAD64_PARAM* = -2; opLLOAD64_PARAM* = -3; opGLOAD64_PARAM* = -4;
@@ -635,10 +635,10 @@ BEGIN
     prev := codes.last;
     not := prev.opcode = opNOT;
     IF not THEN
-        IF opcode = opJE THEN
-            opcode := opJNE
-        ELSIF opcode = opJNE THEN
-            opcode := opJE
+        IF opcode = opJNZ THEN
+            opcode := opJZ
+        ELSIF opcode = opJZ THEN
+            opcode := opJNZ
         ELSE
             not := FALSE
         END
@@ -649,8 +649,77 @@ BEGIN
     IF not THEN
         delete(prev)
     END
-
 END AddJmpCmd;
+
+
+PROCEDURE AndOrOpt* (VAR label: INTEGER);
+VAR
+    cur, prev: COMMAND;
+    i, op, l: INTEGER;
+    jz, not: BOOLEAN;
+
+BEGIN
+    cur := codes.last;
+    not := cur.opcode = opNOT;
+    IF not THEN
+        cur := cur.prev(COMMAND)
+    END;
+
+    IF cur.opcode = opAND THEN
+        op := opAND
+    ELSIF cur.opcode = opOR THEN
+        op := opOR
+    ELSE
+        op := -1
+    END;
+
+    cur := codes.last;
+
+    IF op # -1 THEN
+        IF not THEN
+            IF op = opAND THEN
+                op := opOR
+            ELSE (* op = opOR *)
+                op := opAND
+            END;
+            prev := cur.prev(COMMAND);
+            delete(cur);
+            cur := prev
+        END;
+
+        FOR i := 1 TO 9 DO
+            IF i = 8 THEN
+                l := cur.param1
+            ELSIF i = 9 THEN
+                jz := cur.opcode = opJZ
+            END;
+            prev := cur.prev(COMMAND);
+            delete(cur);
+            cur := prev
+        END;
+
+        setlast(cur);
+
+        IF op = opAND THEN
+            label := l;
+            jz := ~jz
+        END;
+
+        IF jz THEN
+            AddJmpCmd(opJZ, label)
+        ELSE
+            AddJmpCmd(opJNZ, label)
+        END;
+
+        IF op = opOR THEN
+            SetLabel(l)
+        END
+    ELSE
+        AddJmpCmd(opJZ, label)
+    END;
+
+    setlast(codes.last)
+END AndOrOpt;
 
 
 PROCEDURE OnError* (line, error: INTEGER);
@@ -665,7 +734,7 @@ VAR
 BEGIN
     AddCmd(op, t);
     label := NewLabel();
-    AddJmpCmd(opJE, label);
+    AddJmpCmd(opJNZ, label);
     OnError(line, error);
     SetLabel(label)
 END TypeGuard;
@@ -701,6 +770,14 @@ BEGIN
         AddCmd0(opNOT)
     END
 END not;
+
+
+PROCEDURE _ord*;
+BEGIN
+    IF (codes.last.opcode # opAND) & (codes.last.opcode # opOR) THEN
+        AddCmd0(opORD)
+    END
+END _ord;
 
 
 PROCEDURE Enter* (label, params: INTEGER): COMMAND;

@@ -1177,7 +1177,7 @@ BEGIN
         |IL.opERR:
             call(genTrap)
 
-        |IL.opNOP:
+        |IL.opNOP, IL.opAND, IL.opOR:
 
         |IL.opSADR:
             reloc(GetAnyReg(), BIN.RDATA + pic, stroffs + param2)
@@ -1348,37 +1348,25 @@ BEGIN
                 SetCC(jne, r1)
             END
 
-        |IL.opACC:
-            IF (R.top # 0) OR (R.stk[0] # ACC) THEN
-                PushAll(0);
-                GetRegA;
-                pop(ACC);
-                DEC(R.pushed)
-            END
-
         |IL.opDROP:
             UnOp(r1);
             drop
 
-        |IL.opJNZ:
+        |IL.opJNZ1:
             UnOp(r1);
             cbnz(r1, param1)
-
-        |IL.opJZ:
-            UnOp(r1);
-            cbz(r1, param1)
 
         |IL.opJG:
             UnOp(r1);
             Tst(r1);
             jcc(jg, param1)
 
-        |IL.opJE:
+        |IL.opJNZ:
             UnOp(r1);
             cbnz(r1, param1);
             drop
 
-        |IL.opJNE:
+        |IL.opJZ:
             UnOp(r1);
             cbz(r1, param1);
             drop
@@ -1436,10 +1424,10 @@ BEGIN
             cc := cond(opcode);
             next := cmd.next(COMMAND);
 
-            IF next.opcode = IL.opJE THEN
+            IF next.opcode = IL.opJNZ THEN
                 jcc(cc, next.param1);
                 cmd := next
-            ELSIF next.opcode = IL.opJNE THEN
+            ELSIF next.opcode = IL.opJZ THEN
                 jcc(inv0(cc), next.param1);
                 cmd := next
             ELSE

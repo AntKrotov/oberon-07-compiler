@@ -9,8 +9,7 @@ MODULE RVM32I;
 
 IMPORT
 
-    PROG, WR := WRITER, IL, CHL := CHUNKLISTS,
-    REG, C := CONSOLE, UTILS, STRINGS, ERRORS;
+    PROG, WR := WRITER, IL, CHL := CHUNKLISTS, REG, UTILS, STRINGS, ERRORS;
 
 
 CONST
@@ -282,7 +281,7 @@ BEGIN
                 addrc(SP, param2 * 4)
             END
 
-        |IL.opNOP:
+        |IL.opNOP, IL.opAND, IL.opOR:
 
         |IL.opSADR:
             StrAdr(GetAnyReg(), param2)
@@ -351,14 +350,6 @@ BEGIN
         |IL.opDROP:
             UnOp(r1);
             drop
-
-        |IL.opACC:
-            IF (R.top # 0) OR (R.stk[0] # ACC) THEN
-                PushAll(0);
-                GetAcc;
-                pop(ACC);
-                DEC(R.pushed)
-            END
 
         |IL.opSAVEC:
             UnOp(r1);
@@ -591,24 +582,20 @@ BEGIN
             UnOp(r1);
             Emit(opGEC, r1, param2)
 
-        |IL.opJNZ:
+        |IL.opJNZ1:
             UnOp(r1);
             jnz(r1, param1)
-
-        |IL.opJZ:
-            UnOp(r1);
-            Emit(opJZ, r1, param1)
 
         |IL.opJG:
             UnOp(r1);
             Emit(opJGZ, r1, param1)
 
-        |IL.opJE:
+        |IL.opJNZ:
             UnOp(r1);
             jnz(r1, param1);
             drop
 
-        |IL.opJNE:
+        |IL.opJZ:
             UnOp(r1);
             Emit(opJZ, r1, param1);
             drop

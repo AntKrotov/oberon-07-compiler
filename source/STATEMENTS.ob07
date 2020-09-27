@@ -383,7 +383,7 @@ BEGIN
             END;
             IL.AddCmd(IL.opCOPYA, VarType.base.size);
             label := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJE, label);
+            IL.AddJmpCmd(IL.opJNZ, label);
             IL.OnError(line, errCOPY);
             IL.SetLabel(label)
 
@@ -727,7 +727,8 @@ BEGIN
                 END
             ELSE
                 label := IL.NewLabel();
-                IL.AddJmpCmd(IL.opJE, label);
+                IL.not;
+                IL.AndOrOpt(label);
                 IL.OnError(pos.line, errASSERT);
                 IL.SetLabel(label)
             END
@@ -1155,7 +1156,7 @@ BEGIN
                 END
             ELSE
                 IF isBoolean(e) THEN
-                    IL.AddCmd0(IL.opORD)
+                    IL._ord
                 END
             END;
             e._type := tINTEGER
@@ -1381,7 +1382,7 @@ BEGIN
 
     IF chkPTR IN Options.checking THEN
         label := IL.NewLabel();
-        IL.AddJmpCmd(IL.opJNZ, label);
+        IL.AddJmpCmd(IL.opJNZ1, label);
         IL.OnError(pos.line, error);
         IL.SetLabel(label)
     END
@@ -1914,9 +1915,7 @@ VAR
                     IF e.obj = eCONST THEN
                         IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
-                    IL.AddCmd0(IL.opACC);
-                    IL.AddJmpCmd(IL.opJZ, label);
-                    IL.drop
+                    IL.AndOrOpt(label)
                 END
             END;
 
@@ -2037,15 +2036,24 @@ VAR
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
                         IL.Const(ORD(ARITH.getBool(e1.value)))
-                    END;
-                    IL.AddCmd0(IL.opACC)
+                    END
                 END
 
             END
         END;
 
         IF label # -1 THEN
-            IL.SetLabel(label)
+            label1 := IL.NewLabel();
+            IL.AddJmpCmd(IL.opJNZ, label1);
+            IL.SetLabel(label);
+            IL.Const(0);
+            IL.drop;
+            label := IL.NewLabel();
+            IL.AddJmpCmd(IL.opJMP, label);
+            IL.SetLabel(label1);
+            IL.Const(1);
+            IL.SetLabel(label);
+            IL.AddCmd0(IL.opAND)
         END
     END term;
 
@@ -2059,7 +2067,7 @@ VAR
 
         plus, minus: BOOLEAN;
 
-        label: INTEGER;
+        label, label1: INTEGER;
 
     BEGIN
         plus  := parser.sym = SCAN.lxPLUS;
@@ -2112,9 +2120,8 @@ VAR
                     IF e.obj = eCONST THEN
                         IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
-                    IL.AddCmd0(IL.opACC);
-                    IL.AddJmpCmd(IL.opJNZ, label);
-                    IL.drop
+                    IL.not;
+                    IL.AndOrOpt(label)
                 END
 
             END;
@@ -2201,15 +2208,24 @@ VAR
                     e.obj := eEXPR;
                     IF e1.obj = eCONST THEN
                         IL.Const(ORD(ARITH.getBool(e1.value)))
-                    END;
-                    IL.AddCmd0(IL.opACC)
+                    END
                 END
 
             END
         END;
 
         IF label # -1 THEN
-            IL.SetLabel(label)
+            label1 := IL.NewLabel();
+            IL.AddJmpCmd(IL.opJZ, label1);
+            IL.SetLabel(label);
+            IL.Const(1);
+            IL.drop;
+            label := IL.NewLabel();
+            IL.AddJmpCmd(IL.opJMP, label);
+            IL.SetLabel(label1);
+            IL.Const(0);
+            IL.SetLabel(label);
+            IL.AddCmd0(IL.opOR)
         END
 
     END SimpleExpression;
@@ -2642,7 +2658,7 @@ BEGIN
                 IL.AddJmpCmd(IL.opJMP, label)
             END
         ELSE
-            IL.AddJmpCmd(IL.opJNE, label)
+            IL.AndOrOpt(label)
         END;
 
         IF _if THEN
@@ -2684,12 +2700,14 @@ VAR
     e:     PARS.EXPR;
     pos:   PARS.POSITION;
     label: INTEGER;
+    L:     IL.COMMAND;
 
 BEGIN
     IL.AddCmd0(IL.opLOOP);
 
     label := IL.NewLabel();
     IL.SetLabel(label);
+    L := IL.getlast();
 
     PARS.Next(parser);
     parser.StatSeq(parser);
@@ -2703,7 +2721,8 @@ BEGIN
             IL.AddJmpCmd(IL.opJMP, label)
         END
     ELSE
-        IL.AddJmpCmd(IL.opJNE, label)
+        IL.AndOrOpt(label);
+        L.param1 := label
     END;
 
     IL.AddCmd0(IL.opENDLOOP)
@@ -3150,7 +3169,7 @@ BEGIN
         END
     END;
 
-    IL.AddJmpCmd(IL.opJNE, L2);
+    IL.AddJmpCmd(IL.opJZ, L2);
 
     PARS.checklex(parser, SCAN.lxDO);
     PARS.Next(parser);

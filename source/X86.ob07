@@ -912,7 +912,7 @@ BEGIN
         |IL.opLABEL:
             SetLabel(param1) (* L: *)
 
-        |IL.opNOP:
+        |IL.opNOP, IL.opAND, IL.opOR:
 
         |IL.opGADR:
             next := cmd.next(COMMAND);
@@ -1236,10 +1236,10 @@ BEGIN
             cc := cond(opcode);
             next := cmd.next(COMMAND);
 
-            IF next.opcode = IL.opJE THEN
+            IF next.opcode = IL.opJNZ THEN
                 jcc(cc, next.param1);
                 cmd := next
-            ELSIF next.opcode = IL.opJNE THEN
+            ELSIF next.opcode = IL.opJZ THEN
                 jcc(inv0(cc), next.param1);
                 cmd := next
             ELSE
@@ -1269,40 +1269,27 @@ BEGIN
             END;
             andrc(reg1, 1)
 
-        |IL.opACC:
-            IF (R.top # 0) OR (R.stk[0] # eax) THEN
-                PushAll(0);
-                GetRegA;
-                pop(eax);
-                DEC(R.pushed)
-            END
-
         |IL.opDROP:
             UnOp(reg1);
             drop
 
-        |IL.opJNZ:
+        |IL.opJNZ1:
             UnOp(reg1);
             test(reg1);
             jcc(jne, param1)
-
-        |IL.opJZ:
-            UnOp(reg1);
-            test(reg1);
-            jcc(je, param1)
 
         |IL.opJG:
             UnOp(reg1);
             test(reg1);
             jcc(jg, param1)
 
-        |IL.opJE:
+        |IL.opJNZ:
             UnOp(reg1);
             test(reg1);
             jcc(jne, param1);
             drop
 
-        |IL.opJNE:
+        |IL.opJZ:
             UnOp(reg1);
             test(reg1);
             jcc(je, param1);
