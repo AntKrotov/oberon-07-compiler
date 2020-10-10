@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2019, Anton Krotov
+    Copyright (c) 2018-2020, Anton Krotov
     All rights reserved.
 *)
 
@@ -28,9 +28,13 @@ TYPE
         CR:           BOOLEAN;
 
         line*, col*:  INTEGER;
+        _if*:         INTEGER;
         eof*:         BOOLEAN;
         eol*:         BOOLEAN;
-        peak*:        CHAR
+        skip*:        BOOLEAN;
+        peak*:        CHAR;
+        _skip*:       ARRAY 100 OF BOOLEAN;
+        fname*:       ARRAY 2048 OF CHAR
 
     END;
 
@@ -161,8 +165,12 @@ BEGIN
         text.col  := 1;
         text.eof  := FALSE;
         text.eol  := FALSE;
+        text.skip := FALSE;
+        text._if  := 0;
+        text._skip[0] := FALSE;
         text.peak := 0X;
         text.file := FILES.open(name);
+        COPY(name, text.fname);
         IF text.file # NIL THEN
             load(text);
             init(text)

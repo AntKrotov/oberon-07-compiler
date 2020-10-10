@@ -7,7 +7,7 @@
 
 MODULE SCAN;
 
-IMPORT TXT := TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS;
+IMPORT TXT := TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, ERRORS, LISTS;
 
 
 CONST
@@ -47,6 +47,12 @@ CONST
 TYPE
 
     LEXSTR* = ARRAY LEXLEN OF CHAR;
+
+    DEF = POINTER TO RECORD (LISTS.ITEM)
+
+        ident: LEXSTR
+
+    END;
 
     IDENT* = POINTER TO RECORD (AVL.DATA)
 
@@ -88,7 +94,9 @@ VAR
 
     NewIdent: IDENT;
 
-    upto, LowerCase: BOOLEAN;
+    upto, LowerCase, _if: BOOLEAN;
+
+    def: LISTS.LIST;
 
 
 PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
@@ -472,6 +480,102 @@ PROCEDURE Next* (text: SCANNER; VAR lex: LEX);
 VAR
     c: CHAR;
 
+
+    PROCEDURE error (text: SCANNER; lex: LEX; errno: INTEGER);
+    BEGIN
+        ERRORS.ErrorMsg(text.fname, lex.pos.line, lex.pos.col, errno)
+    END error;
+
+
+    PROCEDURE IsDef (str: ARRAY OF CHAR): BOOLEAN;
+    VAR
+        cur: DEF;
+
+    BEGIN
+        cur := def.first(DEF);
+        WHILE (cur # NIL) & (cur.ident # str) DO
+            cur := cur.next(DEF)
+        END
+
+        RETURN cur # NIL
+    END IsDef;
+
+
+    PROCEDURE IsSkip (text: SCANNER): BOOLEAN;
+    VAR
+        i: INTEGER;
+
+    BEGIN
+        i := 0;
+        WHILE (i <= text._if) & ~text._skip[i] DO
+            INC(i)
+        END
+
+        RETURN i <= text._if
+    END IsSkip;
+
+
+    PROCEDURE prep_if (text: SCANNER; VAR lex: LEX);
+    VAR
+        skip: BOOLEAN;
+
+    BEGIN
+        _if := TRUE;
+        skip := TRUE;
+        text.skip := FALSE;
+
+        Next(text, lex);
+        IF lex.sym # lxLROUND THEN
+             error(text, lex, 64)
+        END;
+
+        Next(text, lex);
+        IF lex.sym # lxIDENT THEN
+             error(text, lex, 22)
+        END;
+
+        REPEAT
+            IF IsDef(lex.s) THEN
+                skip := FALSE
+            END;
+
+            Next(text, lex);
+            IF lex.sym = lxBAR THEN
+                Next(text, lex);
+                IF lex.sym # lxIDENT THEN
+                    error(text, lex, 22)
+                END
+            ELSE
+                IF lex.sym # lxRROUND THEN
+                    error(text, lex, 33)
+                END
+            END
+        UNTIL lex.sym = lxRROUND;
+
+        _if := FALSE;
+
+        INC(text._if);
+        text._skip[text._if] := skip;
+        text.skip := IsSkip(text);
+        Next(text, lex)
+    END prep_if;
+
+
+    PROCEDURE prep_end (text: SCANNER; VAR lex: LEX);
+    BEGIN
+        IF text._if = 0 THEN
+            error(text, lex, 118)
+        END;
+        IF lex.sym = lxEND THEN
+            DEC(text._if)
+        ELSIF lex.sym = lxELSE THEN
+            text._skip[text._if] := ~text._skip[text._if]
+        END;
+        text.skip := IsSkip(text);
+        Next(text, lex)
+    END prep_end;
+
+
 BEGIN
 
     REPEAT
@@ -496,8 +600,26 @@ BEGIN
             string(text, lex, c)
         ELSIF delimiters[ORD(c)] THEN
             delimiter(text, lex, c)
+        ELSIF c = "$" THEN
+            IF S.letter(nextc(text)) THEN
+                ident(text, lex);
+                IF lex.sym = lxIF THEN
+                    IF ~_if THEN
+                        prep_if(text, lex)
+                    END
+                ELSIF (lex.sym = lxEND) OR (lex.sym = lxELSE) THEN
+                    IF ~_if THEN
+                        prep_end(text, lex)
+                    END
+                ELSE
+                    error(text, lex, 119)
+                END
+            ELSE
+                error(text, lex, 119)
+            END
         ELSIF c = 0X THEN
             lex.sym := lxEOF;
+            text.skip := FALSE;
             IF text.eof THEN
                 INC(lex.pos.col)
             END
@@ -520,7 +642,7 @@ BEGIN
             lex.error := 0
         END
 
-    UNTIL lex.sym # lxCOMMENT
+    UNTIL (lex.sym # lxCOMMENT) & ~text.skip
 
 END Next;
 
@@ -618,4 +740,17 @@ BEGIN
 END init;
 
 
+PROCEDURE NewDef* (str: ARRAY OF CHAR);
+VAR
+    item: DEF;
+
+BEGIN
+    NEW(item);
+    COPY(str, item.ident);
+    LISTS.push(def, item)
+END NewDef;
+
+
+BEGIN
+    def := LISTS.create(NIL)
 END SCAN.

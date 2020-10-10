@@ -1604,7 +1604,7 @@ END epilog;
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
-    i, adr, heap, stack, TextSize, TypesSize, bits, n: INTEGER;
+    i, adr, heap, stack, TextSize, TypesSize, bits, n, val: INTEGER;
 
     Code, Data, Bss, Free: RECORD address, size: INTEGER END;
 
@@ -1671,10 +1671,11 @@ BEGIN
     reloc := RelList.first(RELOC);
     WHILE reloc # NIL DO
         adr := reloc.WordPtr.offset * 2;
+        val := reloc.WordPtr.val;
         CASE reloc.section OF
-        |RCODE: PutWord(LabelOffs(reloc.WordPtr.val) * 2, adr)
-        |RDATA: PutWord(reloc.WordPtr.val + Data.address, adr)
-        |RBSS:  PutWord(reloc.WordPtr.val + Bss.address, adr)
+        |RCODE: PutWord(LabelOffs(val) * 2, adr)
+        |RDATA: PutWord(val + Data.address, adr)
+        |RBSS:  PutWord(val + Bss.address, adr)
         END;
         reloc := reloc.next(RELOC)
     END;

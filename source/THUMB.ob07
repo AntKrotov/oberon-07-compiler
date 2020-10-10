@@ -616,14 +616,14 @@ VAR
 
     PROCEDURE SetIV (idx, label, CodeAdr: INTEGER);
     VAR
-        l, h: ANYCODE;
+        l, h: LISTS.ITEM;
 
     BEGIN
-        l := CodeList.first(ANYCODE);
-        h := l.next(ANYCODE);
+        l := CodeList.first;
+        h := l.next;
         WHILE idx > 0 DO
-            l := h.next(ANYCODE);
-            h := l.next(ANYCODE);
+            l := h.next;
+            h := l.next;
             DEC(idx)
         END;
         label := BIN.GetLabel(program, label) * 2 + CodeAdr + 1;
@@ -719,7 +719,7 @@ BEGIN
                     PutCode(second)
                 END
 
-        |JCC:  genbc(code)
+        |JCC:   genbc(code)
 
         |CBXZ:
                 IF code.len > 1 THEN

@@ -257,7 +257,7 @@ END StrToWChar;
 
 
 PROCEDURE isStringW1 (e: PARS.EXPR): BOOLEAN;
-    RETURN (e.obj = eCONST) & isString(e) & (utf8strlen(e) = 1) & (strlen(e) > 1)
+    RETURN isString(e) & (utf8strlen(e) = 1) & (strlen(e) > 1)
 END isStringW1;
 
 
@@ -1172,11 +1172,11 @@ BEGIN
         |PROG.sysADR:
             parser.designator(parser, e);
             IF isVar(e) THEN
-               n := PROG.Dim(e._type);
-               WHILE n > 0 DO
+                n := PROG.Dim(e._type);
+                WHILE n > 0 DO
                     IL.drop;
                     DEC(n)
-               END
+                END
             ELSIF e.obj = ePROC THEN
                 IL.PushProc(e.ident.proc.label)
             ELSIF e.obj = eIMP THEN
@@ -2683,13 +2683,11 @@ BEGIN
             parser.StatSeq(parser)
         END;
         IL.SetLabel(L)
+    ELSE
+        IL.AddCmd0(IL.opENDLOOP)
     END;
 
     PARS.checklex(parser, SCAN.lxEND);
-
-    IF ~_if THEN
-        IL.AddCmd0(IL.opENDLOOP)
-    END;
 
     PARS.Next(parser)
 END IfStatement;

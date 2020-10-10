@@ -8,7 +8,7 @@
 MODULE Compiler;
 
 IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE,
-       ERRORS, STRINGS, WRITER, MSP430, THUMB, TARGETS;
+       ERRORS, STRINGS, WRITER, MSP430, THUMB, TARGETS, SCAN;
 
 
 PROCEDURE keys (VAR options: PROG.OPTIONS; VAR out: PARS.PATH);
@@ -118,6 +118,11 @@ BEGIN
 
         ELSIF param = "-pic" THEN
             options.pic := TRUE
+
+        ELSIF param = "-def" THEN
+            INC(i);
+            UTILS.GetArg(i, param);
+            SCAN.NewDef(param)
 
         ELSIF param = "" THEN
             _end := TRUE
@@ -230,6 +235,8 @@ BEGIN
     IF param = "" THEN
         ERRORS.Error(205)
     END;
+
+    SCAN.NewDef(param);
 
     IF TARGETS.Select(param) THEN
         target := TARGETS.target
