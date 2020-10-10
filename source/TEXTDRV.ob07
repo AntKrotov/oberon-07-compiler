@@ -28,12 +28,15 @@ TYPE
         CR:           BOOLEAN;
 
         line*, col*:  INTEGER;
-        _if*:         INTEGER;
+        ifc*:         INTEGER;
+        elsec*:       INTEGER;
         eof*:         BOOLEAN;
         eol*:         BOOLEAN;
         skip*:        BOOLEAN;
         peak*:        CHAR;
-        _skip*:       ARRAY 100 OF BOOLEAN;
+        _skip*,
+        _elsif*,
+        _else*:       ARRAY 100 OF BOOLEAN;
         fname*:       ARRAY 2048 OF CHAR
 
     END;
@@ -166,7 +169,8 @@ BEGIN
         text.eof  := FALSE;
         text.eol  := FALSE;
         text.skip := FALSE;
-        text._if  := 0;
+        text.ifc  := 0;
+        text.elsec := 0;
         text._skip[0] := FALSE;
         text.peak := 0X;
         text.file := FILES.open(name);

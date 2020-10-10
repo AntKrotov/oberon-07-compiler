@@ -481,10 +481,12 @@ VAR
     c: CHAR;
 
 
-    PROCEDURE error (text: SCANNER; lex: LEX; errno: INTEGER);
+    PROCEDURE check (cond: BOOLEAN; text: SCANNER; lex: LEX; errno: INTEGER);
     BEGIN
-        ERRORS.ErrorMsg(text.fname, lex.pos.line, lex.pos.col, errno)
-    END error;
+        IF ~cond THEN
+            ERRORS.ErrorMsg(text.fname, lex.pos.line, lex.pos.col, errno)
+        END
+    END check;
 
 
     PROCEDURE IsDef (str: ARRAY OF CHAR): BOOLEAN;
@@ -501,18 +503,17 @@ VAR
     END IsDef;
 
 
-    PROCEDURE IsSkip (text: SCANNER): BOOLEAN;
+    PROCEDURE Skip (text: SCANNER);
     VAR
         i: INTEGER;
 
     BEGIN
         i := 0;
-        WHILE (i <= text._if) & ~text._skip[i] DO
+        WHILE (i <= text.ifc) & ~text._skip[i] DO
             INC(i)
-        END
-
-        RETURN i <= text._if
-    END IsSkip;
+        END;
+        text.skip := i <= text.ifc
+    END Skip;
 
 
     PROCEDURE prep_if (text: SCANNER; VAR lex: LEX);
@@ -520,19 +521,21 @@ VAR
         skip: BOOLEAN;
 
     BEGIN
+        INC(text.ifc);
+        text._elsif[text.ifc] := lex.sym = lxELSIF;
+        IF lex.sym = lxIF THEN
+            INC(text.elsec);
+            text._else[text.elsec] := FALSE
+        END;
         _if := TRUE;
         skip := TRUE;
         text.skip := FALSE;
 
         Next(text, lex);
-        IF lex.sym # lxLROUND THEN
-             error(text, lex, 64)
-        END;
+        check(lex.sym = lxLROUND, text, lex, 64);
 
         Next(text, lex);
-        IF lex.sym # lxIDENT THEN
-             error(text, lex, 22)
-        END;
+        check(lex.sym = lxIDENT, text, lex, 22);
 
         REPEAT
             IF IsDef(lex.s) THEN
@@ -542,37 +545,39 @@ VAR
             Next(text, lex);
             IF lex.sym = lxBAR THEN
                 Next(text, lex);
-                IF lex.sym # lxIDENT THEN
-                    error(text, lex, 22)
-                END
+                check(lex.sym = lxIDENT, text, lex, 22)
             ELSE
-                IF lex.sym # lxRROUND THEN
-                    error(text, lex, 33)
-                END
+                check(lex.sym = lxRROUND, text, lex, 33)
             END
         UNTIL lex.sym = lxRROUND;
 
         _if := FALSE;
-
-        INC(text._if);
-        text._skip[text._if] := skip;
-        text.skip := IsSkip(text);
+        text._skip[text.ifc] := skip;
+        Skip(text);
         Next(text, lex)
     END prep_if;
 
 
     PROCEDURE prep_end (text: SCANNER; VAR lex: LEX);
     BEGIN
-        IF text._if = 0 THEN
-            error(text, lex, 118)
-        END;
+        check(text.ifc > 0, text, lex, 118);
         IF lex.sym = lxEND THEN
-            DEC(text._if)
-        ELSIF lex.sym = lxELSE THEN
-            text._skip[text._if] := ~text._skip[text._if]
+            WHILE text._elsif[text.ifc] DO
+                DEC(text.ifc)
+            END;
+            DEC(text.ifc);
+            DEC(text.elsec)
+        ELSIF (lex.sym = lxELSE) OR (lex.sym = lxELSIF) THEN
+            check(~text._else[text.elsec], text, lex, 118);
+            text._skip[text.ifc] := ~text._skip[text.ifc];
+            text._else[text.elsec] := lex.sym = lxELSE
         END;
-        text.skip := IsSkip(text);
-        Next(text, lex)
+        Skip(text);
+        IF lex.sym = lxELSIF THEN
+            prep_if(text, lex)
+        ELSE
+            Next(text, lex)
+        END
     END prep_end;
 
 
@@ -607,15 +612,15 @@ BEGIN
                     IF ~_if THEN
                         prep_if(text, lex)
                     END
-                ELSIF (lex.sym = lxEND) OR (lex.sym = lxELSE) THEN
+                ELSIF (lex.sym = lxEND) OR (lex.sym = lxELSE) OR (lex.sym = lxELSIF) THEN
                     IF ~_if THEN
                         prep_end(text, lex)
                     END
                 ELSE
-                    error(text, lex, 119)
+                    check(FALSE, text, lex, 119)
                 END
             ELSE
-                error(text, lex, 119)
+                check(FALSE, text, lex, 119)
             END
         ELSIF c = 0X THEN
             lex.sym := lxEOF;

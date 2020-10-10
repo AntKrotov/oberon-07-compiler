@@ -213,6 +213,7 @@ BEGIN
         C.StringLn("  -nochk <'ptibcwra'>   disable runtime checking (pointers, types, indexes,");
         C.StringLn("                        BYTE, CHR, WCHR)"); C.Ln;
         C.StringLn("  -lower                allow lower case for keywords"); C.Ln;
+        C.StringLn("  -def <identifier>     define conditional compilation symbol"); C.Ln;
         C.StringLn("  -ver <major.minor>    set version of program (KolibriOS DLL)"); C.Ln;
         C.StringLn("  -ram <size>           set size of RAM in bytes (MSP430) or Kbytes (STM32)"); C.Ln;
         C.StringLn("  -rom <size>           set size of ROM in bytes (MSP430) or Kbytes (STM32)"); C.Ln;
