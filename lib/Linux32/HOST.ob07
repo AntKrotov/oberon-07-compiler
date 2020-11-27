@@ -44,6 +44,7 @@ VAR
     time          : PROCEDURE [linux] (ptr: INTEGER): INTEGER;
     clock_gettime : PROCEDURE [linux] (clock_id: INTEGER; VAR tp: TP): INTEGER;
     exit          : PROCEDURE [linux] (code: INTEGER);
+    getcwd        : PROCEDURE [linux] (dir, len: INTEGER): INTEGER;
 
 
 PROCEDURE ExitProcess* (code: INTEGER);
@@ -78,11 +79,9 @@ VAR
     n: INTEGER;
 
 BEGIN
-    GetArg(0, path);
-    n := LENGTH(path) - 1;
-    WHILE path[n] # slash DO
-        DEC(n)
-    END;
+    n := getcwd(SYSTEM.ADR(path[0]), LEN(path) - 2);
+    n := LENGTH(path);
+    path[n] := slash;
     path[n + 1] := 0X
 END GetCurrentDirectory;
 
@@ -241,6 +240,7 @@ BEGIN
     GetSym(libc, "chmod",  SYSTEM.ADR(_chmod));
     GetSym(libc, "time",   SYSTEM.ADR(time));
     GetSym(libc, "exit",   SYSTEM.ADR(exit));
+    GetSym(libc, "getcwd", SYSTEM.ADR(getcwd));
     GetSym(libc, "stdout", SYSTEM.ADR(stdout)); SYSTEM.GET(stdout - SYSTEM.SIZE(INTEGER), stdout);
 
     librt := API.dlopen(SYSTEM.SADR("librt.so.1"), RTLD_LAZY);

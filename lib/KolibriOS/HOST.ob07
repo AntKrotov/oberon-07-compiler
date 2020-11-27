@@ -400,12 +400,9 @@ VAR
     n: INTEGER;
 
 BEGIN
-    GetArg(0, path);
-    n := LENGTH(path) - 1;
-    WHILE path[n] # slash DO
-        DEC(n)
-    END;
-    path[n + 1] := 0X
+    n := K.sysfunc4(30, 2, SYSTEM.ADR(path[0]), LEN(path) - 2);
+    path[n - 1] := slash;
+    path[n] := 0X
 END GetCurrentDirectory;
 
 

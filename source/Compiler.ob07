@@ -177,7 +177,14 @@ BEGIN
     options.checking := ST.chkALL;
 
     PATHS.GetCurrentDirectory(app_path);
-    lib_path := app_path;
+
+    UTILS.GetArg(0, temp);
+    PATHS.split(temp, path, modname, ext);
+    IF PATHS.isRelative(path) THEN
+        PATHS.RelPath(app_path, path, temp);
+        path := temp
+    END;
+    lib_path := path;
 
     UTILS.GetArg(1, inname);
 
