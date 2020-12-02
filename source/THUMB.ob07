@@ -2381,7 +2381,7 @@ BEGIN
 
     WR.Close;
 
-    C.StringLn("--------------------------------------------");
+    C.Dashes;
     C.String(  "  rom:  "); C.Int(CodeSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(CodeSize * 100 DIV rom); C.StringLn("%)");
     C.Ln;
     C.String(  "  ram:  "); C.Int(DataSize); C.String(" of "); C.Int(ram);  C.String("  ("); C.Int(DataSize * 100 DIV ram);  C.StringLn("%)")

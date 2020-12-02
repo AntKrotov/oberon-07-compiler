@@ -198,10 +198,11 @@ END ExpectSym;
 
 PROCEDURE ImportList (parser: PARSER);
 VAR
+    fname, path, ext, _name: PATH;
     name:    SCAN.IDENT;
     parser2: PARSER;
     pos:     POSITION;
-    alias:   BOOLEAN;
+    alias, _in: BOOLEAN;
     unit:    PROG.UNIT;
     ident:   PROG.IDENT;
 
@@ -222,22 +223,64 @@ BEGIN
 
         Next(parser);
 
+        path := parser.path;
+        fname := "";
+        COPY(name.s, _name);
+        _in := FALSE;
+
+        IF parser.sym = SCAN.lxIN THEN
+            _in := TRUE;
+            Next(parser);
+            IF parser.sym = SCAN.lxSTRING THEN
+                STRINGS.trim(parser.lex.s, fname);
+                STRINGS.replace(fname, "/", UTILS.slash);
+                STRINGS.replace(fname, "\", UTILS.slash);
+                PATHS.split(fname, path, _name, ext);
+                IF PATHS.isRelative(path) THEN
+                    PATHS.RelPath(parser.path, path, fname);
+                    STRINGS.append(fname, _name);
+                    STRINGS.append(fname, ext);
+                    PATHS.split(fname, path, _name, ext)
+                END;
+                Next(parser)
+            ELSE
+                check1(FALSE, parser, 117)
+            END
+        END;
+
         IF (parser.sym = SCAN.lxCOMMA) OR (parser.sym = SCAN.lxSEMI) THEN
             alias := FALSE;
-            unit := PROG.getUnit(name);
+            IF (fname = "") & ((_name = "SYSTEM") OR PROG.LowerCase & (_name = "system")) THEN
+                unit := PROG.program.sysunit
+            ELSE
+                IF fname # "" THEN
+                    unit := PROG.getUnit(fname)
+                ELSE
+                    fname := path;
+                    STRINGS.append(fname, _name);
+                    STRINGS.append(fname, UTILS.FILE_EXT);
+                    unit := PROG.getUnit(fname);
+                    IF unit = NIL THEN
+                        fname := parser.lib_path;
+                        STRINGS.append(fname, _name);
+                        STRINGS.append(fname, UTILS.FILE_EXT);
+                        unit := PROG.getUnit(fname)
+                    END
+                END
+            END;
 
             IF unit # NIL THEN
                 check(unit.closed, pos, 31)
             ELSE
-                parser2 := parser.create(parser.path, parser.lib_path,
+                parser2 := parser.create(path, parser.lib_path,
                     parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
 
-                IF ~parser2.open(parser2, name.s) THEN
-                    IF parser.path # parser.lib_path THEN
+                IF ~parser2.open(parser2, _name) THEN
+                    IF (path # parser.lib_path) & ~_in THEN
                         destroy(parser2);
                         parser2 := parser.create(parser.lib_path, parser.lib_path,
                             parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
-                        check(parser2.open(parser2, name.s), pos, 29)
+                        check(parser2.open(parser2, _name), pos, 29)
                     ELSE
                         error(pos, 29)
                     END
@@ -245,6 +288,7 @@ BEGIN
 
                 parser2.parse(parser2);
                 unit := parser2.unit;
+                unit.fname := parser2.fname;
                 destroy(parser2)
             END;
             IF unit = PROG.program.sysunit THEN
@@ -1189,7 +1233,7 @@ BEGIN
     END;
 
     unit := PROG.newUnit(parser.lex.ident);
-
+    unit.fname := parser.fname;
     parser.unit := unit;
 
     ExpectSym(parser, SCAN.lxSEMI);

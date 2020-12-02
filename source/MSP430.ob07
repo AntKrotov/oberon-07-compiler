@@ -1729,7 +1729,7 @@ BEGIN
     INC(TextSize, IntVectorSize + TypesSize);
     INC(Bss.size, minStackSize + RTL.VarSize);
 
-    C.StringLn("--------------------------------------------");
+    C.Dashes;
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
     IF Free.size > 0 THEN
         C.String(  "        "); C.Int(Free.size); C.String(" bytes free (0");

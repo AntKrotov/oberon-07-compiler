@@ -7,7 +7,7 @@
 
 MODULE PROG;
 
-IMPORT SCAN, LISTS, ARITH, ERRORS, C := COLLECTIONS, IL, UTILS, TARGETS, STRINGS;
+IMPORT SCAN, LISTS, ARITH, ERRORS, C := COLLECTIONS, IL, UTILS, TARGETS, STRINGS, PATHS;
 
 
 CONST
@@ -115,6 +115,7 @@ TYPE
 
     rUNIT = RECORD (LISTS.ITEM)
 
+        fname*:      PATHS.PATH;
         name*:       SCAN.IDENT;
         idents*:     LISTS.LIST;
         frwPointers: LISTS.LIST;
@@ -214,7 +215,7 @@ TYPE
 
 VAR
 
-    LowerCase: BOOLEAN;
+    LowerCase*: BOOLEAN;
     idents: C.COLLECTION;
     program*: PROGRAM;
 
@@ -626,20 +627,18 @@ PROCEDURE arrcomp* (src, dst: _TYPE): BOOLEAN;
 END arrcomp;
 
 
-PROCEDURE getUnit* (name: SCAN.IDENT): UNIT;
+PROCEDURE getUnit* (name: PATHS.PATH): UNIT;
 VAR
     item: UNIT;
 
 BEGIN
-    ASSERT(name # NIL);
-
     item := program.units.first(UNIT);
 
-    WHILE (item # NIL) & (item.name # name) DO
+    WHILE (item # NIL) & (item.fname # name) DO
         item := item.next(UNIT)
     END;
 
-    IF (item = NIL) & ((name.s = "SYSTEM") OR LowerCase & (name.s = "system")) THEN
+    IF (item = NIL) & ((name = "SYSTEM") OR LowerCase & (name = "system")) THEN
         item := program.sysunit
     END
 
@@ -1126,6 +1125,7 @@ VAR
 
 BEGIN
     unit := newUnit(SCAN.enterid("$SYSTEM"));
+    unit.fname := "SYSTEM";
 
     EnterProc(unit, "adr",    idSYSFUNC, sysADR);
     EnterProc(unit, "size",   idSYSFUNC, sysSIZE);

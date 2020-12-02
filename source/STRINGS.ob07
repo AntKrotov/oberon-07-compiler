@@ -110,6 +110,45 @@ BEGIN
 END search;
 
 
+PROCEDURE replace* (VAR s: ARRAY OF CHAR; find, repl: CHAR);
+VAR
+    i: INTEGER;
+
+BEGIN
+    i := 0;
+    WHILE s[i] # 0X DO
+        IF s[i] = find THEN
+            s[i] := repl
+        END;
+        INC(i)
+    END
+END replace;
+
+
+PROCEDURE trim* (source: ARRAY OF CHAR; VAR result: ARRAY OF CHAR);
+VAR
+    LenS, start, _end, i, j: INTEGER;
+
+BEGIN
+    LenS := LENGTH(source);
+    IF LenS > 0 THEN
+        WHILE source[start] <= 20X DO
+            INC(start)
+        END;
+        _end := LenS - 1;
+        WHILE source[_end] <= 20X DO
+            DEC(_end)
+        END;
+
+        FOR i := start TO _end DO
+            result[j] := source[i];
+            INC(j)
+        END;
+        result[j] := 0X
+    END
+END trim;
+
+
 PROCEDURE letter* (c: CHAR): BOOLEAN;
     RETURN ("a" <= c) & (c <= "z") OR ("A" <= c) & (c <= "Z") OR (c = "_")
 END letter;
