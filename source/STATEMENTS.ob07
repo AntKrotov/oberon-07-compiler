@@ -3355,13 +3355,13 @@ BEGIN
 
     IF TARGETS.RTL THEN
         parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
-        IF parser.open(parser, UTILS.RTL_NAME) THEN
+        IF parser.open(parser, UTILS.RTL_NAME, UTILS.FILE_EXT) THEN
             parser.parse(parser);
             PARS.destroy(parser)
         ELSE
             PARS.destroy(parser);
             parser := PARS.create(lib_path, lib_path, StatSeq, expression, designator, chkreturn);
-            IF parser.open(parser, UTILS.RTL_NAME) THEN
+            IF parser.open(parser, UTILS.RTL_NAME, UTILS.FILE_EXT) THEN
                 parser.parse(parser);
                 PARS.destroy(parser)
             ELSE
@@ -3373,7 +3373,7 @@ BEGIN
     parser := PARS.create(path, lib_path, StatSeq, expression, designator, chkreturn);
     parser.main := TRUE;
 
-    IF parser.open(parser, modname) THEN
+    IF parser.open(parser, modname, UTILS.FILE_EXT) THEN
         parser.parse(parser)
     ELSE
         ERRORS.FileNotFound(path, modname, UTILS.FILE_EXT)

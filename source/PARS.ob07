@@ -60,7 +60,7 @@ TYPE
         constexp*:   BOOLEAN;
         main*:       BOOLEAN;
 
-        open*:       PROCEDURE (parser: PARSER; modname: ARRAY OF CHAR): BOOLEAN;
+        open*:       PROCEDURE (parser: PARSER; modname, FileExt: ARRAY OF CHAR): BOOLEAN;
         parse*:      PROCEDURE (parser: PARSER);
         StatSeq*:    STATPROC;
         expression*: EXPRPROC;
@@ -225,6 +225,7 @@ BEGIN
 
         path := parser.path;
         fname := "";
+        ext := UTILS.FILE_EXT;
         COPY(name.s, _name);
         _in := FALSE;
 
@@ -275,12 +276,12 @@ BEGIN
                 parser2 := parser.create(path, parser.lib_path,
                     parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
 
-                IF ~parser2.open(parser2, _name) THEN
+                IF ~parser2.open(parser2, _name, ext) THEN
                     IF (path # parser.lib_path) & ~_in THEN
                         destroy(parser2);
                         parser2 := parser.create(parser.lib_path, parser.lib_path,
                             parser.StatSeq, parser.expression, parser.designator, parser.chkreturn);
-                        check(parser2.open(parser2, _name), pos, 29)
+                        check(parser2.open(parser2, _name, ext), pos, 29)
                     ELSE
                         error(pos, 29)
                     END
@@ -1298,12 +1299,12 @@ BEGIN
 END parse;
 
 
-PROCEDURE open (parser: PARSER; modname: ARRAY OF CHAR): BOOLEAN;
+PROCEDURE open (parser: PARSER; modname, FileExt: ARRAY OF CHAR): BOOLEAN;
 BEGIN
     ASSERT(parser # NIL);
 
     STRINGS.append(parser.fname, modname);
-    STRINGS.append(parser.fname, parser.ext);
+    STRINGS.append(parser.fname, FileExt);
     STRINGS.append(parser.modname, modname);
 
     parser.scanner := SCAN.open(parser.fname)
