@@ -1,6 +1,11 @@
 ﻿MODULE animation;               (* moving turtle example *)
 (* demonstrates use of timeout and select() to display a moving turtle in an X11 window *)
-IMPORT SYSTEM, gr;
+
+IMPORT
+
+    SYSTEM,
+    gr IN "./common/gr.ob07";
+
 
 CONST
         Side = 8;       (* nr of pixels of a square side *)

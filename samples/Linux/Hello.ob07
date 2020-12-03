@@ -1,4 +1,4 @@
-﻿MODULE HW;
+﻿MODULE Hello;
 
 IMPORT SYSTEM, Libdl, Args;
 
@@ -49,4 +49,4 @@ BEGIN
     SYSTEM.PUT(SYSTEM.ADR(puts), Libdl.sym(libc, "puts"));
     ASSERT(puts # NIL);
     main
-END HW.
+END Hello.

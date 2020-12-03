@@ -1,5 +1,12 @@
 ﻿MODULE filler;          (* filler game, color more fields than the opponent *)
-IMPORT SYSTEM, out, unix, gr;
+
+IMPORT
+
+    SYSTEM,
+    out IN "./common/out.ob07",
+    unix IN "./common/unix.ob07",
+    gr IN "./common/gr.ob07";
+
 
 CONST
         Side = 14;      (* nr of pixels of a field side *)
