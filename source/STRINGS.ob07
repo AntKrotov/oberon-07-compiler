@@ -131,24 +131,24 @@ VAR
 
 BEGIN
     LenS := LENGTH(source) - 1;
+    j := 0;
     IF LenS >= 0 THEN
         start := 0;
-        WHILE (source[start] <= 20X) & (start < LenS) DO
+        WHILE (start <= LenS) & (source[start] <= 20X) DO
             INC(start)
         END;
 
         _end := LenS;
-        WHILE (source[_end] <= 20X) & (_end > 0) DO
+        WHILE (_end >= 0) & (source[_end] <= 20X) DO
             DEC(_end)
         END;
 
-        j := 0;
         FOR i := start TO _end DO
             result[j] := source[i];
             INC(j)
-        END;
-        result[j] := 0X
-    END
+        END
+    END;
+    result[j] := 0X
 END trim;
 
 
