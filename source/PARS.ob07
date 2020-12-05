@@ -233,20 +233,23 @@ BEGIN
             _in := TRUE;
             Next(parser);
             IF parser.sym = SCAN.lxSTRING THEN
-                STRINGS.trim(parser.lex.s, fname);
-                STRINGS.replace(fname, "/", UTILS.slash);
-                STRINGS.replace(fname, "\", UTILS.slash);
-                PATHS.split(fname, path, _name, ext);
-                IF PATHS.isRelative(path) THEN
-                    PATHS.RelPath(parser.path, path, fname);
-                    STRINGS.append(fname, _name);
-                    STRINGS.append(fname, ext);
-                    PATHS.split(fname, path, _name, ext)
-                END;
-                Next(parser)
+                STRINGS.trim(parser.lex.s, fname)
+            ELSIF parser.sym = SCAN.lxCHAR THEN
+                fname[0] := CHR(ARITH.Int(parser.lex.value));
+                fname[1] := 0X
             ELSE
                 check1(FALSE, parser, 117)
-            END
+            END;
+            STRINGS.replace(fname, "/", UTILS.slash);
+            STRINGS.replace(fname, "\", UTILS.slash);
+            PATHS.split(fname, path, _name, ext);
+            IF PATHS.isRelative(path) THEN
+                PATHS.RelPath(parser.path, path, fname);
+                STRINGS.append(fname, _name);
+                STRINGS.append(fname, ext);
+                PATHS.split(fname, path, _name, ext)
+            END;
+            Next(parser)
         END;
 
         IF (parser.sym = SCAN.lxCOMMA) OR (parser.sym = SCAN.lxSEMI) THEN

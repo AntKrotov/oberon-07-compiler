@@ -130,16 +130,19 @@ VAR
     LenS, start, _end, i, j: INTEGER;
 
 BEGIN
-    LenS := LENGTH(source);
-    IF LenS > 0 THEN
-        WHILE source[start] <= 20X DO
+    LenS := LENGTH(source) - 1;
+    IF LenS >= 0 THEN
+        start := 0;
+        WHILE (source[start] <= 20X) & (start < LenS) DO
             INC(start)
         END;
-        _end := LenS - 1;
-        WHILE source[_end] <= 20X DO
+
+        _end := LenS;
+        WHILE (source[_end] <= 20X) & (_end > 0) DO
             DEC(_end)
         END;
 
+        j := 0;
         FOR i := start TO _end DO
             result[j] := source[i];
             INC(j)
