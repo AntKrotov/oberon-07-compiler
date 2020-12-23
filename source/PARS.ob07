@@ -242,6 +242,7 @@ BEGIN
             END;
             STRINGS.replace(fname, "/", UTILS.slash);
             STRINGS.replace(fname, "\", UTILS.slash);
+            PATHS.DelSlashes(fname);
             PATHS.split(fname, path, _name, ext);
             IF PATHS.isRelative(path) THEN
                 PATHS.RelPath(parser.path, path, fname);

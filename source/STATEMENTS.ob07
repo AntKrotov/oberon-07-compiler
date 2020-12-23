@@ -1913,7 +1913,9 @@ VAR
                     END;
 
                     IF e.obj = eCONST THEN
-                        IL.Const(ORD(ARITH.getBool(e.value)))
+                        IF isBoolean(e) THEN
+                            IL.Const(ORD(ARITH.getBool(e.value)))
+                        END
                     END;
                     IL.AndOrOpt(label)
                 END
@@ -2118,7 +2120,9 @@ VAR
                     END;
 
                     IF e.obj = eCONST THEN
-                        IL.Const(ORD(ARITH.getBool(e.value)))
+                        IF isBoolean(e) THEN
+                            IL.Const(ORD(ARITH.getBool(e.value)))
+                        END
                     END;
                     IL.not;
                     IL.AndOrOpt(label)

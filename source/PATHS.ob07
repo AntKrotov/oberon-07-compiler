@@ -29,7 +29,7 @@ VAR
 BEGIN
     len := LENGTH(fname);
     pos1 := len - 1;
-    pos2 := len - 1;
+    pos2 := pos1;
     STRINGS.search(fname, pos1, slash, FALSE);
     STRINGS.search(fname, pos2,   ".", FALSE);
 
@@ -45,8 +45,7 @@ BEGIN
     STRINGS.copy(fname, name, pos1, 0, pos2 - pos1);
     name[pos2 - pos1] := 0X;
     STRINGS.copy(fname, ext, pos2, 0, len - pos2);
-    ext[len - pos2] := 0X;
-
+    ext[len - pos2] := 0X
 END split;
 
 
@@ -97,6 +96,43 @@ BEGIN
     END
 
 END RelPath;
+
+
+PROCEDURE DelSlashes* (VAR path: ARRAY OF CHAR);
+VAR
+    i, j, k: INTEGER;
+    c: CHAR;
+
+BEGIN
+    i := 0;
+    j := 0;
+    k := 0;
+    REPEAT
+        c := path[j];
+        INC(j);
+        IF c = slash THEN
+            INC(k)
+        ELSE
+            k := 0
+        END;
+        IF k <= 1 THEN
+            path[i] := c;
+            INC(i)
+        END
+    UNTIL c = 0X;
+
+    i := 0;
+    j := 0;
+    REPEAT
+        c := path[j];
+        INC(j);
+        path[i] := c;
+        INC(i);
+        IF (c = slash) & (path[j] = ".") & (path[j + 1] = slash) THEN
+            INC(j, 2)
+        END
+    UNTIL c = 0X
+END DelSlashes;
 
 
 PROCEDURE isRelative* (path: ARRAY OF CHAR): BOOLEAN;
