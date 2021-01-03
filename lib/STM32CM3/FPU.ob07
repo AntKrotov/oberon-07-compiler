@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -98,12 +98,12 @@ END mul2;
 
 PROCEDURE add2 (b, a: INTEGER): INTEGER;
 VAR
-    ea, eb, e, d, r: INTEGER;
+    t, e, d: INTEGER;
 
 BEGIN
-    ea := (a DIV 800000H) MOD 256;
-    eb := (b DIV 800000H) MOD 256;
-    d  := ea - eb;
+    e := (a DIV 800000H) MOD 256;
+    t := (b DIV 800000H) MOD 256;
+    d := e - t;
 
     a := a MOD 800000H + 800000H;
     b := b MOD 800000H + 800000H;
@@ -113,60 +113,55 @@ BEGIN
             b := LSR(b, d)
         ELSE
             b := 0
-        END;
-        e := ea
+        END
     ELSIF d < 0 THEN
         IF d > -24 THEN
             a := LSR(a, -d)
         ELSE
             a := 0
         END;
-        e := eb
-    ELSE
-        e := ea
+        e := t
     END;
 
-    r := a + b;
+    INC(a, b);
 
-    IF r >= 1000000H THEN
-        r := r DIV 2;
+    IF a >= 1000000H THEN
+        a := a DIV 2;
         INC(e)
     END;
 
     IF e >= 255 THEN
         e := 255;
-        r := 800000H
+        a := 800000H
     END
 
-    RETURN (r - 800000H) + e * 800000H
+    RETURN (a - 800000H) + e * 800000H
 END add2;
 
 
 PROCEDURE sub2 (b, a: INTEGER): INTEGER;
 VAR
-    ea, eb, e, d, r, s: INTEGER;
+    t, e, d, s: INTEGER;
 
 BEGIN
-    ea := (a DIV 800000H) MOD 256;
-    eb := (b DIV 800000H) MOD 256;
+    e := (a DIV 800000H) MOD 256;
+    t := (b DIV 800000H) MOD 256;
 
     a := a MOD 800000H + 800000H;
     b := b MOD 800000H + 800000H;
 
-    d := ea - eb;
+    d := e - t;
 
     IF (d > 0) OR (d = 0) & (a >= b) THEN
         s := 0
     ELSE
-        ea := eb;
+        e := t;
         d := -d;
-        r := a;
+        t := a;
         a := b;
-        b := r;
+        b := t;
         s := 80000000H
     END;
-
-    e := ea;
 
     IF d > 0 THEN
         IF d < 24 THEN
@@ -176,32 +171,32 @@ BEGIN
         END
     END;
 
-    r := a - b;
+    DEC(a, b);
 
-    IF r = 0 THEN
+    IF a = 0 THEN
         e := 0;
-        r := 800000H;
+        a := 800000H;
         s := 0
     ELSE
-        WHILE r < 800000H DO
-            r := r * 2;
+        WHILE a < 800000H DO
+            a := a * 2;
             DEC(e)
         END
     END;
 
     IF e <= 0 THEN
         e := 0;
-        r := 800000H;
+        a := 800000H;
         s := 0
     END
 
-    RETURN (r - 800000H) + e * 800000H + s
+    RETURN (a - 800000H) + e * 800000H + s
 END sub2;
 
 
 PROCEDURE zero (VAR x: INTEGER);
 BEGIN
-    IF BITS(x) * {23..30} = {} THEN
+    IF LSR(LSL(x, 1), 24) = 0 THEN
         x := 0
     END
 END zero;
@@ -213,12 +208,13 @@ END isNaN;
 
 
 PROCEDURE isInf (a: INTEGER): BOOLEAN;
-    RETURN (a = INF) OR (a = NINF)
+    RETURN LSL(a, 1) = 0FF000000H
 END isInf;
 
 
-PROCEDURE isNormal (a: INTEGER): BOOLEAN;
-    RETURN (BITS(a) * {23..30} # {23..30}) & (BITS(a) * {23..30} # {})
+PROCEDURE isNormal (a, b: INTEGER): BOOLEAN;
+    RETURN (LSR(LSL(a, 1), 24) # 255) & (LSR(LSL(a, 1), 24) # 0) &
+           (LSR(LSL(b, 1), 24) # 255) & (LSR(LSL(b, 1), 24) # 0)
 END isNormal;
 
 
@@ -229,16 +225,20 @@ VAR
 BEGIN
     zero(a); zero(b);
 
-    IF isNormal(a) & isNormal(b) THEN
+    IF isNormal(a, b) THEN
 
-        IF (a > 0) & (b > 0) THEN
-            r := add2(b, a)
-        ELSIF (a < 0) & (b < 0) THEN
-            r := add2(b, a) + 80000000H
-        ELSIF (a > 0) & (b < 0) THEN
-            r := sub2(b, a)
-        ELSIF (a < 0) & (b > 0) THEN
-            r := sub2(a, b)
+        IF a > 0 THEN
+            IF b > 0 THEN
+                r := add2(b, a)
+            ELSE
+                r := sub2(b, a)
+            END
+        ELSE
+            IF b > 0 THEN
+                r := sub2(a, b)
+            ELSE
+                r := add2(b, a) + 80000000H
+            END
         END
 
     ELSIF isNaN(a) OR isNaN(b) THEN
@@ -270,16 +270,20 @@ VAR
 BEGIN
     zero(a); zero(b);
 
-    IF isNormal(a) & isNormal(b) THEN
+    IF isNormal(a, b) THEN
 
-        IF (a > 0) & (b > 0) THEN
-            r := sub2(b, a)
-        ELSIF (a < 0) & (b < 0) THEN
-            r := sub2(a, b)
-        ELSIF (a > 0) & (b < 0) THEN
-            r := add2(b, a)
-        ELSIF (a < 0) & (b > 0) THEN
-            r := add2(b, a) + 80000000H
+        IF a > 0 THEN
+            IF b > 0 THEN
+                r := sub2(b, a)
+            ELSE
+                r := add2(b, a)
+            END
+        ELSE
+            IF b > 0 THEN
+                r := add2(b, a) + 80000000H
+            ELSE
+                r := sub2(a, b)
+            END
         END
 
     ELSIF isNaN(a) OR isNaN(b) THEN
@@ -313,11 +317,9 @@ VAR
 BEGIN
     zero(a); zero(b);
 
-    IF isNormal(a) & isNormal(b) THEN
+    IF isNormal(a, b) THEN
         r := mul2(b, a)
-    ELSIF isNaN(a) OR isNaN(b) THEN
-        r := NAN
-    ELSIF (isInf(a) & (b = 0)) OR (isInf(b) & (a = 0)) THEN
+    ELSIF isNaN(a) OR isNaN(b) OR (isInf(a) & (b = 0)) OR (isInf(b) & (a = 0)) THEN
         r := NAN
     ELSIF isInf(a) OR isInf(b) THEN
         r := INF + ORD(BITS(a) / BITS(b) - {0..30})
@@ -336,11 +338,9 @@ VAR
 BEGIN
     zero(a); zero(b);
 
-    IF isNormal(a) & isNormal(b) THEN
+    IF isNormal(a, b) THEN
         r := div2(b, a)
-    ELSIF isNaN(a) OR isNaN(b) THEN
-        r := NAN
-    ELSIF isInf(a) & isInf(b) THEN
+    ELSIF isNaN(a) OR isNaN(b) OR isInf(a) & isInf(b) THEN
         r := NAN
     ELSIF isInf(a) THEN
         r := INF + ORD(BITS(a) / BITS(b) - {0..30})
@@ -373,23 +373,18 @@ BEGIN
 
     IF isNaN(a) OR isNaN(b) THEN
         res := op = 1
-    ELSIF (a < 0) & (b < 0) THEN
-        CASE op OF
-        |0: res := a = b
-        |1: res := a # b
-        |2: res := a > b
-        |3: res := a >= b
-        |4: res := a < b
-        |5: res := a <= b
-        END
     ELSE
+        IF (a < 0) & (b < 0) THEN
+            INC(op, 6)
+        END;
+
         CASE op OF
-        |0: res := a = b
-        |1: res := a # b
-        |2: res := a < b
-        |3: res := a <= b
-        |4: res := a > b
-        |5: res := a >= b
+        |0,  6: res := a = b
+        |1,  7: res := a # b
+        |2, 10: res := a < b
+        |3, 11: res := a <= b
+        |4,  8: res := a > b
+        |5,  9: res := a >= b
         END
     END
 
@@ -399,16 +394,16 @@ END cmp;
 
 PROCEDURE flt* (x: INTEGER): INTEGER;
 VAR
-    n, y, r, s: INTEGER;
+    n, y, s: INTEGER;
 
 BEGIN
     IF x = 0 THEN
         s := 0;
-        r := 800000H;
+        x := 800000H;
         n := -126
     ELSIF x = 80000000H THEN
         s := 80000000H;
-        r := 800000H;
+        x := 800000H;
         n := 32
     ELSE
         IF x < 0 THEN
@@ -418,19 +413,19 @@ BEGIN
         END;
         n := 0;
         y := ABS(x);
-        r := y;
+        x := y;
         WHILE y > 0 DO
             y := y DIV 2;
             INC(n)
         END;
         IF n > 24 THEN
-            r := LSR(r, n - 24)
+            x := LSR(x, n - 24)
         ELSE
-            r := LSL(r, 24 - n)
+            x := LSL(x, 24 - n)
         END
     END
 
-    RETURN (r - 800000H) + (n + 126) * 800000H + s
+    RETURN (x - 800000H) + (n + 126) * 800000H + s
 END flt;
 
 
