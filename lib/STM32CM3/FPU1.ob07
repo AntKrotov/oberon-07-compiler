@@ -5,7 +5,7 @@
     All rights reserved.
 *)
 
-MODULE FPU;
+MODULE FPU1;
 
 
 CONST
@@ -457,4 +457,4 @@ BEGIN
 END floor;
 
 
-END FPU.
+END FPU1.
