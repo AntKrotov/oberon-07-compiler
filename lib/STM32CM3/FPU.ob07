@@ -407,13 +407,13 @@ BEGIN
         n := 32
     ELSE
         IF x < 0 THEN
-            s := 80000000H
+            s := 80000000H;
+            x := -x
         ELSE
             s := 0
         END;
         n := 0;
-        y := ABS(x);
-        x := y;
+        y := x;
         WHILE y > 0 DO
             y := y DIV 2;
             INC(n)
