@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020-2021, Anton Krotov
+    Copyright (c) 2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -17,9 +17,7 @@ CONST
 
 
 PROCEDURE [code] div2 (b, a: INTEGER): INTEGER
-    0B410H,  (*  push {r4}         *)
-    0B420H,  (*  push {r5}         *)
-    0B440H,  (*  push {r6}         *)
+    0B470H,  (*  push {r4, r5, r6} *)
     09C03H,  (*  ldr r4, [sp, 12]  *)
     09D04H,  (*  ldr r5, [sp, 16]  *)
     0002BH,  (*  movs r3, r5       *)
@@ -33,7 +31,7 @@ PROCEDURE [code] div2 (b, a: INTEGER): INTEGER
     00076H,  (*  lsls r6, 1        *)
     00E36H,  (*  lsrs r6, 24       *)
     01B92H,  (*  subs r2, r2, r6   *)
-    0327FH,  (*  adds r2, r2, 127  *)
+    0327FH,  (*  adds r2, 127      *)
     02601H,  (*  movs r6, 1        *)
     005F6H,  (*  lsls r6, 23       *)
     0026DH,  (*  lsls r5, 9        *)
@@ -47,7 +45,7 @@ PROCEDURE [code] div2 (b, a: INTEGER): INTEGER
     042A5H,  (*  cmp r5, r4        *)
     0DA01H,  (*  bge L1            *)
     0006DH,  (*  lsls r5, 1        *)
-    01E52H,  (*  subs r2, r2, 1    *)
+    03A01H,  (*  subs r2, 1        *)
              (*  L1:               *)
     02D00H,  (*  cmp r5, 0         *)
     0DD08H,  (*  ble L2            *)
@@ -78,15 +76,11 @@ PROCEDURE [code] div2 (b, a: INTEGER): INTEGER
     005D2H,  (*  lsls r2, 23       *)
     01880H,  (*  adds r0, r0, r2   *)
     018C0H,  (*  adds r0, r0, r3   *)
-    0BC40H,  (*  pop {r6}          *)
-    0BC20H,  (*  pop {r5}          *)
-    0BC10H;  (*  pop {r4}          *)
+    0BC70H;  (*  pop {r4, r5, r6}  *)
 
 
 PROCEDURE [code] mul2 (b, a: INTEGER): INTEGER
-    0B410H,  (*  push {r4}         *)
-    0B420H,  (*  push {r5}         *)
-    0B440H,  (*  push {r6}         *)
+    0B470H,  (*  push {r4, r5, r6} *)
     09C03H,  (*  ldr r4, [sp, 12]  *)
     09D04H,  (*  ldr r5, [sp, 16]  *)
     0002BH,  (*  movs r3, r5       *)
@@ -100,7 +94,7 @@ PROCEDURE [code] mul2 (b, a: INTEGER): INTEGER
     00076H,  (*  lsls r6, 1        *)
     00E36H,  (*  lsrs r6, 24       *)
     01992H,  (*  adds r2, r2, r6   *)
-    03A7FH,  (*  subs r2, r2, 127  *)
+    03A7FH,  (*  subs r2, 127      *)
     02601H,  (*  movs r6, 1        *)
     005F6H,  (*  lsls r6, 23       *)
     0026DH,  (*  lsls r5, 9        *)
@@ -134,7 +128,7 @@ PROCEDURE [code] mul2 (b, a: INTEGER): INTEGER
     04288H,  (*  cmp r0, r1        *)
     0DB01H,  (*  blt L2            *)
     00840H,  (*  lsrs r0, 1        *)
-    01C52H,  (*  adds r2, r2, 1    *)
+    03201H,  (*  adds r2, 1        *)
              (*  L2:               *)
     02A00H,  (*  cmp r2, 0         *)
     0DC03H,  (*  bgt L4            *)
@@ -152,9 +146,7 @@ PROCEDURE [code] mul2 (b, a: INTEGER): INTEGER
     005D2H,  (*  lsls r2, 23       *)
     01880H,  (*  adds r0, r0, r2   *)
     018C0H,  (*  adds r0, r0, r3   *)
-    0BC40H,  (*  pop {r6}          *)
-    0BC20H,  (*  pop {r5}          *)
-    0BC10H;  (*  pop {r4}          *)
+    0BC70H;  (*  pop {r4, r5, r6}  *)
 
 
 PROCEDURE [code] add2 (b, a: INTEGER): INTEGER
@@ -203,7 +195,7 @@ PROCEDURE [code] add2 (b, a: INTEGER): INTEGER
     042A0H,  (*  cmp r0, r4        *)
     0DB01H,  (*  blt L6            *)
     00840H,  (*  lsrs r0, 1        *)
-    01C52H,  (*  adds r2, r2, 1    *)
+    03201H,  (*  adds r2, 1        *)
              (*  L6:               *)
     02AFFH,  (*  cmp r2, 255       *)
     0DB01H,  (*  blt L7            *)
@@ -217,8 +209,7 @@ PROCEDURE [code] add2 (b, a: INTEGER): INTEGER
 
 
 PROCEDURE [code] sub2 (b, a: INTEGER): INTEGER
-    0B410H,  (*  push {r4}         *)
-    0B420H,  (*  push {r5}         *)
+    0B430H,  (*  push {r4, r5}     *)
     09902H,  (*  ldr r1, [sp, 8]   *)
     09803H,  (*  ldr r0, [sp, 12]  *)
     00002H,  (*  movs r2, r0       *)
@@ -275,7 +266,7 @@ PROCEDURE [code] sub2 (b, a: INTEGER): INTEGER
     042A8H,  (*  cmp r0, r5        *)
     0DA02H,  (*  bge L7            *)
     00040H,  (*  lsls r0, 1        *)
-    01E52H,  (*  subs r2, r2, 1    *)
+    03A01H,  (*  subs r2, 1        *)
     0E7FAH,  (*  b L6              *)
              (*  L7:               *)
     02A00H,  (*  cmp r2, 0         *)
@@ -288,8 +279,7 @@ PROCEDURE [code] sub2 (b, a: INTEGER): INTEGER
     01B40H,  (*  subs r0, r0, r5   *)
     01880H,  (*  adds r0, r0, r2   *)
     018C0H,  (*  adds r0, r0, r3   *)
-    0BC20H,  (*  pop {r5}          *)
-    0BC10H;  (*  pop {r4}          *)
+    0BC30H;  (*  pop {r4, r5}      *)
 
 
 PROCEDURE [code] zero (VAR a, b: INTEGER)
@@ -616,8 +606,8 @@ PROCEDURE [code] cmp* (op, b, a: INTEGER): BOOLEAN
     0DC00H,  (*  bgt L6            *)
     02301H,  (*  movs r3, 1        *)
              (*  L6:               *)
-    0BC10H,  (*  pop {r4}          *)
-    00018H;  (*  movs r0, r3       *)
+    00018H,  (*  movs r0, r3       *)
+    0BC10H;  (*  pop {r4}          *)
 
 
 PROCEDURE [code] flt* (x: INTEGER): INTEGER
@@ -656,11 +646,11 @@ PROCEDURE [code] flt* (x: INTEGER): INTEGER
     02900H,  (*  cmp r1, 0         *)
     0DD02H,  (*  ble L6            *)
     00849H,  (*  lsrs r1, 1        *)
-    01C52H,  (*  adds r2, r2, 1    *)
+    03201H,  (*  adds r2, 1        *)
     0E7FAH,  (*  b L7              *)
              (*  L6:               *)
     00011H,  (*  movs r1, r2       *)
-    03A18H,  (*  subs r2, r2, 24   *)
+    03A18H,  (*  subs r2, 24       *)
     02A00H,  (*  cmp r2, 0         *)
     0DD01H,  (*  ble L8            *)
     040D0H,  (*  lsrs r0, r2       *)
@@ -692,7 +682,7 @@ PROCEDURE [code] floor* (x: INTEGER): INTEGER
     0000AH,  (*  movs r2, r1       *)
     00052H,  (*  lsls r2, 1        *)
     00E12H,  (*  lsrs r2, 24       *)
-    03A7FH,  (*  subs r2, r2, 127  *)
+    03A7FH,  (*  subs r2, 127      *)
     00008H,  (*  movs r0, r1       *)
     00240H,  (*  lsls r0, 9        *)
     00A40H,  (*  lsrs r0, 9        *)
@@ -703,23 +693,23 @@ PROCEDURE [code] floor* (x: INTEGER): INTEGER
     0DB13H,  (*  blt L1            *)
     02A16H,  (*  cmp r2, 22        *)
     0DC0CH,  (*  bgt L2            *)
-    03A17H,  (*  subs r2, r2, 23   *)
+    03A17H,  (*  subs r2, 23       *)
     04252H,  (*  negs r2, r2       *)
     00003H,  (*  movs r3, r0       *)
     040D0H,  (*  lsrs r0, r2       *)
     04252H,  (*  negs r2, r2       *)
-    03220H,  (*  adds r2, r2, 32   *)
+    03220H,  (*  adds r2, 32       *)
     02900H,  (*  cmp r1, 0         *)
     0DA0DH,  (*  bge L5            *)
     04093H,  (*  lsls r3, r2       *)
     02B00H,  (*  cmp r3, 0         *)
     0D00AH,  (*  beq L5            *)
-    01C40H,  (*  adds r0, r0, 1    *)
+    03001H,  (*  adds r0, 1        *)
     0E008H,  (*  b L5              *)
              (*  L2:               *)
     02A36H,  (*  cmp r2, 54        *)
     0DC05H,  (*  bgt L6            *)
-    03A17H,  (*  subs r2, r2, 23   *)
+    03A17H,  (*  subs r2, 23       *)
     04090H,  (*  lsls r0, r2       *)
     0E003H,  (*  b L5              *)
              (*  L1:               *)

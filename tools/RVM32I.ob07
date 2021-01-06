@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -42,6 +42,7 @@ CONST
     opLEA = 78; opLABEL = 79; opSYSCALL = 80;
 
 
+    nREG = 32;
     ACC = 0; BP = 3; SP = 4;
 
     Types   = 0;
@@ -62,8 +63,6 @@ TYPE
 
 
 VAR
-
-    R: ARRAY 32 OF INTEGER;
 
     Sections: ARRAY 5 OF RECORD address: INTEGER; name: ARRAY 16 OF CHAR END;
 
@@ -119,6 +118,7 @@ VAR
     cmd: COMMAND;
     param1, param2: INTEGER;
     temp: INTEGER;
+    R: ARRAY nREG OF INTEGER;
 
 BEGIN
     cmd := first;
