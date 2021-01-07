@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -533,8 +533,6 @@ VAR
     shorted: BOOLEAN;
     jump:    JUMP;
 
-    first, second: INTEGER;
-
     reloc, i, diff, len: INTEGER;
 
     RelocCode: RELOCCODE;
@@ -553,14 +551,6 @@ VAR
         ASSERT(srange(offset, 11))
         RETURN 0E000H + offset MOD 2048
     END genjmp;
-
-
-    PROCEDURE genlongjmp (offset: INTEGER; VAR first, second: INTEGER);
-    BEGIN
-        ASSERT(srange(offset, 22));
-        first  := 0F000H + ASR(offset, 11) MOD 2048;
-        second := 0F800H + offset MOD 2048
-    END genlongjmp;
 
 
     PROCEDURE movwt (r, imm16, t: INTEGER; VAR code: RELOCCODE);
@@ -597,19 +587,22 @@ VAR
     END PutCode;
 
 
-    PROCEDURE genbc (code: JUMP);
-    VAR
-        first, second: INTEGER;
+    PROCEDURE genlongjmp (offset: INTEGER);
+    BEGIN
+        ASSERT(srange(offset, 22));
+        PutCode(0F000H + ASR(offset, 11) MOD 2048);
+        PutCode(0F800H + offset MOD 2048)
+    END genlongjmp;
 
+
+    PROCEDURE genbc (code: JUMP);
     BEGIN
         CASE code.len OF
         |1: PutCode(genjcc(code.cond, code.diff))
         |2: PutCode(genjcc(inv0(code.cond), 0));
             PutCode(genjmp(code.diff))
         |3: PutCode(genjcc(inv0(code.cond), 1));
-            genlongjmp(code.diff, first, second);
-            PutCode(first);
-            PutCode(second)
+            genlongjmp(code.diff)
         END
     END genbc;
 
@@ -714,9 +707,7 @@ BEGIN
                 IF code.len = 1 THEN
                     PutCode(genjmp(code.diff))
                 ELSE
-                    genlongjmp(code.diff, first, second);
-                    PutCode(first);
-                    PutCode(second)
+                    genlongjmp(code.diff)
                 END
 
         |JCC:   genbc(code)
@@ -731,10 +722,7 @@ BEGIN
                     PutCode(0B100H + 800H * ORD(code.cond = jne) + 200H * ORD(code.diff >= 32) + (code.diff MOD 32) * 8 + code.reg)
                 END
 
-        |CALL:
-                genlongjmp(code.diff, first, second);
-                PutCode(first);
-                PutCode(second)
+        |CALL:  genlongjmp(code.diff)
 
         |RELOC:
                 CASE code.rel OF
@@ -982,25 +970,26 @@ BEGIN
 END AddSP;
 
 
-PROCEDURE cbz (r, label: INTEGER);
+PROCEDURE cbxz2 (c, r, label: INTEGER);
 BEGIN
     IF Target.InstrSet.cbxz THEN
-        cbxz(je, r, label)
+        cbxz(c, r, label)
     ELSE
         Tst(r);
-        jcc(je, label)
+        jcc(c, label)
     END
+END cbxz2;
+
+
+PROCEDURE cbz (r, label: INTEGER);
+BEGIN
+    cbxz2(je, r, label)
 END cbz;
 
 
 PROCEDURE cbnz (r, label: INTEGER);
 BEGIN
-    IF Target.InstrSet.cbxz THEN
-        cbxz(jne, r, label)
-    ELSE
-        Tst(r);
-        jcc(jne, label)
-    END
+    cbxz2(jne, r, label)
 END cbnz;
 
 
@@ -2315,6 +2304,20 @@ BEGIN
     Target.InstrSet.sdiv   := TRUE;
     Target.InstrSet.cbxz   := TRUE
 END CortexM3;
+
+
+PROCEDURE CortexM0;
+BEGIN
+    Target.FlashAdr := 08000000H;
+    Target.SRAMAdr  := 20000000H;
+    Target.IVTLen   := 256;
+    Target.Reserved := 0;
+    Target.MinStack := 512;
+    Target.InstrSet.thumb2 := FALSE;
+    Target.InstrSet.it     := FALSE;
+    Target.InstrSet.sdiv   := FALSE;
+    Target.InstrSet.cbxz   := FALSE
+END CortexM0;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
