@@ -23,10 +23,16 @@ CONST
 
     inf = 7F800000H;
 
-    STM32_minROM* = 16; STM32_maxROM* = 65536;
-    STM32_minRAM* = 4;  STM32_maxRAM* = 65536;
+    minROM* = 16; maxROM* = 65536;
+    minRAM* = 4;  maxRAM* = 65536;
 
     maxIVT* = 1023;
+
+    _THUMB2 = 0; _IT = 1; _SDIV = 2; _CBXZ = 3;
+
+    CortexM0 = {};
+    CortexM1 = {};
+    CortexM3 = {_THUMB2, _IT, _SDIV, _CBXZ};
 
 
 TYPE
@@ -103,7 +109,8 @@ VAR
         IVTLen,
         MinStack,
         Reserved: INTEGER;
-        InstrSet: RECORD thumb2, it, cbxz, sdiv: BOOLEAN END
+        InstrSet: SET;
+        isNXP: BOOLEAN
     END;
 
     IVT: ARRAY maxIVT + 1 OF INTEGER;
@@ -566,7 +573,7 @@ VAR
 
     PROCEDURE genmovimm32 (r, value: INTEGER; VAR code: RELOCCODE);
     BEGIN
-        IF Target.InstrSet.thumb2 THEN
+        IF _THUMB2 IN Target.InstrSet THEN
             movwt(r, low(value), 0, code);
             movwt(r, high(value), 1, code)
         ELSE
@@ -640,7 +647,7 @@ BEGIN
             |CODE:  INC(count)
             |LABEL: BIN.SetLabel(program, code.label, count)
             |JUMP:  INC(count, code.len); code.offset := count + ORD(code.short)
-            |RELOC: INC(count, 7 - ORD(Target.InstrSet.thumb2) * 3 + code.rel MOD 2)
+            |RELOC: INC(count, 7 - ORD(_THUMB2 IN Target.InstrSet) * 3 + code.rel MOD 2)
             END;
 
             code := code.next(ANYCODE)
@@ -731,10 +738,10 @@ BEGIN
                 |BIN.RBSS,  BIN.PICBSS:  reloc := code.value + BssAdr
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    DEC(reloc, CodeAdr + 2 * (code.offset - 3 * ORD(Target.InstrSet.thumb2) + 9))
+                    DEC(reloc, CodeAdr + 2 * (code.offset - 3 * ORD(_THUMB2 IN Target.InstrSet) + 9))
                 END;
                 genmovimm32(code.reg, reloc, RelocCode);
-                FOR i := 0 TO 6 - 3 * ORD(Target.InstrSet.thumb2) DO
+                FOR i := 0 TO 6 - 3 * ORD(_THUMB2 IN Target.InstrSet) DO
                     PutCode(RelocCode[i])
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
@@ -846,7 +853,7 @@ BEGIN
         MovImm8(r, 1);
         LslImm(r, 31)
     ELSE
-        IF Target.InstrSet.thumb2 THEN
+        IF _THUMB2 IN Target.InstrSet THEN
             movwt(r, low(c), 0);
             IF (c < 0) OR (c > 65535) THEN
                 movwt(r, high(c), 1)
@@ -885,7 +892,7 @@ VAR
     L1, L2: INTEGER;
 
 BEGIN
-    IF Target.InstrSet.it THEN
+    IF _IT IN Target.InstrSet THEN
         Code(0BF00H + cc * 16 + ((cc + 1) MOD 2) * 8 + 4); (* ite cc *)
         MovConst(r, 1);
         MovConst(r, 0)
@@ -926,7 +933,7 @@ BEGIN
             ELSE
                 SubImm8(r, -n)
             END
-        ELSIF Target.InstrSet.thumb2 & (-4095 <= n) & (n <= 4095) THEN
+        ELSIF (_THUMB2 IN Target.InstrSet) & (-4095 <= n) & (n <= 4095) THEN
             IF n > 0 THEN
                 AddSubImm12(r, n, FALSE)
             ELSE
@@ -972,7 +979,7 @@ END AddSP;
 
 PROCEDURE cbxz2 (c, r, label: INTEGER);
 BEGIN
-    IF Target.InstrSet.cbxz THEN
+    IF _CBXZ IN Target.InstrSet THEN
         cbxz(c, r, label)
     ELSE
         Tst(r);
@@ -2121,7 +2128,7 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (GlobSize, tcount, pic, FlashAdr, sp, ivt_len: INTEGER);
+PROCEDURE prolog (GlobSize, tcount, pic, sp, ivt_len: INTEGER);
 VAR
     r1, r2, i, dcount: INTEGER;
 
@@ -2207,7 +2214,7 @@ BEGIN
     call(entry);
 
     Label(sdivProc);
-    IF Target.InstrSet.sdiv THEN
+    IF _SDIV IN Target.InstrSet THEN
         Code(09800H);  (* ldr  r0, [sp + #0] *)
         Code(09901H);  (* ldr  r1, [sp + #4] *)
         Code(0FB91H);  (* sdiv r2, r1, r0    *)
@@ -2292,49 +2299,34 @@ BEGIN
 END epilog;
 
 
-PROCEDURE CortexM3;
+PROCEDURE SetTarget (FlashStart, SRAMStart: INTEGER; InstrSet: SET; isNXP: BOOLEAN);
 BEGIN
-    Target.FlashAdr := 08000000H;
-    Target.SRAMAdr  := 20000000H;
-    Target.IVTLen   := 256;
+    Target.FlashAdr := FlashStart;
+    Target.SRAMAdr  := SRAMStart;
+    Target.InstrSet := InstrSet;
+    Target.isNXP    := isNXP;
+
+    Target.IVTLen   := 240; (* >= 192 *)
     Target.Reserved := 0;
     Target.MinStack := 512;
-    Target.InstrSet.thumb2 := TRUE;
-    Target.InstrSet.it     := TRUE;
-    Target.InstrSet.sdiv   := TRUE;
-    Target.InstrSet.cbxz   := TRUE
-END CortexM3;
-
-
-PROCEDURE CortexM0;
-BEGIN
-    Target.FlashAdr := 08000000H;
-    Target.SRAMAdr  := 20000000H;
-    Target.IVTLen   := 256;
-    Target.Reserved := 0;
-    Target.MinStack := 512;
-    Target.InstrSet.thumb2 := FALSE;
-    Target.InstrSet.it     := FALSE;
-    Target.InstrSet.sdiv   := FALSE;
-    Target.InstrSet.cbxz   := FALSE
-END CortexM0;
+END SetTarget;
 
 
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     opt: PROG.OPTIONS;
 
-    ram, rom: INTEGER;
+    ram, rom, i, j: INTEGER;
 
     DataAdr, BssAdr, DataSize, BssSize, CodeSize: INTEGER;
 
 BEGIN
-    IF target = TARGETS.STM32CM3 THEN
-        CortexM3
-    END;
+    ram := MIN(MAX(options.ram, minRAM), maxRAM) * 1024;
+    rom := MIN(MAX(options.rom, minROM), maxROM) * 1024;
 
-    ram := MIN(MAX(options.ram, STM32_minRAM), STM32_maxRAM) * 1024;
-    rom := MIN(MAX(options.rom, STM32_minROM), STM32_maxROM) * 1024;
+    IF target = TARGETS.STM32CM3 THEN
+        SetTarget(08000000H, 20000000H, CortexM3, FALSE)
+    END;
 
     tcount := CHL.Length(IL.codes.types);
 
@@ -2360,7 +2352,7 @@ BEGIN
     BssSize := IL.codes.bss;
     ASSERT(UTILS.Align(BssSize, 4));
 
-    prolog(BssSize, tcount, ORD(opt.pic), Target.FlashAdr, Target.SRAMAdr + ram, Target.IVTLen);
+    prolog(BssSize, tcount, ORD(opt.pic), Target.SRAMAdr + ram, Target.IVTLen);
     translate(ORD(opt.pic), tcount * 4);
     epilog;
 
@@ -2377,6 +2369,16 @@ BEGIN
         ERRORS.Error(204)
     END;
 
+    IF Target.isNXP THEN
+        BIN.put32le(program.code, 2FCH, 0H); (* code read protection (CRP) *)
+        (* NXP checksum *)
+        j := 0;
+        FOR i := 0 TO 6 DO
+            INC(j, BIN.get32le(program.code, i * 4))
+        END;
+        BIN.put32le(program.code, 1CH, -j)
+    END;
+
     WR.Create(outname);
 
     HEX.Data2(program.code, 0, CodeSize, high(Target.FlashAdr));
@@ -2388,7 +2390,6 @@ BEGIN
     C.String(  "  rom:  "); C.Int(CodeSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(CodeSize * 100 DIV rom); C.StringLn("%)");
     C.Ln;
     C.String(  "  ram:  "); C.Int(DataSize); C.String(" of "); C.Int(ram);  C.String("  ("); C.Int(DataSize * 100 DIV ram);  C.StringLn("%)")
-
 END CodeGen;
 
 

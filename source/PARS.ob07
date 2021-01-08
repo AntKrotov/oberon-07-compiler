@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -1010,7 +1010,7 @@ VAR
 
         IF parser.sym = SCAN.lxLSQUARE THEN
             getpos(parser, pos2);
-            check(TARGETS.target = TARGETS.STM32CM3, pos2, 24);
+            check((TARGETS.CPU = TARGETS.cpuTHUMB) & (TARGETS.OS = TARGETS.osNONE), pos2, 24);
             Next(parser);
             getpos(parser, pos2);
             ConstExpression(parser, iv);

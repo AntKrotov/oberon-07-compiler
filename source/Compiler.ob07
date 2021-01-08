@@ -190,7 +190,7 @@ BEGIN
 
     C.Ln;
     C.String("Akron Oberon Compiler v"); C.Int(UTILS.vMajor); C.String("."); C.Int2(UTILS.vMinor);
-        C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit) 2021-01-07");
+        C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit) 2021-01-09");
     C.StringLn("Copyright (c) 2018-2021, Anton Krotov");
 
     IF inname = "" THEN
@@ -252,14 +252,14 @@ BEGIN
         ERRORS.Error(206)
     END;
 
-    IF target = TARGETS.MSP430 THEN
+    IF TARGETS.CPU = TARGETS.cpuMSP430 THEN
         options.ram := MSP430.minRAM;
         options.rom := MSP430.minROM
     END;
 
-    IF target = TARGETS.STM32CM3 THEN
-        options.ram := THUMB.STM32_minRAM;
-        options.rom := THUMB.STM32_minROM
+    IF (TARGETS.CPU = TARGETS.cpuTHUMB) & (TARGETS.OS = TARGETS.osNONE) THEN
+        options.ram := THUMB.minRAM;
+        options.rom := THUMB.minROM
     END;
 
     IF UTILS.bit_depth < TARGETS.BitDepth THEN
