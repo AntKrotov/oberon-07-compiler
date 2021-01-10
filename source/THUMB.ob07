@@ -30,9 +30,10 @@ CONST
 
     _THUMB2 = 0; _IT = 1; _SDIV = 2; _CBXZ = 3;
 
-    CortexM0 = {};
-    CortexM1 = {};
-    CortexM3 = {_THUMB2, _IT, _SDIV, _CBXZ};
+    CortexM0  = {};
+    CortexM1  = {};
+    CortexM3  = {_THUMB2, _IT, _SDIV, _CBXZ};
+    CortexM23 = {_SDIV, _CBXZ};
 
 
 TYPE
@@ -482,7 +483,7 @@ END Cmp;
 
 PROCEDURE Tst (r: INTEGER);
 BEGIN
-    gen3(1, r, 0) (* cmp r, #0 *)
+    gen3(1, r, 0) (* cmp r, 0 *)
 END Tst;
 
 
@@ -577,13 +578,13 @@ VAR
             movwt(r, low(value), 0, code);
             movwt(r, high(value), 1, code)
         ELSE
-            code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* mov r, #imm8 *)
-            code[1] := 0200H + r * 9;                           (* lsl r, r, #8 *)
-            code[2] := 3000H + r * 256 + UTILS.Byte(value, 2);  (* add r, #imm8 *)
-            code[3] := code[1];                                 (* lsl r, r, #8 *)
-            code[4] := 3000H + r * 256 + UTILS.Byte(value, 1);  (* add r, #imm8 *)
-            code[5] := code[1];                                 (* lsl r, r, #8 *)
-            code[6] := 3000H + r * 256 + UTILS.Byte(value, 0)   (* add r, #imm8 *)
+            code[0] := 2000H + r * 256 + UTILS.Byte(value, 3);  (* movs r, imm8 *)
+            code[1] := 0200H + r * 9;                           (* lsls r, 8    *)
+            code[2] := 3000H + r * 256 + UTILS.Byte(value, 2);  (* adds r, imm8 *)
+            code[3] := code[1];                                 (* lsls r, 8    *)
+            code[4] := 3000H + r * 256 + UTILS.Byte(value, 1);  (* adds r, imm8 *)
+            code[5] := code[1];                                 (* lsls r, 8    *)
+            code[6] := 3000H + r * 256 + UTILS.Byte(value, 0)   (* adds r, imm8 *)
         END
     END genmovimm32;
 
@@ -721,12 +722,12 @@ BEGIN
 
         |CBXZ:
                 IF code.len > 1 THEN
-                    PutCode(2800H + code.reg * 256); (* cmp code.reg, #0 *)
+                    PutCode(2800H + code.reg * 256); (* cmp code.reg, 0 *)
                     DEC(code.len);
                     genbc(code)
                 ELSE
                     (* cb(n)z code.reg, L *)
-                    PutCode(0B100H + 800H * ORD(code.cond = jne) + 200H * ORD(code.diff >= 32) + (code.diff MOD 32) * 8 + code.reg)
+                    PutCode(0B100H + 800H * ORD(code.cond = jne) + 200H * (code.diff DIV 32) + (code.diff MOD 32) * 8 + code.reg)
                 END
 
         |CALL:  genlongjmp(code.diff)
@@ -745,7 +746,7 @@ BEGIN
                     PutCode(RelocCode[i])
                 END;
                 IF code.rel IN {BIN.PICCODE, BIN.PICDATA, BIN.PICBSS} THEN
-                    PutCode(4478H + code.reg) (* add code.reg, PC *)
+                    PutCode(4478H + code.reg) (* add code.reg, pc *)
                 END
         END;
 
@@ -966,7 +967,7 @@ PROCEDURE AddSP (n: INTEGER);
 BEGIN
     IF n > 0 THEN
         IF n < 127 THEN
-            Code(0B000H + n) (*  add sp, n*4  *)
+            Code(0B000H + n) (* add sp, n*4 *)
         ELSE
             ASSERT(R2 IN R.regs);
             MovConst(R2, n * 4);
@@ -1099,7 +1100,7 @@ BEGIN
 
             Label(param1);
 
-            gen14(FALSE, TRUE, {}); (* push LR *)
+            gen14(FALSE, TRUE, {}); (* push {lr} *)
 
             n := param2;
             IF n >= 5 THEN
@@ -1135,10 +1136,10 @@ BEGIN
             ASSERT(StkCount = param1);
 
             AddSP(param1);
-            gen14(TRUE, TRUE, {}) (* pop PC *)
+            gen14(TRUE, TRUE, {}) (* pop {pc} *)
 
         |IL.opLEAVEC:
-            gen5(3, FALSE, TRUE, 6, 0) (* bx LR *)
+            gen5(3, FALSE, TRUE, 6, 0) (* bx lr *)
 
         |IL.opPRECALL:
             PushAll(0)
@@ -1545,11 +1546,11 @@ BEGIN
 
         |IL.opCHR:
             UnOp(r1);
-            Code(0B2C0H + r1 * 9) (* uxtb r1 *)
+            Code(0B2C0H + r1 * 9) (* uxtb r1, r1 *)
 
         |IL.opWCHR:
             UnOp(r1);
-            Code(0B280H + r1 * 9) (* uxth r1 *)
+            Code(0B280H + r1 * 9) (* uxth r1, r1 *)
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             BinOp(r1, r2);
@@ -1716,46 +1717,46 @@ BEGIN
 
         |IL.opMULS:
             BinOp(r1, r2);
-            gen4(0, r2, r1); (* and r1, r2 *)
+            gen4(0, r2, r1); (* ands r1, r2 *)
             drop
 
         |IL.opMULSC:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
-            gen4(0, r2, r1); (* and r1, r2 *)
+            gen4(0, r2, r1); (* ands r1, r2 *)
             drop
 
         |IL.opDIVS:
             BinOp(r1, r2);
-            gen4(1, r2, r1); (* eor r1, r2 *)
+            gen4(1, r2, r1); (* eors r1, r2 *)
             drop
 
         |IL.opDIVSC:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
-            gen4(1, r2, r1); (* eor r1, r2 *)
+            gen4(1, r2, r1); (* eors r1, r2 *)
             drop
 
         |IL.opADDS:
             BinOp(r1, r2);
-            gen4(12, r2, r1); (* orr r1, r2 *)
+            gen4(12, r2, r1); (* orrs r1, r2 *)
             drop
 
         |IL.opSUBS:
             BinOp(r1, r2);
-            gen4(14, r2, r1); (* bic r1, r2 *)
+            gen4(14, r2, r1); (* bics r1, r2 *)
             drop
 
         |IL.opADDSC:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
-            gen4(12, r2, r1); (* orr r1, r2 *)
+            gen4(12, r2, r1); (* orrs r1, r2 *)
             drop
 
         |IL.opSUBSL:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
-            gen4(14, r1, r2); (* bic r2, r1 *)
+            gen4(14, r1, r2); (* bics r2, r1 *)
             INCL(R.regs, r1);
             DEC(R.top);
             R.stk[R.top] := r2
@@ -1763,12 +1764,12 @@ BEGIN
         |IL.opSUBSR:
             MovConst(GetAnyReg(), param2);
             BinOp(r1, r2);
-            gen4(14, r2, r1); (* bic r1, r2 *)
+            gen4(14, r2, r1); (* bics r1, r2 *)
             drop
 
         |IL.opUMINS:
             UnOp(r1);
-            gen4(15, r1, r1) (* mvn r1, r1 *)
+            gen4(15, r1, r1) (* mvns r1, r1 *)
 
         |IL.opINCL, IL.opEXCL:
             BinOp(r1, r2);
@@ -1777,12 +1778,12 @@ BEGIN
             CmpConst(r1, 32);
             L := NewLabel();
             jcc(jnb, L);
-            gen4(2, r1, r3); (* lsl r3, r1 *)
+            gen4(2, r1, r3); (* lsls r3, r1 *)
             Ldr32(r1, r2);
             IF opcode = IL.opINCL THEN
-                gen4(12, r3, r1) (* orr r1, r3 *)
+                gen4(12, r3, r1) (* orrs r1, r3 *)
             ELSE
-                gen4(14, r3, r1) (* bic r1, r3 *)
+                gen4(14, r3, r1) (* bics r1, r3 *)
             END;
             Str32(r1, r2);
             Label(L);
@@ -1798,9 +1799,9 @@ BEGIN
             LslImm(r3, param2);
             Ldr32(r1, r2);
             IF opcode = IL.opINCLC THEN
-                gen4(12, r3, r1) (* orr r1, r3 *)
+                gen4(12, r3, r1) (* orrs r1, r3 *)
             ELSE
-                gen4(14, r3, r1) (* bic r1, r3 *)
+                gen4(14, r3, r1) (* bics r1, r3 *)
             END;
             Str32(r1, r2);
             drop;
@@ -1898,9 +1899,9 @@ BEGIN
             IF n > 0 THEN
                 UnOp(r1);
                 IF n = 8 THEN
-                    Code(0B2C0H + r1 * 9) (* uxtb r1 *)
+                    Code(0B2C0H + r1 * 9) (* uxtb r1, r1 *)
                 ELSIF n = 16 THEN
-                    Code(0B280H + r1 * 9) (* uxth r1 *)
+                    Code(0B280H + r1 * 9) (* uxth r1, r1 *)
                 ELSE
                     LslImm(r1, 32 - n);
                     LsrImm(r1, 32 - n)
@@ -1942,7 +1943,7 @@ BEGIN
             Label(L);
             MovConst(r3, 1);
             Shift(IL.opLSL, r3, r1);
-            gen4(0, r3, r2); (* and r2, r3 *)
+            gen4(0, r3, r2); (* ands r2, r3 *)
             SetCC(jne, r1);
             Label(L2);
             drop;
@@ -1952,7 +1953,7 @@ BEGIN
             UnOp(r1);
             r2 := GetAnyReg();
             MovConst(r2, LSL(1, param2));
-            gen4(0, r2, r1); (* and r1, r2 *)
+            gen4(0, r2, r1); (* ands r1, r2 *)
             SetCC(jne, r1);
             drop
 
@@ -2035,7 +2036,7 @@ BEGIN
             r2 := GetAnyReg();
             MovConst(r2, 1);
             LslImm(r2, 31);
-            gen4(1, r2, r1); (* eor r1, r2 *)
+            gen4(1, r2, r1); (* eors r1, r2 *)
             drop
 
         |IL.opFABS:
@@ -2043,7 +2044,7 @@ BEGIN
             r2 := GetAnyReg();
             MovConst(r2, 1);
             LslImm(r2, 31);
-            gen4(14, r2, r1); (* bic r1, r2 *)
+            gen4(14, r2, r1); (* bics r1, r2 *)
             drop
 
         |IL.opNEW:
@@ -2197,14 +2198,14 @@ VAR
     L1, L2, L3, L4: INTEGER;
 
 BEGIN
-    Code(0BF30H);  (* L2: wfi *)
-    Code(0E7FDH);  (* b L2    *)
+                   (* L2:  *)
+    Code(0E7FEH);  (* b L2 *)
 
     Label(genInt);
-    Code(0F3EFH); Code(08105H);  (* mrs r1, ipsr  *)
-    gen14(FALSE, TRUE, {R1});    (* push {LR, R1} *)
+    Code(0F3EFH); Code(08005H);  (* mrs r0, ipsr  *)
+    gen14(FALSE, TRUE, {R0});    (* push {lr, r0} *)
     call(int0);
-    gen14(TRUE, TRUE, {R1});     (* pop {PC, R1}  *)
+    gen14(TRUE, TRUE, {R0});     (* pop {pc, r0}  *)
 
     Label(emptyProc);
     Code(04770H);  (* bx lr *)
@@ -2215,19 +2216,19 @@ BEGIN
 
     Label(sdivProc);
     IF _SDIV IN Target.InstrSet THEN
-        Code(09800H);  (* ldr  r0, [sp + #0] *)
-        Code(09901H);  (* ldr  r1, [sp + #4] *)
-        Code(0FB91H);  (* sdiv r2, r1, r0    *)
+        Code(09800H);  (* ldr  r0, [sp]    *)
+        Code(09901H);  (* ldr  r1, [sp, 4] *)
+        Code(0FB91H);  (* sdiv r2, r1, r0  *)
         Code(0F2F0H);
-        Code(00013H);  (* mov  r3, r2        *)
-        Code(04343H);  (* mul  r3, r0        *)
-        Code(01AC9H);  (* sub  r1, r3        *)
-        Code(0DA01H);  (* bge  L             *)
-        Code(04401H);  (* add  r1, r0        *)
-        Code(03A01H);  (* sub  r2, #1        *)
-                       (* L:                 *)
-        Code(00010H);  (* mov  r0, r2        *)
-        Code(04770H);  (* bx   lr            *)
+        Code(00013H);  (* movs r3, r2      *)
+        Code(04343H);  (* muls r3, r0, r3  *)
+        Code(01AC9H);  (* subs r1, r1, r3  *)
+        Code(0DA01H);  (* bge  L           *)
+        Code(01809H);  (* adds r1, r1, r0  *)
+        Code(03A01H);  (* subs r2, 1       *)
+                       (* L:               *)
+        Code(00010H);  (* movs r0, r2      *)
+        Code(04770H);  (* bx   lr          *)
     ELSE
         (* a / b; a >= 0 *)
         L1 := NewLabel();
@@ -2306,7 +2307,7 @@ BEGIN
     Target.InstrSet := InstrSet;
     Target.isNXP    := isNXP;
 
-    Target.IVTLen   := 240; (* >= 192 *)
+    Target.IVTLen   := 256; (* >= 192 *)
     Target.Reserved := 0;
     Target.MinStack := 512;
 END SetTarget;
@@ -2389,7 +2390,7 @@ BEGIN
     C.Dashes;
     C.String(  "  rom:  "); C.Int(CodeSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(CodeSize * 100 DIV rom); C.StringLn("%)");
     C.Ln;
-    C.String(  "  ram:  "); C.Int(DataSize); C.String(" of "); C.Int(ram);  C.String("  ("); C.Int(DataSize * 100 DIV ram);  C.StringLn("%)")
+    C.String(  "  ram:  "); C.Int(DataSize); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(DataSize * 100 DIV ram); C.StringLn("%)")
 END CodeGen;
 
 

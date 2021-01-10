@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -23,7 +23,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 44;
+    vMinor* = 45;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
