@@ -64,6 +64,12 @@ CONST
         EXTI_PR = EXTI + 14H;
 
 
+    SCB_SCR = 0E000ED00H + 10H;
+        SLEEPONEXIT = {1};
+        SLEEPDEEP   = {2};
+        SEVONPEND   = {4};
+
+
     LINE0 = {0};
 
     Blue  = 6;
@@ -79,15 +85,35 @@ VAR
 PROCEDURE PushButton [22];
 BEGIN
     SYSTEM.PUT(EXTI_PR, LINE0);  (* сбросить флаг прерывания *)
-    state := (state + 1) MOD 4;
+    INC(state);
     (* изменить состояние светодиодов *)
-    CASE state OF
+    CASE state MOD 4 OF
     |0: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green + 16})
     |1: SYSTEM.PUT(GPIOBBSRR, {Blue, Green + 16})
     |2: SYSTEM.PUT(GPIOBBSRR, {Blue + 16, Green})
     |3: SYSTEM.PUT(GPIOBBSRR, {Blue, Green})
     END
 END PushButton;
+
+
+PROCEDURE [code] wfi
+    0BF30H; (* wfi *)
+
+
+PROCEDURE sleep;
+VAR
+    x: SET;
+
+BEGIN
+    REPEAT
+        (* настроить режим сна *)
+        SYSTEM.GET(SCB_SCR, x);
+        SYSTEM.PUT(SCB_SCR, x - SLEEPDEEP);
+
+        (* ждать прерывание *)
+        wfi
+    UNTIL FALSE
+END sleep;
 
 
 BEGIN
@@ -111,4 +137,6 @@ BEGIN
     (* разрешить прерывания от LINE0 по нарастающему краю импульса *)
     SYSTEM.PUT(EXTI_IMR, LINE0);
     SYSTEM.PUT(EXTI_RTSR, LINE0);
+
+    sleep
 END Button.

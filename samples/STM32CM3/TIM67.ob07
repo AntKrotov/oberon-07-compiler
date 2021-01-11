@@ -78,6 +78,12 @@ CONST
         NVIC_ICER2 = NVIC + 88H;
 
 
+    SCB_SCR = 0E000ED00H + 10H;
+        SLEEPONEXIT = {1};
+        SLEEPDEEP   = {2};
+        SEVONPEND   = {4};
+
+
     BLUELED  = 6;
     GREENLED = 7;
 
@@ -94,7 +100,6 @@ BEGIN
     state1 := ~state1;
     (* включить или выключить синий светодиод *)
     SYSTEM.PUT(GPIOBBSRR, {BLUELED + 16 * ORD(state1)})
-
 END tim6;
 
 
@@ -106,6 +111,26 @@ BEGIN
     (* включить или выключить зеленый светодиод *)
     SYSTEM.PUT(GPIOBBSRR, {GREENLED + 16 * ORD(state2)})
 END tim7;
+
+
+PROCEDURE [code] wfi
+    0BF30H; (* wfi *)
+
+
+PROCEDURE sleep;
+VAR
+    x: SET;
+
+BEGIN
+    REPEAT
+        (* настроить режим сна *)
+        SYSTEM.GET(SCB_SCR, x);
+        SYSTEM.PUT(SCB_SCR, x - SLEEPDEEP);
+
+        (* ждать прерывание *)
+        wfi
+    UNTIL FALSE
+END sleep;
 
 
 BEGIN
@@ -140,4 +165,6 @@ BEGIN
     SYSTEM.PUT(TIM7_DIER, UIE);
     SYSTEM.GET(TIM7_CR1, x);
     SYSTEM.PUT(TIM7_CR1, x + CEN - (UDIS + URS + OPM + ARPE));
+
+    sleep
 END TIM67.

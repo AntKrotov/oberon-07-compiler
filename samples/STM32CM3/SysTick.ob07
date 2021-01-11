@@ -43,6 +43,12 @@ CONST
         STK_CALIB = STK + 0CH;
 
 
+    SCB_SCR = 0E000ED00H + 10H;
+        SLEEPONEXIT = {1};
+        SLEEPDEEP   = {2};
+        SEVONPEND   = {4};
+
+
     Blue  = 6;
     Green = 7;
 
@@ -62,8 +68,28 @@ BEGIN
 END tick;
 
 
+PROCEDURE [code] wfi
+    0BF30H; (* wfi *)
+
+
+PROCEDURE sleep;
+VAR
+    x: SET;
+
 BEGIN
-    state := FALSE;
+    REPEAT
+        (* настроить режим сна *)
+        SYSTEM.GET(SCB_SCR, x);
+        SYSTEM.PUT(SCB_SCR, x - SLEEPDEEP);
+
+        (* ждать прерывание *)
+        wfi
+    UNTIL FALSE
+END sleep;
+
+
+BEGIN
+    state := TRUE;
 
     (* подключить GPIOB *)
     SYSTEM.GET(RCC_AHBENR, x);
@@ -76,4 +102,6 @@ BEGIN
     (* настроить и запустить SysTick *)
     SYSTEM.PUT(STK_LOAD, 1048576);
     SYSTEM.PUT(STK_CTRL, ENABLE + TICKINT + CLKSOURCE);
+
+    sleep
 END SysTick.

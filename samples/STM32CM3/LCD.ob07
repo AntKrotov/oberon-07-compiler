@@ -64,6 +64,12 @@ CONST
         RCC_CSR     = RCC + 34H;
 
 
+    SCB_SCR = 0E000ED00H + 10H;
+        SLEEPONEXIT = {1};
+        SLEEPDEEP   = {2};
+        SEVONPEND   = {4};
+
+
     PWR = 40007000H;
         PWR_CR = PWR;
 
@@ -361,6 +367,27 @@ BEGIN
 END main;
 
 
+PROCEDURE [code] wfi
+    0BF30H; (* wfi *)
+
+
+PROCEDURE sleep;
+VAR
+    x: SET;
+
 BEGIN
-    main
+    REPEAT
+        (* настроить режим сна *)
+        SYSTEM.GET(SCB_SCR, x);
+        SYSTEM.PUT(SCB_SCR, x - SLEEPDEEP);
+
+        (* ждать прерывание *)
+        wfi
+    UNTIL FALSE
+END sleep;
+
+
+BEGIN
+    main;
+    sleep
 END LCD.
