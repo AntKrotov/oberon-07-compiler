@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -159,20 +159,14 @@ VAR
     i: INTEGER;
 
 BEGIN
-    WHILE ((source MOD WORD # 0) OR (dest MOD WORD # 0)) & (bytes > 0) DO
-        SYSTEM.GET(source, b);
-        SYSTEM.PUT8(dest, b);
-        INC(source);
-        INC(dest);
-        DEC(bytes)
-    END;
-
-    WHILE bytes >= WORD DO
-        SYSTEM.GET(source, i);
-        SYSTEM.PUT(dest, i);
-        INC(source, WORD);
-        INC(dest, WORD);
-        DEC(bytes, WORD)
+    IF (source MOD WORD = 0) & (dest MOD WORD = 0) THEN
+        WHILE bytes >= WORD DO
+            SYSTEM.GET(source, i);
+            SYSTEM.PUT(dest, i);
+            INC(source, WORD);
+            INC(dest, WORD);
+            DEC(bytes, WORD)
+        END
     END;
 
     WHILE bytes > 0 DO
@@ -209,7 +203,7 @@ VAR
     res: INTEGER;
 
 BEGIN
-    res := 0;
+    res := minint;
     WHILE n > 0 DO
         SYSTEM.GET(a, A); INC(a);
         SYSTEM.GET(b, B); INC(b);
@@ -218,6 +212,7 @@ BEGIN
             res := ORD(A) - ORD(B);
             n := 0
         ELSIF A = 0X THEN
+            res := 0;
             n := 0
         END
     END
@@ -227,13 +222,22 @@ END strncmp;
 
 PROCEDURE _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
-    res: INTEGER;
+    res:  INTEGER;
     bRes: BOOLEAN;
+    c:    CHAR;
 
 BEGIN
     res := strncmp(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _length(len1, str1) - _length(len2, str2)
+    IF res = minint THEN
+        IF len1 > len2 THEN
+            SYSTEM.GET(str1 + len2, c);
+            res := ORD(c)
+        ELSIF len1 < len2 THEN
+            SYSTEM.GET(str2 + len1, c);
+            res := -ORD(c)
+        ELSE
+            res := 0
+        END
     END;
 
     CASE op OF
@@ -255,7 +259,7 @@ VAR
     res:  INTEGER;
 
 BEGIN
-    res := 0;
+    res := minint;
     WHILE n > 0 DO
         SYSTEM.GET(a, A); INC(a, 2);
         SYSTEM.GET(b, B); INC(b, 2);
@@ -263,7 +267,8 @@ BEGIN
         IF A # B THEN
             res := ORD(A) - ORD(B);
             n := 0
-        ELSIF A = WCHR(0) THEN
+        ELSIF A = 0X THEN
+            res := 0;
             n := 0
         END
     END
@@ -273,13 +278,22 @@ END strncmpw;
 
 PROCEDURE _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
 VAR
-    res: INTEGER;
+    res:  INTEGER;
     bRes: BOOLEAN;
+    c:    WCHAR;
 
 BEGIN
     res := strncmpw(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _lengthw(len1, str1) - _lengthw(len2, str2)
+    IF res = minint THEN
+        IF len1 > len2 THEN
+            SYSTEM.GET(str1 + len2 * 2, c);
+            res := ORD(c)
+        ELSIF len1 < len2 THEN
+            SYSTEM.GET(str2 + len1 * 2, c);
+            res := -ORD(c)
+        ELSE
+            res := 0
+        END
     END;
 
     CASE op OF
