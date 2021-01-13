@@ -7,26 +7,17 @@
 
 MODULE RTL;
 
-IMPORT SYSTEM, F := FPU2;
+IMPORT SYSTEM, F := FPU;
 
 
 CONST
 
-    bit_depth = 32;
-    maxint = 7FFFFFFFH;
-    minint = 80000000H;
-
-    WORD = bit_depth DIV 8;
-    MAX_SET = bit_depth - 1;
+    WORD = 4;
 
 
 VAR
 
     Heap, Types, TypesCount: INTEGER;
-
-
-PROCEDURE [code] sp (): INTEGER
-    4668H; (* mov r0, sp *)
 
 
 PROCEDURE _fmul* (b, a: INTEGER): INTEGER;
@@ -74,223 +65,317 @@ PROCEDURE _flt* (x: INTEGER): INTEGER;
 END _flt;
 
 
-PROCEDURE _pack* (n: INTEGER; VAR x: SET);
-BEGIN
-    n := LSL((LSR(ORD(x), 23) MOD 256 + n) MOD 256, 23);
-    x := x - {23..30} + BITS(n)
-END _pack;
+PROCEDURE [code] sp (): INTEGER
+    04668H;  (*  mov r0, sp        *)
 
 
-PROCEDURE _unpk* (VAR n: INTEGER; VAR x: SET);
-BEGIN
-    n := LSR(ORD(x), 23) MOD 256 - 127;
-    x := x - {30} + {23..29}
-END _unpk;
+PROCEDURE [code] _pack* (n: INTEGER; VAR x: INTEGER)
+    09800H,  (*  ldr r0, [sp, 0]   *)
+    09901H,  (*  ldr r1, [sp, 4]   *)
+    0680AH,  (*  ldr r2, [r1, 0]   *)
+    00013H,  (*  movs r3, r2       *)
+    00052H,  (*  lsls r2, 1        *)
+    00E12H,  (*  lsrs r2, 24       *)
+    01812H,  (*  adds r2, r2, r0   *)
+    00612H,  (*  lsls r2, 24       *)
+    00852H,  (*  lsrs r2, 1        *)
+    020FFH,  (*  movs r0, 255      *)
+    005C0H,  (*  lsls r0, 23       *)
+    04383H,  (*  bics r3, r0       *)
+    04313H,  (*  orrs r3, r2       *)
+    0600BH;  (*  str r3, [r1, 0]   *)
 
 
-PROCEDURE _rot* (VAR A: ARRAY OF INTEGER);
-VAR
-    i, n, k: INTEGER;
-
-BEGIN
-    k := LEN(A) - 1;
-    n := A[0];
-    i := 0;
-    WHILE i < k DO
-        A[i] := A[i + 1];
-        INC(i)
-    END;
-    A[k] := n
-END _rot;
-
-
-PROCEDURE _set* (b, a: INTEGER): INTEGER;
-BEGIN
-    IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
-        IF b > MAX_SET THEN
-            b := MAX_SET
-        END;
-        IF a < 0 THEN
-            a := 0
-        END;
-        a := LSR(ASR(minint, b - a), MAX_SET - b)
-    ELSE
-        a := 0
-    END
-
-    RETURN a
-END _set;
+PROCEDURE [code] _unpk* (VAR n: INTEGER; VAR x: INTEGER)
+    09800H,  (*  ldr r0, [sp, 0]   *)
+    09901H,  (*  ldr r1, [sp, 4]   *)
+    0680AH,  (*  ldr r2, [r1, 0]   *)
+    00013H,  (*  movs r3, r2       *)
+    00052H,  (*  lsls r2, 1        *)
+    00E12H,  (*  lsrs r2, 24       *)
+    03A7FH,  (*  subs r2, 127      *)
+    06002H,  (*  str r2, [r0, 0]   *)
+    02001H,  (*  movs r0, 1        *)
+    00780H,  (*  lsls r0, 30       *)
+    04383H,  (*  bics r3, r0       *)
+    0207FH,  (*  movs r0, 127      *)
+    005C0H,  (*  lsls r0, 23       *)
+    04303H,  (*  orrs r3, r0       *)
+    0600BH;  (*  str r3, [r1, 0]   *)
 
 
-PROCEDURE _set1* (a: INTEGER): INTEGER;
-BEGIN
-    IF ASR(a, 5) = 0 THEN
-        a := LSL(1, a)
-    ELSE
-        a := 0
-    END
-    RETURN a
-END _set1;
+PROCEDURE [code] _rot* (VAR A: ARRAY OF INTEGER)
+    09801H,  (*  ldr r0, [sp, 4]   *)
+    09900H,  (*  ldr r1, [sp, 0]   *)
+    06802H,  (*  ldr r2, [r0, 0]   *)
+    00003H,  (*  movs r3, r0       *)
+    03004H,  (*  adds r0, 4        *)
+    03901H,  (*  subs r1, 1        *)
+    0DD08H,  (*  ble L2            *)
+    0B404H,  (*  push {r2}         *)
+             (*  L1:               *)
+    06802H,  (*  ldr r2, [r0, 0]   *)
+    0601AH,  (*  str r2, [r3, 0]   *)
+    03004H,  (*  adds r0, 4        *)
+    03304H,  (*  adds r3, 4        *)
+    03901H,  (*  subs r1, 1        *)
+    0DCF9H,  (*  bgt L1            *)
+    0BC04H,  (*  pop {r2}          *)
+    0601AH;  (*  str r2, [r3, 0]   *)
+             (*  L2:               *)
 
 
-PROCEDURE _length* (len, str: INTEGER): INTEGER;
-VAR
-    c: CHAR;
-    res: INTEGER;
-
-BEGIN
-    res := 0;
-    REPEAT
-        SYSTEM.GET(str, c);
-        INC(str);
-        DEC(len);
-        INC(res)
-    UNTIL (len = 0) OR (c = 0X);
-
-    RETURN res - ORD(c = 0X)
-END _length;
+PROCEDURE [code] _set1* (a: INTEGER): INTEGER (* {a} -> r0 *)
+    09900H,  (*  ldr r1, [sp, 0]   *)  (* r1 <- a *)
+    02900H,  (*  cmp r1, 0         *)
+    0DB04H,  (*  blt L1            *)
+    0291FH,  (*  cmp r1, 31        *)
+    0DC02H,  (*  bgt L1            *)
+    02001H,  (*  movs r0, 1        *)
+    04088H,  (*  lsls r0, r1       *)
+    04770H,  (*  bx lr             *)
+             (*  L1:               *)
+    02000H;  (*  movs r0, 0        *)
+             (*  L2:               *)
 
 
-PROCEDURE _move* (bytes, dest, source: INTEGER);
-VAR
-    b: BYTE;
-    i: INTEGER;
-
-BEGIN
-    WHILE ((source MOD WORD # 0) OR (dest MOD WORD # 0)) & (bytes > 0) DO
-        SYSTEM.GET(source, b);
-        SYSTEM.PUT8(dest, b);
-        INC(source);
-        INC(dest);
-        DEC(bytes)
-    END;
-
-    WHILE bytes >= WORD DO
-        SYSTEM.GET(source, i);
-        SYSTEM.PUT(dest, i);
-        INC(source, WORD);
-        INC(dest, WORD);
-        DEC(bytes, WORD)
-    END;
-
-    WHILE bytes > 0 DO
-        SYSTEM.GET(source, b);
-        SYSTEM.PUT8(dest, b);
-        INC(source);
-        INC(dest);
-        DEC(bytes)
-    END
-END _move;
+PROCEDURE [code] _set* (b, a: INTEGER): INTEGER (* {a..b} -> r0 *)
+    09900H,  (*  ldr r1, [sp, 0]   *)  (* r1 <- b *)
+    09801H,  (*  ldr r0, [sp, 4]   *)  (* r0 <- a *)
+    04288H,  (*  cmp r0, r1        *)
+    0DC11H,  (*  bgt L1            *)
+    0281FH,  (*  cmp r0, 31        *)
+    0DC0FH,  (*  bgt L1            *)
+    02900H,  (*  cmp r1, 0         *)
+    0DB0DH,  (*  blt L1            *)
+    0291FH,  (*  cmp r1, 31        *)
+    0DD00H,  (*  ble L3            *)
+    0211FH,  (*  movs r1, 31       *)
+             (*  L3:               *)
+    02800H,  (*  cmp r0, 0         *)
+    0DA00H,  (*  bge L4            *)
+    02000H,  (*  movs r0, 0        *)
+             (*  L4:               *)
+    01A0AH,  (*  subs r2, r1, r0   *)
+    02001H,  (*  movs r0, 1        *)
+    007C0H,  (*  lsls r0, 31       *)
+    04110H,  (*  asrs r0, r2       *)
+    0391FH,  (*  subs r1, 31       *)
+    04249H,  (*  negs r1, r1       *)
+    040C8H,  (*  lsrs r0, r1       *)
+    04770H,  (*  bx lr             *)
+             (*  L1:               *)
+    02000H;  (*  movs r0, 0        *)
+             (*  L2:               *)
 
 
-PROCEDURE _lengthw* (len, str: INTEGER): INTEGER;
-VAR
-    c: WCHAR;
-    res: INTEGER;
-
-BEGIN
-    res := 0;
-    REPEAT
-        SYSTEM.GET(str, c);
-        INC(str, 2);
-        DEC(len);
-        INC(res)
-    UNTIL (len = 0) OR (c = 0X);
-
-    RETURN res - ORD(c = 0X)
-END _lengthw;
-
-
-PROCEDURE strncmp (a, b, n: INTEGER): INTEGER;
-VAR
-    A, B: CHAR;
-    res: INTEGER;
-
-BEGIN
-    res := 0;
-    WHILE n > 0 DO
-        SYSTEM.GET(a, A); INC(a);
-        SYSTEM.GET(b, B); INC(b);
-        DEC(n);
-        IF A # B THEN
-            res := ORD(A) - ORD(B);
-            n := 0
-        ELSIF A = 0X THEN
-            n := 0
-        END
-    END
-    RETURN res
-END strncmp;
+PROCEDURE [code] _length* (len, str: INTEGER): INTEGER
+    09801H,  (*  ldr r0, [sp, 4]   *)
+    09900H,  (*  ldr r1, [sp, 0]   *)
+    00003H,  (*  movs r3, r0       *)
+    03801H,  (*  subs r0, 1        *)
+             (*  L1:               *)
+    03001H,  (*  adds r0, 1        *)
+    07802H,  (*  ldrb r2, [r0]     *)
+    02A00H,  (*  cmp  r2, 0        *)
+    0D002H,  (*  beq  L2           *)
+    03901H,  (*  subs r1, 1        *)
+    0DCF9H,  (*  bgt L1            *)
+    03001H,  (*  adds r0, 1        *)
+             (*  L2:               *)
+    01AC0H;  (*  subs r0, r0, r3   *)
 
 
-PROCEDURE _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
-VAR
-    res: INTEGER;
-    bRes: BOOLEAN;
-
-BEGIN
-    res := strncmp(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _length(len1, str1) - _length(len2, str2)
-    END;
-
-    CASE op OF
-    |0: bRes := res =  0
-    |1: bRes := res #  0
-    |2: bRes := res <  0
-    |3: bRes := res <= 0
-    |4: bRes := res >  0
-    |5: bRes := res >= 0
-    END
-
-    RETURN bRes
-END _strcmp;
+PROCEDURE [code] _lengthw* (len, str: INTEGER): INTEGER
+    09801H,  (*  ldr r0, [sp, 4]   *)
+    09900H,  (*  ldr r1, [sp, 0]   *)
+    00003H,  (*  movs r3, r0       *)
+    03802H,  (*  subs r0, 2        *)
+             (*  L1:               *)
+    03002H,  (*  adds r0, 2        *)
+    08802H,  (*  ldrh r2, [r0]     *)
+    02A00H,  (*  cmp  r2, 0        *)
+    0D002H,  (*  beq  L2           *)
+    03901H,  (*  subs r1, 1        *)
+    0DCF9H,  (*  bgt L1            *)
+    03002H,  (*  adds r0, 2        *)
+             (*  L2:               *)
+    01AC0H,  (*  subs r0, r0, r3   *)
+    00840H;  (*  lsrs r0, 1        *)
 
 
-PROCEDURE strncmpw (a, b, n: INTEGER): INTEGER;
-VAR
-    A, B: WCHAR;
-    res:  INTEGER;
+PROCEDURE [code] _strcmp* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
+    09904H,  (*  ldr r1, [sp, 16]  *)  (* r1 <- str1 *)
+    09A02H,  (*  ldr r2, [sp, 8]   *)  (* r2 <- str2 *)
+    09B01H,  (*  ldr r3, [sp, 4]   *)  (* r3 <- len2 *)
+    09803H,  (*  ldr r0, [sp, 12]  *)  (* r0 <- len1 *)
+    04298H,  (*  cmp r0, r3        *)
+    0DA00H,  (*  bge L5            *)
+    00003H,  (*  movs r3, r0       *)
+             (*  L5:               *)  (* r3 <- min(r0, r3) *)
+    0B430H,  (*  push {r4, r5}     *)
 
-BEGIN
-    res := 0;
-    WHILE n > 0 DO
-        SYSTEM.GET(a, A); INC(a, 2);
-        SYSTEM.GET(b, B); INC(b, 2);
-        DEC(n);
-        IF A # B THEN
-            res := ORD(A) - ORD(B);
-            n := 0
-        ELSIF A = WCHR(0) THEN
-            n := 0
-        END
-    END
-    RETURN res
-END strncmpw;
+             (*  L3:               *)
+    02B00H,  (*  cmp r3, 0         *)  (* while r3 > 0 do *)
+    0DD09H,  (*  ble L1            *)
+    0780CH,  (*  ldrb r4, [r1]     *)
+    03101H,  (*  adds r1, 1        *)
+    07815H,  (*  ldrb r5, [r2]     *)
+    03201H,  (*  adds r2, 1        *)
+    03B01H,  (*  subs r3, 1        *)
+    01B60H,  (*  subs r0, r4, r5   *)
+    0D10FH,  (*  bne L6            *)
+    02C00H,  (*  cmp r4, 0         *)
+    0D1F4H,  (*  bne L3            *)  (* end while *)
+    0E00CH,  (*  b L6              *)
+
+             (*  L1:               *)
+    09A03H,  (*  ldr r2, [sp, 12]  *)  (* r2 <- len2 *)
+    09905H,  (*  ldr r1, [sp, 20]  *)  (* r1 <- len1 *)
+    04291H,  (*  cmp r1, r2        *)
+    0DC02H,  (*  bgt L9            *)
+    0DB04H,  (*  blt L4            *)
+    02000H,  (*  movs r0, 0        *)
+    0E005H,  (*  b L6              *)
+             (*  L9:               *)
+    09806H,  (*  ldr r0, [sp, 24]  *)  (* r0 <- str1 *)
+    05C80H,  (*  ldrb r0, [r0, r2] *)  (* r0 <- str1[len2] *)
+    0E002H,  (*  b L6              *)
+             (*  L4:               *)
+    09804H,  (*  ldr r0, [sp, 16]  *)  (* r0 <- str2 *)
+    05C40H,  (*  ldrb r0, [r0, r1] *)  (* r0 <- str2[len1] *)
+    04240H,  (*  negs r0, r0       *)
+
+             (*  L6:               *)  (* case op of *)
+    09A02H,  (*  ldr r2, [sp, 8]   *)  (* r2 <- op *)
+    00092H,  (*  lsls r2, 2        *)
+    03A02H,  (*  subs r2, 2        *)
+    02800H,  (*  cmp r0, 0         *)
+    04497H,  (*  add pc, r2        *)
+    0D00AH,  (*  beq L7            *)
+    0E00CH,  (*  b L8              *)
+    0D108H,  (*  bne L7            *)
+    0E00AH,  (*  b L8              *)
+    0DB06H,  (*  blt L7            *)
+    0E008H,  (*  b L8              *)
+    0DD04H,  (*  ble L7            *)
+    0E006H,  (*  b L8              *)
+    0DC02H,  (*  bgt L7            *)
+    0E004H,  (*  b L8              *)
+    0DA00H,  (*  bge L7            *)
+    0E002H,  (*  b L8              *)
+             (*  L7:               *)
+    02001H,  (*  movs r0, 1        *)
+    0BC30H,  (*  pop {r4, r5}      *)
+    04770H,  (*  bx lr             *)
+             (*  L8:               *)
+    02000H,  (*  movs r0, 0        *)
+    0BC30H;  (*  pop {r4, r5}      *)
 
 
-PROCEDURE _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN;
-VAR
-    res: INTEGER;
-    bRes: BOOLEAN;
+PROCEDURE [code] _strcmpw* (op, len2, str2, len1, str1: INTEGER): BOOLEAN
+    09904H,  (*  ldr r1, [sp, 16]  *)  (* r1 <- str1 *)
+    09A02H,  (*  ldr r2, [sp, 8]   *)  (* r2 <- str2 *)
+    09B01H,  (*  ldr r3, [sp, 4]   *)  (* r3 <- len2 *)
+    09803H,  (*  ldr r0, [sp, 12]  *)  (* r0 <- len1 *)
+    04298H,  (*  cmp r0, r3        *)
+    0DA00H,  (*  bge L5            *)
+    00003H,  (*  movs r3, r0       *)
+             (*  L5:               *)  (* r3 <- min(r0, r3) *)
+    0B430H,  (*  push {r4, r5}     *)
 
-BEGIN
-    res := strncmpw(str1, str2, MIN(len1, len2));
-    IF res = 0 THEN
-        res := _lengthw(len1, str1) - _lengthw(len2, str2)
-    END;
+             (*  L3:               *)
+    02B00H,  (*  cmp r3, 0         *)  (* while r3 > 0 do *)
+    0DD09H,  (*  ble L1            *)
+    0880CH,  (*  ldrh r4, [r1]     *)
+    03102H,  (*  adds r1, 2        *)
+    08815H,  (*  ldrh r5, [r2]     *)
+    03202H,  (*  adds r2, 2        *)
+    03B01H,  (*  subs r3, 1        *)
+    01B60H,  (*  subs r0, r4, r5   *)
+    0D111H,  (*  bne L6            *)
+    02C00H,  (*  cmp r4, 0         *)
+    0D1F4H,  (*  bne L3            *)  (* end while *)
+    0E00DH,  (*  b L6              *)
 
-    CASE op OF
-    |0: bRes := res =  0
-    |1: bRes := res #  0
-    |2: bRes := res <  0
-    |3: bRes := res <= 0
-    |4: bRes := res >  0
-    |5: bRes := res >= 0
-    END
+             (*  L1:               *)
+    09A03H,  (*  ldr r2, [sp, 12]  *)  (* r2 <- len2 *)
+    09905H,  (*  ldr r1, [sp, 20]  *)  (* r1 <- len1 *)
+    00049H,  (*  lsls r1, 1        *)
+    00052H,  (*  lsls r2, 1        *)
+    04291H,  (*  cmp r1, r2        *)
+    0DC02H,  (*  bgt L9            *)
+    0DB04H,  (*  blt L4            *)
+    02000H,  (*  movs r0, 0        *)
+    0E005H,  (*  b L6              *)
+             (*  L9:               *)
+    09806H,  (*  ldr r0, [sp, 24]  *)  (* r0 <- str1 *)
+    05A80H,  (*  ldrh r0, [r0, r2] *)  (* r0 <- str1[len2] *)
+    0E002H,  (*  b L6              *)
+             (*  L4:               *)
+    09804H,  (*  ldr r0, [sp, 16]  *)  (* r0 <- str2 *)
+    05A40H,  (*  ldrh r0, [r0, r1] *)  (* r0 <- str2[len1] *)
+    04240H,  (*  negs r0, r0       *)
 
-    RETURN bRes
-END _strcmpw;
+             (*  L6:               *)  (* case op of *)
+    09A02H,  (*  ldr r2, [sp, 8]   *)  (* r2 <- op *)
+    00092H,  (*  lsls r2, 2        *)
+    03A02H,  (*  subs r2, 2        *)
+    02800H,  (*  cmp r0, 0         *)
+    04497H,  (*  add pc, r2        *)
+    0D00AH,  (*  beq L7            *)
+    0E00CH,  (*  b L8              *)
+    0D108H,  (*  bne L7            *)
+    0E00AH,  (*  b L8              *)
+    0DB06H,  (*  blt L7            *)
+    0E008H,  (*  b L8              *)
+    0DD04H,  (*  ble L7            *)
+    0E006H,  (*  b L8              *)
+    0DC02H,  (*  bgt L7            *)
+    0E004H,  (*  b L8              *)
+    0DA00H,  (*  bge L7            *)
+    0E002H,  (*  b L8              *)
+             (*  L7:               *)
+    02001H,  (*  movs r0, 1        *)
+    0BC30H,  (*  pop {r4, r5}      *)
+    04770H,  (*  bx lr             *)
+             (*  L8:               *)
+    02000H,  (*  movs r0, 0        *)
+    0BC30H;  (*  pop {r4, r5}      *)
+
+
+PROCEDURE [code] _move* (bytes, dest, source: INTEGER)
+    09802H,  (*  ldr r0, [sp, 8]   *)
+    00001H,  (*  movs r1, r0       *)
+    09A01H,  (*  ldr r2, [sp, 4]   *)
+    00013H,  (*  movs r3, r2       *)
+    00789H,  (*  lsls r1, 30       *)
+    0D10AH,  (*  bne L1            *)
+    0079BH,  (*  lsls r3, 30       *)
+    0D108H,  (*  bne L1            *)
+    09900H,  (*  ldr r1, [sp, 0]   *)
+             (*  L4:               *)
+    02904H,  (*  cmp r1, 4         *)
+    0DB06H,  (*  blt L2            *)
+    06803H,  (*  ldr r3, [r0, 0]   *)
+    06013H,  (*  str r3, [r2, 0]   *)
+    03004H,  (*  adds r0, 4        *)
+    03204H,  (*  adds r2, 4        *)
+    03904H,  (*  subs r1, 4        *)
+    0E7F7H,  (*  b L4              *)
+             (*  L1:               *)
+    09900H,  (*  ldr r1, [sp, 0]   *)
+             (*  L2:               *)
+    02900H,  (*  cmp r1, 0         *)
+    0DD05H,  (*  ble L3            *)
+             (*  L5:               *)
+    07803H,  (*  ldrb r3, [r0, 0]  *)
+    07013H,  (*  strb r3, [r2, 0]  *)
+    03001H,  (*  adds r0, 1        *)
+    03201H,  (*  adds r2, 1        *)
+    03901H,  (*  subs r1, 1        *)
+    0DCF9H;  (*  bgt L5            *)
+             (*  L3:               *)
 
 
 PROCEDURE _arrcpy* (base_size, len_dst, dst, len_src, src: INTEGER): BOOLEAN;
