@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -12,6 +12,8 @@ IMPORT IL, LISTS, REG, CHL := CHUNKLISTS, ERRORS, WR := WRITER, HEX,
 
 
 CONST
+
+    chkSTK* = 6;
 
     minRAM* = 128;  maxRAM* = 2048;
     minROM* = 2048; maxROM* = 24576;
@@ -108,7 +110,7 @@ VAR
 
     IdxWords: RECORD src, dst: INTEGER END;
 
-    StkCnt: INTEGER;
+    StkCnt, MaxStkCnt: INTEGER;
 
 
 PROCEDURE EmitLabel (L: INTEGER);
@@ -161,6 +163,13 @@ BEGIN
     call.label := label;
     LISTS.push(CodeList, call)
 END EmitCall;
+
+
+PROCEDURE IncStk;
+BEGIN
+    INC(StkCnt);
+    MaxStkCnt := MAX(StkCnt, MaxStkCnt)
+END IncStk;
 
 
 PROCEDURE bw (b: BOOLEAN): INTEGER;
@@ -266,7 +275,7 @@ BEGIN
         Op1(opPUSH, PC, sINCR);
         EmitWord(imm)
     END;
-    INC(StkCnt)
+    IncStk
 END PushImm;
 
 
@@ -389,7 +398,7 @@ END Fixup;
 PROCEDURE Push (reg: INTEGER);
 BEGIN
     Op1(opPUSH, reg, sREG);
-    INC(StkCnt)
+    IncStk
 END Push;
 
 
@@ -440,6 +449,8 @@ END Reloc;
 
 PROCEDURE CallRTL (proc, params: INTEGER);
 BEGIN
+    IncStk;
+    DEC(StkCnt);
     EmitCall(RTL.rtl[proc].label);
     RTL.Used(proc);
     IF params > 0 THEN
@@ -611,7 +622,7 @@ PROCEDURE LocalSrc (offset: INTEGER): INTEGER;
 END LocalSrc;
 
 
-PROCEDURE translate;
+PROCEDURE translate (chk_stk: BOOLEAN);
 VAR
     cmd, next: COMMAND;
 
@@ -620,6 +631,8 @@ VAR
     reg1, reg2: INTEGER;
 
     cc: INTEGER;
+
+    word: WORD;
 
 BEGIN
     cmd := IL.codes.commands.first(COMMAND);
@@ -636,9 +649,13 @@ BEGIN
             EmitJmp(opJMP, param1)
 
         |IL.opCALL:
+            IncStk;
+            DEC(StkCnt);
             EmitCall(param1)
 
         |IL.opCALLP:
+            IncStk;
+            DEC(StkCnt);
             UnOp(reg1);
             Op1(opCALL, reg1, sREG);
             drop;
@@ -652,7 +669,7 @@ BEGIN
 
         |IL.opSADR_PARAM:
             Op1(opPUSH, PC, sINCR);
-            INC(StkCnt);
+            IncStk;
             EmitWord(param2);
             Reloc(RDATA)
 
@@ -672,8 +689,23 @@ BEGIN
 
         |IL.opENTER:
             ASSERT(R.top = -1);
-            StkCnt := 0;
             EmitLabel(param1);
+            n := param2 MOD 65536;
+            param2 := param2 DIV 65536;
+            C.String("proc "); C.IntLn(n);
+
+            IF chk_stk THEN
+                L := NewLabel();
+                Op2(opMOV, SP * 256, R4);
+                Op2(opSUB, HP * 256, R4);
+                Op2(opCMP, imm(16),  R4);  word := CodeList.last(WORD);
+                jcc(jge, L);
+                PushImm(n);
+                DEC(StkCnt);
+                EmitJmp(opJMP, cmd.param3);
+                EmitLabel(L)
+            END;
+
             IF param2 > 8 THEN
                 Op2(opMOV, imm(param2), R4);
                 L := NewLabel();
@@ -681,26 +713,29 @@ BEGIN
                 Push(CG);
                 Op2(opSUB, imm(1), R4);
                 jcc(jne, L)
-            ELSIF param2 > 0 THEN
-                WHILE param2 > 0 DO
-                    Push(CG);
-                    DEC(param2)
+            ELSE
+                FOR n := 1 TO param2 DO
+                    Push(CG)
                 END
-            END
+            END;
+            StkCnt := param2;
+            MaxStkCnt := StkCnt
 
         |IL.opLEAVE, IL.opLEAVER:
             ASSERT(param2 = 0);
             IF opcode = IL.opLEAVER THEN
                 UnOp(reg1);
                 IF reg1 # ACC THEN
-                    GetRegA;
-                    ASSERT(REG.Exchange(R, reg1, ACC));
-                    drop
+                    mov(ACC, reg1)
                 END;
                 drop
             END;
             ASSERT(R.top = -1);
             ASSERT(StkCnt = param1);
+            IF chk_stk THEN
+                INC(word.val, MaxStkCnt * 2)
+            END;
+            C.IntLn(MaxStkCnt);
             IF param1 > 0 THEN
                 Op2(opADD, imm(param1 * 2), SP)
             END;
@@ -1036,7 +1071,7 @@ BEGIN
             UnOp(reg1);
             PushAll(0);
             Op1(opPUSH, reg1, sIDX);
-            INC(StkCnt);
+            IncStk;
             EmitWord(-2);
             PushImm(param2);
             CallRTL(RTL._guardrec, 2);
@@ -1351,7 +1386,7 @@ BEGIN
             UnOp(reg1);
             PushAll_1;
             Op1(opPUSH, PC, sINCR);
-            INC(StkCnt);
+            IncStk;
             EmitWord(param2);
             Reloc(RDATA);
             Push(reg1);
@@ -1644,7 +1679,7 @@ BEGIN
     REG.Init(R, Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
     prolog(ram);
-    translate;
+    translate(chkSTK IN options.checking);
     epilog;
 
     Code.address := 10000H - rom;
@@ -1737,7 +1772,6 @@ BEGIN
     END;
     C.Ln;
     C.String(  "  ram:  "); C.Int(Bss.size); C.String(" of "); C.Int(ram); C.String("  ("); C.Int(Bss.size * 100 DIV ram); C.StringLn("%)")
-
 END CodeGen;
 
 

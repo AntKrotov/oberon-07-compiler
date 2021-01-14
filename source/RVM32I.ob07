@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -324,9 +324,7 @@ BEGIN
             IF opcode # IL.opLEAVE THEN
                 UnOp(r1);
                 IF r1 # ACC THEN
-                    GetAcc;
-                    ASSERT(REG.Exchange(R, r1, ACC));
-                    drop
+                    mov(ACC, r1)
                 END;
                 drop
             END;
@@ -1075,8 +1073,8 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            INC(param2, 8);
-            ASSERT(UTILS.Align(param2, 32));
+            INC(param2, 4);
+            ASSERT(UTILS.Align(param2, 4));
             pushc(param2);
             pushc(param1);
             CallRTL(IL._new, 3)

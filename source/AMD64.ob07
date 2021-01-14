@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -858,9 +858,7 @@ BEGIN
         |IL.opCALLP, IL.opWIN64CALLP, IL.opSYSVCALLP:
             UnOp(reg1);
             IF reg1 # rax THEN
-                GetRegA;
-                ASSERT(REG.Exchange(R, reg1, rax));
-                drop
+                mov(rax, reg1)
             END;
             drop;
             REG.Store(R);
@@ -1038,9 +1036,7 @@ BEGIN
             IF opcode = IL.opLEAVER THEN
                 UnOp(reg1);
                 IF reg1 # rax THEN
-                    GetRegA;
-                    ASSERT(REG.Exchange(R, reg1, rax));
-                    drop
+                    mov(rax, reg1)
                 END;
                 drop
             END;
@@ -1059,7 +1055,7 @@ BEGIN
 
             pop(rbp);
             IF param2 > 0 THEN
-                OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256) (* ret param2 *)
+                OutByte3(0C2H, (param2 * 8) MOD 256, (param2 * 8) DIV 256) (* ret param2*8 *)
             ELSE
                 X86.ret
             END;
@@ -1490,8 +1486,8 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            n := param2 + 16;
-            ASSERT(UTILS.Align(n, 64));
+            n := param2 + 8;
+            ASSERT(UTILS.Align(n, 8));
             pushc(n);
             pushc(param1);
             CallRTL(IL._new)

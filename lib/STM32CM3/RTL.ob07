@@ -65,10 +65,6 @@ PROCEDURE _flt* (x: INTEGER): INTEGER;
 END _flt;
 
 
-PROCEDURE [code] sp (): INTEGER
-    04668H;  (*  mov r0, sp        *)
-
-
 PROCEDURE [code] _pack* (n: INTEGER; VAR x: INTEGER)
     09800H,  (*  ldr r0, [sp, 0]   *)
     09901H,  (*  ldr r1, [sp, 4]   *)
@@ -400,19 +396,42 @@ BEGIN
 END _strcpy;
 
 
+PROCEDURE [code] GetSP (): INTEGER
+    04668H;  (*  mov r0, sp  *)
+
+
+PROCEDURE [code] cpsid_i
+    0B672H;  (*  cpsid i  *)
+
+
+PROCEDURE [code] cpsie_i
+    0B662H;  (*  cpsie i  *)
+
+
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
+VAR
+    ptr: INTEGER;
+
 BEGIN
-    IF Heap + size < sp() - 64 THEN
-        p := Heap + WORD;
-        REPEAT
-            SYSTEM.PUT(Heap, t);
-            INC(Heap, WORD);
-            DEC(size, WORD);
-            t := 0
-        UNTIL size = 0
+    cpsid_i;
+
+    ptr := Heap;
+    IF ptr + size < GetSP() - 64 THEN
+        INC(Heap, size);
+        p := ptr + WORD;
+        SYSTEM.PUT(ptr, t);
+        INC(ptr, WORD);
+        DEC(size, WORD);
+        WHILE size > 0 DO
+            SYSTEM.PUT(ptr, 0);
+            INC(ptr, WORD);
+            DEC(size, WORD)
+        END
     ELSE
         p := 0
-    END
+    END;
+
+    cpsie_i
 END _new;
 
 

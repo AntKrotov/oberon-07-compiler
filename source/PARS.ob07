@@ -975,6 +975,7 @@ VAR
         code, iv:   ARITH.VALUE;
         codeProc,
         handler:    BOOLEAN;
+        line:       INTEGER;
 
     BEGIN
         endmod := FALSE;
@@ -987,6 +988,7 @@ VAR
         getpos(parser, pos);
         pos1 := pos;
         checklex(parser, SCAN.lxIDENT);
+        line := pos.line;
 
         IF _import # NIL THEN
             proc := IdentDef(parser, PROG.idIMP, name);
@@ -1125,7 +1127,9 @@ VAR
             END;
 
             IF TARGETS.CPU = TARGETS.cpuMSP430 THEN
-                check((enter.param2 * ORD(~codeProc) + proc._type.parSize) * 2 + 16 < PROG.program.options.ram, pos1, 63)
+                check((enter.param2 * ORD(~codeProc) + proc._type.parSize) * 2 + 16 < PROG.program.options.ram, pos1, 63);
+                enter.param2 := enter.param2 * 65536 + line;
+                enter.param3 := IL.codes.errlabels[10]
             END
         END;
 

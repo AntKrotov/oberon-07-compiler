@@ -332,15 +332,22 @@ END _strcpy;
 
 
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
+VAR
+    ptr: INTEGER;
+
 BEGIN
-    IF Heap + size < Trap.sp() - 64 THEN
-        p := Heap + WORD;
-        REPEAT
-            SYSTEM.PUT(Heap, t);
-            INC(Heap, WORD);
-            DEC(size, WORD);
-            t := 0
-        UNTIL size = 0
+    ptr := Heap;
+    IF ptr + size < Trap.sp() - 64 THEN
+        INC(Heap, size);
+        p := ptr + WORD;
+        SYSTEM.PUT(ptr, t);
+        INC(ptr, WORD);
+        DEC(size, WORD);
+        WHILE size > 0 DO
+            SYSTEM.PUT(ptr, 0);
+            INC(ptr, WORD);
+            DEC(size, WORD)
+        END
     ELSE
         p := 0
     END

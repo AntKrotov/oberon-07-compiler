@@ -1125,9 +1125,7 @@ BEGIN
             IF opcode # IL.opLEAVE THEN
                 UnOp(r1);
                 IF r1 # ACC THEN
-                    GetRegA;
-                    ASSERT(REG.Exchange(R, r1, ACC));
-                    drop
+                    mov(ACC, r1)
                 END;
                 drop
             END;
@@ -2049,8 +2047,8 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            n := param2 + 8;
-            ASSERT(UTILS.Align(n, 32));
+            n := param2 + 4;
+            ASSERT(UTILS.Align(n, 4));
             PushConst(n);
             PushConst(param1);
             CallRTL(IL._new, 3)

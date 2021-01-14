@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -187,7 +187,7 @@ BEGIN
         Word1(5405H);                 (*  ADD  R4, R5              *)
         Word2(5035H, bits);           (*  ADD  bits, R5            *)
         Word1(4524H);                 (*  MOV  @R5, R4             *)
-        Word1(4130H);                 (*  MOV  @SP+, PC            *)
+        Word1(4130H);                 (*  RET                      *)
                                       (*  L1:                      *)
         Word1(4304H);                 (*  MOV  #0, R4              *)
         Word1(4130H)                  (*  RET                      *)
@@ -202,7 +202,7 @@ BEGIN
         Word1(5404H);                 (*  ADD  R4, R4              *)
         Word2(5034H, bits);           (*  ADD  bits, R4            *)
         Word1(4424H);                 (*  MOV  @R4, R4             *)
-        Word1(4130H);                 (*  MOV  @SP+, PC            *)
+        Word1(4130H);                 (*  RET                      *)
                                       (*  L1:                      *)
         Word1(4304H);                 (*  MOV  #0, R4              *)
         Word1(4130H)                  (*  RET                      *)
@@ -234,7 +234,7 @@ BEGIN
         Word2(0F114H, 2);              (*  AND  2(SP), R4           *)
         Word1(2400H + 3);              (*  JZ   L1                  *)
         Word1(4314H);                  (*  MOV  #1, R4              *)
-        Word1(4130H);                  (*  MOV  @SP+, PC            *)
+        Word1(4130H);                  (*  RET                      *)
                                        (*  L2:                      *)
         Word1(4304H);                  (*  MOV  #0, R4              *)
                                        (*  L1:                      *)
@@ -442,7 +442,7 @@ BEGIN
         Word1(9405H);                 (*  CMP  R4, R5               *)
         Word1(2400H + 2);             (*  JZ   L2                   *)
         Word1(4304H);                 (*  MOV  #0, R4               *)
-        Word1(4130H);                 (*  MOV  @SP+, PC             *)
+        Word1(4130H);                 (*  RET                       *)
                                       (*  L2:                       *)
         Word1(4314H);                 (*  MOV  #1, R4               *)
         Word1(4130H)                  (*  RET                       *)

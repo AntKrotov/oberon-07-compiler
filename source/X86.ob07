@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -851,9 +851,7 @@ BEGIN
             IF opcode = IL.opLEAVER THEN
                 UnOp(reg1);
                 IF reg1 # eax THEN
-                    GetRegA;
-                    ASSERT(REG.Exchange(R, reg1, eax));
-                    drop
+                    mov(eax, reg1)
                 END;
                 drop
             END;
@@ -872,10 +870,8 @@ BEGIN
 
             pop(ebp);
 
-            n := param2;
-            IF n > 0 THEN
-                n := n * 4;
-                OutByte(0C2H); OutWord(n MOD 65536) (* ret n *)
+            IF param2 > 0 THEN
+                OutByte(0C2H); OutWord(param2 * 4 MOD 65536) (* ret param2*4 *)
             ELSE
                 ret
             END

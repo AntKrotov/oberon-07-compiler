@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -26,8 +26,9 @@ CONST
     errCHR    = 9;  errWCHR = 10;  errBYTE = 11;
 
     chkIDX* = 0; chkGUARD* = 1; chkPTR* = 2; chkCHR* = 3; chkWCHR* = 4; chkBYTE* = 5;
+    chkSTK* = MSP430.chkSTK; (* 6 *)
 
-    chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE};
+    chkALL* = {chkIDX, chkGUARD, chkPTR, chkCHR, chkWCHR, chkBYTE, chkSTK};
 
 
 TYPE
