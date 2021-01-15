@@ -400,21 +400,11 @@ PROCEDURE [code] GetSP (): INTEGER
     04668H;  (*  mov r0, sp  *)
 
 
-PROCEDURE [code] cpsid_i
-    0B672H;  (*  cpsid i  *)
-
-
-PROCEDURE [code] cpsie_i
-    0B662H;  (*  cpsie i  *)
-
-
 PROCEDURE _new* (t, size: INTEGER; VAR p: INTEGER);
 VAR
     ptr: INTEGER;
 
 BEGIN
-    cpsid_i;
-
     ptr := Heap;
     IF ptr + size < GetSP() - 64 THEN
         INC(Heap, size);
@@ -429,9 +419,7 @@ BEGIN
         END
     ELSE
         p := 0
-    END;
-
-    cpsie_i
+    END
 END _new;
 
 

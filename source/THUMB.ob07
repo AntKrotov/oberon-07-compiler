@@ -1050,6 +1050,18 @@ BEGIN
 END divmod;
 
 
+PROCEDURE cpsid_i;
+BEGIN
+    Code(0B672H)  (*  cpsid i  *)
+END cpsid_i;
+
+
+PROCEDURE cpsie_i;
+BEGIN
+    Code(0B662H)  (*  cpsie i  *)
+END cpsie_i;
+
+
 PROCEDURE translate (pic, stroffs: INTEGER);
 VAR
     cmd, next: COMMAND;
@@ -1164,6 +1176,7 @@ BEGIN
             PushConst(param2)
 
         |IL.opONERR:
+            cpsid_i;
             MovConst(R0, param2);
             push(R0);
             DEC(StkCount);
@@ -2046,12 +2059,14 @@ BEGIN
             drop
 
         |IL.opNEW:
+            cpsid_i;
             PushAll(1);
             n := param2 + 4;
             ASSERT(UTILS.Align(n, 4));
             PushConst(n);
             PushConst(param1);
-            CallRTL(IL._new, 3)
+            CallRTL(IL._new, 3);
+            cpsie_i
 
         |IL.opTYPEGP:
             UnOp(r1);
@@ -2153,6 +2168,7 @@ BEGIN
     END;
 
     Label(entry);
+    cpsie_i;
 
     r1 := GetAnyReg();
     r2 := GetAnyReg();
