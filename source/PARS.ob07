@@ -8,7 +8,7 @@
 MODULE PARS;
 
 IMPORT PROG, SCAN, ARITH, STRINGS, ERRORS, LISTS, IL, CONSOLE, PATHS, UTILS,
-       C := COLLECTIONS, TARGETS, THUMB;
+       C := COLLECTIONS, TARGETS, THUMB, MSP430;
 
 
 CONST
@@ -1126,8 +1126,8 @@ VAR
                 proc.proc.leave := IL.LeaveC()
             END;
 
-            IF TARGETS.CPU = TARGETS.cpuMSP430 THEN
-                check((enter.param2 * ORD(~codeProc) + proc._type.parSize) * 2 + 16 < PROG.program.options.ram, pos1, 63);
+            IF (TARGETS.CPU = TARGETS.cpuMSP430) & ~codeProc THEN
+                check(MSP430.CheckProcDataSize(enter.param2 + proc._type.parSize, PROG.program.options.ram), pos1, 63);
                 enter.param2 := enter.param2 * 65536 + line;
                 enter.param3 := IL.codes.errlabels[10]
             END

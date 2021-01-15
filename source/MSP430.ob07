@@ -18,7 +18,7 @@ CONST
     minRAM* = 128;  maxRAM* = 2048;
     minROM* = 2048; maxROM* = 24576;
 
-    minStackSize = 64;
+    StkReserve = RTL.StkReserve;
 
     IntVectorSize* = RTL.IntVectorSize;
 
@@ -111,6 +111,11 @@ VAR
     IdxWords: RECORD src, dst: INTEGER END;
 
     StkCnt, MaxStkCnt: INTEGER;
+
+
+PROCEDURE CheckProcDataSize* (VarSize, RamSize: INTEGER): BOOLEAN;
+    RETURN (VarSize + 1) * 2 + StkReserve + RTL.VarSize < RamSize
+END CheckProcDataSize;
 
 
 PROCEDURE EmitLabel (L: INTEGER);
@@ -680,8 +685,10 @@ BEGIN
             PushImm(param2)
 
         |IL.opONERR:
-            PushImm(param2);
             DEC(StkCnt);
+            EmitWord(0C232H); (*  BIC   #8, SR; DINT  *)
+            EmitWord(4303H);  (*  MOV   R3, R3; NOP   *)
+            PushImm(param2);
             EmitJmp(opJMP, param1)
 
         |IL.opLEAVEC:
@@ -692,16 +699,18 @@ BEGIN
             EmitLabel(param1);
             n := param2 MOD 65536;
             param2 := param2 DIV 65536;
-            C.String("proc "); C.IntLn(n);
-
+            StkCnt := 0;
             IF chk_stk THEN
                 L := NewLabel();
                 Op2(opMOV, SP * 256, R4);
                 Op2(opSUB, HP * 256, R4);
-                Op2(opCMP, imm(16),  R4);  word := CodeList.last(WORD);
+                Op2(opCMP, imm(StkReserve), R4);
+                word := CodeList.last(WORD);
                 jcc(jge, L);
-                PushImm(n);
                 DEC(StkCnt);
+                EmitWord(0C232H); (*  BIC   #8, SR; DINT  *)
+                EmitWord(4303H);  (*  MOV   R3, R3; NOP   *)
+                PushImm(n);
                 EmitJmp(opJMP, cmd.param3);
                 EmitLabel(L)
             END;
@@ -735,7 +744,6 @@ BEGIN
             IF chk_stk THEN
                 INC(word.val, MaxStkCnt * 2)
             END;
-            C.IntLn(MaxStkCnt);
             IF param1 > 0 THEN
                 Op2(opADD, imm(param1 * 2), SP)
             END;
@@ -1660,7 +1668,7 @@ BEGIN
     ram := MIN(MAX(ram, minRAM), maxRAM);
     rom := MIN(MAX(rom, minROM), maxROM);
 
-    IF IL.codes.bss > ram - minStackSize - RTL.VarSize THEN
+    IF IL.codes.bss > ram - StkReserve - RTL.VarSize THEN
         ERRORS.Error(204)
     END;
 
@@ -1697,7 +1705,7 @@ BEGIN
     Bss.size := IL.codes.bss + IL.codes.bss MOD 2;
     heap := Bss.address + Bss.size;
     stack := RTL.ram + ram;
-    ASSERT(stack - heap >= minStackSize);
+    ASSERT(stack - heap >= StkReserve);
     adr := Code.address + 2;
     PutWord(stack, adr);
     adr := Code.address + 6;
@@ -1762,7 +1770,7 @@ BEGIN
     WR.Close;
 
     INC(TextSize, IntVectorSize + TypesSize);
-    INC(Bss.size, minStackSize + RTL.VarSize);
+    INC(Bss.size, StkReserve + RTL.VarSize);
 
     C.Dashes;
     C.String(  "  rom:  "); C.Int(TextSize); C.String(" of "); C.Int(rom); C.String("  ("); C.Int(TextSize * 100 DIV rom); C.StringLn("%)");
