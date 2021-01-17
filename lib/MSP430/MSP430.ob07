@@ -12,7 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
-    iv  = 0FFC0H;
+    iv = 0FFC0H;
 
     bsl        = iv - 2;
     sp         = bsl - 2;
@@ -23,14 +23,14 @@ CONST
     bits_offs  = bits - 32;
     types      = bits_offs - 2;
 
+    int_offs  = 0;
+    trap_offs = 2;
+
     GIE*     = {3};
     CPUOFF*  = {4};
     OSCOFF*  = {5};
     SCG0*    = {6};
     SCG1*    = {7};
-
-    int_offs  = 0;
-    trap_offs = 2;
 
 
 TYPE

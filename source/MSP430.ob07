@@ -26,7 +26,7 @@ CONST
 
     R4 = 4; R5 = 5; R6 = 6; R7 = 7;
 
-    HP = 14; IR = 15;
+    HP = RTL.HP;
 
     ACC = R4;
 
@@ -1593,7 +1593,6 @@ BEGIN
     EmitWord(0);
     Op2(opMOV, incr(PC), HP);
     EmitWord(0);
-    MovRR(SP, IR);
     Op2(opMOV, imm(5A80H), dst_x(0120H, SR)); (* stop WDT *)
     Op2(opMOV, imm(RTL.empty_proc), dst_x(0, SP));
     Op2(opMOV, imm(RTL.empty_proc), dst_x(2, SP));
@@ -1632,7 +1631,7 @@ BEGIN
 
     Push(R4);
     Op1(opPUSH, R4, sINDIR);
-    Op1(opCALL, IR, sINDIR);
+    Op1(opCALL, SR, sIDX); EmitWord(-RTL.VarSize); Reloc(RBSS); (* call int *)
     Op2(opADD, imm(4), SP);
 
     FOR i := 15 TO 0 BY -1 DO
@@ -1723,7 +1722,7 @@ BEGIN
         CASE reloc.section OF
         |RCODE: PutWord(LabelOffs(val) * 2, adr)
         |RDATA: PutWord(val + Data.address, adr)
-        |RBSS:  PutWord(val + Bss.address, adr)
+        |RBSS:  PutWord((val + Bss.address) MOD 65536, adr)
         END;
         reloc := reloc.next(RELOC)
     END;

@@ -34,7 +34,7 @@ CONST
     _new*      = 21;
 
 
-    HP = 14;
+    HP* = 15;
 
     LenIV* = 32;
 
