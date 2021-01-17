@@ -42,7 +42,7 @@ CONST
     opLEA = 78; opLABEL = 79; opSYSCALL = 80;
 
 
-    nREG = 32;
+    nREG = 8;
     ACC = 0; BP = 3; SP = 4;
 
     Types   = 0;
@@ -61,14 +61,18 @@ TYPE
 
     END;
 
+    LABELS = ARRAY 30000 OF COMMAND;
+
+    SECTIONS = ARRAY 5 OF INTEGER;
+
 
 VAR
 
-    Sections: ARRAY 5 OF RECORD address: INTEGER; name: ARRAY 16 OF CHAR END;
+    Sections: SECTIONS;
 
     first, last: COMMAND;
 
-    Labels: ARRAY 30000 OF COMMAND;
+    Labels: LABELS;
 
     F: INTEGER; buf: ARRAY 65536 OF BYTE; cnt: INTEGER;
 
@@ -113,7 +117,7 @@ BEGIN
 END syscall;
 
 
-PROCEDURE exec;
+PROCEDURE exec (Labels: LABELS; first, last: COMMAND; Sections: SECTIONS);
 VAR
     cmd: COMMAND;
     param1, param2: INTEGER;
@@ -204,7 +208,7 @@ BEGIN
         |opGEC:      R[param1] := ORD(R[param1] >= param2)
         |opBT:       R[param1] := ORD((R[param1] < R[param2]) & (R[param1] >= 0))
         |opBTC:      R[param1] := ORD((R[param1] < param2) & (R[param1] >= 0))
-        |opLEA:      R[param1 MOD 256] := Sections[param1 DIV 256].address + param2
+        |opLEA:      R[param1 MOD 256] := Sections[param1 DIV 256] + param2
         |opLABEL:
         |opSYSCALL:  syscall(R[param1])
         END;
@@ -218,6 +222,7 @@ VAR
     cmd: COMMAND;
     param1, param2, i, t, ptr: INTEGER;
     b: BYTE;
+    Names: ARRAY 5, 16 OF CHAR;
 
 
     PROCEDURE String (s: ARRAY OF CHAR);
@@ -326,11 +331,11 @@ VAR
 
 
 BEGIN
-    Sections[Types].name := "TYPES";
-    Sections[Strings].name := "STRINGS";
-    Sections[Global].name := "GLOBAL";
-    Sections[Heap].name := "HEAP";
-    Sections[Stack].name := "STACK";
+    Names[Types]   := "TYPES";
+    Names[Strings] := "STRINGS";
+    Names[Global]  := "GLOBAL";
+    Names[Heap]    := "HEAP";
+    Names[Stack]   := "STACK";
 
     F := File.Create(name);
     ASSERT(F > 0);
@@ -419,7 +424,7 @@ BEGIN
         |opGEC:      String("GE      ");  RegC(param1, param2)
         |opBT:       String("BT      ");  Reg2(param1, param2)
         |opBTC:      String("BT      ");  RegC(param1, param2)
-        |opLEA:      String("LEA     ");  Reg(param1 MOD 256); String(", "); String(Sections[param1 DIV 256].name); String(" + "); Hex(param2)
+        |opLEA:      String("LEA     ");  Reg(param1 MOD 256); String(", "); String(Names[param1 DIV 256]); String(" + "); Hex(param2)
         |opLABEL:    String("L"); Hex(param1); String(":")
         |opSYSCALL:  String("SYSCALL ");  Reg(param1)
         END;
@@ -428,7 +433,7 @@ BEGIN
     END;
 
     String("TYPES:");
-    ptr := Sections[Types].address;
+    ptr := Sections[Types];
     FOR i := 0 TO t_count - 1 DO
         IF i MOD 4 = 0 THEN
             Ln; String("WORD ")
@@ -441,7 +446,7 @@ BEGIN
     Ln;
 
     String("STRINGS:");
-    ptr := Sections[Strings].address;
+    ptr := Sections[Strings];
     FOR i := 0 TO c_count - 1 DO
         IF i MOD 8 = 0 THEN
             Ln; String("BYTE ")
@@ -524,21 +529,21 @@ BEGIN
         HeapStackSize := descr[3];
         ASSERT(HeapStackSize > 0);
 
-        Sections[Types].address := API._NEW(offStrings - offTypes);
-        ASSERT(Sections[Types].address # 0);
-        SYSTEM.MOVE(file + offTypes, Sections[Types].address, offStrings - offTypes);
+        Sections[Types] := API._NEW(offStrings - offTypes);
+        ASSERT(Sections[Types] # 0);
+        SYSTEM.MOVE(file + offTypes, Sections[Types], offStrings - offTypes);
 
-        Sections[Strings].address := API._NEW(fsize - offStrings - DescrSize);
-        ASSERT(Sections[Strings].address # 0);
-        SYSTEM.MOVE(file + offStrings, Sections[Strings].address, fsize - offStrings - DescrSize);
+        Sections[Strings] := API._NEW(fsize - offStrings - DescrSize);
+        ASSERT(Sections[Strings] # 0);
+        SYSTEM.MOVE(file + offStrings, Sections[Strings], fsize - offStrings - DescrSize);
 
-        Sections[Global].address := API._NEW(GlobalSize * 4);
-        ASSERT(Sections[Global].address # 0);
+        Sections[Global] := API._NEW(GlobalSize * 4);
+        ASSERT(Sections[Global] # 0);
 
-        Sections[Heap].address := API._NEW(HeapStackSize * 4);
-        ASSERT(Sections[Heap].address # 0);
+        Sections[Heap] := API._NEW(HeapStackSize * 4);
+        ASSERT(Sections[Heap] # 0);
 
-        Sections[Stack].address := Sections[Heap].address + HeapStackSize * 4 - 32;
+        Sections[Stack] := Sections[Heap] + HeapStackSize * 4 - 32;
 
         n := offTypes DIV 12;
         first := GetCommand(file + offTypes - n * 12);
@@ -561,7 +566,7 @@ BEGIN
                 disasm(name, (offStrings - offTypes) DIV 4, fsize - offStrings - DescrSize, GlobalSize, HeapStackSize)
             END
         ELSIF param = "-run" THEN
-            exec
+            exec(Labels, first, last, Sections)
         END
     ELSE
         Out.String("file not found"); Out.Ln

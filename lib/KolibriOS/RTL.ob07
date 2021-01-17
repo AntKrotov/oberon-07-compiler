@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -17,7 +17,6 @@ CONST
     minint* = 80000000H;
 
     WORD = bit_depth DIV 8;
-    MAX_SET = bit_depth - 1;
 
 
 VAR
@@ -72,37 +71,63 @@ BEGIN
 END _strcpy;
 
 
-PROCEDURE [stdcall] _rot* (VAR A: ARRAY OF INTEGER);
-VAR
-    i, n, k: INTEGER;
-
+PROCEDURE [stdcall] _rot* (Len, Ptr: INTEGER);
 BEGIN
-    k := LEN(A) - 1;
-    n := A[0];
-    i := 0;
-    WHILE i < k DO
-        A[i] := A[i + 1];
-        INC(i)
-    END;
-    A[k] := n
+    SYSTEM.CODE(
+    08BH, 04DH, 008H,   (*  mov   ecx, dword [ebp +  8]  *)  (* ecx <- Len *)
+    08BH, 045H, 00CH,   (*  mov   eax, dword [ebp + 12]  *)  (* eax <- Ptr *)
+    049H,               (*  dec   ecx                    *)
+    053H,               (*  push  ebx                    *)
+    08BH, 018H,         (*  mov   ebx, dword [eax]       *)
+                        (*  L:                           *)
+    08BH, 050H, 004H,   (*  mov   edx, dword [eax + 4]   *)
+    089H, 010H,         (*  mov   dword [eax], edx       *)
+    083H, 0C0H, 004H,   (*  add   eax, 4                 *)
+    049H,               (*  dec   ecx                    *)
+    075H, 0F5H,         (*  jnz   L                      *)
+    089H, 018H,         (*  mov   dword [eax], ebx       *)
+    05BH,               (*  pop   ebx                    *)
+    05DH,               (*  pop   ebp                    *)
+    0C2H, 008H, 000H    (*  ret   8                      *)
+    )
 END _rot;
 
 
-PROCEDURE [stdcall] _set* (b, a: INTEGER): INTEGER;
+PROCEDURE [stdcall] _set* (b, a: INTEGER); (* {a..b} -> eax *)
 BEGIN
-    IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
-        IF b > MAX_SET THEN
-            b := MAX_SET
-        END;
-        IF a < 0 THEN
-            a := 0
-        END;
-        a := LSR(ASR(minint, b - a), MAX_SET - b)
-    ELSE
-        a := 0
-    END
-
-    RETURN a
+    SYSTEM.CODE(
+    08BH, 04DH, 008H,              (*  mov   ecx, dword [ebp +  8]  *)  (* ecx <- b *)
+    08BH, 045H, 00CH,              (*  mov   eax, dword [ebp + 12]  *)  (* eax <- a *)
+    039H, 0C8H,                    (*  cmp   eax, ecx               *)
+    07FH, 033H,                    (*  jg    L1                     *)
+    083H, 0F8H, 01FH,              (*  cmp   eax, 31                *)
+    07FH, 02EH,                    (*  jg    L1                     *)
+    085H, 0C9H,                    (*  test  ecx, ecx               *)
+    07CH, 02AH,                    (*  jl    L1                     *)
+    083H, 0F9H, 01FH,              (*  cmp   ecx, 31                *)
+    07EH, 005H,                    (*  jle   L3                     *)
+    0B9H, 01FH, 000H, 000H, 000H,  (*  mov   ecx, 31                *)
+                                   (*  L3:                          *)
+    085H, 0C0H,                    (*  test  eax, eax               *)
+    07DH, 002H,                    (*  jge   L2                     *)
+    031H, 0C0H,                    (*  xor   eax, eax               *)
+                                   (*  L2:                          *)
+    089H, 0CAH,                    (*  mov   edx, ecx               *)
+    029H, 0C2H,                    (*  sub   edx, eax               *)
+    0B8H, 000H, 000H, 000H, 080H,  (*  mov   eax, 0x80000000        *)
+    087H, 0CAH,                    (*  xchg  edx, ecx               *)
+    0D3H, 0F8H,                    (*  sar   eax, cl                *)
+    087H, 0CAH,                    (*  xchg  edx, ecx               *)
+    083H, 0E9H, 01FH,              (*  sub   ecx, 31                *)
+    0F7H, 0D9H,                    (*  neg   ecx                    *)
+    0D3H, 0E8H,                    (*  shr   eax, cl                *)
+    05DH,                          (*  pop   ebp                    *)
+    0C2H, 008H, 000H,              (*  ret   8                      *)
+                                   (*  L1:                          *)
+    031H, 0C0H,                    (*  xor   eax, eax               *)
+    05DH,                          (*  pop   ebp                    *)
+    0C2H, 008H, 000H               (*  ret   8                      *)
+    )
 END _set;
 
 

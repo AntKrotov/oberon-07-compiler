@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -46,52 +46,36 @@ TYPE
 
 PROCEDURE SetByte* (list: BYTELIST; idx: INTEGER; byte: BYTE);
 VAR
-    ChunkNum: INTEGER;
-    chunk:    BYTECHUNK;
+    chunk: BYTECHUNK;
+    item:  LISTS.ITEM;
 
 BEGIN
     ASSERT(idx >= 0);
     ASSERT(list # NIL);
 
-    ChunkNum := idx DIV LENOFBYTECHUNK;
-    idx      := idx MOD LENOFBYTECHUNK;
-
-    chunk := list.first(BYTECHUNK);
-
-    WHILE (chunk # NIL) & (ChunkNum > 0) DO
-        chunk := chunk.next(BYTECHUNK);
-        DEC(ChunkNum)
-    END;
-
-    ASSERT(chunk # NIL);
+    item := LISTS.getidx(list, idx DIV LENOFBYTECHUNK);
+    ASSERT(item # NIL);
+    chunk := item(BYTECHUNK);
+    idx := idx MOD LENOFBYTECHUNK;
     ASSERT(idx < chunk.count);
-
     chunk.data[idx] := byte
 END SetByte;
 
 
 PROCEDURE GetByte* (list: BYTELIST; idx: INTEGER): BYTE;
 VAR
-    ChunkNum: INTEGER;
-    chunk:    BYTECHUNK;
+    chunk: BYTECHUNK;
+    item:  LISTS.ITEM;
 
 BEGIN
     ASSERT(idx >= 0);
     ASSERT(list # NIL);
 
-    ChunkNum := idx DIV LENOFBYTECHUNK;
-    idx      := idx MOD LENOFBYTECHUNK;
-
-    chunk := list.first(BYTECHUNK);
-
-    WHILE (chunk # NIL) & (ChunkNum > 0) DO
-        chunk := chunk.next(BYTECHUNK);
-        DEC(ChunkNum)
-    END;
-
-    ASSERT(chunk # NIL);
+    item := LISTS.getidx(list, idx DIV LENOFBYTECHUNK);
+    ASSERT(item # NIL);
+    chunk := item(BYTECHUNK);
+    idx := idx MOD LENOFBYTECHUNK;
     ASSERT(idx < chunk.count)
-
     RETURN chunk.data[idx]
 END GetByte;
 
@@ -187,52 +171,37 @@ END CreateByteList;
 
 PROCEDURE SetInt* (list: INTLIST; idx: INTEGER; int: INTEGER);
 VAR
-    ChunkNum: INTEGER;
-    chunk:    INTCHUNK;
+    chunk: INTCHUNK;
+    item:  LISTS.ITEM;
 
 BEGIN
     ASSERT(idx >= 0);
     ASSERT(list # NIL);
 
-    ChunkNum := idx DIV LENOFINTCHUNK;
-    idx      := idx MOD LENOFINTCHUNK;
-
-    chunk := list.first(INTCHUNK);
-
-    WHILE (chunk # NIL) & (ChunkNum > 0) DO
-        chunk := chunk.next(INTCHUNK);
-        DEC(ChunkNum)
-    END;
-
-    ASSERT(chunk # NIL);
+    item := LISTS.getidx(list, idx DIV LENOFINTCHUNK);
+    ASSERT(item # NIL);
+    chunk := item(INTCHUNK);
+    idx := idx MOD LENOFINTCHUNK;
     ASSERT(idx < chunk.count);
-
     chunk.data[idx] := int
 END SetInt;
 
 
 PROCEDURE GetInt* (list: INTLIST; idx: INTEGER): INTEGER;
+
 VAR
-    ChunkNum: INTEGER;
-    chunk:    INTCHUNK;
+    chunk: INTCHUNK;
+    item:  LISTS.ITEM;
 
 BEGIN
     ASSERT(idx >= 0);
     ASSERT(list # NIL);
 
-    ChunkNum := idx DIV LENOFINTCHUNK;
-    idx      := idx MOD LENOFINTCHUNK;
-
-    chunk := list.first(INTCHUNK);
-
-    WHILE (chunk # NIL) & (ChunkNum > 0) DO
-        chunk := chunk.next(INTCHUNK);
-        DEC(ChunkNum)
-    END;
-
-    ASSERT(chunk # NIL);
+    item := LISTS.getidx(list, idx DIV LENOFINTCHUNK);
+    ASSERT(item # NIL);
+    chunk := item(INTCHUNK);
+    idx := idx MOD LENOFINTCHUNK;
     ASSERT(idx < chunk.count)
-
     RETURN chunk.data[idx]
 END GetInt;
 

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -126,20 +126,23 @@ BEGIN
     prev := item.prev;
     next := item.next;
 
-    IF (next # NIL) & (prev # NIL) THEN
-        prev.next := next;
-        next.prev := prev
-    ELSIF (next = NIL) & (prev = NIL) THEN
-        list.first := NIL;
-        list.last := NIL
-    ELSIF (next = NIL) & (prev # NIL) THEN
-        prev.next := NIL;
-        list.last := prev
-    ELSIF (next # NIL) & (prev = NIL) THEN
-        next.prev := NIL;
-        list.first := next
+    IF next # NIL THEN
+        IF prev # NIL THEN
+            prev.next := next;
+            next.prev := prev
+        ELSE
+            next.prev := NIL;
+            list.first := next
+        END
+    ELSE
+        IF prev # NIL THEN
+            prev.next := NIL;
+            list.last := prev
+        ELSE
+            list.first := NIL;
+            list.last := NIL
+        END
     END
-
 END delete;
 
 

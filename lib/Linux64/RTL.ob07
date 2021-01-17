@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -17,14 +17,12 @@ CONST
     minint* = 8000000000000000H;
 
     WORD = bit_depth DIV 8;
-    MAX_SET = bit_depth - 1;
 
 
 VAR
 
     name:  INTEGER;
     types: INTEGER;
-    sets:  ARRAY (MAX_SET + 1) * (MAX_SET + 1) OF INTEGER;
 
 
 PROCEDURE [stdcall64] _move* (bytes, dest, source: INTEGER);
@@ -73,31 +71,65 @@ BEGIN
 END _strcpy;
 
 
-PROCEDURE [stdcall64] _rot* (VAR A: ARRAY OF INTEGER);
-VAR
-    i, n, k: INTEGER;
-
+PROCEDURE [stdcall64] _rot* (Len, Ptr: INTEGER);
 BEGIN
-    k := LEN(A) - 1;
-    n := A[0];
-    i := 0;
-    WHILE i < k DO
-        A[i] := A[i + 1];
-        INC(i)
-    END;
-    A[k] := n
+    SYSTEM.CODE(
+    048H, 08BH, 04DH, 010H,   (*  mov   rcx, qword [rbp + 16]  *)  (* rcx <- Len *)
+    048H, 08BH, 045H, 018H,   (*  mov   rax, qword [rbp + 24]  *)  (* rax <- Ptr *)
+    048H, 0FFH, 0C9H,         (*  dec   rcx                    *)
+    04CH, 08BH, 010H,         (*  mov   r10, qword [rax]       *)
+                              (*  L:                           *)
+    048H, 08BH, 050H, 008H,   (*  mov   rdx, qword [rax + 8]   *)
+    048H, 089H, 010H,         (*  mov   qword [rax], rdx       *)
+    048H, 083H, 0C0H, 008H,   (*  add   rax, 8                 *)
+    048H, 0FFH, 0C9H,         (*  dec   rcx                    *)
+    075H, 0F0H,               (*  jnz   L                      *)
+    04CH, 089H, 010H,         (*  mov   qword [rax], r10       *)
+    05DH,                     (*  pop   rbp                    *)
+    0C2H, 010H, 000H          (*  ret   16                     *)
+    )
 END _rot;
 
 
-PROCEDURE [stdcall64] _set* (b, a: INTEGER): INTEGER;
+PROCEDURE [stdcall64] _set* (b, a: INTEGER); (* {a..b} -> rax *)
 BEGIN
-    IF (a <= b) & (a <= MAX_SET) & (b >= 0) THEN
-        SYSTEM.GET((MIN(b, MAX_SET) * (MAX_SET + 1) + MAX(a, 0)) * WORD + SYSTEM.ADR(sets[0]), a)
-    ELSE
-        a := 0
-    END
+    SYSTEM.CODE(
+    048H, 08BH, 04DH, 010H,    (*  mov   rcx, qword ptr [rbp + 16]  *)  (* rcx <- b *)
+    048H, 08BH, 045H, 018H,    (*  mov   rax, qword ptr [rbp + 24]  *)  (* rax <- a *)
+    048H, 039H, 0C8H,          (*  cmp   rax, rcx                   *)
+    07FH, 047H,                (*  jg    L1                         *)
+    048H, 083H, 0F8H, 03FH,    (*  cmp   rax, 63                    *)
+    07FH, 041H,                (*  jg    L1                         *)
+    048H, 085H, 0C9H,          (*  test  rcx, rcx                   *)
+    07CH, 03CH,                (*  jl    L1                         *)
+    048H, 083H, 0F9H, 03FH,    (*  cmp   rcx, 63                    *)
+    07EH, 007H,                (*  jle   L3                         *)
+    048H, 0C7H, 0C1H, 03FH,    (*  mov   rcx, 63                    *)
+    000H, 000H, 000H,
+                               (*  L3:                              *)
+    048H, 085H, 0C0H,          (*  test  rax, rax                   *)
+    07DH, 003H,                (*  jge   L2                         *)
+    048H, 031H, 0C0H,          (*  xor   rax, rax                   *)
+                               (*  L2:                              *)
+    048H, 089H, 0CAH,          (*  mov   rdx, rcx                   *)
+    048H, 029H, 0C2H,          (*  sub   rdx, rax                   *)
+    048H, 0B8H, 000H, 000H,    (*  movabs   rax, minint             *)
+    000H, 000H, 000H, 000H,
+    000H, 080H,
 
-    RETURN a
+    048H, 087H, 0CAH,          (*  xchg  rdx, rcx                   *)
+    048H, 0D3H, 0F8H,          (*  sar   rax, cl                    *)
+    048H, 087H, 0CAH,          (*  xchg  rdx, rcx                   *)
+    048H, 083H, 0E9H, 03FH,    (*  sub   rcx, 63                    *)
+    048H, 0F7H, 0D9H,          (*  neg   rcx                        *)
+    048H, 0D3H, 0E8H,          (*  shr   rax, cl                    *)
+    05DH,                      (*  pop   rbp                        *)
+    0C2H, 010H, 000H,          (*  ret   16                         *)
+                               (*  L1:                              *)
+    048H, 031H, 0C0H,          (*  xor   rax, rax                   *)
+    05DH,                      (*  pop   rbp                        *)
+    0C2H, 010H, 000H           (*  ret   16                         *)
+    )
 END _set;
 
 
@@ -202,9 +234,9 @@ BEGIN
     04CH, 08BH, 045H, 020H,   (*  mov     r8,  qword[rbp + 32]; r8  <- n *)
     04DH, 031H, 0C9H,         (*  xor     r9, r9                         *)
     04DH, 031H, 0D2H,         (*  xor     r10, r10                       *)
-    048H, 0B8H, 000H, 000H,
+    048H, 0B8H, 000H, 000H,   (*  movabs  rax, minint                    *)
     000H, 000H, 000H, 000H,
-    000H, 080H,               (*  movabs  rax, minint                    *)
+    000H, 080H,
                               (*  L1:                                    *)
     04DH, 085H, 0C0H,         (*  test    r8, r8                         *)
     07EH, 024H,               (*  jle     L3                             *)
@@ -238,9 +270,9 @@ BEGIN
     04CH, 08BH, 045H, 020H,   (*  mov     r8,  qword[rbp + 32]; r8  <- n *)
     04DH, 031H, 0C9H,         (*  xor     r9, r9                         *)
     04DH, 031H, 0D2H,         (*  xor     r10, r10                       *)
-    048H, 0B8H, 000H, 000H,
+    048H, 0B8H, 000H, 000H,   (*  movabs  rax, minint                    *)
     000H, 000H, 000H, 000H,
-    000H, 080H,               (*  movabs  rax, minint                    *)
+    000H, 080H,
                               (*  L1:                                    *)
     04DH, 085H, 0C0H,         (*  test    r8, r8                         *)
     07EH, 028H,               (*  jle     L3                             *)
@@ -487,12 +519,6 @@ BEGIN
             END;
 
             SYSTEM.PUT8(i * tcount + j + types, ORD(t0 = t1))
-        END
-    END;
-
-    FOR i := 0 TO MAX_SET DO
-        FOR j := 0 TO i DO
-            sets[i * (MAX_SET + 1) + j] := LSR(ASR(minint, i - j), MAX_SET - i)
         END
     END;
 
