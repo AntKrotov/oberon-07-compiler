@@ -23,17 +23,14 @@ CONST
     bits_offs  = bits - 32;
     types      = bits_offs - 2;
 
-    ram = 200H;
-
-    trap = ram;
-    int  = trap + 2;
-
-
     GIE*     = {3};
     CPUOFF*  = {4};
     OSCOFF*  = {5};
     SCG0*    = {6};
     SCG1*    = {7};
+
+    int_offs  = 0;
+    trap_offs = 2;
 
 
 TYPE
@@ -46,17 +43,29 @@ TYPE
 
 
 PROCEDURE SetTrapProc* (TrapProc: TTrapProc);
+VAR
+    ptr: INTEGER;
+
 BEGIN
-    SYSTEM.PUT(trap, TrapProc)
+    SYSTEM.GET(sp, ptr);
+    IF TrapProc = NIL THEN
+        SYSTEM.PUT(ptr + trap_offs, empty_proc)
+    ELSE
+        SYSTEM.PUT(ptr + trap_offs, TrapProc)
+    END
 END SetTrapProc;
 
 
 PROCEDURE SetIntProc* (IntProc: TIntProc);
+VAR
+    ptr: INTEGER;
+
 BEGIN
-    IF IntProc # NIL THEN
-        SYSTEM.PUT(int, IntProc)
+    SYSTEM.GET(sp, ptr);
+    IF IntProc = NIL THEN
+        SYSTEM.PUT(ptr + int_offs, empty_proc)
     ELSE
-        SYSTEM.PUT(int, empty_proc)
+        SYSTEM.PUT(ptr + int_offs, IntProc)
     END
 END SetIntProc;
 

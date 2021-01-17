@@ -55,6 +55,8 @@ CONST
 
     StkReserve* = 40;
 
+    trap = 2;
+
 
 TYPE
 
@@ -63,7 +65,7 @@ TYPE
 
 VAR
 
-    ram*, trap*, int*: INTEGER;
+    ram*: INTEGER;
 
     rtl*: ARRAY 22 OF
               RECORD
@@ -385,11 +387,9 @@ BEGIN
         Word1(1206H);                (*  PUSH  R6                           *)
         Word1(1205H);                (*  PUSH  R5                           *)
         Word1(1204H);                (*  PUSH  R4                           *)
-        Word2(4214H, trap);          (*  MOV   trap(SR), R4                 *)
-        Word1(9304H);                (*  TST   R4                           *)
-        Word1(2400H + 1);            (*  JZ    L                            *)
+        Word2(4214H, sp);            (*  MOV   sp(SR), R4                   *)
+        Word2(4414H, trap);          (*  MOV   trap(R4), R4                 *)
         Word1(1284H);                (*  CALL  R4                           *)
-                                     (*  L:                                 *)
         Word2(04032H, 0F0H)          (*  MOV   CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
     END;
 
@@ -661,14 +661,12 @@ BEGIN
 END Used;
 
 
-PROCEDURE Init* (pLabel, pWord, pCall: EMITPROC; ramSize: INTEGER);
+PROCEDURE Init* (pLabel, pWord, pCall: EMITPROC);
 BEGIN
     Label := pLabel;
     Word  := pWord;
     Call  := pCall;
     ram   := 200H;
-    trap  := ram;
-    int   := trap + 2
 END Init;
 
 

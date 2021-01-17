@@ -1577,12 +1577,12 @@ BEGIN
 END translate;
 
 
-PROCEDURE prolog (ramSize: INTEGER);
+PROCEDURE prolog;
 VAR
     i: INTEGER;
 
 BEGIN
-    RTL.Init(EmitLabel, EmitWord, EmitCall, ramSize);
+    RTL.Init(EmitLabel, EmitWord, EmitCall);
     FOR i := 0 TO LEN(RTL.rtl) - 1 DO
         RTL.Set(i, NewLabel())
     END;
@@ -1593,15 +1593,16 @@ BEGIN
     EmitWord(0);
     Op2(opMOV, incr(PC), HP);
     EmitWord(0);
+    MovRR(SP, IR);
     Op2(opMOV, imm(5A80H), dst_x(0120H, SR)); (* stop WDT *)
-    Op2(opMOV, imm(RTL.empty_proc), dst_x(RTL.int, SR));
-    Op2(opMOV, imm(0), dst_x(RTL.trap, SR))
+    Op2(opMOV, imm(RTL.empty_proc), dst_x(0, SP));
+    Op2(opMOV, imm(RTL.empty_proc), dst_x(2, SP));
 END prolog;
 
 
 PROCEDURE epilog;
 VAR
-    L1, i: INTEGER;
+    L1, i, n: INTEGER;
 
 BEGIN
     Op2(opBIS, imm(10H), SR); (* CPUOFF *)
@@ -1618,18 +1619,20 @@ BEGIN
 
     EmitLabel(L1);
 
-    MovRR(SP, IR);
-
+    n := 0;
     FOR i := 0 TO 15 DO
         IF i IN R.regs + R.vregs THEN
-            Push(i)
+            Push(i);
+            INC(n)
         END
     END;
 
-    Push(IR);
-    Op1(opPUSH, IR, sINDIR);
-    Op1(opCALL, SR, sIDX);
-    EmitWord(RTL.int);
+    MovRR(SP, R4);
+    Op2(opADD, imm(n * 2), R4);
+
+    Push(R4);
+    Op1(opPUSH, R4, sINDIR);
+    Op1(opCALL, IR, sINDIR);
     Op2(opADD, imm(4), SP);
 
     FOR i := 15 TO 0 BY -1 DO
@@ -1686,7 +1689,7 @@ BEGIN
     RelList  := LISTS.create(NIL);
     REG.Init(R, Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
 
-    prolog(ram);
+    prolog;
     translate(chkSTK IN options.checking);
     epilog;
 
@@ -1701,10 +1704,12 @@ BEGIN
         ERRORS.Error(203)
     END;
 
-    Bss.address := RTL.ram + RTL.VarSize;
-    Bss.size := IL.codes.bss + IL.codes.bss MOD 2;
-    heap := Bss.address + Bss.size;
     stack := RTL.ram + ram;
+    Bss.size := IL.codes.bss + IL.codes.bss MOD 2;
+    DEC(stack, Bss.size);
+    Bss.address := stack;
+    DEC(stack, RTL.VarSize);
+    heap := RTL.ram;
     ASSERT(stack - heap >= StkReserve);
     adr := Code.address + 2;
     PutWord(stack, adr);
