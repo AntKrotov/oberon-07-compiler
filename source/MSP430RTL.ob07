@@ -42,9 +42,7 @@ CONST
     bsl         = iv - 2;
     sp          = bsl - 2;
     empty_proc* = sp - 2;
-    free_size   = empty_proc - 2;
-    free_adr    = free_size - 2;
-    bits        = free_adr - 272;
+    bits        = empty_proc - 272;
     bits_offs   = bits - 32;
     DataSize*   = iv - bits_offs;
     types       = bits_offs - 2;
@@ -378,19 +376,19 @@ BEGIN
     (* _error (modNum, modName, err, line: INTEGER) *)
     IF rtl[_error].used THEN
         Label(rtl[_error].label);
-        Word2(4114H, 2);             (*  MOV   2(SP), R4; R4 <- modNum      *)
-        Word2(4115H, 4);             (*  MOV   4(SP), R5; R5 <- modName     *)
-        Word2(4116H, 6);             (*  MOV   6(SP), R6; R6 <- err         *)
-        Word2(4117H, 8);             (*  MOV   8(SP), R7; R7 <- line        *)
-        Word2(4211H, sp);            (*  MOV   sp(SR), SP                   *)
-        Word1(1207H);                (*  PUSH  R7                           *)
-        Word1(1206H);                (*  PUSH  R6                           *)
-        Word1(1205H);                (*  PUSH  R5                           *)
-        Word1(1204H);                (*  PUSH  R4                           *)
-        Word2(4214H, sp);            (*  MOV   sp(SR), R4                   *)
-        Word2(4414H, trap);          (*  MOV   trap(R4), R4                 *)
-        Word1(1284H);                (*  CALL  R4                           *)
-        Word2(04032H, 0F0H)          (*  MOV   CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
+        Word1(5321H);          (*  ADD   #2, SP             *)
+        Word1(4134H);          (*  POP   R4; R4 <- modNum   *)
+        Word1(4135H);          (*  POP   R5; R5 <- modName  *)
+        Word1(4136H);          (*  POP   R6; R6 <- err      *)
+        Word1(4137H);          (*  POP   R7; R7 <- line     *)
+        Word2(4211H, sp);      (*  MOV   sp(SR), SP                   *)
+        Word1(1207H);          (*  PUSH  R7                           *)
+        Word1(1206H);          (*  PUSH  R6                           *)
+        Word1(1205H);          (*  PUSH  R5                           *)
+        Word1(1204H);          (*  PUSH  R4                           *)
+        Word2(4214H, sp);      (*  MOV   sp(SR), R4                   *)
+        Word2(1294H, trap);    (*  CALL  trap(R4)                     *)
+        Word2(04032H, 0F0H)    (*  MOV   CPUOFF+OSCOFF+SCG0+SCG1, SR  *)
     END;
 
     (* _new (t, size: INTEGER; VAR ptr: INTEGER) *)

@@ -17,9 +17,7 @@ CONST
     bsl        = iv - 2;
     sp         = bsl - 2;
     empty_proc = sp - 2;
-    free_size  = empty_proc - 2;
-    free_adr   = free_size - 2;
-    bits       = free_adr - 272;
+    bits       = empty_proc - 272;
     bits_offs  = bits - 32;
     types      = bits_offs - 2;
 
@@ -109,13 +107,6 @@ PROCEDURE [code] SetSR* (bits: SET)
 
 PROCEDURE [code] ClrSR* (bits: SET)
     0C112H, 2; (*  BIC 2(SP), SR  *)
-
-
-PROCEDURE GetFreeFlash* (VAR address, size: INTEGER);
-BEGIN
-    SYSTEM.GET(free_adr, address);
-    SYSTEM.GET(free_size, size)
-END GetFreeFlash;
 
 
 PROCEDURE [code] Delay* (n: INTEGER)

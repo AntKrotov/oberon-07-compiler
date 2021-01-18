@@ -106,12 +106,10 @@ END trap;
 
 PROCEDURE main;
 CONST
-    seg_adr = 0FC00H; (* адрес сегмента для стирания и записи (ДОЛЖЕН БЫТЬ СВОБОДНЫМ!) *)
+    seg_adr = 0F800H; (* адрес сегмента для стирания и записи (ДОЛЖЕН БЫТЬ СВОБОДНЫМ!) *)
 
 VAR
-    adr, x, i: INTEGER;
-
-    free: RECORD address, size: INTEGER END;
+    adr, x, i, entry: INTEGER;
 
 BEGIN
     (* инициализация регистров порта P1 *)
@@ -124,11 +122,12 @@ BEGIN
 
     ASSERT(seg_adr MOD 512 = 0); (* адрес сегмента должен быть кратным 512 *)
 
-    MSP430.GetFreeFlash(free.address, free.size);
+    (* получить адрес используемой части флэш-памяти
+      (совпадает с точкой входа в программу) *)
+    SYSTEM.GET(0FFFEH, entry);
 
     (* проверить, свободен ли сегмент *)
-    ASSERT(free.address <= seg_adr);
-    ASSERT(seg_adr + 511 <= free.address + free.size);
+    ASSERT(seg_adr + 511 < entry);
 
     Write(seg_adr, 0, FERASE); (* стереть сегмент *)
 

@@ -85,9 +85,9 @@ BEGIN
     IF priority = 24 THEN                 (* прерывание от таймера A *)
         SYSTEM.GET(TACTL, x);             (* взять регистр TACTL *)
         IF TAIFG * x = TAIFG THEN         (* прерывание было *)
+            SYSTEM.PUT(TACTL, x - TAIFG); (* сбросить флаг прерывания и обновить регистр TACTL *)
             inv_bits(P1OUT, REDLED);      (* изменить состояние светодиода *)
             inv_bits(P1OUT, GREENLED);    (* изменить состояние светодиода *)
-            SYSTEM.PUT(TACTL, x - TAIFG)  (* сбросить флаг прерывания и обновить регистр TACTL *)
         END
     END
 END int;
@@ -108,8 +108,8 @@ BEGIN
     (* инициализация регистров таймера A *)
     SYSTEM.PUT(TAR, 0);
     SYSTEM.PUT(TACCTL0, CCIE + CAP);
-    SYSTEM.PUT(TACCR0, 1000);
-    SYSTEM.PUT(TACTL, TAIE + MC0 + TASSEL0)
+    SYSTEM.PUT(TACCR0, 0FFFFH);
+    SYSTEM.PUT(TACTL, TAIE + MC0 + MC1 + TASSEL1 + ID0 + ID1)
 END main;
 
 
