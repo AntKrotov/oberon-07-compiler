@@ -11,6 +11,15 @@ IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE,
        ERRORS, STRINGS, WRITER, MSP430, THUMB, TARGETS, SCAN;
 
 
+CONST
+
+    DEF_WINDOWS   = "WINDOWS";
+    DEF_LINUX     = "LINUX";
+    DEF_KOLIBRIOS = "KOLIBRIOS";
+    DEF_CPU_X86   = "CPU_X86";
+    DEF_CPU_X8664 = "CPU_X8664";
+
+
 PROCEDURE keys (VAR options: PROG.OPTIONS; VAR out: PARS.PATH);
 VAR
     param: PARS.PATH;
@@ -286,6 +295,23 @@ BEGIN
     END;
 
     PARS.init(options);
+
+    CASE TARGETS.OS OF
+    |TARGETS.osNONE:
+    |TARGETS.osWIN32,
+     TARGETS.osWIN64:   SCAN.NewDef(DEF_WINDOWS)
+    |TARGETS.osLINUX32,
+     TARGETS.osLINUX64: SCAN.NewDef(DEF_LINUX)
+    |TARGETS.osKOS:     SCAN.NewDef(DEF_KOLIBRIOS)
+    END;
+
+    CASE TARGETS.CPU OF
+    |TARGETS.cpuX86:    SCAN.NewDef(DEF_CPU_X86)
+    |TARGETS.cpuAMD64:  SCAN.NewDef(DEF_CPU_X8664)
+    |TARGETS.cpuMSP430:
+    |TARGETS.cpuTHUMB:
+    |TARGETS.cpuRVM32I:
+    END;
 
     ST.compile(path, lib_path, modname, outname, target, options);
 

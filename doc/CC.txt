@@ -13,6 +13,14 @@
     где ident:
     - одно из возможных значений параметра <target> в командной строке
     - пользовательский идентификатор, переданный с ключом -def при компиляции
+    - один из возможных предопределенных идентификаторов:
+
+        WINDOWS   - приложение Windows
+        LINUX     - приложение Linux
+        KOLIBRIOS - приложение KolibriOS
+        CPU_X86   - приложение для процессора x86 (32-бит)
+        CPU_X8664 - приложение для процессора x86_64
+
 
 примеры:
 
@@ -29,8 +37,25 @@
     $END
 
 
-    $IF (CPUX86_64) (* -def CPUX86_64 *)
-        bit_depth := 64;
-    $ELSE
-        bit_depth := 32;
+    $IF (debug) (* -def debug *)
+        print("debug");
+    $END
+
+
+    $IF (WINDOWS)
+        $IF (CPU_X86)
+        (*windows 32*)
+
+        $ELSIF (CPU_X8664)
+        (*windows 64*)
+
+        $END
+    $ELSIF (LINUX)
+        $IF (CPU_X86)
+        (*linux 32*)
+
+        $ELSIF (CPU_X8664)
+        (*linux 64*)
+
+        $END
     $END
