@@ -689,7 +689,7 @@ BEGIN
             END;
 
             IF rvar # NIL THEN
-                reg := REG.GetAnyVarReg(R);
+                reg := REG.GetVarReg(R, 0);
                 IF reg # -1 THEN
                     REG.Lock(R, reg, rvar.offset, rvar.size);
                     REG.Load(R, reg);

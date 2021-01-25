@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -18,10 +18,7 @@ VAR
 
 PROCEDURE align* (n, _align: INTEGER): INTEGER;
 BEGIN
-    IF n MOD _align # 0 THEN
-        INC(n, _align - (n MOD _align))
-    END
-
+    ASSERT(UTILS.Align(n, _align))
     RETURN n
 END align;
 

@@ -23,7 +23,7 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 47;
+    vMinor* = 48;
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
@@ -162,20 +162,9 @@ END Byte;
 
 
 PROCEDURE Align* (VAR bytes: INTEGER; align: INTEGER): BOOLEAN;
-VAR
-    res: BOOLEAN;
-
 BEGIN
-    IF bytes MOD align # 0 THEN
-        res := maxint - bytes >= align - (bytes MOD align);
-        IF res THEN
-            bytes := bytes + align - (bytes MOD align)
-        END
-    ELSE
-        res := TRUE
-    END
-
-    RETURN res
+    INC(bytes, (-bytes) MOD align)
+    RETURN bytes >= 0
 END Align;
 
 
@@ -221,6 +210,6 @@ END hexdgt;
 
 
 BEGIN
-    time := GetTickCount();
+    time := HOST.GetTickCount();
     maxreal := HOST.maxreal
 END UTILS.
