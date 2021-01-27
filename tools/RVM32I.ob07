@@ -39,7 +39,7 @@ CONST
     opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
     opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
 
-    opLEA = 78; opLABEL = 79; opSYSCALL = 80;
+    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opJNA = 82;
 
 
     nREG = 8;
@@ -57,7 +57,7 @@ TYPE
     COMMAND = POINTER TO RECORD
 
         op, param1, param2: INTEGER;
-        next: COMMAND
+        next, prev: COMMAND
 
     END;
 
@@ -117,41 +117,66 @@ BEGIN
 END syscall;
 
 
-PROCEDURE exec (Labels: LABELS; first, last: COMMAND; Sections: SECTIONS);
+PROCEDURE exec (VAR Labels: LABELS; first, last: COMMAND; Sections: SECTIONS);
 VAR
     cmd: COMMAND;
-    param1, param2: INTEGER;
-    temp: INTEGER;
+    param1, param2, i: INTEGER;
     R: ARRAY nREG OF INTEGER;
 
 BEGIN
+    FOR i := 0 TO LEN(Labels) - 1 DO
+        cmd := Labels[i];
+        IF cmd # NIL THEN
+            REPEAT
+                cmd := cmd.next
+            UNTIL cmd.op # opLABEL;
+            Labels[i] := cmd
+        END
+    END;
+
+    cmd := first;
+    WHILE cmd # NIL DO
+        IF cmd.op = opLABEL THEN
+            cmd.prev.next := cmd.next;
+            cmd.next.prev := cmd.prev
+        END;
+        cmd := cmd.next
+    END;
+
+    FOR i := 0 TO LEN(Labels) - 1 DO
+        IF Labels[i] # NIL THEN
+            Labels[i] := Labels[i].prev
+        END
+    END;
+
     cmd := first;
     WHILE cmd # NIL DO
         param1 := cmd.param1;
         param2 := cmd.param2;
         CASE cmd.op OF
         |opSTOP:     cmd := last
-        |opRET:      SYSTEM.MOVE(R[SP], SYSTEM.ADR(cmd), 4); INC(R[SP], 4)
+        |opRET:      SYSTEM.GET(R[SP], cmd); INC(R[SP], 4)
         |opENTER:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[BP]); R[BP] := R[SP]; WHILE param1 > 0 DO DEC(R[SP], 4); SYSTEM.PUT32(R[SP], 0); DEC(param1) END
         |opPOP:      SYSTEM.GET32(R[SP], R[param1]); INC(R[SP], 4)
         |opNEG:      R[param1] := -R[param1]
         |opNOT:      R[param1] := ORD(-BITS(R[param1]))
         |opABS:      R[param1] := ABS(R[param1])
-        |opXCHG:     temp := R[param1]; R[param1] := R[param2]; R[param2] := temp
-        |opLDR8:     SYSTEM.GET8(R[param2], R[param1]); R[param1] := R[param1] MOD 256;
-        |opLDR16:    SYSTEM.GET16(R[param2], R[param1]); R[param1] := R[param1] MOD 65536;
-        |opLDR32:    SYSTEM.GET32(R[param2], R[param1])
+        |opXCHG:     i := R[param1]; R[param1] := R[param2]; R[param2] := i
+        |opLDR8:     i := param1 MOD 256; SYSTEM.GET8(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 256
+        |opLDR16:    i := param1 MOD 256; SYSTEM.GET16(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 65536
+        |opLDR32:    SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opPUSH:     DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[param1])
         |opPUSHC:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], param1)
         |opJGZ:      IF R[param1] > 0 THEN cmd := Labels[cmd.param2] END
         |opJZ:       IF R[param1] = 0 THEN cmd := Labels[cmd.param2] END
         |opJNZ:      IF R[param1] # 0 THEN cmd := Labels[cmd.param2] END
-        |opLLA:      SYSTEM.MOVE(SYSTEM.ADR(Labels[cmd.param2]), SYSTEM.ADR(R[param1]), 4)
+        |opLLA:      SYSTEM.GET32(SYSTEM.ADR(Labels[cmd.param2]), R[param1])
         |opJGA:      IF R[ACC] > param1 THEN cmd := Labels[cmd.param2] END
         |opJLA:      IF R[ACC] < param1 THEN cmd := Labels[cmd.param2] END
+        |opJNA:      IF R[ACC] # param1 THEN cmd := Labels[cmd.param2] END
         |opJMP:      cmd := Labels[cmd.param1]
-        |opCALL:     DEC(R[SP], 4); SYSTEM.MOVE(SYSTEM.ADR(cmd), R[SP], 4); cmd := Labels[cmd.param1]
-        |opCALLI:    DEC(R[SP], 4); SYSTEM.MOVE(SYSTEM.ADR(cmd), R[SP], 4); SYSTEM.MOVE(SYSTEM.ADR(R[param1]), SYSTEM.ADR(cmd), 4)
+        |opCALL:     DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); cmd := Labels[cmd.param1]
+        |opCALLI:    DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); SYSTEM.GET(SYSTEM.ADR(R[param1]), cmd)
         |opMOV:      R[param1] := R[param2]
         |opMOVC:     R[param1] := param2
         |opMUL:      R[param1] := R[param1] * R[param2]
@@ -164,16 +189,16 @@ BEGIN
         |opDIVC:     R[param1] := R[param1] DIV param2
         |opMOD:      R[param1] := R[param1] MOD R[param2]
         |opMODC:     R[param1] := R[param1] MOD param2
-        |opSTR8:     SYSTEM.PUT8(R[param1], R[param2])
+        |opSTR8:     SYSTEM.PUT8(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTR16:    SYSTEM.PUT16(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTR32:    SYSTEM.PUT32(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opSTR8C:    SYSTEM.PUT8(R[param1], param2)
-        |opSTR16:    SYSTEM.PUT16(R[param1], R[param2])
         |opSTR16C:   SYSTEM.PUT16(R[param1], param2)
-        |opSTR32:    SYSTEM.PUT32(R[param1], R[param2])
         |opSTR32C:   SYSTEM.PUT32(R[param1], param2)
-        |opINCL:     SYSTEM.GET32(R[param1], temp); SYSTEM.PUT32(R[param1], ORD(BITS(temp) + {R[param2]}))
-        |opINCLC:    SYSTEM.GET32(R[param1], temp); SYSTEM.PUT32(R[param1], ORD(BITS(temp) + {param2}))
-        |opEXCL:     SYSTEM.GET32(R[param1], temp); SYSTEM.PUT32(R[param1], ORD(BITS(temp) - {R[param2]}))
-        |opEXCLC:    SYSTEM.GET32(R[param1], temp); SYSTEM.PUT32(R[param1], ORD(BITS(temp) - {param2}))
+        |opINCL:     SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) + {R[param2]}))
+        |opINCLC:    SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) + {param2}))
+        |opEXCL:     SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) - {R[param2]}))
+        |opEXCLC:    SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) - {param2}))
         |opIN:       R[param1] := ORD(R[param1] IN BITS(R[param2]))
         |opINC:      R[param1] := ORD(R[param1] IN BITS(param2))
         |opAND:      R[param1] := ORD(BITS(R[param1]) * BITS(R[param2]))
@@ -209,8 +234,9 @@ BEGIN
         |opBT:       R[param1] := ORD((R[param1] < R[param2]) & (R[param1] >= 0))
         |opBTC:      R[param1] := ORD((R[param1] < param2) & (R[param1] >= 0))
         |opLEA:      R[param1 MOD 256] := Sections[param1 DIV 256] + param2
-        |opLABEL:
+        (*|opLABEL:*)
         |opSYSCALL:  syscall(R[param1])
+        |opADDRC:    R[param1 MOD 256] := R[param1 DIV 256] + param2
         END;
         cmd := cmd.next
     END
@@ -354,9 +380,9 @@ BEGIN
         |opNOT:      String("NOT     ");  Reg(param1)
         |opABS:      String("ABS     ");  Reg(param1)
         |opXCHG:     String("XCHG    ");  Reg2(param1, param2)
-        |opLDR8:     String("LDR8    ");  Reg2(param1, param2)
-        |opLDR16:    String("LDR16   ");  Reg2(param1, param2)
-        |opLDR32:    String("LDR32   ");  Reg2(param1, param2)
+        |opLDR8:     String("LDR8    ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDR16:    String("LDR16   ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDR32:    String("LDR32   ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opPUSH:     String("PUSH    ");  Reg(param1)
         |opPUSHC:    String("PUSH    ");  Hex(param1)
         |opJGZ:      String("JGZ     ");  RegL(param1, param2)
@@ -365,6 +391,7 @@ BEGIN
         |opLLA:      String("LLA     ");  RegL(param1, param2)
         |opJGA:      String("JGA     ");  Hex(param1); String(", L"); Hex(param2)
         |opJLA:      String("JLA     ");  Hex(param1); String(", L"); Hex(param2)
+        |opJNA:      String("JNA     ");  Hex(param1); String(", L"); Hex(param2)
         |opJMP:      String("JMP     L"); Hex(param1)
         |opCALL:     String("CALL    L"); Hex(param1)
         |opCALLI:    String("CALL    ");  Reg(param1)
@@ -380,12 +407,12 @@ BEGIN
         |opDIVC:     String("DIV     ");  RegC(param1, param2)
         |opMOD:      String("MOD     ");  Reg2(param1, param2)
         |opMODC:     String("MOD     ");  RegC(param1, param2)
-        |opSTR8:     String("STR8    ");  Reg2(param1, param2)
-        |opSTR8C:    String("STR8    ");  RegC(param1, param2)
-        |opSTR16:    String("STR16   ");  Reg2(param1, param2)
-        |opSTR16C:   String("STR16   ");  RegC(param1, param2)
-        |opSTR32:    String("STR32   ");  Reg2(param1, param2)
-        |opSTR32C:   String("STR32   ");  RegC(param1, param2)
+        |opSTR8:     String("STR8    ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTR16:    String("STR16   ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTR32:    String("STR32   ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTR8C:    String("STR8    ["); Reg(param1); String("], "); Hex(param2)
+        |opSTR16C:   String("STR16   ["); Reg(param1); String("], "); Hex(param2)
+        |opSTR32C:   String("STR32   ["); Reg(param1); String("], "); Hex(param2)
         |opINCL:     String("INCL    ");  Reg2(param1, param2)
         |opINCLC:    String("INCL    ");  RegC(param1, param2)
         |opEXCL:     String("EXCL    ");  Reg2(param1, param2)
@@ -425,6 +452,7 @@ BEGIN
         |opBT:       String("BT      ");  Reg2(param1, param2)
         |opBTC:      String("BT      ");  RegC(param1, param2)
         |opLEA:      String("LEA     ");  Reg(param1 MOD 256); String(", "); String(Names[param1 DIV 256]); String(" + "); Hex(param2)
+        |opADDRC:    String("ADD     ");  Reg(param1 MOD 256); String(", "); Reg(param1 DIV 256); String(", "); Hex(param2)
         |opLABEL:    String("L"); Hex(param1); String(":")
         |opSYSCALL:  String("SYSCALL ");  Reg(param1)
         END;
@@ -547,6 +575,7 @@ BEGIN
 
         n := offTypes DIV 12;
         first := GetCommand(file + offTypes - n * 12);
+        first.prev := NIL;
         last := first;
         DEC(n);
         WHILE n > 0 DO
@@ -555,6 +584,7 @@ BEGIN
                 Labels[cmd.param1] := cmd
             END;
             last.next := cmd;
+            cmd.prev := last;
             last := cmd;
             DEC(n)
         END;

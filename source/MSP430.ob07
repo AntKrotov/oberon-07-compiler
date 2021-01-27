@@ -1187,8 +1187,12 @@ BEGIN
 
         |IL.opCASELR:
             Op2(opCMP, imm(param1), ACC);
-            jcc(jl, param2);
-            jcc(jg, cmd.param3)
+            IF param2 = cmd.param3 THEN
+                jcc(jne, param2)
+            ELSE
+                jcc(jl, param2);
+                jcc(jg, cmd.param3)
+            END
 
         |IL.opSBOOL:
             BinOp(reg2, reg1);

@@ -1870,8 +1870,12 @@ BEGIN
         |IL.opCASELR:
             GetRegA;
             cmprc(rax, param1);
-            jcc(jl, param2);
-            jcc(jg, cmd.param3);
+            IF param2 = cmd.param3 THEN
+                jcc(jne, param2)
+            ELSE
+                jcc(jl, param2);
+                jcc(jg, cmd.param3)
+            END;
             drop
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:

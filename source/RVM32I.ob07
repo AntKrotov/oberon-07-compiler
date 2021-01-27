@@ -46,7 +46,7 @@ CONST
     opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
     opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
 
-    opLEA = 78; opLABEL = 79;
+    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opJNA = 82;
 
     inf = 7F800000H;
 
@@ -176,37 +176,37 @@ END sub;
 
 PROCEDURE ldr32 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR32, r1, r2)
+    Emit(opLDR32, r2 * 256 + r1, 0)
 END ldr32;
 
 
 PROCEDURE ldr16 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR16, r1, r2)
+    Emit(opLDR16, r2 * 256 + r1, 0)
 END ldr16;
 
 
 PROCEDURE ldr8 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR8, r1, r2)
+    Emit(opLDR8, r2 * 256 + r1, 0)
 END ldr8;
 
 
 PROCEDURE str32 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR32, r1, r2)
+    Emit(opSTR32, r1 * 256 + r2, 0)
 END str32;
 
 
 PROCEDURE str16 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR16, r1, r2)
+    Emit(opSTR16, r1 * 256 + r2, 0)
 END str16;
 
 
 PROCEDURE str8 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR8, r1, r2)
+    Emit(opSTR8, r1 * 256 + r2, 0)
 END str8;
 
 
@@ -243,7 +243,7 @@ END CallRTL;
 
 PROCEDURE translate;
 VAR
-    cmd: IL.COMMAND;
+    cmd, next: IL.COMMAND;
     opcode, param1, param2: INTEGER;
     r1, r2, r3: INTEGER;
 
@@ -290,9 +290,25 @@ BEGIN
             GlobalAdr(GetAnyReg(), param2)
 
         |IL.opLADR:
-            r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4)
+            next := cmd.next(IL.COMMAND);
+            IF (next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVE32) OR (next.opcode = IL.opSAVEF) THEN
+                UnOp(r1);
+                Emit(opSTR32, BP * 256 + r1, param2 * 4);
+                drop;
+                cmd := next
+            ELSIF next.opcode = IL.opSAVE16 THEN
+                UnOp(r1);
+                Emit(opSTR16, BP * 256 + r1, param2 * 4);
+                drop;
+                cmd := next
+            ELSIF next.opcode = IL.opSAVE8 THEN
+                UnOp(r1);
+                Emit(opSTR8, BP * 256 + r1, param2 * 4);
+                drop;
+                cmd := next
+            ELSE
+                Emit(opADDRC, BP * 256 + GetAnyReg(), param2 * 4)
+            END
 
         |IL.opPARAM:
             IF param2 = 1 THEN
@@ -394,16 +410,11 @@ BEGIN
             ldr32(r1, r1)
 
         |IL.opVADR, IL.opLLOAD32:
-            r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr32(r1, r1)
+            Emit(opLDR32, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD32:
             r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr32(r1, r1);
+            Emit(opLDR32, BP * 256 + r1, param2 * 4);
             ldr32(r1, r1)
 
         |IL.opGLOAD16:
@@ -412,16 +423,11 @@ BEGIN
             ldr16(r1, r1)
 
         |IL.opLLOAD16:
-            r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr16(r1, r1)
+            Emit(opLDR16, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD16:
             r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr32(r1, r1);
+            Emit(opLDR32, BP * 256 + r1, param2 * 4);
             ldr16(r1, r1)
 
         |IL.opGLOAD8:
@@ -430,16 +436,11 @@ BEGIN
             ldr8(r1, r1)
 
         |IL.opLLOAD8:
-            r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr8(r1, r1)
+            Emit(opLDR8, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD8:
             r1 := GetAnyReg();
-            mov(r1, BP);
-            addrc(r1, param2 * 4);
-            ldr32(r1, r1);
+            Emit(opLDR32, BP * 256 + r1, param2 * 4);
             ldr8(r1, r1)
 
         |IL.opLOAD8:
@@ -755,20 +756,18 @@ BEGIN
         |IL.opENDSW:
 
         |IL.opCASEL:
-            GetAcc;
-            Emit(opJLA, param1, param2);
-            drop
+            Emit(opJLA, param1, param2)
 
         |IL.opCASER:
-            GetAcc;
-            Emit(opJGA, param1, param2);
-            drop
+            Emit(opJGA, param1, param2)
 
         |IL.opCASELR:
-            GetAcc;
-            Emit(opJLA, param1, param2);
-            Emit(opJGA, param1, cmd.param3);
-            drop
+            IF param2 = cmd.param3 THEN
+                Emit(opJNA, param1, param2)
+            ELSE
+                Emit(opJLA, param1, param2);
+                Emit(opJGA, param1, cmd.param3)
+            END
 
         |IL.opSBOOL:
             BinOp(r2, r1);
