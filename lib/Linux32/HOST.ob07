@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -241,7 +241,7 @@ BEGIN
     GetSym(libc, "time",   SYSTEM.ADR(time));
     GetSym(libc, "exit",   SYSTEM.ADR(exit));
     GetSym(libc, "getcwd", SYSTEM.ADR(getcwd));
-    GetSym(libc, "stdout", SYSTEM.ADR(stdout)); SYSTEM.GET(stdout - SYSTEM.SIZE(INTEGER), stdout);
+    GetSym(libc, "stdout", SYSTEM.ADR(stdout)); SYSTEM.GET(stdout, stdout);
 
     librt := API.dlopen(SYSTEM.SADR("librt.so.1"), RTLD_LAZY);
     GetSym(librt, "clock_gettime", SYSTEM.ADR(clock_gettime))

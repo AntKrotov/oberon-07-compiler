@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -68,9 +68,9 @@ BEGIN
     GetSym(libc, "fclose", SYSTEM.ADR(fclose));
     GetSym(libc, "time",   SYSTEM.ADR(time));
 
-    GetSym(libc, "stdout", SYSTEM.ADR(stdout)); SYSTEM.GET(stdout - SYSTEM.SIZE(INTEGER), stdout);
-    GetSym(libc, "stdin",  SYSTEM.ADR(stdin));  SYSTEM.GET(stdin  - SYSTEM.SIZE(INTEGER), stdin);
-    GetSym(libc, "stderr", SYSTEM.ADR(stderr)); SYSTEM.GET(stderr - SYSTEM.SIZE(INTEGER), stderr);
+    GetSym(libc, "stdout", SYSTEM.ADR(stdout)); SYSTEM.GET(stdout, stdout);
+    GetSym(libc, "stdin",  SYSTEM.ADR(stdin));  SYSTEM.GET(stdin,  stdin);
+    GetSym(libc, "stderr", SYSTEM.ADR(stderr)); SYSTEM.GET(stderr, stderr);
 
     librt := Libdl.open("librt.so.1", Libdl.LAZY);
 
@@ -94,7 +94,7 @@ BEGIN
     05FH,               (*  pop     edi                    *)
     05EH,               (*  pop     esi                    *)
     05BH,               (*  pop     ebx                    *)
-    0C9H,               (*  leave                          *)
+    05DH,               (*  pop     ebp                    *)
     0C2H, 018H, 000H    (*  ret     24                     *)
     )
     RETURN 0

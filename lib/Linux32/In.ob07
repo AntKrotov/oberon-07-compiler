@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
 MODULE In;
 
-IMPORT SYSTEM, Libdl;
+IMPORT SYSTEM, Libdl, LINAPI;
 
 
 CONST
@@ -18,15 +18,15 @@ CONST
 VAR
 
     Done*: BOOLEAN;
-    s: ARRAY MAX_LEN + 4 OF CHAR;
+    s: ARRAY MAX_LEN OF CHAR;
 
     sscanf: PROCEDURE [linux] (buf: INTEGER; fmt: INTEGER; adr: INTEGER): INTEGER;
-    gets:   PROCEDURE [linux] (buf: INTEGER);
+    fgets:  PROCEDURE [linux-] (string: INTEGER; num: INTEGER; filestream: INTEGER): INTEGER;
 
 
 PROCEDURE String* (VAR str: ARRAY OF CHAR);
 BEGIN
-    gets(SYSTEM.ADR(s[0]));
+    fgets(SYSTEM.ADR(s[0]), LEN(s), LINAPI.stdin);
     COPY(s, str);
     str[LEN(str) - 1] := 0X;
     Done := TRUE
@@ -75,8 +75,8 @@ BEGIN
     ASSERT(libc # 0);
     SYSTEM.PUT(SYSTEM.ADR(sscanf), Libdl.sym(libc, "sscanf"));
     ASSERT(sscanf # NIL);
-    SYSTEM.PUT(SYSTEM.ADR(gets), Libdl.sym(libc, "gets"));
-    ASSERT(gets # NIL);
+    SYSTEM.PUT(SYSTEM.ADR(fgets), Libdl.sym(libc, "fgets"));
+    ASSERT(fgets # NIL);
 END init;
 
 
