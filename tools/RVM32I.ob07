@@ -23,23 +23,23 @@ IMPORT SYSTEM, File, Args, Out, API, HOST, RTL;
 CONST
 
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opABS = 5;
-    opXCHG = 6; opLDR8 = 7; opLDR16 = 8; opLDR32 = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opLLA = 16; opJGA = 17;
+    opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
+    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opJNA = 16; opJGA = 17;
     opJLA = 18; opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
-    opSTR8 = 34; opSTR16 = 36; opSTR32 = 38; opINCL = 40; opEXCL = 42;
+    opSTB = 34; opSTH = 36; opSTW = 38; opINCL = 40; opEXCL = 42;
     opIN = 44; opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
     opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opEQ = 64; opNE = 66;
     opLT = 68; opLE = 70; opGT = 72; opGE = 74; opBT = 76;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
-    opSTR8C = 35; opSTR16C = 37; opSTR32C = 39; opINCLC = 41; opEXCLC = 43;
+    opSTBC = 35; opSTHC = 37; opSTWC = 39; opINCLC = 41; opEXCLC = 43;
     opINC = 45; opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
     opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
     opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
 
-    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opJNA = 82;
+    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opLLA = 82;
 
 
     nREG = 8;
@@ -162,20 +162,20 @@ BEGIN
         |opNOT:      R[param1] := ORD(-BITS(R[param1]))
         |opABS:      R[param1] := ABS(R[param1])
         |opXCHG:     i := R[param1]; R[param1] := R[param2]; R[param2] := i
-        |opLDR8:     i := param1 MOD 256; SYSTEM.GET8(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 256
-        |opLDR16:    i := param1 MOD 256; SYSTEM.GET16(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 65536
-        |opLDR32:    SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opLDB:      i := param1 MOD 256; SYSTEM.GET8(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 256
+        |opLDH:      i := param1 MOD 256; SYSTEM.GET16(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 65536
+        |opLDW:      SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opPUSH:     DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[param1])
         |opPUSHC:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], param1)
-        |opJGZ:      IF R[param1] > 0 THEN cmd := Labels[cmd.param2] END
-        |opJZ:       IF R[param1] = 0 THEN cmd := Labels[cmd.param2] END
-        |opJNZ:      IF R[param1] # 0 THEN cmd := Labels[cmd.param2] END
-        |opLLA:      SYSTEM.GET32(SYSTEM.ADR(Labels[cmd.param2]), R[param1])
-        |opJGA:      IF R[ACC] > param1 THEN cmd := Labels[cmd.param2] END
-        |opJLA:      IF R[ACC] < param1 THEN cmd := Labels[cmd.param2] END
-        |opJNA:      IF R[ACC] # param1 THEN cmd := Labels[cmd.param2] END
-        |opJMP:      cmd := Labels[cmd.param1]
-        |opCALL:     DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); cmd := Labels[cmd.param1]
+        |opJGZ:      IF R[param1] > 0 THEN cmd := Labels[param2] END
+        |opJZ:       IF R[param1] = 0 THEN cmd := Labels[param2] END
+        |opJNZ:      IF R[param1] # 0 THEN cmd := Labels[param2] END
+        |opLLA:      SYSTEM.GET32(SYSTEM.ADR(Labels[param2]), R[param1])
+        |opJGA:      IF R[ACC] > param1 THEN cmd := Labels[param2] END
+        |opJLA:      IF R[ACC] < param1 THEN cmd := Labels[param2] END
+        |opJNA:      IF R[ACC] # param1 THEN cmd := Labels[param2] END
+        |opJMP:      cmd := Labels[param1]
+        |opCALL:     DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); cmd := Labels[param1]
         |opCALLI:    DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); SYSTEM.GET(SYSTEM.ADR(R[param1]), cmd)
         |opMOV:      R[param1] := R[param2]
         |opMOVC:     R[param1] := param2
@@ -189,12 +189,12 @@ BEGIN
         |opDIVC:     R[param1] := R[param1] DIV param2
         |opMOD:      R[param1] := R[param1] MOD R[param2]
         |opMODC:     R[param1] := R[param1] MOD param2
-        |opSTR8:     SYSTEM.PUT8(R[param1 DIV 256] + param2, R[param1 MOD 256])
-        |opSTR16:    SYSTEM.PUT16(R[param1 DIV 256] + param2, R[param1 MOD 256])
-        |opSTR32:    SYSTEM.PUT32(R[param1 DIV 256] + param2, R[param1 MOD 256])
-        |opSTR8C:    SYSTEM.PUT8(R[param1], param2)
-        |opSTR16C:   SYSTEM.PUT16(R[param1], param2)
-        |opSTR32C:   SYSTEM.PUT32(R[param1], param2)
+        |opSTB:      SYSTEM.PUT8(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTH:      SYSTEM.PUT16(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTW:      SYSTEM.PUT32(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTBC:     SYSTEM.PUT8(R[param1], param2)
+        |opSTHC:     SYSTEM.PUT16(R[param1], param2)
+        |opSTWC:     SYSTEM.PUT32(R[param1], param2)
         |opINCL:     SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) + {R[param2]}))
         |opINCLC:    SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) + {param2}))
         |opEXCL:     SYSTEM.GET32(R[param1], i); SYSTEM.PUT32(R[param1], ORD(BITS(i) - {R[param2]}))
@@ -380,9 +380,9 @@ BEGIN
         |opNOT:      String("NOT     ");  Reg(param1)
         |opABS:      String("ABS     ");  Reg(param1)
         |opXCHG:     String("XCHG    ");  Reg2(param1, param2)
-        |opLDR8:     String("LDR8    ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
-        |opLDR16:    String("LDR16   ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
-        |opLDR32:    String("LDR32   ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDB:      String("LDB     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDH:      String("LDH     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDW:      String("LDW     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opPUSH:     String("PUSH    ");  Reg(param1)
         |opPUSHC:    String("PUSH    ");  Hex(param1)
         |opJGZ:      String("JGZ     ");  RegL(param1, param2)
@@ -407,12 +407,12 @@ BEGIN
         |opDIVC:     String("DIV     ");  RegC(param1, param2)
         |opMOD:      String("MOD     ");  Reg2(param1, param2)
         |opMODC:     String("MOD     ");  RegC(param1, param2)
-        |opSTR8:     String("STR8    ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
-        |opSTR16:    String("STR16   ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
-        |opSTR32:    String("STR32   ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
-        |opSTR8C:    String("STR8    ["); Reg(param1); String("], "); Hex(param2)
-        |opSTR16C:   String("STR16   ["); Reg(param1); String("], "); Hex(param2)
-        |opSTR32C:   String("STR32   ["); Reg(param1); String("], "); Hex(param2)
+        |opSTB:      String("STB     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTH:      String("STH     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTW:      String("STW     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTBC:     String("STB     ["); Reg(param1); String("], "); Hex(param2)
+        |opSTHC:     String("STH     ["); Reg(param1); String("], "); Hex(param2)
+        |opSTWC:     String("STW     ["); Reg(param1); String("], "); Hex(param2)
         |opINCL:     String("INCL    ");  Reg2(param1, param2)
         |opINCLC:    String("INCL    ");  RegC(param1, param2)
         |opEXCL:     String("EXCL    ");  Reg2(param1, param2)

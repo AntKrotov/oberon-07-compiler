@@ -30,23 +30,23 @@ CONST
     GPRs = {0 .. 2} + {5 .. numGPRs + 1};
 
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opABS = 5;
-    opXCHG = 6; opLDR8 = 7; opLDR16 = 8; opLDR32 = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opLLA = 16; opJGA = 17;
+    opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
+    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opJNA = 16; opJGA = 17;
     opJLA = 18; opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
-    opSTR8 = 34; opSTR16 = 36; opSTR32 = 38; opINCL = 40; opEXCL = 42;
+    opSTB = 34; opSTH = 36; opSTW = 38; opINCL = 40; opEXCL = 42;
     opIN = 44; opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
     opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opEQ = 64; opNE = 66;
     opLT = 68; opLE = 70; opGT = 72; opGE = 74; opBT = 76;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
-    opSTR8C = 35; opSTR16C = 37; opSTR32C = 39; opINCLC = 41; opEXCLC = 43;
+    opSTBC = 35; opSTHC = 37; opSTWC = 39; opINCLC = 41; opEXCLC = 43;
     opINC = 45; opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
     opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
     opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
 
-    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opJNA = 82;
+    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opLLA = 82;
 
     inf = 7F800000H;
 
@@ -176,37 +176,37 @@ END sub;
 
 PROCEDURE ldr32 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR32, r2 * 256 + r1, 0)
+    Emit(opLDW, r2 * 256 + r1, 0)
 END ldr32;
 
 
 PROCEDURE ldr16 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR16, r2 * 256 + r1, 0)
+    Emit(opLDH, r2 * 256 + r1, 0)
 END ldr16;
 
 
 PROCEDURE ldr8 (r1, r2: INTEGER);
 BEGIN
-    Emit(opLDR8, r2 * 256 + r1, 0)
+    Emit(opLDB, r2 * 256 + r1, 0)
 END ldr8;
 
 
 PROCEDURE str32 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR32, r1 * 256 + r2, 0)
+    Emit(opSTW, r1 * 256 + r2, 0)
 END str32;
 
 
 PROCEDURE str16 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR16, r1 * 256 + r2, 0)
+    Emit(opSTH, r1 * 256 + r2, 0)
 END str16;
 
 
 PROCEDURE str8 (r1, r2: INTEGER);
 BEGIN
-    Emit(opSTR8, r1 * 256 + r2, 0)
+    Emit(opSTB, r1 * 256 + r2, 0)
 END str8;
 
 
@@ -293,17 +293,17 @@ BEGIN
             next := cmd.next(IL.COMMAND);
             IF (next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVE32) OR (next.opcode = IL.opSAVEF) THEN
                 UnOp(r1);
-                Emit(opSTR32, BP * 256 + r1, param2 * 4);
+                Emit(opSTW, BP * 256 + r1, param2 * 4);
                 drop;
                 cmd := next
             ELSIF next.opcode = IL.opSAVE16 THEN
                 UnOp(r1);
-                Emit(opSTR16, BP * 256 + r1, param2 * 4);
+                Emit(opSTH, BP * 256 + r1, param2 * 4);
                 drop;
                 cmd := next
             ELSIF next.opcode = IL.opSAVE8 THEN
                 UnOp(r1);
-                Emit(opSTR8, BP * 256 + r1, param2 * 4);
+                Emit(opSTB, BP * 256 + r1, param2 * 4);
                 drop;
                 cmd := next
             ELSE
@@ -367,17 +367,17 @@ BEGIN
 
         |IL.opSAVEC:
             UnOp(r1);
-            Emit(opSTR32C, r1, param2);
+            Emit(opSTWC, r1, param2);
             drop
 
         |IL.opSAVE8C:
             UnOp(r1);
-            Emit(opSTR8C, r1, param2 MOD 256);
+            Emit(opSTBC, r1, param2 MOD 256);
             drop
 
         |IL.opSAVE16C:
             UnOp(r1);
-            Emit(opSTR16C, r1, param2 MOD 65536);
+            Emit(opSTHC, r1, param2 MOD 65536);
             drop
 
         |IL.opSAVE, IL.opSAVE32, IL.opSAVEF:
@@ -410,11 +410,11 @@ BEGIN
             ldr32(r1, r1)
 
         |IL.opVADR, IL.opLLOAD32:
-            Emit(opLDR32, BP * 256 + GetAnyReg(), param2 * 4)
+            Emit(opLDW, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD32:
             r1 := GetAnyReg();
-            Emit(opLDR32, BP * 256 + r1, param2 * 4);
+            Emit(opLDW, BP * 256 + r1, param2 * 4);
             ldr32(r1, r1)
 
         |IL.opGLOAD16:
@@ -423,11 +423,11 @@ BEGIN
             ldr16(r1, r1)
 
         |IL.opLLOAD16:
-            Emit(opLDR16, BP * 256 + GetAnyReg(), param2 * 4)
+            Emit(opLDH, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD16:
             r1 := GetAnyReg();
-            Emit(opLDR32, BP * 256 + r1, param2 * 4);
+            Emit(opLDW, BP * 256 + r1, param2 * 4);
             ldr16(r1, r1)
 
         |IL.opGLOAD8:
@@ -436,11 +436,11 @@ BEGIN
             ldr8(r1, r1)
 
         |IL.opLLOAD8:
-            Emit(opLDR8, BP * 256 + GetAnyReg(), param2 * 4)
+            Emit(opLDB, BP * 256 + GetAnyReg(), param2 * 4)
 
         |IL.opVLOAD8:
             r1 := GetAnyReg();
-            Emit(opLDR32, BP * 256 + r1, param2 * 4);
+            Emit(opLDW, BP * 256 + r1, param2 * 4);
             ldr8(r1, r1)
 
         |IL.opLOAD8:
@@ -778,7 +778,7 @@ BEGIN
 
         |IL.opSBOOLC:
             UnOp(r1);
-            Emit(opSTR8C, r1, ORD(param2 # 0));
+            Emit(opSTBC, r1, ORD(param2 # 0));
             drop
 
         |IL.opINCC:

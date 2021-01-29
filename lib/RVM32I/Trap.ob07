@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -10,15 +10,20 @@ MODULE Trap;
 IMPORT SYSTEM;
 
 
+CONST
+
+    SP = 4;
+
+
 PROCEDURE [code] sp* (): INTEGER
-    22, 0, 4;  (*  MOV R0, SP  *)
+    22, 0, SP;  (*  MOV R0, SP  *)
 
 
 PROCEDURE [code] syscall* (ptr: INTEGER)
-    22, 0, 4,  (*  MOV      R0, SP  *)
-    27, 0, 4,  (*  ADD      R0,  4  *)
-     9, 0, 0,  (*  LDR32    R0, R0  *)
-    80, 0, 0;  (*  SYSCALL  R0      *)
+    22, 0, SP,  (*  MOV      R0, SP  *)
+    27, 0, 4,   (*  ADD      R0,  4  *)
+     9, 0, 0,   (*  LDW      R0, R0  *)
+    80, 0, 0;   (*  SYSCALL  R0      *)
 
 
 PROCEDURE Char (c: CHAR);
