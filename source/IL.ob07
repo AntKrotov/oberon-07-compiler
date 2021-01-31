@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -493,14 +493,32 @@ BEGIN
             set(cur, opGADR_SAVEC, param2)
 
         ELSIF (nov.opcode = opMULC) & (old_opcode = opMULC) THEN
-            cur.param2 := param2 * cur.param2
+            cur.param2 := cur.param2 * param2
 
         ELSIF (nov.opcode = opADDC) & (old_opcode = opADDC) THEN
-            cur.param2 := param2 + cur.param2
+            INC(cur.param2, param2)
 
         ELSE
             old_opcode := -1
         END
+
+    ELSIF CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuRVM32I} THEN
+
+        old_opcode := cur.opcode;
+        param2 := nov.param2;
+
+        IF (old_opcode = opLADR) & (nov.opcode = opSAVE) THEN
+            cur.opcode := opLADR_SAVE
+        ELSIF (old_opcode = opLADR) & (nov.opcode = opINCC) THEN
+            set(cur, opLADR_INCC, param2)
+        ELSIF (nov.opcode = opMULC) & (old_opcode = opMULC) THEN
+            cur.param2 := cur.param2 * param2
+        ELSIF (nov.opcode = opADDC) & (old_opcode = opADDC) THEN
+            INC(cur.param2, param2)
+        ELSE
+            old_opcode := -1
+        END
+
     ELSE
         old_opcode := -1
     END;

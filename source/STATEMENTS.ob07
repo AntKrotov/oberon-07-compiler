@@ -1913,10 +1913,8 @@ VAR
                         label := IL.NewLabel()
                     END;
 
-                    IF e.obj = eCONST THEN
-                        IF isBoolean(e) THEN
-                            IL.Const(ORD(ARITH.getBool(e.value)))
-                        END
+                    IF (e.obj = eCONST) & isBoolean(e) THEN
+                        IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
                     IL.AndOrOpt(label)
                 END
@@ -2033,7 +2031,7 @@ VAR
             |SCAN.lxAND:
                 PARS.check(isBoolean(e) & isBoolean(e1), pos, 37);
 
-                IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
+                IF (e.obj = eCONST) & (e1.obj = eCONST) & parser.constexp THEN
                     ARITH.opBoolean(e.value, e1.value, "&")
                 ELSE
                     e.obj := eEXPR;
@@ -2120,10 +2118,8 @@ VAR
                         label := IL.NewLabel()
                     END;
 
-                    IF e.obj = eCONST THEN
-                        IF isBoolean(e) THEN
-                            IL.Const(ORD(ARITH.getBool(e.value)))
-                        END
+                    IF (e.obj = eCONST) & isBoolean(e) THEN
+                        IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
                     IL.not;
                     IL.AndOrOpt(label)
@@ -2207,7 +2203,7 @@ VAR
             |SCAN.lxOR:
                 PARS.check(isBoolean(e) & isBoolean(e1), pos, 37);
 
-                IF (e.obj = eCONST) & (e1.obj = eCONST) THEN
+                IF (e.obj = eCONST) & (e1.obj = eCONST) & parser.constexp THEN
                     ARITH.opBoolean(e.value, e1.value, "|")
                 ELSE
                     e.obj := eEXPR;

@@ -201,7 +201,7 @@ BEGIN
 
     C.Ln;
     C.String("Akron Oberon Compiler v"); C.Int(UTILS.vMajor); C.String("."); C.Int2(UTILS.vMinor);
-        C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit) 2021-01-29");
+        C.String(" ("); C.Int(UTILS.bit_depth); C.StringLn("-bit) " + UTILS.Date);
     C.StringLn("Copyright (c) 2018-2021, Anton Krotov");
 
     IF inname = "" THEN

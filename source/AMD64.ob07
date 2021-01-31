@@ -1498,8 +1498,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(reg1);
-            reg2 := GetAnyReg();
-            movrm(reg2, reg1, -8)
+            movrm(GetAnyReg(), reg1, -8)
 
         |IL.opISREC:
             PushAll(2);
@@ -1710,6 +1709,7 @@ BEGIN
                     END
                 END
             ELSIF isLong(param2) THEN
+                UnOp(reg1);
                 addrc(reg1, param2)
             END
 

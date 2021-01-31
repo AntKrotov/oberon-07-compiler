@@ -935,11 +935,7 @@ BEGIN
                 SubImm8(r, -n)
             END
         ELSIF (_THUMB2 IN Target.InstrSet) & (-4095 <= n) & (n <= 4095) THEN
-            IF n > 0 THEN
-                AddSubImm12(r, n, FALSE)
-            ELSE
-                AddSubImm12(r, -n, TRUE)
-            END
+            AddSubImm12(r, ABS(n), n < 0)
         ELSE
             r2 := GetAnyReg();
             ASSERT(r2 # r);
@@ -1210,6 +1206,38 @@ BEGIN
             r1 := GetAnyReg();
             reloc(r1, BIN.RBSS + pic, param2);
             Ldr8(r1, r1)
+
+        |IL.opLADR_SAVE:
+            UnOp(r1);
+            n := LocalOffset(param2);
+            IF n <= 255 THEN
+                gen11(FALSE, r1, n)  (* str r1, [sp, n*4] *)
+            ELSE
+                LocAdr(param2);
+                BinOp(r1, r2);
+                Str32(r1, r2);
+                drop
+            END;
+            drop
+
+        |IL.opLADR_INCC:
+            n := LocalOffset(param1);
+            IF n <= 255 THEN
+                r1 := GetAnyReg();
+                LdrSp(r1, n);
+                AddConst(r1, param2);
+                gen11(FALSE, r1, n)  (* str r1, [sp, n*4] *)
+            ELSE
+                LocAdr(param1);
+                r1 := GetAnyReg();
+                BinOp(r2, r1);
+                Ldr32(r1, r2);
+                AddConst(r1, param2);
+                BinOp(r2, r1);
+                Str32(r1, r2);
+                drop
+            END;
+            drop
 
         |IL.opLLOAD32, IL.opVADR, IL.opVLOAD32:
             r1 := GetAnyReg();

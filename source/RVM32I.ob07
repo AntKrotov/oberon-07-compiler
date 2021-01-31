@@ -916,10 +916,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(r1);
-            r2 := GetAnyReg();
-            mov(r2, r1);
-            subrc(r2, 4);
-            ldr32(r2, r2)
+            Emit(opLDW, r1 * 256 + GetAnyReg(), -4)
 
         |IL.opGET, IL.opGETC:
             IF opcode = IL.opGET THEN
@@ -1202,6 +1199,18 @@ BEGIN
 
         |IL.opCODE:
             OutInt(param2)
+
+        |IL.opLADR_SAVE:
+            UnOp(r1);
+            Emit(opSTW, BP * 256 + r1, param2 * 4);
+            drop
+
+        |IL.opLADR_INCC:
+            r1 := GetAnyReg();
+            Emit(opLDW, BP * 256 + r1, param1 * 4);
+            Emit(opADDC, r1, param2);
+            Emit(opSTW, BP * 256 + r1, param1 * 4);
+            drop
 
         END;
 
