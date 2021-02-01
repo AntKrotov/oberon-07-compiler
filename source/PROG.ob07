@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -55,7 +55,7 @@ CONST
 
     noalign* = 22;
 
-    callee_clean_up* = {default32, stdcall, _stdcall, default64, stdcall64, _stdcall64};
+    callee_clean_up* = {default32, _default32, stdcall, _stdcall, default64, _default64, stdcall64, _stdcall64};
 
     sf_stdcall* =  0; sf_stdcall64* = 1; sf_ccall*   = 2; sf_ccall16* = 3;
     sf_win64*   =  4; sf_systemv*   = 5; sf_windows* = 6; sf_linux*   = 7;
