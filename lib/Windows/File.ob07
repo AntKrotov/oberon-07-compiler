@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -61,7 +61,17 @@ END Open;
 
 
 PROCEDURE Seek* (F, Offset, Origin: INTEGER): INTEGER;
-    RETURN WINAPI.SetFilePointer(F, Offset MOD 100000000H, SYSTEM.ADR(Offset) + 4, Origin)
+VAR
+    res: INTEGER;
+
+BEGIN
+    IF API.BIT_DEPTH = 32 THEN
+        res := WINAPI.SetFilePointer(F, Offset, 0, Origin)
+    ELSE
+        res := WINAPI.SetFilePointer(F, ORD(BITS(Offset) * {0..31}), SYSTEM.ADR(Offset) + 4, Origin)
+    END
+
+    RETURN res
 END Seek;
 
 

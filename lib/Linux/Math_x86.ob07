@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2013-2014, 2018-2020 Anton Krotov
+    Copyright (c) 2013-2014, 2018-2021 Anton Krotov
     All rights reserved.
 *)
 
-MODULE Math;
+MODULE Math_x86;
 
-IMPORT SYSTEM;
+IMPORT SYSTEM, API;
 
 
 CONST
@@ -81,7 +81,7 @@ PROCEDURE IsZero (x: REAL): BOOLEAN;
 END IsZero;
 
 
-PROCEDURE [stdcall] sqrt* (x: REAL): REAL;
+PROCEDURE [oberon] sqrt* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -93,7 +93,7 @@ BEGIN
 END sqrt;
 
 
-PROCEDURE [stdcall] sin* (x: REAL): REAL;
+PROCEDURE [oberon] sin* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -105,7 +105,7 @@ BEGIN
 END sin;
 
 
-PROCEDURE [stdcall] cos* (x: REAL): REAL;
+PROCEDURE [oberon] cos* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -117,7 +117,7 @@ BEGIN
 END cos;
 
 
-PROCEDURE [stdcall] tan* (x: REAL): REAL;
+PROCEDURE [oberon] tan* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -130,7 +130,7 @@ BEGIN
 END tan;
 
 
-PROCEDURE [stdcall] arctan2* (y, x: REAL): REAL;
+PROCEDURE [oberon] arctan2* (y, x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,              (*  fld     qword [ebp + 08h]  *)
@@ -143,7 +143,7 @@ BEGIN
 END arctan2;
 
 
-PROCEDURE [stdcall] ln* (x: REAL): REAL;
+PROCEDURE [oberon] ln* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0D9H, 0EDH,                    (*  fldln2                     *)
@@ -156,7 +156,7 @@ BEGIN
 END ln;
 
 
-PROCEDURE [stdcall] log* (base, x: REAL): REAL;
+PROCEDURE [oberon] log* (base, x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0D9H, 0E8H,                    (*  fld1                       *)
@@ -173,7 +173,7 @@ BEGIN
 END log;
 
 
-PROCEDURE [stdcall] exp* (x: REAL): REAL;
+PROCEDURE [oberon] exp* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,           (*  fld     qword [ebp + 08h]  *)
@@ -190,7 +190,7 @@ BEGIN
 END exp;
 
 
-PROCEDURE [stdcall] round* (x: REAL): REAL;
+PROCEDURE [oberon] round* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,           (*  fld     qword [ebp + 08h]  *)
@@ -206,7 +206,7 @@ BEGIN
 END round;
 
 
-PROCEDURE [stdcall] frac* (x: REAL): REAL;
+PROCEDURE [oberon] frac* (x: REAL): REAL;
 BEGIN
     SYSTEM.CODE(
     050H,
@@ -447,4 +447,6 @@ BEGIN
 END hypot;
 
 
-END Math.
+BEGIN
+    ASSERT(API.BIT_DEPTH = 32)
+END Math_x86.

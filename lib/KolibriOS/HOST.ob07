@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
 MODULE HOST;
 
-IMPORT SYSTEM, K := KOSAPI, API, RTL;
+IMPORT SYSTEM, K := KOSAPI, API;
 
 
 CONST
@@ -15,9 +15,9 @@ CONST
     slash* = "/";
     eol* = 0DX + 0AX;
 
-    bit_depth* = RTL.bit_depth;
-    maxint* = RTL.maxint;
-    minint* = RTL.minint;
+    bit_depth* = API.BIT_DEPTH;
+    maxint* = ROR(-2, 1);
+    minint* = ROR(1, 1);
 
     MAX_PARAM = 1024;
 

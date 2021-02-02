@@ -17,7 +17,7 @@
 
 MODULE RVM32I;
 
-IMPORT SYSTEM, File, Args, Out, API, HOST, RTL;
+IMPORT SYSTEM, File, Args, Out, API, HOST;
 
 
 CONST
@@ -605,6 +605,6 @@ END main;
 
 
 BEGIN
-    ASSERT(RTL.bit_depth = 32);
+    ASSERT(API.BIT_DEPTH = 32);
     main
 END RVM32I.

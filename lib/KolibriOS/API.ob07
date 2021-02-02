@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2020, Anton Krotov
+    Copyright (c) 2018, 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -13,6 +13,7 @@ IMPORT SYSTEM, K := KOSAPI;
 CONST
 
     eol* = 0DX + 0AX;
+    BIT_DEPTH* = 32;
 
     MAX_SIZE  = 16 * 400H;
     HEAP_SIZE =  1 * 100000H;

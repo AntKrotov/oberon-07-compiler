@@ -12,11 +12,9 @@ IMPORT SYSTEM, API;
 
 CONST
 
-    bit_depth* = 32;
-    maxint* = 7FFFFFFFH;
-    minint* = 80000000H;
+    minint = ROR(1, 1);
 
-    WORD = bit_depth DIV 8;
+    WORD = API.BIT_DEPTH DIV 8;
 
 
 VAR

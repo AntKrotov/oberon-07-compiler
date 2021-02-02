@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -35,14 +35,28 @@ VAR
     LnInfinity, LnSmall, large, miny: REAL;
 
 
-PROCEDURE [stdcall64] sqrt* (x: REAL): REAL;
+PROCEDURE [oberon] sqrt* (x: REAL): REAL;
 BEGIN
     ASSERT(x >= ZERO);
+
+    $IF (CPU_X8664)
+
     SYSTEM.CODE(
     0F2H, 0FH, 51H, 45H, 10H,  (*  sqrtsd  xmm0, qword[rbp + 10h]  *)
     05DH,                      (*  pop     rbp                     *)
     0C2H, 08H, 00H             (*  ret     8                       *)
     )
+
+    $ELSIF (CPU_X86)
+
+    SYSTEM.CODE(
+    0DDH, 045H, 008H,          (*  fld     qword [ebp + 08h]  *)
+    0D9H, 0FAH,                (*  fsqrt                      *)
+    0C9H,                      (*  leave                      *)
+    0C2H, 008H, 000H           (*  ret     08h                *)
+    )
+
+    $END
 
     RETURN 0.0
 END sqrt;

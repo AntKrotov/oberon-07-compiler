@@ -1,0 +1,109 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2020-2021, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE Out;
+
+IMPORT SYSTEM, Libdl, API;
+
+
+CONST
+
+    bit_depth = API.BIT_DEPTH;
+
+
+VAR
+
+    fmt: ARRAY 8 OF CHAR;
+
+    printf1: PROCEDURE [linux] (fmt: INTEGER; x: INTEGER);
+    printf2: PROCEDURE [linux] (fmt: INTEGER; width, x: INTEGER);
+    printf3: PROCEDURE [linux] (fmt: INTEGER; width, precision: INTEGER; x: REAL);
+    printf4: PROCEDURE [linux] (fmt: INTEGER; width, precision: INTEGER; x: INTEGER);
+
+
+PROCEDURE Char* (x: CHAR);
+BEGIN
+    printf1(SYSTEM.SADR("%c"), ORD(x))
+END Char;
+
+
+PROCEDURE String* (s: ARRAY OF CHAR);
+BEGIN
+    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s[0]))
+END String;
+
+
+PROCEDURE Ln*;
+BEGIN
+    printf1(SYSTEM.SADR("%s"), SYSTEM.SADR(0AX))
+END Ln;
+
+
+PROCEDURE Int* (x, width: INTEGER);
+BEGIN
+    printf2(SYSTEM.ADR(fmt[0]), width, x)
+END Int;
+
+
+PROCEDURE intval (x: REAL): INTEGER;
+VAR
+    i: INTEGER;
+
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x), i)
+    RETURN i
+END intval;
+
+
+PROCEDURE Real* (x: REAL; width: INTEGER);
+BEGIN
+    IF bit_depth = 32 THEN
+        printf3(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), x)
+    ELSE
+        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), intval(x))
+    END
+END Real;
+
+
+PROCEDURE FixReal* (x: REAL; width, precision: INTEGER);
+BEGIN
+    IF bit_depth = 32 THEN
+        printf3(SYSTEM.SADR("%*.*f"), width, precision, x)
+    ELSE
+        printf4(SYSTEM.SADR("%*.*f"), width, precision, intval(x))
+    END
+END FixReal;
+
+
+PROCEDURE Open*;
+END Open;
+
+
+PROCEDURE init;
+VAR
+    libc, printf: INTEGER;
+
+BEGIN
+    IF bit_depth = 32 THEN
+        fmt := "%*d"
+    ELSE
+        fmt := "%*lld"
+    END;
+    libc := Libdl.open("libc.so.6", Libdl.LAZY);
+    ASSERT(libc # 0);
+    printf := Libdl.sym(libc, "printf");
+    ASSERT(printf # 0);
+    SYSTEM.PUT(SYSTEM.ADR(printf1), printf);
+    SYSTEM.PUT(SYSTEM.ADR(printf2), printf);
+    SYSTEM.PUT(SYSTEM.ADR(printf3), printf);
+    SYSTEM.PUT(SYSTEM.ADR(printf4), printf);
+END init;
+
+
+BEGIN
+    init
+END Out.

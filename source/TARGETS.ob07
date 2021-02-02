@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -127,19 +127,19 @@ BEGIN
     EnterCPU(cpuTHUMB,  32, 2, TRUE);
     EnterCPU(cpuRVM32I, 32, 4, TRUE);
 
-    Enter( MSP430,        cpuMSP430,  0,  osNONE,     "msp430",      "MSP430",     ".hex");
-    Enter( Win32C,        cpuX86,     8,  osWIN32,    "win32con",    "Windows32",  ".exe");
-    Enter( Win32GUI,      cpuX86,     8,  osWIN32,    "win32gui",    "Windows32",  ".exe");
-    Enter( Win32DLL,      cpuX86,     8,  osWIN32,    "win32dll",    "Windows32",  ".dll");
-    Enter( KolibriOS,     cpuX86,     8,  osKOS,      "kosexe",      "KolibriOS",  "");
-    Enter( KolibriOSDLL,  cpuX86,     8,  osKOS,      "kosdll",      "KolibriOS",  ".obj");
-    Enter( Win64C,        cpuAMD64,   8,  osWIN64,    "win64con",    "Windows64",  ".exe");
-    Enter( Win64GUI,      cpuAMD64,   8,  osWIN64,    "win64gui",    "Windows64",  ".exe");
-    Enter( Win64DLL,      cpuAMD64,   8,  osWIN64,    "win64dll",    "Windows64",  ".dll");
-    Enter( Linux32,       cpuX86,     8,  osLINUX32,  "linux32exe",  "Linux32",    "");
-    Enter( Linux32SO,     cpuX86,     8,  osLINUX32,  "linux32so",   "Linux32",    ".so");
-    Enter( Linux64,       cpuAMD64,   8,  osLINUX64,  "linux64exe",  "Linux64",    "");
-    Enter( Linux64SO,     cpuAMD64,   8,  osLINUX64,  "linux64so",   "Linux64",    ".so");
-    Enter( STM32CM3,      cpuTHUMB,   4,  osNONE,     "stm32cm3",    "STM32CM3",   ".hex");
-    Enter( RVM32I,        cpuRVM32I,  4,  osNONE,     "rvm32i",      "RVM32I",     ".bin");
+    Enter( MSP430,        cpuMSP430,  0,  osNONE,     "msp430",      "MSP430",    ".hex");
+    Enter( Win32C,        cpuX86,     8,  osWIN32,    "win32con",    "Windows",   ".exe");
+    Enter( Win32GUI,      cpuX86,     8,  osWIN32,    "win32gui",    "Windows",   ".exe");
+    Enter( Win32DLL,      cpuX86,     8,  osWIN32,    "win32dll",    "Windows",   ".dll");
+    Enter( KolibriOS,     cpuX86,     8,  osKOS,      "kosexe",      "KolibriOS", "");
+    Enter( KolibriOSDLL,  cpuX86,     8,  osKOS,      "kosdll",      "KolibriOS", ".obj");
+    Enter( Win64C,        cpuAMD64,   8,  osWIN64,    "win64con",    "Windows",   ".exe");
+    Enter( Win64GUI,      cpuAMD64,   8,  osWIN64,    "win64gui",    "Windows",   ".exe");
+    Enter( Win64DLL,      cpuAMD64,   8,  osWIN64,    "win64dll",    "Windows",   ".dll");
+    Enter( Linux32,       cpuX86,     8,  osLINUX32,  "linux32exe",  "Linux",     "");
+    Enter( Linux32SO,     cpuX86,     8,  osLINUX32,  "linux32so",   "Linux",     ".so");
+    Enter( Linux64,       cpuAMD64,   8,  osLINUX64,  "linux64exe",  "Linux",     "");
+    Enter( Linux64SO,     cpuAMD64,   8,  osLINUX64,  "linux64so",   "Linux",     ".so");
+    Enter( STM32CM3,      cpuTHUMB,   4,  osNONE,     "stm32cm3",    "STM32CM3",  ".hex");
+    Enter( RVM32I,        cpuRVM32I,  4,  osNONE,     "rvm32i",      "RVM32I",    ".bin");
 END TARGETS.

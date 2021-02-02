@@ -359,7 +359,13 @@ BEGIN
             Emit(opRET, 0, 0)
 
         |IL.opCONST:
-            movrc(GetAnyReg(), param2)
+            next := cmd.next(IL.COMMAND);
+            IF (next.opcode = IL.opPARAM) & (next.param2 = 1) THEN
+                pushc(param2);
+                cmd := next
+            ELSE
+                movrc(GetAnyReg(), param2)
+            END
 
         |IL.opDROP:
             UnOp(r1);

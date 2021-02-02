@@ -1,0 +1,108 @@
+﻿(*
+    BSD 2-Clause License
+
+    Copyright (c) 2020-2021, Anton Krotov
+    All rights reserved.
+*)
+
+MODULE Out;
+
+IMPORT SYSTEM, API;
+
+
+CONST
+
+    bit_depth = API.BIT_DEPTH;
+
+
+VAR
+
+    hConsoleOutput: INTEGER;
+    fmt: ARRAY 8 OF CHAR;
+
+
+PROCEDURE [ccall, "msvcrt.dll", "printf"] printf1 (fmt: INTEGER; x: INTEGER);
+PROCEDURE [ccall, "msvcrt.dll", "printf"] printf2 (fmt: INTEGER; width, x: INTEGER);
+PROCEDURE [ccall, "msvcrt.dll", "printf"] printf3 (fmt: INTEGER; width, precision: INTEGER; x: REAL);
+PROCEDURE [ccall, "msvcrt.dll", "printf"] printf4 (fmt: INTEGER; width, precision: INTEGER; x: INTEGER);
+
+PROCEDURE [windows, "kernel32.dll", ""]
+    WriteConsoleW (hConsoleOutput, lpBuffer, nNumberOfCharsToWrite, lpNumberOfCharsWritten, lpReserved: INTEGER);
+
+PROCEDURE [windows, "kernel32.dll", ""]
+    GetStdHandle (nStdHandle: INTEGER): INTEGER;
+
+
+PROCEDURE Char* (x: CHAR);
+BEGIN
+    printf1(SYSTEM.SADR("%c"), ORD(x))
+END Char;
+
+
+PROCEDURE StringW* (s: ARRAY OF WCHAR);
+BEGIN
+    WriteConsoleW(hConsoleOutput, SYSTEM.ADR(s[0]), LENGTH(s), 0, 0)
+END StringW;
+
+
+PROCEDURE String* (s: ARRAY OF CHAR);
+BEGIN
+    printf2(SYSTEM.SADR("%.*s"), LENGTH(s), SYSTEM.ADR(s[0]))
+END String;
+
+
+PROCEDURE Ln*;
+BEGIN
+    printf1(SYSTEM.SADR("%s"), SYSTEM.SADR(CHR(13) + CHR(10)))
+END Ln;
+
+
+PROCEDURE Int* (x, width: INTEGER);
+BEGIN
+    printf2(SYSTEM.ADR(fmt[0]), width, x)
+END Int;
+
+
+PROCEDURE intval (x: REAL): INTEGER;
+VAR
+    i: INTEGER;
+
+BEGIN
+    SYSTEM.GET(SYSTEM.ADR(x), i)
+    RETURN i
+END intval;
+
+
+PROCEDURE Real* (x: REAL; width: INTEGER);
+BEGIN
+    IF bit_depth = 32 THEN
+        printf3(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), x)
+    ELSE
+        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), intval(x))
+    END
+END Real;
+
+
+PROCEDURE FixReal* (x: REAL; width, precision: INTEGER);
+BEGIN
+    IF bit_depth = 32 THEN
+        printf3(SYSTEM.SADR("%*.*f"), width, precision, x)
+    ELSE
+        printf4(SYSTEM.SADR("%*.*f"), width, precision, intval(x))
+    END
+END FixReal;
+
+
+PROCEDURE Open*;
+BEGIN
+    hConsoleOutput := GetStdHandle(-11)
+END Open;
+
+
+BEGIN
+    IF bit_depth = 32 THEN
+        fmt := "%*d"
+    ELSE
+        fmt := "%*lld"
+    END
+END Out.

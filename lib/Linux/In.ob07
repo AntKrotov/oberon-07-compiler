@@ -7,18 +7,20 @@
 
 MODULE In;
 
-IMPORT SYSTEM, Libdl, LINAPI;
+IMPORT SYSTEM, Libdl, LINAPI, API;
 
 
 CONST
 
     MAX_LEN = 10240;
+    bit_depth = API.BIT_DEPTH;
 
 
 VAR
 
     Done*: BOOLEAN;
     s: ARRAY MAX_LEN OF CHAR;
+    fmt: ARRAY 8 OF CHAR;
 
     sscanf: PROCEDURE [linux] (buf: INTEGER; fmt: INTEGER; adr: INTEGER): INTEGER;
     fgets:  PROCEDURE [linux-] (string: INTEGER; num: INTEGER; filestream: INTEGER): INTEGER;
@@ -36,7 +38,7 @@ END String;
 PROCEDURE Int* (VAR x: INTEGER);
 BEGIN
     String(s);
-    Done := sscanf(SYSTEM.ADR(s[0]), SYSTEM.SADR("%d"), SYSTEM.ADR(x)) = 1
+    Done := sscanf(SYSTEM.ADR(s[0]), SYSTEM.ADR(fmt[0]), SYSTEM.ADR(x)) = 1
 END Int;
 
 
@@ -71,6 +73,11 @@ VAR
     libc: INTEGER;
 
 BEGIN
+    IF bit_depth = 32 THEN
+        fmt := "%d"
+    ELSE
+        fmt := "%lld"
+    END;
     libc := Libdl.open("libc.so.6", Libdl.LAZY);
     ASSERT(libc # 0);
     SYSTEM.PUT(SYSTEM.ADR(sscanf), Libdl.sym(libc, "sscanf"));

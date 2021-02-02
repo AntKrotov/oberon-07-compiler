@@ -533,12 +533,10 @@ VAR
 BEGIN
     IF parser.lex.s = "stdcall" THEN
         sf := PROG.sf_stdcall
-    ELSIF parser.lex.s = "stdcall64" THEN
-        sf := PROG.sf_stdcall64
+    ELSIF parser.lex.s = "cdecl" THEN
+        sf := PROG.sf_cdecl
     ELSIF parser.lex.s = "ccall" THEN
         sf := PROG.sf_ccall
-    ELSIF parser.lex.s = "ccall16" THEN
-        sf := PROG.sf_ccall16
     ELSIF parser.lex.s = "win64" THEN
         sf := PROG.sf_win64
     ELSIF parser.lex.s = "systemv" THEN
@@ -568,12 +566,16 @@ BEGIN
     CASE sf OF
     |PROG.sf_stdcall:
         res := PROG.stdcall
-    |PROG.sf_stdcall64:
-        res := PROG.stdcall64
+    |PROG.sf_cdecl:
+        res := PROG.cdecl
     |PROG.sf_ccall:
-        res := PROG.ccall
-    |PROG.sf_ccall16:
-        res := PROG.ccall16
+        IF TARGETS.OS IN {TARGETS.osWIN32, TARGETS.osLINUX32, TARGETS.osKOS} THEN
+            res := PROG.ccall
+        ELSIF TARGETS.OS = TARGETS.osWIN64 THEN
+            res := PROG.win64
+        ELSIF TARGETS.OS = TARGETS.osLINUX64 THEN
+            res := PROG.systemv
+        END
     |PROG.sf_win64:
         res := PROG.win64
     |PROG.sf_systemv:
@@ -594,7 +596,7 @@ BEGIN
         END
     |PROG.sf_linux:
         IF TARGETS.OS = TARGETS.osLINUX32 THEN
-            res := PROG.ccall16
+            res := PROG.ccall
         ELSIF TARGETS.OS = TARGETS.osLINUX64 THEN
             res := PROG.systemv
         END
@@ -663,7 +665,7 @@ BEGIN
         |32: IF TARGETS.CPU = TARGETS.cpuX86 THEN
                  call := PROG.default32
              ELSE
-                 call := PROG.ccall
+                 call := PROG.cdecl
              END
         |64: call := PROG.default64
         END
