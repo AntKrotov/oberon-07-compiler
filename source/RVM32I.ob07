@@ -479,7 +479,20 @@ BEGIN
 
         |IL.opADDC:
             UnOp(r1);
-            addrc(r1, param2)
+            next := cmd.next(IL.COMMAND);
+            CASE next.opcode OF
+            |IL.opLOAD32, IL.opLOADF:
+                Emit(opLDW, r1 * 256 + r1, param2);
+                cmd := next
+            |IL.opLOAD16:
+                Emit(opLDH, r1 * 256 + r1, param2);
+                cmd := next
+            |IL.opLOAD8:
+                Emit(opLDB, r1 * 256 + r1, param2);
+                cmd := next
+            ELSE
+                addrc(r1, param2)
+            END
 
         |IL.opSUBR:
             UnOp(r1);

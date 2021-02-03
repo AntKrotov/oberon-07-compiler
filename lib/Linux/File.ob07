@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020, Anton Krotov
+    Copyright (c) 2020-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -43,9 +43,7 @@ VAR
     libc: INTEGER;
 
 BEGIN
-    libc := Libdl.open("libc.so.6", Libdl.LAZY);
-    ASSERT(libc # 0);
-
+    libc := API.libc;
     GetSym(libc, "fread",  SYSTEM.ADR(fread));
     GetSym(libc, "fwrite", SYSTEM.ADR(fwrite));
     GetSym(libc, "fseek",  SYSTEM.ADR(fseek));

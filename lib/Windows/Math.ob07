@@ -52,8 +52,8 @@ BEGIN
     SYSTEM.CODE(
     0DDH, 045H, 008H,          (*  fld     qword [ebp + 08h]  *)
     0D9H, 0FAH,                (*  fsqrt                      *)
-    0C9H,                      (*  leave                      *)
-    0C2H, 008H, 000H           (*  ret     08h                *)
+    05DH,                      (*  pop     ebp                *)
+    0C2H, 008H, 000H           (*  ret     8                  *)
     )
 
     $END

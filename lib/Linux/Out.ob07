@@ -85,7 +85,7 @@ END Open;
 
 PROCEDURE init;
 VAR
-    libc, printf: INTEGER;
+    printf: INTEGER;
 
 BEGIN
     IF bit_depth = 32 THEN
@@ -93,9 +93,7 @@ BEGIN
     ELSE
         fmt := "%*lld"
     END;
-    libc := Libdl.open("libc.so.6", Libdl.LAZY);
-    ASSERT(libc # 0);
-    printf := Libdl.sym(libc, "printf");
+    printf := Libdl.sym(API.libc, "printf");
     ASSERT(printf # 0);
     SYSTEM.PUT(SYSTEM.ADR(printf1), printf);
     SYSTEM.PUT(SYSTEM.ADR(printf2), printf);

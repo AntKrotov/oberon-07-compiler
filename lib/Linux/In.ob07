@@ -68,25 +68,14 @@ BEGIN
 END Open;
 
 
-PROCEDURE init;
-VAR
-    libc: INTEGER;
-
 BEGIN
     IF bit_depth = 32 THEN
         fmt := "%d"
     ELSE
         fmt := "%lld"
     END;
-    libc := Libdl.open("libc.so.6", Libdl.LAZY);
-    ASSERT(libc # 0);
-    SYSTEM.PUT(SYSTEM.ADR(sscanf), Libdl.sym(libc, "sscanf"));
+    SYSTEM.PUT(SYSTEM.ADR(sscanf), Libdl.sym(API.libc, "sscanf"));
     ASSERT(sscanf # NIL);
-    SYSTEM.PUT(SYSTEM.ADR(fgets), Libdl.sym(libc, "fgets"));
+    SYSTEM.PUT(SYSTEM.ADR(fgets), Libdl.sym(API.libc, "fgets"));
     ASSERT(fgets # NIL);
-END init;
-
-
-BEGIN
-    init
 END In.
