@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2020, Anton Krotov
+    Copyright (c) 2019-2021, Anton Krotov
     All rights reserved.
 *)
 
 MODULE ELF;
 
-IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PE32, UTILS;
+IMPORT BIN, WR := WRITER, CHL := CHUNKLISTS, LISTS, PE32, UTILS, STRINGS;
 
 
 CONST
@@ -153,25 +153,6 @@ BEGIN
 
     LISTS.push(symtab, sym)
 END NewSym;
-
-
-PROCEDURE HashStr (name: ARRAY OF CHAR): INTEGER;
-VAR
-    i, h: INTEGER;
-    g: SET;
-
-BEGIN
-    h := 0;
-    i := 0;
-    WHILE name[i] # 0X DO
-        h := h * 16 + ORD(name[i]);
-        g := BITS(h) * {28..31};
-        h := ORD(BITS(h) / BITS(LSR(ORD(g), 24)) - g);
-        INC(i)
-    END
-
-    RETURN h
-END HashStr;
 
 
 PROCEDURE MakeHash (bucket, chain: CHL.INTLIST; symCount: INTEGER);
@@ -329,18 +310,18 @@ BEGIN
 
     hashtab := CHL.CreateIntList();
 
-    CHL.PushInt(hashtab, HashStr(""));
+    CHL.PushInt(hashtab, STRINGS.HashStr(""));
     NewSym(CHL.PushStr(strtab, ""), 0, 0, 0X, 0X, 0X);
-    CHL.PushInt(hashtab, HashStr("dlopen"));
+    CHL.PushInt(hashtab, STRINGS.HashStr("dlopen"));
     NewSym(CHL.PushStr(strtab, "dlopen"), 0, 0, 12X, 0X, 0X);
-    CHL.PushInt(hashtab, HashStr("dlsym"));
+    CHL.PushInt(hashtab, STRINGS.HashStr("dlsym"));
     NewSym(CHL.PushStr(strtab, "dlsym"), 0, 0, 12X, 0X, 0X);
 
     IF so THEN
         item := program.exp_list.first;
         WHILE item # NIL DO
             ASSERT(CHL.GetStr(program.export, item(BIN.EXPRT).nameoffs, Name));
-            CHL.PushInt(hashtab, HashStr(Name));
+            CHL.PushInt(hashtab, STRINGS.HashStr(Name));
             NewSym(CHL.PushStr(strtab, Name), item(BIN.EXPRT).label, 0, 12X, 0X, 0X);
             item := item.next
         END;
@@ -575,7 +556,7 @@ BEGIN
         WR.Write32LE(00000201H)
 
     END;
-    
+
     WR.Write32LE(symCount);
     WR.Write32LE(symCount);
 
@@ -588,14 +569,14 @@ BEGIN
     END;
 
     CHL.WriteToFile(strtab);
-        
+
     IF amd64 THEN
         WR.Write64LE(0);
         WR.Write64LE(0)
     ELSE
         WR.Write32LE(0);
-        WR.Write32LE(0)    
-    END;    
+        WR.Write32LE(0)
+    END;
 
     CHL.WriteToFile(program.code);
     WHILE pad > 0 DO

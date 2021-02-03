@@ -344,7 +344,7 @@ END QIdent;
 PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 VAR
     str: SCAN.LEXSTR;
-    string1, string2: SCAN.IDENT;
+    string1, string2: SCAN.STRING;
     bool: BOOLEAN;
 
 BEGIN
@@ -352,20 +352,20 @@ BEGIN
     IF v.typ = ARITH.tCHAR THEN
         ASSERT(v2.typ = ARITH.tSTRING);
         ARITH.charToStr(v, str);
-        string1 := SCAN.enterid(str);
-        string2 := v2.string(SCAN.IDENT)
+        string1 := SCAN.enterStr(str);
+        string2 := v2.string(SCAN.STRING)
     END;
 
     IF v2.typ = ARITH.tCHAR THEN
         ASSERT(v.typ = ARITH.tSTRING);
         ARITH.charToStr(v2, str);
-        string2 := SCAN.enterid(str);
-        string1 := v.string(SCAN.IDENT)
+        string2 := SCAN.enterStr(str);
+        string1 := v.string(SCAN.STRING)
     END;
 
     IF v.typ = v2.typ THEN
-        string1 := v.string(SCAN.IDENT);
-        string2 := v2.string(SCAN.IDENT)
+        string1 := v.string(SCAN.STRING);
+        string2 := v2.string(SCAN.STRING)
     END;
 
     CASE operator OF
@@ -624,7 +624,7 @@ VAR
         getpos(parser, pos);
         ConstExpression(parser, str);
         IF str.typ = ARITH.tSTRING THEN
-            name := str.string(SCAN.IDENT).s
+            name := str.string(SCAN.STRING).s
         ELSIF str.typ = ARITH.tCHAR THEN
             ARITH.charToStr(str, name)
         ELSE
@@ -1141,15 +1141,15 @@ VAR
                 getpos(parser, pos);
                 endname := parser.lex.ident;
                 IF ~codeProc & (_import = NIL) THEN
-                    check(endname = name, pos, 60);
+                    check(PROG.IdEq(endname, name), pos, 60);
                     ExpectSym(parser, SCAN.lxSEMI);
                     Next(parser)
                 ELSE
-                    IF endname = parser.unit.name THEN
+                    IF PROG.IdEq(endname, parser.unit.name) THEN
                         ExpectSym(parser, SCAN.lxPOINT);
                         Next(parser);
                         endmod := TRUE
-                    ELSIF endname = name THEN
+                    ELSIF PROG.IdEq(endname, name) THEN
                         ExpectSym(parser, SCAN.lxSEMI);
                         Next(parser)
                     ELSE

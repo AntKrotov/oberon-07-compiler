@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
 MODULE SCAN;
 
-IMPORT TXT := TEXTDRV, AVL := AVLTREES, ARITH, S := STRINGS, ERRORS, LISTS;
+IMPORT TXT := TEXTDRV, ARITH, S := STRINGS, ERRORS, LISTS;
 
 
 CONST
@@ -54,11 +54,17 @@ TYPE
 
     END;
 
-    IDENT* = POINTER TO RECORD (AVL.DATA)
+    STRING* = POINTER TO RECORD (LISTS.ITEM)
 
         s*: LEXSTR;
-        offset*, offsetW*: INTEGER;
-        key: INTEGER
+        offset*, offsetW*, hash: INTEGER
+
+    END;
+
+    IDENT* = RECORD
+
+        s*: LEXSTR;
+        hash*: INTEGER
 
     END;
 
@@ -73,9 +79,10 @@ TYPE
         s*:         LEXSTR;
         length*:    INTEGER;
         sym*:       INTEGER;
+        hash:       INTEGER;
         pos*:       POSITION;
         ident*:     IDENT;
-        string*:    IDENT;
+        string*:    STRING;
         value*:     ARITH.VALUE;
         error*:     INTEGER;
 
@@ -85,43 +92,78 @@ TYPE
 
     SCANNER* = TXT.TEXT;
 
+    KEYWORD = ARRAY 10 OF CHAR;
+
 
 VAR
-
-    idents: AVL.NODE;
 
     delimiters: ARRAY 256 OF BOOLEAN;
 
-    NewIdent: IDENT;
-
     upto, LowerCase, _if: BOOLEAN;
 
-    def: LISTS.LIST;
+    strings, def: LISTS.LIST;
+
+    KW: ARRAY 33 OF RECORD upper, lower: KEYWORD; uhash, lhash: INTEGER END;
 
 
-PROCEDURE nodecmp (a, b: AVL.DATA): INTEGER;
-    RETURN ORD(a(IDENT).s > b(IDENT).s) - ORD(a(IDENT).s < b(IDENT).s)
-END nodecmp;
+PROCEDURE enterKW (s: KEYWORD; idx: INTEGER);
+BEGIN
+    KW[idx].lower := s;
+    KW[idx].upper := s;
+    S.UpCase(KW[idx].upper);
+    KW[idx].uhash := S.HashStr(KW[idx].upper);
+    KW[idx].lhash := S.HashStr(KW[idx].lower);
+END enterKW;
 
 
-PROCEDURE enterid* (s: LEXSTR): IDENT;
+PROCEDURE checkKW (ident: IDENT): INTEGER;
 VAR
-    newnode: BOOLEAN;
-    node:    AVL.NODE;
+    i, res: INTEGER;
 
 BEGIN
-    NewIdent.s := s;
-    idents := AVL.insert(idents, NewIdent, nodecmp, newnode, node);
-
-    IF newnode THEN
-        NEW(NewIdent);
-        NewIdent.offset  := -1;
-        NewIdent.offsetW := -1;
-        NewIdent.key := 0
+    res := lxIDENT;
+    i := 0;
+    WHILE i < LEN(KW) DO
+        IF (KW[i].uhash = ident.hash) & (KW[i].upper = ident.s)
+        OR LowerCase & (KW[i].lhash = ident.hash) & (KW[i].lower = ident.s) THEN
+            res := i + lxKW;
+            i := LEN(KW)
+        END;
+        INC(i)
     END
 
-    RETURN node.data(IDENT)
-END enterid;
+    RETURN res
+END checkKW;
+
+
+PROCEDURE enterStr* (s: LEXSTR): STRING;
+VAR
+    str, res: STRING;
+    hash: INTEGER;
+
+BEGIN
+    hash := S.HashStr(s);
+    str := strings.first(STRING);
+    res := NIL;
+    WHILE str # NIL DO
+        IF (str.hash = hash) & (str.s = s) THEN
+            res := str;
+            str := NIL
+        ELSE
+            str := str.next(STRING)
+        END
+    END;
+    IF res = NIL THEN
+        NEW(res);
+        res.s := s;
+        res.offset  := -1;
+        res.offsetW := -1;
+        res.hash := S.HashStr(s);
+        LISTS.push(strings, res)
+    END
+
+    RETURN res
+END enterStr;
 
 
 PROCEDURE putchar (VAR lex: LEX; c: CHAR);
@@ -143,6 +185,13 @@ BEGIN
 END nextc;
 
 
+PROCEDURE setIdent* (VAR ident: IDENT; s: LEXSTR);
+BEGIN
+    ident.s := s;
+    ident.hash := S.HashStr(s);
+END setIdent;
+
+
 PROCEDURE ident (text: TXT.TEXT; VAR lex: LEX);
 VAR
     c: CHAR;
@@ -159,12 +208,8 @@ BEGIN
     IF lex.over THEN
         lex.sym := lxERROR06
     ELSE
-        lex.ident := enterid(lex.s);
-        IF lex.ident.key # 0 THEN
-            lex.sym := lex.ident.key
-        ELSE
-            lex.sym := lxIDENT
-        END
+        setIdent(lex.ident, lex.s);
+        lex.sym := checkKW(lex.ident)
     END
 
 END ident;
@@ -312,7 +357,7 @@ BEGIN
     END;
 
     IF lex.sym = lxSTRING THEN
-        lex.string := enterid(lex.s);
+        lex.string := enterStr(lex.s);
         lex.value.typ := ARITH.tSTRING;
         lex.value.string := lex.string
     END
@@ -594,7 +639,6 @@ BEGIN
         lex.length   := 0;
         lex.pos.line := text.line;
         lex.pos.col  := text.col;
-        lex.ident    := NIL;
         lex.over     := FALSE;
 
         IF S.letter(c) THEN
@@ -668,24 +712,6 @@ VAR
     i: INTEGER;
     delim: ARRAY 23 OF CHAR;
 
-
-    PROCEDURE enterkw (key: INTEGER; kw: LEXSTR);
-    VAR
-        id: IDENT;
-        upper: LEXSTR;
-
-    BEGIN
-        IF LowerCase THEN
-            id := enterid(kw);
-            id.key := key
-        END;
-        upper := kw;
-        S.UpCase(upper);
-        id := enterid(upper);
-        id.key := key
-    END enterkw;
-
-
 BEGIN
     upto := FALSE;
     LowerCase := lower;
@@ -700,48 +726,39 @@ BEGIN
         delimiters[ORD(delim[i])] := TRUE
     END;
 
-    NEW(NewIdent);
-    NewIdent.s       := "";
-    NewIdent.offset  := -1;
-    NewIdent.offsetW := -1;
-    NewIdent.key     := 0;
-
-    idents := NIL;
-
-    enterkw(lxARRAY, "array");
-    enterkw(lxBEGIN, "begin");
-    enterkw(lxBY, "by");
-    enterkw(lxCASE, "case");
-    enterkw(lxCONST, "const");
-    enterkw(lxDIV, "div");
-    enterkw(lxDO, "do");
-    enterkw(lxELSE, "else");
-    enterkw(lxELSIF, "elsif");
-    enterkw(lxEND, "end");
-    enterkw(lxFALSE, "false");
-    enterkw(lxFOR, "for");
-    enterkw(lxIF, "if");
-    enterkw(lxIMPORT, "import");
-    enterkw(lxIN, "in");
-    enterkw(lxIS, "is");
-    enterkw(lxMOD, "mod");
-    enterkw(lxMODULE, "module");
-    enterkw(lxNIL, "nil");
-    enterkw(lxOF, "of");
-    enterkw(lxOR, "or");
-    enterkw(lxPOINTER, "pointer");
-    enterkw(lxPROCEDURE, "procedure");
-    enterkw(lxRECORD, "record");
-    enterkw(lxREPEAT, "repeat");
-    enterkw(lxRETURN, "return");
-    enterkw(lxTHEN, "then");
-    enterkw(lxTO, "to");
-    enterkw(lxTRUE, "true");
-    enterkw(lxTYPE, "type");
-    enterkw(lxUNTIL, "until");
-    enterkw(lxVAR, "var");
-    enterkw(lxWHILE, "while")
-
+    enterKW("array",      0);
+    enterKW("begin",      1);
+    enterKW("by",         2);
+    enterKW("case",       3);
+    enterKW("const",      4);
+    enterKW("div",        5);
+    enterKW("do",         6);
+    enterKW("else",       7);
+    enterKW("elsif",      8);
+    enterKW("end",        9);
+    enterKW("false",     10);
+    enterKW("for",       11);
+    enterKW("if",        12);
+    enterKW("import",    13);
+    enterKW("in",        14);
+    enterKW("is",        15);
+    enterKW("mod",       16);
+    enterKW("module",    17);
+    enterKW("nil",       18);
+    enterKW("of",        19);
+    enterKW("or",        20);
+    enterKW("pointer",   21);
+    enterKW("procedure", 22);
+    enterKW("record",    23);
+    enterKW("repeat",    24);
+    enterKW("return",    25);
+    enterKW("then",      26);
+    enterKW("to",        27);
+    enterKW("true",      28);
+    enterKW("type",      29);
+    enterKW("until",     30);
+    enterKW("var",       31);
+    enterKW("while",     32)
 END init;
 
 
@@ -757,5 +774,6 @@ END NewDef;
 
 
 BEGIN
-    def := LISTS.create(NIL)
+    def := LISTS.create(NIL);
+    strings := LISTS.create(NIL)
 END SCAN.

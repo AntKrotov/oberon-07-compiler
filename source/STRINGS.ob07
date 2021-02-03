@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -329,6 +329,25 @@ BEGIN
 
     RETURN j
 END Utf8To16;
+
+
+PROCEDURE HashStr* (name: ARRAY OF CHAR): INTEGER;
+VAR
+    i, h: INTEGER;
+    g: SET;
+
+BEGIN
+    h := 0;
+    i := 0;
+    WHILE name[i] # 0X DO
+        h := h * 16 + ORD(name[i]);
+        g := BITS(h) * {28..31};
+        h := ORD(BITS(h) / BITS(LSR(ORD(g), 24)) - g);
+        INC(i)
+    END
+
+    RETURN h
+END HashStr;
 
 
 END STRINGS.

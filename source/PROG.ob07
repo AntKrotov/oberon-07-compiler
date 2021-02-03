@@ -300,15 +300,18 @@ BEGIN
 END closeUnit;
 
 
+PROCEDURE IdEq* (a, b: SCAN.IDENT): BOOLEAN;
+    RETURN (a.hash = b.hash) & (a.s = b.s)
+END IdEq;
+
+
 PROCEDURE unique (unit: UNIT; ident: SCAN.IDENT): BOOLEAN;
 VAR
     item: IDENT;
 
 BEGIN
-    ASSERT(ident # NIL);
-
     item := unit.idents.last(IDENT);
-    WHILE (item.typ # idGUARD) & (item.name # ident) DO
+    WHILE (item.typ # idGUARD) & ~IdEq(item.name, ident) DO
         item := item.prev(IDENT)
     END
 
@@ -324,7 +327,6 @@ VAR
 
 BEGIN
     ASSERT(unit # NIL);
-    ASSERT(ident # NIL);
 
     res := unique(unit, ident);
 
@@ -410,21 +412,19 @@ VAR
     item: IDENT;
 
 BEGIN
-    ASSERT(ident # NIL);
-
     item := unit.idents.last(IDENT);
 
     IF item # NIL THEN
 
         IF currentScope THEN
-            WHILE (item.name # ident) & (item.typ # idGUARD) DO
+            WHILE (item.typ # idGUARD) & ~IdEq(item.name, ident) DO
                 item := item.prev(IDENT)
             END;
-            IF item.name # ident THEN
+            IF item.typ = idGUARD THEN
                 item := NIL
             END
         ELSE
-            WHILE (item # NIL) & (item.name # ident) DO
+            WHILE (item # NIL) & ~IdEq(item.name, ident) DO
                 item := item.prev(IDENT)
             END
         END
@@ -452,7 +452,8 @@ BEGIN
         NEW(item);
         item := NewIdent();
 
-        item.name := NIL;
+        item.name.s := "";
+        item.name.hash := 0;
         item.typ  := idGUARD;
 
         LISTS.push(unit.idents, item)
@@ -508,7 +509,6 @@ VAR
 BEGIN
     ASSERT(unit # NIL);
     ASSERT(_type # NIL);
-    ASSERT(baseIdent # NIL);
 
     NEW(newptr);
 
@@ -648,19 +648,22 @@ END getUnit;
 PROCEDURE enterStTypes (unit: UNIT);
 
 
-    PROCEDURE enter (unit: UNIT; name: SCAN.LEXSTR; _type: _TYPE);
+    PROCEDURE enter (unit: UNIT; nameStr: SCAN.LEXSTR; _type: _TYPE);
     VAR
         ident: IDENT;
         upper: SCAN.LEXSTR;
+        name:  SCAN.IDENT;
 
     BEGIN
         IF LowerCase THEN
-            ident := addIdent(unit, SCAN.enterid(name), idTYPE);
+            SCAN.setIdent(name, nameStr);
+            ident := addIdent(unit, name, idTYPE);
             ident._type := _type
         END;
-        upper := name;
+        upper := nameStr;
         STRINGS.UpCase(upper);
-        ident := addIdent(unit, SCAN.enterid(upper), idTYPE);
+        SCAN.setIdent(name, upper);
+        ident := addIdent(unit, name, idTYPE);
         ident._type := _type
     END enter;
 
@@ -685,80 +688,64 @@ END enterStTypes;
 PROCEDURE enterStProcs (unit: UNIT);
 
 
-    PROCEDURE EnterProc (unit: UNIT; name: SCAN.LEXSTR; proc: INTEGER);
+    PROCEDURE Enter (unit: UNIT; nameStr: SCAN.LEXSTR; nfunc, tfunc: INTEGER);
     VAR
         ident: IDENT;
         upper: SCAN.LEXSTR;
+        name:  SCAN.IDENT;
 
     BEGIN
         IF LowerCase THEN
-            ident := addIdent(unit, SCAN.enterid(name), idSTPROC);
-            ident.stproc := proc;
+            SCAN.setIdent(name, nameStr);
+            ident := addIdent(unit, name, tfunc);
+            ident.stproc := nfunc;
             ident._type := program.stTypes.tNONE
         END;
-        upper := name;
+        upper := nameStr;
         STRINGS.UpCase(upper);
-        ident := addIdent(unit, SCAN.enterid(upper), idSTPROC);
-        ident.stproc := proc;
+        SCAN.setIdent(name, upper);
+        ident := addIdent(unit, name, tfunc);
+        ident.stproc := nfunc;
         ident._type := program.stTypes.tNONE
-    END EnterProc;
-
-
-    PROCEDURE EnterFunc (unit: UNIT; name: SCAN.LEXSTR; func: INTEGER);
-    VAR
-        ident: IDENT;
-        upper: SCAN.LEXSTR;
-
-    BEGIN
-        IF LowerCase THEN
-            ident := addIdent(unit, SCAN.enterid(name), idSTFUNC);
-            ident.stproc := func;
-            ident._type := program.stTypes.tNONE
-        END;
-        upper := name;
-        STRINGS.UpCase(upper);
-        ident := addIdent(unit, SCAN.enterid(upper), idSTFUNC);
-        ident.stproc := func;
-        ident._type := program.stTypes.tNONE
-    END EnterFunc;
+    END Enter;
 
 
 BEGIN
-    EnterProc(unit, "assert", stASSERT);
-    EnterProc(unit, "dec",    stDEC);
-    EnterProc(unit, "excl",   stEXCL);
-    EnterProc(unit, "inc",    stINC);
-    EnterProc(unit, "incl",   stINCL);
-    EnterProc(unit, "new",    stNEW);
-    EnterProc(unit, "copy",   stCOPY);
+    Enter(unit, "assert", stASSERT, idSTPROC);
+    Enter(unit, "dec",    stDEC,    idSTPROC);
+    Enter(unit, "excl",   stEXCL,   idSTPROC);
+    Enter(unit, "inc",    stINC,    idSTPROC);
+    Enter(unit, "incl",   stINCL,   idSTPROC);
+    Enter(unit, "new",    stNEW,    idSTPROC);
+    Enter(unit, "copy",   stCOPY,   idSTPROC);
 
-    EnterFunc(unit, "abs",    stABS);
-    EnterFunc(unit, "asr",    stASR);
-    EnterFunc(unit, "chr",    stCHR);
-    EnterFunc(unit, "len",    stLEN);
-    EnterFunc(unit, "lsl",    stLSL);
-    EnterFunc(unit, "odd",    stODD);
-    EnterFunc(unit, "ord",    stORD);
-    EnterFunc(unit, "ror",    stROR);
-    EnterFunc(unit, "bits",   stBITS);
-    EnterFunc(unit, "lsr",    stLSR);
-    EnterFunc(unit, "length", stLENGTH);
-    EnterFunc(unit, "min",    stMIN);
-    EnterFunc(unit, "max",    stMAX);
+    Enter(unit, "abs",    stABS,    idSTFUNC);
+    Enter(unit, "asr",    stASR,    idSTFUNC);
+    Enter(unit, "chr",    stCHR,    idSTFUNC);
+    Enter(unit, "len",    stLEN,    idSTFUNC);
+    Enter(unit, "lsl",    stLSL,    idSTFUNC);
+    Enter(unit, "odd",    stODD,    idSTFUNC);
+    Enter(unit, "ord",    stORD,    idSTFUNC);
+    Enter(unit, "ror",    stROR,    idSTFUNC);
+    Enter(unit, "bits",   stBITS,   idSTFUNC);
+    Enter(unit, "lsr",    stLSR,    idSTFUNC);
+    Enter(unit, "length", stLENGTH, idSTFUNC);
+    Enter(unit, "min",    stMIN,    idSTFUNC);
+    Enter(unit, "max",    stMAX,    idSTFUNC);
 
     IF TARGETS.RealSize # 0 THEN
-        EnterProc(unit, "pack",  stPACK);
-        EnterProc(unit, "unpk",  stUNPK);
-        EnterFunc(unit, "floor", stFLOOR);
-        EnterFunc(unit, "flt",   stFLT)
+        Enter(unit, "pack",  stPACK,  idSTPROC);
+        Enter(unit, "unpk",  stUNPK,  idSTPROC);
+        Enter(unit, "floor", stFLOOR, idSTFUNC);
+        Enter(unit, "flt",   stFLT,   idSTFUNC)
     END;
 
     IF TARGETS.BitDepth >= 32 THEN
-        EnterFunc(unit, "wchr", stWCHR)
+        Enter(unit, "wchr", stWCHR, idSTFUNC)
     END;
 
     IF TARGETS.Dispose THEN
-        EnterProc(unit, "dispose", stDISPOSE)
+        Enter(unit, "dispose", stDISPOSE, idSTPROC)
     END
 
 END enterStProcs;
@@ -769,8 +756,6 @@ VAR
     unit: UNIT;
 
 BEGIN
-    ASSERT(name # NIL);
-
     NEW(unit);
 
     unit.name        := name;
@@ -808,7 +793,6 @@ VAR
 
 BEGIN
     ASSERT(self # NIL);
-    ASSERT(name # NIL);
     ASSERT(unit # NIL);
 
     field := NIL;
@@ -816,7 +800,7 @@ BEGIN
 
         field := self.fields.first(FIELD);
 
-        WHILE (field # NIL) & (field.name # name) DO
+        WHILE (field # NIL) & ~IdEq(field.name, name) DO
             field := field.next(FIELD)
         END;
 
@@ -840,8 +824,6 @@ VAR
     res:   BOOLEAN;
 
 BEGIN
-    ASSERT(name # NIL);
-
     res := getField(self, name, self.unit) = NIL;
 
     IF res THEN
@@ -899,11 +881,9 @@ VAR
     item: PARAM;
 
 BEGIN
-    ASSERT(name # NIL);
-
     item := self.params.first(PARAM);
 
-    WHILE (item # NIL) & (item.name # name) DO
+    WHILE (item # NIL) & ~IdEq(item.name, name) DO
         item := item.next(PARAM)
     END
 
@@ -917,8 +897,6 @@ VAR
     res:   BOOLEAN;
 
 BEGIN
-    ASSERT(name # NIL);
-
     res := getParam(self, name) = NIL;
 
     IF res THEN
@@ -1099,23 +1077,27 @@ PROCEDURE createSysUnit;
 VAR
     ident: IDENT;
     unit:  UNIT;
+    name:  SCAN.IDENT;
 
 
-    PROCEDURE EnterProc (sys: UNIT; name: SCAN.LEXSTR; idtyp, proc: INTEGER);
+    PROCEDURE EnterProc (sys: UNIT; nameStr: SCAN.LEXSTR; idtyp, proc: INTEGER);
     VAR
         ident: IDENT;
         upper: SCAN.LEXSTR;
+        name:  SCAN.IDENT;
 
     BEGIN
         IF LowerCase THEN
-            ident := addIdent(sys, SCAN.enterid(name), idtyp);
+            SCAN.setIdent(name, nameStr);
+            ident := addIdent(sys, name, idtyp);
             ident.stproc := proc;
             ident._type := program.stTypes.tNONE;
             ident.export := TRUE
         END;
-        upper := name;
+        upper := nameStr;
         STRINGS.UpCase(upper);
-        ident := addIdent(sys, SCAN.enterid(upper), idtyp);
+        SCAN.setIdent(name, upper);
+        ident := addIdent(sys, name, idtyp);
         ident.stproc := proc;
         ident._type := program.stTypes.tNONE;
         ident.export := TRUE
@@ -1123,7 +1105,8 @@ VAR
 
 
 BEGIN
-    unit := newUnit(SCAN.enterid("$SYSTEM"));
+    SCAN.setIdent(name, "$SYSTEM");
+    unit := newUnit(name);
     unit.fname := "SYSTEM";
 
     EnterProc(unit, "adr",    idSYSFUNC, sysADR);
@@ -1160,11 +1143,13 @@ BEGIN
         EnterProc(unit, "get32",  idSYSPROC, sysGET32);
 
         IF LowerCase THEN
-            ident := addIdent(unit, SCAN.enterid("card32"), idTYPE);
+            SCAN.setIdent(name, "card32");
+            ident := addIdent(unit, name, idTYPE);
             ident._type := program.stTypes.tCARD32;
             ident.export := TRUE
         END;
-        ident := addIdent(unit, SCAN.enterid("CARD32"), idTYPE);
+        SCAN.setIdent(name, "CARD32");
+        ident := addIdent(unit, name, idTYPE);
         ident._type := program.stTypes.tCARD32;
         ident.export := TRUE;
     END;

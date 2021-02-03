@@ -1,13 +1,13 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
 MODULE ARITH;
 
-IMPORT AVLTREES, STRINGS, UTILS;
+IMPORT STRINGS, UTILS, LISTS;
 
 
 CONST
@@ -31,7 +31,7 @@ TYPE
         set:       SET;
         bool:      BOOLEAN;
 
-        string*:   AVLTREES.DATA
+        string*:   LISTS.ITEM
 
     END;
 

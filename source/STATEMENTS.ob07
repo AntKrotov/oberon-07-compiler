@@ -208,7 +208,7 @@ BEGIN
     IF e._type = tCHAR THEN
         res := 1
     ELSE
-        res := LENGTH(e.value.string(SCAN.IDENT).s)
+        res := LENGTH(e.value.string(SCAN.STRING).s)
     END
     RETURN res
 END strlen;
@@ -241,7 +241,7 @@ BEGIN
     IF e._type.typ IN {PROG.tCHAR, PROG.tWCHAR} THEN
         res := 1
     ELSE
-        res := _length(e.value.string(SCAN.IDENT).s)
+        res := _length(e.value.string(SCAN.STRING).s)
     END
     RETURN res
 END utf8strlen;
@@ -302,11 +302,11 @@ END assigncomp;
 PROCEDURE String (e: PARS.EXPR): INTEGER;
 VAR
     offset: INTEGER;
-    string: SCAN.IDENT;
+    string: SCAN.STRING;
 
 BEGIN
     IF strlen(e) # 1 THEN
-        string := e.value.string(SCAN.IDENT);
+        string := e.value.string(SCAN.STRING);
         IF string.offset = -1 THEN
             string.offset := IL.putstr(string.s);
         END;
@@ -322,11 +322,11 @@ END String;
 PROCEDURE StringW (e: PARS.EXPR): INTEGER;
 VAR
     offset: INTEGER;
-    string: SCAN.IDENT;
+    string: SCAN.STRING;
 
 BEGIN
     IF utf8strlen(e) # 1 THEN
-        string := e.value.string(SCAN.IDENT);
+        string := e.value.string(SCAN.STRING);
         IF string.offsetW = -1 THEN
             string.offsetW := IL.putstrW(string.s);
         END;
@@ -335,7 +335,7 @@ BEGIN
         IF e._type.typ IN {PROG.tWCHAR, PROG.tCHAR} THEN
             offset := IL.putstrW1(ARITH.Int(e.value))
         ELSE (* e._type.typ = PROG.tSTRING *)
-            string := e.value.string(SCAN.IDENT);
+            string := e.value.string(SCAN.STRING);
             IF string.offsetW = -1 THEN
                 string.offsetW := IL.putstrW(string.s);
             END;
@@ -437,7 +437,7 @@ BEGIN
         ELSIF (e.obj = eCONST) & isChar(e) & (VarType = tWCHAR) THEN
             IL.AddCmd(IL.opSAVE16C, ARITH.Int(e.value))
         ELSIF isStringW1(e) & (VarType = tWCHAR) THEN
-            IL.AddCmd(IL.opSAVE16C, StrToWChar(e.value.string(SCAN.IDENT).s))
+            IL.AddCmd(IL.opSAVE16C, StrToWChar(e.value.string(SCAN.STRING).s))
         ELSIF isCharW(e) & (VarType = tWCHAR) THEN
             IF e.obj = eCONST THEN
                 IL.AddCmd(IL.opSAVE16C, ARITH.Int(e.value))
@@ -609,7 +609,7 @@ BEGIN
                     IL.Const(0);
                     IL.Param1
                 ELSIF isStringW1(e) & (p._type = tWCHAR) THEN
-                    IL.Const(StrToWChar(e.value.string(SCAN.IDENT).s));
+                    IL.Const(StrToWChar(e.value.string(SCAN.STRING).s));
                     IL.Param1
                 ELSIF (e._type.typ = PROG.tSTRING) OR
                       (e._type.typ IN {PROG.tCHAR, PROG.tWCHAR}) & (p._type.typ = PROG.tARRAY) & (p._type.base.typ IN {PROG.tCHAR, PROG.tWCHAR}) THEN
@@ -1151,7 +1151,7 @@ BEGIN
             PARS.check(isChar(e) OR isBoolean(e) OR isSet(e) OR isCharW(e) OR isStringW1(e), pos, 66);
             IF e.obj = eCONST THEN
                 IF isStringW1(e) THEN
-                    ASSERT(ARITH.setInt(e.value, StrToWChar(e.value.string(SCAN.IDENT).s)))
+                    ASSERT(ARITH.setInt(e.value, StrToWChar(e.value.string(SCAN.STRING).s)))
                 ELSE
                     ARITH.ord(e.value)
                 END
@@ -2156,15 +2156,15 @@ VAR
                         IF e.value.typ = ARITH.tCHAR THEN
                             ARITH.charToStr(e.value, s)
                         ELSE
-                            s := e.value.string(SCAN.IDENT).s
+                            s := e.value.string(SCAN.STRING).s
                         END;
                         IF e1.value.typ = ARITH.tCHAR THEN
                             ARITH.charToStr(e1.value, s1)
                         ELSE
-                            s1 := e1.value.string(SCAN.IDENT).s
+                            s1 := e1.value.string(SCAN.STRING).s
                         END;
                         PARS.check(ARITH.concat(s, s1), pos, 5);
-                        e.value.string := SCAN.enterid(s);
+                        e.value.string := SCAN.enterStr(s);
                         e.value.typ := ARITH.tSTRING;
                         e._type := PROG.program.stTypes.tSTRING
                    END
@@ -2372,10 +2372,10 @@ BEGIN
                 END
 
             ELSIF isStringW1(e) & isCharW(e1) THEN
-                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e.value.string(SCAN.STRING).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.STRING).s))
 
             ELSIF isBoolean(e) & isBoolean(e1) THEN
                 IF constant THEN
@@ -2489,10 +2489,10 @@ BEGIN
                 END
 
             ELSIF isStringW1(e) & isCharW(e1) THEN
-                IL.AddCmd(IL.opEQC + invcmpcode(op), StrToWChar(e.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + invcmpcode(op), StrToWChar(e.value.string(SCAN.STRING).s))
 
             ELSIF isStringW1(e1) & isCharW(e) THEN
-                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.IDENT).s))
+                IL.AddCmd(IL.opEQC + cmp, StrToWChar(e1.value.string(SCAN.STRING).s))
 
             ELSIF isReal(e) & isReal(e1) THEN
                 IF constant THEN
@@ -2798,8 +2798,8 @@ VAR
             a := ARITH.getInt(value)
         ELSIF isCharW(caseExpr) THEN
             PARS.ConstExpression(parser, value);
-            IF (value.typ = ARITH.tSTRING) & (_length(value.string(SCAN.IDENT).s) = 1) & (LENGTH(value.string(SCAN.IDENT).s) > 1) THEN
-                ASSERT(ARITH.setInt(value, StrToWChar(value.string(SCAN.IDENT).s)))
+            IF (value.typ = ARITH.tSTRING) & (_length(value.string(SCAN.STRING).s) = 1) & (LENGTH(value.string(SCAN.STRING).s) > 1) THEN
+                ASSERT(ARITH.setInt(value, StrToWChar(value.string(SCAN.STRING).s)))
             ELSE
                 PARS.check(value.typ IN {ARITH.tWCHAR, ARITH.tCHAR}, pos, 99)
             END;
@@ -3264,9 +3264,11 @@ VAR
     PROCEDURE getproc (rtl: PROG.UNIT; name: SCAN.LEXSTR; idx: INTEGER);
     VAR
         id: PROG.IDENT;
+        ident: SCAN.IDENT;
 
     BEGIN
-        id := PROG.getIdent(rtl, SCAN.enterid(name), FALSE);
+        SCAN.setIdent(ident, name);
+        id := PROG.getIdent(rtl, ident, FALSE);
 
         IF (id # NIL) & (id._import # NIL) THEN
             IL.set_rtl(idx, -id._import(IL.IMPORT_PROC).label);
