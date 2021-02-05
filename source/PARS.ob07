@@ -233,7 +233,7 @@ BEGIN
             _in := TRUE;
             Next(parser);
             IF parser.sym = SCAN.lxSTRING THEN
-                STRINGS.trim(parser.lex.s, fname)
+                STRINGS.trim(parser.lex.string.s, fname)
             ELSIF parser.sym = SCAN.lxCHAR THEN
                 fname[0] := CHR(ARITH.Int(parser.lex.value));
                 fname[1] := 0X
@@ -343,7 +343,7 @@ END QIdent;
 
 PROCEDURE strcmp* (VAR v: ARITH.VALUE; v2: ARITH.VALUE; operator: INTEGER);
 VAR
-    str: SCAN.LEXSTR;
+    str: SCAN.TEXTSTR;
     string1, string2: SCAN.STRING;
     bool: BOOLEAN;
 
@@ -531,25 +531,26 @@ VAR
     res, sf: INTEGER;
 
 BEGIN
-    IF parser.lex.s = "stdcall" THEN
+    checklex(parser, SCAN.lxIDENT);
+    IF parser.lex.ident.s = "stdcall" THEN
         sf := PROG.sf_stdcall
-    ELSIF parser.lex.s = "cdecl" THEN
+    ELSIF parser.lex.ident.s = "cdecl" THEN
         sf := PROG.sf_cdecl
-    ELSIF parser.lex.s = "ccall" THEN
+    ELSIF parser.lex.ident.s = "ccall" THEN
         sf := PROG.sf_ccall
-    ELSIF parser.lex.s = "win64" THEN
+    ELSIF parser.lex.ident.s = "win64" THEN
         sf := PROG.sf_win64
-    ELSIF parser.lex.s = "systemv" THEN
+    ELSIF parser.lex.ident.s = "systemv" THEN
         sf := PROG.sf_systemv
-    ELSIF parser.lex.s = "windows" THEN
+    ELSIF parser.lex.ident.s = "windows" THEN
         sf := PROG.sf_windows
-    ELSIF parser.lex.s = "linux" THEN
+    ELSIF parser.lex.ident.s = "linux" THEN
         sf := PROG.sf_linux
-    ELSIF parser.lex.s = "code" THEN
+    ELSIF parser.lex.ident.s = "code" THEN
         sf := PROG.sf_code
-    ELSIF parser.lex.s = "oberon" THEN
+    ELSIF parser.lex.ident.s = "oberon" THEN
         sf := PROG.sf_oberon
-    ELSIF parser.lex.s = "noalign" THEN
+    ELSIF parser.lex.ident.s = "noalign" THEN
         sf := PROG.sf_noalign
     ELSE
         check1(FALSE, parser, 124)
@@ -611,11 +612,11 @@ END sysflag;
 PROCEDURE procflag (parser: PARSER; VAR _import: IL.IMPORT_PROC; isProc: BOOLEAN): INTEGER;
 VAR
     call: INTEGER;
-    dll, proc: SCAN.LEXSTR;
+    dll, proc: SCAN.TEXTSTR;
     pos: POSITION;
 
 
-    PROCEDURE getStr (parser: PARSER; VAR name: SCAN.LEXSTR);
+    PROCEDURE getStr (parser: PARSER; VAR name: SCAN.TEXTSTR);
     VAR
         pos: POSITION;
         str: ARITH.VALUE;
@@ -996,7 +997,7 @@ VAR
             proc := IdentDef(parser, PROG.idIMP, name);
             proc._import := _import;
             IF _import.name = "" THEN
-                _import.name := name.s
+                COPY(name.s, _import.name)
             END;
             PROG.program.procs.last(PROG.PROC)._import := _import
         ELSE
@@ -1240,7 +1241,7 @@ BEGIN
     ExpectSym(parser, SCAN.lxIDENT);
 
     IF ~parser.main THEN
-        check1(parser.lex.s = parser.modname, parser, 23)
+        check1(parser.lex.ident.s = parser.modname, parser, 23)
     END;
 
     unit := PROG.newUnit(parser.lex.ident);
@@ -1300,7 +1301,7 @@ BEGIN
         checklex(parser, SCAN.lxEND);
 
         ExpectSym(parser, SCAN.lxIDENT);
-        check1(parser.lex.s = unit.name.s, parser, 25);
+        check1(parser.lex.ident.s = unit.name.s, parser, 25);
         ExpectSym(parser, SCAN.lxPOINT)
     END;
 

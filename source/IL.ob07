@@ -166,13 +166,13 @@ TYPE
     EXPORT_PROC* = POINTER TO RECORD (LISTS.ITEM)
 
         label*: INTEGER;
-        name*:  SCAN.LEXSTR
+        name*:  SCAN.IDSTR
 
     END;
 
     IMPORT_LIB* = POINTER TO RECORD (LISTS.ITEM)
 
-        name*:   SCAN.LEXSTR;
+        name*:   SCAN.TEXTSTR;
         procs*:  LISTS.LIST
 
     END;
@@ -181,7 +181,7 @@ TYPE
 
         label*: INTEGER;
         lib*:   IMPORT_LIB;
-        name*:  SCAN.LEXSTR;
+        name*:  SCAN.TEXTSTR;
         count:  INTEGER
 
     END;
@@ -1107,7 +1107,7 @@ BEGIN
 END fname;
 
 
-PROCEDURE AddExp* (label: INTEGER; name: SCAN.LEXSTR);
+PROCEDURE AddExp* (label: INTEGER; name: SCAN.IDSTR);
 VAR
     exp: EXPORT_PROC;
 
@@ -1119,7 +1119,7 @@ BEGIN
 END AddExp;
 
 
-PROCEDURE AddImp* (dll, proc: SCAN.LEXSTR): IMPORT_PROC;
+PROCEDURE AddImp* (dll, proc: SCAN.TEXTSTR): IMPORT_PROC;
 VAR
     lib: IMPORT_LIB;
     p:   IMPORT_PROC;

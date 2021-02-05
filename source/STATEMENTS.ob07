@@ -2064,7 +2064,7 @@ VAR
         pos: PARS.POSITION;
         op:  INTEGER;
         e1:  PARS.EXPR;
-        s, s1: SCAN.LEXSTR;
+        s, s1: SCAN.TEXTSTR;
 
         plus, minus: BOOLEAN;
 
@@ -3261,7 +3261,7 @@ VAR
     rtl: PROG.UNIT;
 
 
-    PROCEDURE getproc (rtl: PROG.UNIT; name: SCAN.LEXSTR; idx: INTEGER);
+    PROCEDURE getproc (rtl: PROG.UNIT; name: SCAN.IDSTR; idx: INTEGER);
     VAR
         id: PROG.IDENT;
         ident: SCAN.IDENT;

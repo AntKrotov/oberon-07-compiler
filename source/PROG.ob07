@@ -648,10 +648,10 @@ END getUnit;
 PROCEDURE enterStTypes (unit: UNIT);
 
 
-    PROCEDURE enter (unit: UNIT; nameStr: SCAN.LEXSTR; _type: _TYPE);
+    PROCEDURE enter (unit: UNIT; nameStr: SCAN.IDSTR; _type: _TYPE);
     VAR
         ident: IDENT;
-        upper: SCAN.LEXSTR;
+        upper: SCAN.IDSTR;
         name:  SCAN.IDENT;
 
     BEGIN
@@ -688,10 +688,10 @@ END enterStTypes;
 PROCEDURE enterStProcs (unit: UNIT);
 
 
-    PROCEDURE Enter (unit: UNIT; nameStr: SCAN.LEXSTR; nfunc, tfunc: INTEGER);
+    PROCEDURE Enter (unit: UNIT; nameStr: SCAN.IDSTR; nfunc, tfunc: INTEGER);
     VAR
         ident: IDENT;
-        upper: SCAN.LEXSTR;
+        upper: SCAN.IDSTR;
         name:  SCAN.IDENT;
 
     BEGIN
@@ -1080,10 +1080,10 @@ VAR
     name:  SCAN.IDENT;
 
 
-    PROCEDURE EnterProc (sys: UNIT; nameStr: SCAN.LEXSTR; idtyp, proc: INTEGER);
+    PROCEDURE EnterProc (sys: UNIT; nameStr: SCAN.IDSTR; idtyp, proc: INTEGER);
     VAR
         ident: IDENT;
-        upper: SCAN.LEXSTR;
+        upper: SCAN.IDSTR;
         name:  SCAN.IDENT;
 
     BEGIN

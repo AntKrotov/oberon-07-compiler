@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -25,6 +25,7 @@ BEGIN
     CASE warning OF
     |0: C.StringLn("passing a string value as a fixed array")
     |1: C.StringLn("endless FOR loop")
+    |2: C.StringLn("identifier too long")
     END
 END WarningMsg;
 
@@ -43,7 +44,7 @@ BEGIN
     |  3: str := "unclosed string"
     |  4: str := "illegal character"
     |  5: str := "string too long"
-    |  6: str := "identifier too long"
+
     |  7: str := "number too long"
     |  8..12: str := "number too large"
     | 13: str := "real numbers not supported"

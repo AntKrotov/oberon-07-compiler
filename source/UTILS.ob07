@@ -24,7 +24,7 @@ CONST
 
     vMajor* = 1;
     vMinor* = 50;
-    Date* = "2021-02-04";
+    Date* = "2021-02-05";
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";
