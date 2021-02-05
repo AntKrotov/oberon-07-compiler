@@ -122,8 +122,9 @@ PROCEDURE [code] Delay* (n: INTEGER)
     4303H,       (*  NOP             *)
     8314H,       (*  SUB  #1, R4     *)
     3800H - 7,   (*  JGE  L1         *)
+    4303H,       (*  NOP             *)
     8315H,       (*  SUB  #1, R5     *)
-    3800H - 12;  (*  JGE  L2         *)
+    3800H - 13;  (*  JGE  L2         *)
 
 
 END MSP430.
