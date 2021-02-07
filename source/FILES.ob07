@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2021, Anton Krotov
     All rights reserved.
 *)
 
@@ -154,27 +154,24 @@ END read;
 
 PROCEDURE write* (file: FILE; chunk: ARRAY OF BYTE; bytes: INTEGER): INTEGER;
 VAR
-    free, n, k, res, idx: INTEGER;
+    free, n, idx: INTEGER;
 
 BEGIN
     idx := 0;
-    res := 0;
     IF (file # NIL) & (file.count >= 0) THEN
 
         free := LEN(file.buffer) - file.count;
         WHILE bytes > 0 DO
             n := MIN(free, bytes);
             copy(chunk, idx, file.buffer, file.count, n);
-            INC(res, n);
             DEC(free, n);
             DEC(bytes, n);
             INC(idx, n);
             INC(file.count, n);
             IF free = 0 THEN
-                k := flush(file);
-                IF k # LEN(file.buffer) THEN
+                IF flush(file) # LEN(file.buffer) THEN
                     bytes := 0;
-                    DEC(res, n)
+                    DEC(idx, n)
                 ELSE
                     file.count := 0;
                     free := LEN(file.buffer)
@@ -184,7 +181,7 @@ BEGIN
 
     END
 
-    RETURN res
+    RETURN idx
 END write;
 
 

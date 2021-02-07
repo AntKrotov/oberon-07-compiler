@@ -312,14 +312,13 @@ BEGIN
         sym := lxERROR07
     END;
 
+    num[i] := 0X;
+
     IF sym = lxINTEGER THEN
-        num[i] := 0X;
         ARITH.iconv(num, lex.value, error)
     ELSIF (sym = lxHEX) OR (sym = lxCHAR) THEN
-        num[i] := 0X;
         ARITH.hconv(num, lex.value, error)
     ELSIF sym = lxFLOAT THEN
-        num[i] := 0X;
         ARITH.fconv(num, lex.value, error)
     END;
 

@@ -861,15 +861,11 @@ BEGIN
 
         |IL.opINCLC, IL.opEXCLC:
             UnOp(r1);
-            r2 := GetAnyReg();
-            ldr32(r2, r1);
             IF opcode = IL.opINCLC THEN
-                Emit(opINCLC, r2, param2)
+                Emit(opINCLC, r1, param2)
             ELSE
-                Emit(opEXCLC, r2, param2)
+                Emit(opEXCLC, r1, param2)
             END;
-            str32(r1, r2);
-            drop;
             drop
 
         |IL.opEQB, IL.opNEB:
