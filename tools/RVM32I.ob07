@@ -24,22 +24,23 @@ CONST
 
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opABS = 5;
     opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opJNA = 16; opJGA = 17;
+    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; opJNA = 16; opJGA = 17;
     opJLA = 18; opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
     opSTB = 34; opSTH = 36; opSTW = 38; opINCL = 40; opEXCL = 42;
     opIN = 44; opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
-    opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opEQ = 64; opNE = 66;
-    opLT = 68; opLE = 70; opGT = 72; opGE = 74; opBT = 76;
+    opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opCMP = 64;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
     opSTBC = 35; opSTHC = 37; opSTWC = 39; opINCLC = 41; opEXCLC = 43;
     opINC = 45; opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
-    opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
-    opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
+    opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opCMPC = 65;
 
-    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opLLA = 82;
+    opSYSCALL = 67; opJBT = 68; opADDRC = 69;
+
+    opJEQ = 70; opJNE = 71; opJLT = 72; opJGE = 73; opJGT = 74; opJLE = 75;
+    opSEQ = 76; opSNE = 77; opSLT = 78; opSGE = 79; opSGT = 80; opSLE = 81;
 
 
     nREG = 8;
@@ -123,6 +124,8 @@ VAR
     param1, param2, i: INTEGER;
     R: ARRAY nREG OF INTEGER;
 
+    fe, fl, fb: BOOLEAN;
+
 BEGIN
     FOR i := 0 TO LEN(Labels) - 1 DO
         cmd := Labels[i];
@@ -167,9 +170,6 @@ BEGIN
         |opLDW:      SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opPUSH:     DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[param1])
         |opPUSHC:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], param1)
-        |opJGZ:      IF R[param1] > 0 THEN cmd := Labels[param2] END
-        |opJZ:       IF R[param1] = 0 THEN cmd := Labels[param2] END
-        |opJNZ:      IF R[param1] # 0 THEN cmd := Labels[param2] END
         |opLLA:      SYSTEM.GET32(SYSTEM.ADR(Labels[param2]), R[param1])
         |opJGA:      IF R[ACC] > param1 THEN cmd := Labels[param2] END
         |opJLA:      IF R[ACC] < param1 THEN cmd := Labels[param2] END
@@ -219,24 +219,25 @@ BEGIN
         |opMINC:     R[param1] := MIN(R[param1], param2)
         |opMAX:      R[param1] := MAX(R[param1], R[param2])
         |opMAXC:     R[param1] := MAX(R[param1], param2)
-        |opEQ:       R[param1] := ORD(R[param1] = R[param2])
-        |opEQC:      R[param1] := ORD(R[param1] = param2)
-        |opNE:       R[param1] := ORD(R[param1] # R[param2])
-        |opNEC:      R[param1] := ORD(R[param1] # param2)
-        |opLT:       R[param1] := ORD(R[param1] < R[param2])
-        |opLTC:      R[param1] := ORD(R[param1] < param2)
-        |opLE:       R[param1] := ORD(R[param1] <= R[param2])
-        |opLEC:      R[param1] := ORD(R[param1] <= param2)
-        |opGT:       R[param1] := ORD(R[param1] > R[param2])
-        |opGTC:      R[param1] := ORD(R[param1] > param2)
-        |opGE:       R[param1] := ORD(R[param1] >= R[param2])
-        |opGEC:      R[param1] := ORD(R[param1] >= param2)
-        |opBT:       R[param1] := ORD((R[param1] < R[param2]) & (R[param1] >= 0))
-        |opBTC:      R[param1] := ORD((R[param1] < param2) & (R[param1] >= 0))
         |opLEA:      R[param1 MOD 256] := Sections[param1 DIV 256] + param2
         (*|opLABEL:*)
         |opSYSCALL:  syscall(R[param1])
         |opADDRC:    R[param1 MOD 256] := R[param1 DIV 256] + param2
+        |opCMP:      fl := R[param1] < R[param2]; fe := R[param1] = R[param2]; fb := fl & (R[param1] >= 0)
+        |opCMPC:     fl := R[param1] < param2; fe := R[param1] = param2; fb := fl & (R[param1] >= 0)
+        |opJEQ:      IF fe THEN cmd := Labels[param1] END
+        |opJNE:      IF ~fe THEN cmd := Labels[param1] END
+        |opJLT:      IF fl THEN cmd := Labels[param1] END
+        |opJLE:      IF fl OR fe THEN cmd := Labels[param1] END
+        |opJGT:      IF ~fl & ~fe THEN cmd := Labels[param1] END
+        |opJGE:      IF ~fl THEN cmd := Labels[param1] END
+        |opSEQ:      R[param1] := ORD(fe)
+        |opSNE:      R[param1] := ORD(~fe)
+        |opSLT:      R[param1] := ORD(fl)
+        |opSLE:      R[param1] := ORD(fl OR fe)
+        |opSGT:      R[param1] := ORD(~fl & ~fe)
+        |opSGE:      R[param1] := ORD(~fl)
+        |opJBT:      IF fb THEN cmd := Labels[param1] END
         END;
         cmd := cmd.next
     END
@@ -385,9 +386,6 @@ BEGIN
         |opLDW:      String("LDW     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opPUSH:     String("PUSH    ");  Reg(param1)
         |opPUSHC:    String("PUSH    ");  Hex(param1)
-        |opJGZ:      String("JGZ     ");  RegL(param1, param2)
-        |opJZ:       String("JZ      ");  RegL(param1, param2)
-        |opJNZ:      String("JNZ     ");  RegL(param1, param2)
         |opLLA:      String("LLA     ");  RegL(param1, param2)
         |opJGA:      String("JGA     ");  Hex(param1); String(", L"); Hex(param2)
         |opJLA:      String("JLA     ");  Hex(param1); String(", L"); Hex(param2)
@@ -437,24 +435,25 @@ BEGIN
         |opMINC:     String("MIN     ");  RegC(param1, param2)
         |opMAX:      String("MAX     ");  Reg2(param1, param2)
         |opMAXC:     String("MAX     ");  RegC(param1, param2)
-        |opEQ:       String("EQ      ");  Reg2(param1, param2)
-        |opEQC:      String("EQ      ");  RegC(param1, param2)
-        |opNE:       String("NE      ");  Reg2(param1, param2)
-        |opNEC:      String("NE      ");  RegC(param1, param2)
-        |opLT:       String("LT      ");  Reg2(param1, param2)
-        |opLTC:      String("LT      ");  RegC(param1, param2)
-        |opLE:       String("LE      ");  Reg2(param1, param2)
-        |opLEC:      String("LE      ");  RegC(param1, param2)
-        |opGT:       String("GT      ");  Reg2(param1, param2)
-        |opGTC:      String("GT      ");  RegC(param1, param2)
-        |opGE:       String("GE      ");  Reg2(param1, param2)
-        |opGEC:      String("GE      ");  RegC(param1, param2)
-        |opBT:       String("BT      ");  Reg2(param1, param2)
-        |opBTC:      String("BT      ");  RegC(param1, param2)
         |opLEA:      String("LEA     ");  Reg(param1 MOD 256); String(", "); String(Names[param1 DIV 256]); String(" + "); Hex(param2)
         |opADDRC:    String("ADD     ");  Reg(param1 MOD 256); String(", "); Reg(param1 DIV 256); String(", "); Hex(param2)
         |opLABEL:    String("L"); Hex(param1); String(":")
         |opSYSCALL:  String("SYSCALL ");  Reg(param1)
+        |opCMP:      String("CMP     ");  Reg2(param1, param2)
+        |opCMPC:     String("CMP     ");  RegC(param1, param2)
+        |opJEQ:      String("JEQ     L"); Hex(param1)
+        |opJNE:      String("JNE     L"); Hex(param1)
+        |opJLT:      String("JLT     L"); Hex(param1)
+        |opJLE:      String("JLE     L"); Hex(param1)
+        |opJGT:      String("JGT     L"); Hex(param1)
+        |opJGE:      String("JGE     L"); Hex(param1)
+        |opSEQ:      String("SEQ     ");  Reg(param1)
+        |opSNE:      String("SNE     ");  Reg(param1)
+        |opSLT:      String("SLT     ");  Reg(param1)
+        |opSLE:      String("SLE     ");  Reg(param1)
+        |opSGT:      String("SGT     ");  Reg(param1)
+        |opSGE:      String("SGE     ");  Reg(param1)
+        |opJBT:      String("JBT     L"); Hex(param1)
         END;
         Ln;
         cmd := cmd.next

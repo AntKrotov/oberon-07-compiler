@@ -23,8 +23,8 @@ CONST
     max32* =  2147483647;
 
     vMajor* = 1;
-    vMinor* = 50;
-    Date* = "2021-02-05";
+    vMinor* = 51;
+    Date* = "2021-02-09";
 
     FILE_EXT* = ".ob07";
     RTL_NAME* = "RTL";

@@ -33,14 +33,16 @@
 
     Регистры
 
-      Пять 32-битных регистров:
+      Не меньше пяти 32-битных регистров:
 
         R0, R1, R2   регистры общего назначения
         BP(R3)       указатель кадра стэка
         SP(R4)       указатель стэка (растет вниз)
 
-      Нет регистра флагов, нет регистра связи (адрес возврата передается через стэк),
-      регистр-счетчик команд (PC) -- скрытый.
+        R5, R6...    регистры общего назначения (опционально)
+
+      Регистра связи нет (адрес возврата передается через стэк),
+      регистр-счетчик команд (PC) -- скрытый, регистр флагов -- скрытый.
 
       Нет вещественных регистров, операции с плавающей точкой (single) эмулируются.
 
@@ -99,9 +101,13 @@
     PUSH Rn                 10       n        0           DEC(SP, 4); Int32Ptr(SP)^ := Rn
     PUSH imm                11      imm       0           DEC(SP, 4); Int32Ptr(SP)^ := imm
     POP Rn                  12       n        0           Rn := Int32Ptr(SP)^; INC(SP, 4)
-    JGZ Rn, L#hex           13       n       hex          IF Rn > 0 THEN goto L#hex
-    JZ Rn, L#hex            14       n       hex          IF Rn = 0 THEN goto L#hex
-    JNZ Rn, L#hex           15       n       hex          IF Rn # 0 THEN goto L#hex
+    L#hex:                  13      hex       0           метка:
+    LEA Rn, TYPES + imm     14    n + 000H   imm          Rn := imm + address(TYPES)
+    LEA Rn, STRINGS + imm   14    n + 100H   imm          Rn := imm + address(STRINGS)
+    LEA Rn, GLOBAL + imm    14    n + 200H   imm          Rn := imm + address(GLOBAL)
+    LEA Rn, HEAP + imm      14    n + 300H   imm          Rn := imm + address(HEAP)
+    LEA Rn, STACK + imm     14    n + 400H   imm          Rn := imm + address(STACK)
+    LLA Rn, L#hex           15       n       hex          Rn := address(L#hex)
     JNA imm, L#hex          16      imm      hex          IF R0 # imm THEN goto L#hex
     JGA imm, L#hex          17      imm      hex          IF R0 > imm THEN goto L#hex
     JLA imm, L#hex          18      imm      hex          IF R0 < imm THEN goto L#hex
@@ -150,29 +156,27 @@
     MIN Rn, imm             61       n       imm          IF imm < Rn THEN Rn := imm
     MAX Rn, Rm              62       n        m           IF Rm > Rn THEN Rn := Rm
     MAX Rn, imm             63       n       imm          IF imm > Rn THEN Rn := imm
-    EQ Rn, Rm               64       n        m           Rn := ORD(Rn = Rm)
-    EQ Rn, imm              65       n       imm          Rn := ORD(Rn = imm)
-    NE Rn, Rm               66       n        m           Rn := ORD(Rn # Rm)
-    NE Rn, imm              67       n       imm          Rn := ORD(Rn # imm)
-    LT Rn, Rm               68       n        m           Rn := ORD(Rn < Rm)
-    LT Rn, imm              69       n       imm          Rn := ORD(Rn < imm)
-    LE Rn, Rm               70       n        m           Rn := ORD(Rn <= Rm)
-    LE Rn, imm              71       n       imm          Rn := ORD(Rn <= imm)
-    GT Rn, Rm               72       n        m           Rn := ORD(Rn > Rm)
-    GT Rn, imm              73       n       imm          Rn := ORD(Rn > imm)
-    GE Rn, Rm               74       n        m           Rn := ORD(Rn >= Rm)
-    GE Rn, imm              75       n       imm          Rn := ORD(Rn >= imm)
-    BT Rn, Rm               76       n        m           Rn := ORD((0 <= Rn) & (Rn < Rm))
-    BT Rn, imm              77       n       imm          Rn := ORD((0 <= Rn) & (Rn < imm))
-    LEA Rn, TYPES + imm     78    n + 000H   imm          Rn := imm + address(TYPES)
-    LEA Rn, STRINGS + imm   78    n + 100H   imm          Rn := imm + address(STRINGS)
-    LEA Rn, GLOBAL + imm    78    n + 200H   imm          Rn := imm + address(GLOBAL)
-    LEA Rn, HEAP + imm      78    n + 300H   imm          Rn := imm + address(HEAP)
-    LEA Rn, STACK + imm     78    n + 400H   imm          Rn := imm + address(STACK)
-    L#hex:                  79      hex       0           метка:
-    SYSCALL Rn              80       n        0           системный вызов; Rn содержит адрес параметров
-    ADD Rn, Rm, imm         81   m*256 + n   imm          Rn := Rm + imm
-    LLA Rn, L#hex           82       n       hex          Rn := address(L#hex)
+    CMP Rn, Rm              64       n        m           сравнить Rn и Rm
+    CMP Rn, imm             65       n       imm          сравнить Rn и imm
+    SYSCALL Rn              67       n        0           системный вызов; Rn содержит адрес параметров
+    JBT L#hex               68      hex       0           перейти на метку L#hex, если "ниже"
+    ADD Rn, Rm, imm         69   m*256 + n   imm          Rn := Rm + imm
+    JEQ L#hex               70      hex       0           перейти на метку L#hex, если "равно"
+    JNE L#hex               71      hex       0           перейти на метку L#hex, если "не равно"
+    JLT L#hex               72      hex       0           перейти на метку L#hex, если "меньше"
+    JGЕ L#hex               73      hex       0           перейти на метку L#hex, если "не меньше"
+    JGT L#hex               74      hex       0           перейти на метку L#hex, если "больше"
+    JLЕ L#hex               75      hex       0           перейти на метку L#hex, если "не больше"
+    SEQ Rn                  76       n        0           если "равно": Rn := 1, иначе Rn := 0
+    SNE Rn                  77       n        0           если "не равно": Rn := 1, иначе Rn := 0
+    SLT Rn                  78       n        0           если "меньше": Rn := 1, иначе Rn := 0
+    SGЕ Rn                  79       n        0           если "не меньше": Rn := 1, иначе Rn := 0
+    SGT Rn                  80       n        0           если "больше": Rn := 1, иначе Rn := 0
+    SLЕ Rn                  81       n        0           если "не больше": Rn := 1, иначе Rn := 0
+
+Команда CMP сохраняет результат сравнения в скрытом регистре, этот результат используется
+в командах перехода по условию (JEQ, JNE, JLT, JGE, JGT, JLE, JBT) а также в командах
+установки регистра по условию (SEQ, SNE, SLT, SGE, SGT, SLE).
 
 ---------------------------------------------------------------------------------------------------
 

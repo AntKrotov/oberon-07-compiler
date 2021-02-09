@@ -31,22 +31,23 @@ CONST
 
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opABS = 5;
     opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opJGZ = 13; opJZ = 14; opJNZ = 15; opJNA = 16; opJGA = 17;
+    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; opJNA = 16; opJGA = 17;
     opJLA = 18; opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
     opSTB = 34; opSTH = 36; opSTW = 38; opINCL = 40; opEXCL = 42;
     opIN = 44; opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
-    opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opEQ = 64; opNE = 66;
-    opLT = 68; opLE = 70; opGT = 72; opGE = 74; opBT = 76;
+    opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opCMP = 64;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
     opSTBC = 35; opSTHC = 37; opSTWC = 39; opINCLC = 41; opEXCLC = 43;
     opINC = 45; opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
-    opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opEQC = 65; opNEC = 67;
-    opLTC = 69; opLEC = 71; opGTC = 73; opGEC = 75; opBTC = 77;
+    opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opCMPC = 65;
 
-    opLEA = 78; opLABEL = 79; opSYSCALL = 80; opADDRC = 81; opLLA = 82;
+    opSYSCALL = 67; opJBT = 68; opADDRC = 69;
+
+    opJEQ = 70; opJNE = 71; opJLT = 72; opJGE = 73; opJGT = 74; opJLE = 75;
+    opSEQ = 76; opSNE = 77; opSLT = 78; opSGE = 79; opSGT = 80; opSLE = 81;
 
     inf = 7F800000H;
 
@@ -230,7 +231,8 @@ END ProcAdr;
 
 PROCEDURE jnz (r, label: INTEGER);
 BEGIN
-    Emit(opJNZ, r, label)
+    Emit(opCMPC, r, 0);
+    Emit(opJNE, label, 0)
 END jnz;
 
 
@@ -239,6 +241,20 @@ BEGIN
     Emit(opCALL, IL.codes.rtl[proc], 0);
     addrc(SP, par * 4)
 END CallRTL;
+
+
+PROCEDURE jcc (cc: INTEGER): INTEGER;
+BEGIN
+    CASE cc OF
+    |IL.opEQ, IL.opEQC: cc := opJEQ
+    |IL.opNE, IL.opNEC: cc := opJNE
+    |IL.opLT, IL.opLTC: cc := opJLT
+    |IL.opLE, IL.opLEC: cc := opJLE
+    |IL.opGT, IL.opGTC: cc := opJGT
+    |IL.opGE, IL.opGEC: cc := opJGE
+    END
+    RETURN cc
+END jcc;
 
 
 PROCEDURE translate;
@@ -546,59 +562,27 @@ BEGIN
             mov(r1, r2);
             drop
 
-        |IL.opEQ:
-            BinOp(r1, r2);
-            Emit(opEQ, r1, r2);
-            drop
-
-        |IL.opNE:
-            BinOp(r1, r2);
-            Emit(opNE, r1, r2);
-            drop
-
-        |IL.opLT:
-            BinOp(r1, r2);
-            Emit(opLT, r1, r2);
-            drop
-
-        |IL.opLE:
-            BinOp(r1, r2);
-            Emit(opLE, r1, r2);
-            drop
-
-        |IL.opGT:
-            BinOp(r1, r2);
-            Emit(opGT, r1, r2);
-            drop
-
-        |IL.opGE:
-            BinOp(r1, r2);
-            Emit(opGE, r1, r2);
-            drop
-
-        |IL.opEQC:
-            UnOp(r1);
-            Emit(opEQC, r1, param2)
-
-        |IL.opNEC:
-            UnOp(r1);
-            Emit(opNEC, r1, param2)
-
-        |IL.opLTC:
-            UnOp(r1);
-            Emit(opLTC, r1, param2)
-
-        |IL.opLEC:
-            UnOp(r1);
-            Emit(opLEC, r1, param2)
-
-        |IL.opGTC:
-            UnOp(r1);
-            Emit(opGTC, r1, param2)
-
-        |IL.opGEC:
-            UnOp(r1);
-            Emit(opGEC, r1, param2)
+        |IL.opEQ .. IL.opGE, IL.opEQC .. IL.opGEC:
+            IF (IL.opEQ <= opcode) & (opcode <= IL.opGE) THEN
+                BinOp(r1, r2);
+                Emit(opCMP, r1, r2);
+                drop
+            ELSE
+                UnOp(r1);
+                Emit(opCMPC, r1, param2)
+            END;
+            next := cmd.next(IL.COMMAND);
+            IF next.opcode = IL.opJZ THEN
+                Emit(ORD(BITS(jcc(opcode)) / {0}), next.param1, 0);
+                cmd := next;
+                drop
+            ELSIF next.opcode = IL.opJNZ THEN
+                Emit(jcc(opcode), next.param1, 0);
+                cmd := next;
+                drop
+            ELSE
+                Emit(jcc(opcode) + 6, r1, 0)
+            END
 
         |IL.opJNZ1:
             UnOp(r1);
@@ -606,7 +590,8 @@ BEGIN
 
         |IL.opJG:
             UnOp(r1);
-            Emit(opJGZ, r1, param1)
+            Emit(opCMPC, r1, 0);
+            Emit(opJGT, param1, 0)
 
         |IL.opJNZ:
             UnOp(r1);
@@ -615,7 +600,8 @@ BEGIN
 
         |IL.opJZ:
             UnOp(r1);
-            Emit(opJZ, r1, param1);
+            Emit(opCMPC, r1, 0);
+            Emit(opJEQ, param1, 0);
             drop
 
         |IL.opMULS:
@@ -790,7 +776,8 @@ BEGIN
 
         |IL.opSBOOL:
             BinOp(r2, r1);
-            Emit(opNEC, r2, 0);
+            Emit(opCMPC, r2, 0);
+            Emit(opSNE, r2, 0);
             str8(r1, r2);
             drop;
             drop
@@ -870,39 +857,33 @@ BEGIN
 
         |IL.opEQB, IL.opNEB:
             BinOp(r1, r2);
-            Emit(opNEC, r1, 0);
-            Emit(opNEC, r2, 0);
+            Emit(opCMPC, r1, 0);
+            Emit(opSNE, r1, 0);
+            Emit(opCMPC, r2, 0);
+            Emit(opSNE, r2, 0);
+            Emit(opCMP, r1, r2);
             IF opcode = IL.opEQB THEN
-                Emit(opEQ, r1, r2)
+                Emit(opSEQ, r1, 0)
             ELSE
-                Emit(opNE, r1, r2)
+                Emit(opSNE, r1, 0)
             END;
             drop
 
         |IL.opCHKBYTE:
             BinOp(r1, r2);
-            r3 := GetAnyReg();
-            mov(r3, r1);
-            Emit(opBTC, r3, 256);
-            jnz(r3, param1);
-            drop
+            Emit(opCMPC, r1, 256);
+            Emit(opJBT, param1, 0)
 
         |IL.opCHKIDX:
             UnOp(r1);
-            r2 := GetAnyReg();
-            mov(r2, r1);
-            Emit(opBTC, r2, param2);
-            jnz(r2, param1);
-            drop
+            Emit(opCMPC, r1, param2);
+            Emit(opJBT, param1, 0)
 
         |IL.opCHKIDX2:
             BinOp(r1, r2);
             IF param2 # -1 THEN
-                r3 := GetAnyReg();
-                mov(r3, r2);
-                Emit(opBT, r3, r1);
-                jnz(r3, param1);
-                drop
+                Emit(opCMP, r2, r1);
+                Emit(opJBT, param1, 0)
             END;
             INCL(R.regs, r1);
             DEC(R.top);
@@ -911,10 +892,11 @@ BEGIN
         |IL.opEQP, IL.opNEP:
             ProcAdr(GetAnyReg(), param1);
             BinOp(r1, r2);
+            Emit(opCMP, r1, r2);
             IF opcode = IL.opEQP THEN
-                Emit(opEQ, r1, r2)
+                Emit(opSEQ, r1, 0)
             ELSE
-                Emit(opNE, r1, r2)
+                Emit(opSNE, r1, 0)
             END;
             drop
 
@@ -952,11 +934,13 @@ BEGIN
 
         |IL.opNOT:
             UnOp(r1);
-            Emit(opEQC, r1, 0)
+            Emit(opCMPC, r1, 0);
+            Emit(opSEQ, r1, 0)
 
         |IL.opORD:
             UnOp(r1);
-            Emit(opNEC, r1, 0)
+            Emit(opCMPC, r1, 0);
+            Emit(opSNE, r1, 0)
 
         |IL.opMIN:
             BinOp(r1, r2);

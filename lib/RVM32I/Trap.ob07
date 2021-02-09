@@ -23,7 +23,7 @@ PROCEDURE [code] syscall* (ptr: INTEGER)
     22, 0, SP,  (*  MOV      R0, SP  *)
     27, 0, 4,   (*  ADD      R0,  4  *)
      9, 0, 0,   (*  LDW      R0, R0  *)
-    80, 0, 0;   (*  SYSCALL  R0      *)
+    67, 0, 0;   (*  SYSCALL  R0      *)
 
 
 PROCEDURE Char (c: CHAR);
