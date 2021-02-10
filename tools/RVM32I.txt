@@ -93,10 +93,10 @@
     ENTER imm                2      imm       0           push BP; BP := SP; WHILE imm > 0 DO push 0; DEC(imm) END
     NEG Rn                   3       n        0           Rn := -Rn
     NOT Rn                   4       n        0           Rn := ORD(-BITS(Rn))
-    ABS Rn                   5       n        0           Rn := ABS(Rn)
+    NOP                      5       0        0           нет операции
     XCHG Rn, Rm              6       n        m           temp := Rn; Rn := Rm; Rm := temp
-    LDB Rn, [Rm + imm]       7   m*256 + n   imm          Rn := BytePtr(Rm + imm)^
-    LDH Rn, [Rm + imm]       8   m*256 + n   imm          Rn := Card16Ptr(Rm + imm)^
+    LDB Rn, [Rm + imm]       7   m*256 + n   imm          Rn := UInt8Ptr(Rm + imm)^
+    LDH Rn, [Rm + imm]       8   m*256 + n   imm          Rn := UInt16Ptr(Rm + imm)^
     LDW Rn, [Rm + imm]       9   m*256 + n   imm          Rn := Int32Ptr(Rm + imm)^
     PUSH Rn                 10       n        0           DEC(SP, 4); Int32Ptr(SP)^ := Rn
     PUSH imm                11      imm       0           DEC(SP, 4); Int32Ptr(SP)^ := imm
@@ -108,9 +108,7 @@
     LEA Rn, HEAP + imm      14    n + 300H   imm          Rn := imm + address(HEAP)
     LEA Rn, STACK + imm     14    n + 400H   imm          Rn := imm + address(STACK)
     LLA Rn, L#hex           15       n       hex          Rn := address(L#hex)
-    JNA imm, L#hex          16      imm      hex          IF R0 # imm THEN goto L#hex
-    JGA imm, L#hex          17      imm      hex          IF R0 > imm THEN goto L#hex
-    JLA imm, L#hex          18      imm      hex          IF R0 < imm THEN goto L#hex
+
     JMP L#hex               19      hex       0           goto L#hex
     CALL L#hex              20      hex       0           push PC; goto L#hex
     CALL Rn                 21       n        0           push PC; goto Rn
@@ -126,18 +124,13 @@
     DIV Rn, imm             31       n       imm          Rn := Rn DIV imm
     MOD Rn, Rm              32       n        m           Rn := Rn MOD Rm
     MOD Rn, imm             33       n       imm          Rn := Rn MOD imm
-    STB [Rn + imm], Rm      34   n*256 + m   imm          BytePtr(Rn + imm)^ := Rm MOD 256
-    STB [Rn], imm           35       n       imm          BytePtr(Rn)^ := imm MOD 256
-    STH [Rn + imm], Rm      36   n*256 + m   imm          Card16Ptr(Rn + imm)^ := Rm MOD 65536
-    STH [Rn], imm           37       n       imm          Card16Ptr(Rn)^ := imm MOD 65536
+    STB [Rn + imm], Rm      34   n*256 + m   imm          UInt8Ptr(Rn + imm)^ := Rm MOD 256
+    STB [Rn], imm           35       n       imm          UInt8Ptr(Rn)^ := imm MOD 256
+    STH [Rn + imm], Rm      36   n*256 + m   imm          UInt16Ptr(Rn + imm)^ := Rm MOD 65536
+    STH [Rn], imm           37       n       imm          UInt16Ptr(Rn)^ := imm MOD 65536
     STW [Rn + imm], Rm      38   n*256 + m   imm          Int32Ptr(Rn + imm)^ := Rm
     STW [Rn], imm           39       n       imm          Int32Ptr(Rn)^ := imm
-    INCL Rn, Rm             40       n        m           Int32Ptr(Rn)^ := ORD(BITS(Int32Ptr(Rn)^) + {Rm})
-    INCL Rn, imm            41       n       imm          Int32Ptr(Rn)^ := ORD(BITS(Int32Ptr(Rn)^) + {imm})
-    EXCL Rn, Rm             42       n        m           Int32Ptr(Rn)^ := ORD(BITS(Int32Ptr(Rn)^) - {Rm})
-    EXCL Rn, imm            43       n       imm          Int32Ptr(Rn)^ := ORD(BITS(Int32Ptr(Rn)^) - {imm})
-    IN Rn, Rm               44       n        m           Rn := ORD(Rn IN Rm)
-    IN Rn, imm              45       n       imm          Rn := ORD(Rn IN imm)
+
     AND Rn, Rm              46       n        m           Rn := ORD(BITS(Rn) * BITS(Rm))
     AND Rn, imm             47       n       imm          Rn := ORD(BITS(Rn) * BITS(imm))
     OR Rn, Rm               48       n        m           Rn := ORD(BITS(Rn) + BITS(Rm))
@@ -152,12 +145,10 @@
     LSL Rn, imm             57       n       imm          Rn := LSL(Rn, imm)
     ROR Rn, Rm              58       n        m           Rn := ROR(Rn, Rm)
     ROR Rn, imm             59       n       imm          Rn := ROR(Rn, imm)
-    MIN Rn, Rm              60       n        m           IF Rm < Rn THEN Rn := Rm
-    MIN Rn, imm             61       n       imm          IF imm < Rn THEN Rn := imm
-    MAX Rn, Rm              62       n        m           IF Rm > Rn THEN Rn := Rm
-    MAX Rn, imm             63       n       imm          IF imm > Rn THEN Rn := imm
+
     CMP Rn, Rm              64       n        m           сравнить Rn и Rm
     CMP Rn, imm             65       n       imm          сравнить Rn и imm
+    BIT Rn, Rm              66       n        m           Rn := ORD({Rm})
     SYSCALL Rn              67       n        0           системный вызов; Rn содержит адрес параметров
     JBT L#hex               68      hex       0           перейти на метку L#hex, если "ниже"
     ADD Rn, Rm, imm         69   m*256 + n   imm          Rn := Rm + imm

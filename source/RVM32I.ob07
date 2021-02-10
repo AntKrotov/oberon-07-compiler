@@ -29,22 +29,22 @@ CONST
 
     GPRs = {0 .. 2} + {5 .. numGPRs + 1};
 
-    opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opABS = 5;
+    opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opNOP = 5;
     opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; opJNA = 16; opJGA = 17;
-    opJLA = 18; opJMP = 19; opCALL = 20; opCALLI = 21;
+    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; (* 16, 17, 18 *)
+    opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
-    opSTB = 34; opSTH = 36; opSTW = 38; opINCL = 40; opEXCL = 42;
-    opIN = 44; opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
-    opLSL = 56; opROR = 58; opMIN = 60; opMAX = 62; opCMP = 64;
+    opSTB = 34; opSTH = 36; opSTW = 38; (* 40, 42, 44 *)
+    opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
+    opLSL = 56; opROR = 58; (* 60, 62 *) opCMP = 64;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
-    opSTBC = 35; opSTHC = 37; opSTWC = 39; opINCLC = 41; opEXCLC = 43;
-    opINC = 45; opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
-    opLSLC = 57; opRORC = 59; opMINC = 61; opMAXC = 63; opCMPC = 65;
+    opSTBC = 35; opSTHC = 37; opSTWC = 39; (* 41, 43, 45 *)
+    opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
+    opLSLC = 57; opRORC = 59; (* 61, 63 *) opCMPC = 65;
 
-    opSYSCALL = 67; opJBT = 68; opADDRC = 69;
+    opBIT = 66; opSYSCALL = 67; opJBT = 68; opADDRC = 69;
 
     opJEQ = 70; opJNE = 71; opJLT = 72; opJGE = 73; opJGT = 74; opJLE = 75;
     opSEQ = 76; opSNE = 77; opSLT = 78; opSGE = 79; opSGT = 80; opSLE = 81;
@@ -257,11 +257,37 @@ BEGIN
 END jcc;
 
 
+PROCEDURE shift1 (op, param: INTEGER);
+VAR
+    r1, r2: INTEGER;
+
+BEGIN
+    r2 := GetAnyReg();
+    Emit(opMOVC, r2, param);
+    BinOp(r1, r2);
+    Emit(op, r2, r1);
+    mov(r1, r2);
+    drop
+END shift1;
+
+
+PROCEDURE shift (op: INTEGER);
+VAR
+    r1, r2: INTEGER;
+
+BEGIN
+    BinOp(r1, r2);
+    Emit(op, r1, r2);
+    drop
+END shift;
+
+
 PROCEDURE translate;
 VAR
     cmd, next: IL.COMMAND;
     opcode, param1, param2: INTEGER;
     r1, r2, r3: INTEGER;
+    label: INTEGER;
 
 BEGIN
     cmd := IL.codes.commands.first(IL.COMMAND);
@@ -651,56 +677,28 @@ BEGIN
             Emit(opNOT, r1, 0)
 
         |IL.opASR:
-            BinOp(r1, r2);
-            Emit(opASR, r1, r2);
-            drop
+            shift(opASR)
 
         |IL.opLSL:
-            BinOp(r1, r2);
-            Emit(opLSL, r1, r2);
-            drop
+            shift(opLSL)
 
         |IL.opROR:
-            BinOp(r1, r2);
-            Emit(opROR, r1, r2);
-            drop
+            shift(opROR)
 
         |IL.opLSR:
-            BinOp(r1, r2);
-            Emit(opLSR, r1, r2);
-            drop
+            shift(opLSR)
 
         |IL.opASR1:
-            r2 := GetAnyReg();
-            Emit(opMOVC, r2, param2);
-            BinOp(r1, r2);
-            Emit(opASR, r2, r1);
-            mov(r1, r2);
-            drop
+            shift1(opASR, param2)
 
         |IL.opLSL1:
-            r2 := GetAnyReg();
-            Emit(opMOVC, r2, param2);
-            BinOp(r1, r2);
-            Emit(opLSL, r2, r1);
-            mov(r1, r2);
-            drop
+            shift1(opLSL, param2)
 
         |IL.opROR1:
-            r2 := GetAnyReg();
-            Emit(opMOVC, r2, param2);
-            BinOp(r1, r2);
-            Emit(opROR, r2, r1);
-            mov(r1, r2);
-            drop
+            shift1(opROR, param2)
 
         |IL.opLSR1:
-            r2 := GetAnyReg();
-            Emit(opMOVC, r2, param2);
-            BinOp(r1, r2);
-            Emit(opLSR, r2, r1);
-            mov(r1, r2);
-            drop
+            shift1(opLSR, param2)
 
         |IL.opASR2:
             UnOp(r1);
@@ -728,7 +726,11 @@ BEGIN
 
         |IL.opABS:
             UnOp(r1);
-            Emit(opABS, r1, 0)
+            Emit(opCMPC, r1, 0);
+            label := IL.NewLabel();
+            Emit(opJGE, label, 0);
+            Emit(opNEG, r1, 0);
+            Emit(opLABEL, label, 0)
 
         |IL.opLEN:
             UnOp(r1);
@@ -761,17 +763,20 @@ BEGIN
         |IL.opENDSW:
 
         |IL.opCASEL:
-            Emit(opJLA, param1, param2)
+            Emit(opCMPC, ACC, param1);
+            Emit(opJLT, param2, 0)
 
         |IL.opCASER:
-            Emit(opJGA, param1, param2)
+            Emit(opCMPC, ACC, param1);
+            Emit(opJGT, param2, 0)
 
         |IL.opCASELR:
+            Emit(opCMPC, ACC, param1);
             IF param2 = cmd.param3 THEN
-                Emit(opJNA, param1, param2)
+                Emit(opJNE, param2, 0)
             ELSE
-                Emit(opJLA, param1, param2);
-                Emit(opJGA, param1, cmd.param3)
+                Emit(opJLT, param2, 0);
+                Emit(opJGT, cmd.param3, 0)
             END
 
         |IL.opSBOOL:
@@ -838,21 +843,31 @@ BEGIN
 
         |IL.opINCL, IL.opEXCL:
             BinOp(r2, r1);
+            Emit(opBIT, r2, r2);
+            r3 := GetAnyReg();
+            ldr32(r3, r1);
             IF opcode = IL.opINCL THEN
-                Emit(opINCL, r1, r2)
+                Emit(opOR, r3, r2)
             ELSE
-                Emit(opEXCL, r1, r2)
+                Emit(opNOT, r2, 0);
+                Emit(opAND, r3, r2)
             END;
+            str32(r1, r3);
+            drop;
             drop;
             drop
 
         |IL.opINCLC, IL.opEXCLC:
             UnOp(r1);
+            r2 := GetAnyReg();
+            ldr32(r2, r1);
             IF opcode = IL.opINCLC THEN
-                Emit(opINCLC, r1, param2)
+                Emit(opORC, r2, ORD({param2}))
             ELSE
-                Emit(opEXCLC, r1, param2)
+                Emit(opANDC, r2, ORD(-{param2}))
             END;
+            str32(r1, r2);
+            drop;
             drop
 
         |IL.opEQB, IL.opNEB:
@@ -942,40 +957,51 @@ BEGIN
             Emit(opCMPC, r1, 0);
             Emit(opSNE, r1, 0)
 
-        |IL.opMIN:
+        |IL.opMIN, IL.opMAX:
             BinOp(r1, r2);
-            Emit(opMIN, r1, r2);
+            Emit(opCMP, r1, r2);
+            label := IL.NewLabel();
+            IF opcode = IL.opMIN THEN
+                Emit(opJLE, label, 0)
+            ELSE
+                Emit(opJGE, label, 0)
+            END;
+            Emit(opMOV, r1, r2);
+            Emit(opLABEL, label, 0);
             drop
 
-        |IL.opMAX:
-            BinOp(r1, r2);
-            Emit(opMAX, r1, r2);
-            drop
-
-        |IL.opMINC:
+        |IL.opMINC, IL.opMAXC:
             UnOp(r1);
-            Emit(opMINC, r1, param2)
-
-        |IL.opMAXC:
-            UnOp(r1);
-            Emit(opMAXC, r1, param2)
+            Emit(opCMPC, r1, param2);
+            label := IL.NewLabel();
+            IF opcode = IL.opMINC THEN
+                Emit(opJLE, label, 0)
+            ELSE
+                Emit(opJGE, label, 0)
+            END;
+            Emit(opMOVC, r1, param2);
+            Emit(opLABEL, label, 0)
 
         |IL.opIN:
             BinOp(r1, r2);
-            Emit(opIN, r1, r2);
+            Emit(opBIT, r1, r1);
+            Emit(opAND, r1, r2);
+            Emit(opCMPC, r1, 0);
+            Emit(opSNE, r1, 0);
             drop
 
         |IL.opINL:
-            r1 := GetAnyReg();
-            movrc(r1, param2);
-            BinOp(r2, r1);
-            Emit(opIN, r1, r2);
-            mov(r2, r1);
-            drop
+            UnOp(r1);
+            Emit(opANDC, r1, ORD({param2}));
+            Emit(opCMPC, r1, 0);
+            Emit(opSNE, r1, 0)
 
         |IL.opINR:
             UnOp(r1);
-            Emit(opINC, r1, param2)
+            Emit(opBIT, r1, r1);
+            Emit(opANDC, r1, param2);
+            Emit(opCMPC, r1, 0);
+            Emit(opSNE, r1, 0)
 
         |IL.opERR:
             CallRTL(IL._error, 4)
