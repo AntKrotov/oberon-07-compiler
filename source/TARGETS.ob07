@@ -7,6 +7,8 @@
 
 MODULE TARGETS;
 
+IMPORT UTILS;
+
 
 CONST
 
@@ -25,16 +27,20 @@ CONST
     Linux64SO*    = 12;
     STM32CM3*     = 13;
     RVM32I*       = 14;
+    RVM64I*       = 15;
 
     cpuX86* = 0; cpuAMD64* = 1; cpuMSP430* = 2; cpuTHUMB* = 3;
-    cpuRVM32I* = 4;
+    cpuRVM32I* = 4; cpuRVM64I* = 5;
 
     osNONE*    = 0;  osWIN32*   = 1;  osWIN64* = 2;
     osLINUX32* = 3;  osLINUX64* = 4;  osKOS*   = 5;
 
-    noDISPOSE = {MSP430, STM32CM3, RVM32I};
+    noDISPOSE = {MSP430, STM32CM3, RVM32I, RVM64I};
 
     noRTL = {MSP430};
+
+    libRVM32I = "RVMxI" + UTILS.slash + "32";
+    libRVM64I = "RVMxI" + UTILS.slash + "64";
 
 
 TYPE
@@ -51,9 +57,9 @@ TYPE
 
 VAR
 
-    Targets*: ARRAY 15 OF TARGET;
+    Targets*: ARRAY 16 OF TARGET;
 
-    CPUs: ARRAY 5 OF
+    CPUs: ARRAY 6 OF
         RECORD
             BitDepth, InstrSize: INTEGER;
             LittleEndian: BOOLEAN
@@ -126,6 +132,7 @@ BEGIN
     EnterCPU(cpuMSP430, 16, 2, TRUE);
     EnterCPU(cpuTHUMB,  32, 2, TRUE);
     EnterCPU(cpuRVM32I, 32, 4, TRUE);
+    EnterCPU(cpuRVM64I, 64, 8, TRUE);
 
     Enter( MSP430,        cpuMSP430,  0,  osNONE,     "msp430",      "MSP430",    ".hex");
     Enter( Win32C,        cpuX86,     8,  osWIN32,    "win32con",    "Windows",   ".exe");
@@ -141,5 +148,6 @@ BEGIN
     Enter( Linux64,       cpuAMD64,   8,  osLINUX64,  "linux64exe",  "Linux",     "");
     Enter( Linux64SO,     cpuAMD64,   8,  osLINUX64,  "linux64so",   "Linux",     ".so");
     Enter( STM32CM3,      cpuTHUMB,   4,  osNONE,     "stm32cm3",    "STM32CM3",  ".hex");
-    Enter( RVM32I,        cpuRVM32I,  4,  osNONE,     "rvm32i",      "RVM32I",    ".bin");
+    Enter( RVM32I,        cpuRVM32I,  4,  osNONE,     "rvm32i",      libRVM32I,   ".bin");
+    Enter( RVM64I,        cpuRVM64I,  8,  osNONE,     "rvm64i",      libRVM64I,   ".bin");
 END TARGETS.

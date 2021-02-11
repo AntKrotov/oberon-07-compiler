@@ -311,6 +311,7 @@ BEGIN
     |TARGETS.cpuMSP430:
     |TARGETS.cpuTHUMB:
     |TARGETS.cpuRVM32I:
+    |TARGETS.cpuRVM64I:
     END;
 
     ST.compile(path, lib_path, modname, outname, target, options);

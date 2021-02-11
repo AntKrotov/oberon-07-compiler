@@ -9,7 +9,7 @@ MODULE STATEMENTS;
 
 IMPORT
 
-    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, IL, X86, AMD64, MSP430, THUMB, RVM32I,
+    PARS, PROG, SCAN, ARITH, STRINGS, LISTS, IL, X86, AMD64, MSP430, THUMB, RVMxI,
     ERRORS, UTILS, AVL := AVLTREES, CONSOLE, C := COLLECTIONS, TARGETS;
 
 
@@ -3310,7 +3310,7 @@ BEGIN
         getproc(rtl, "_isrec",    IL._isrec);
         getproc(rtl, "_dllentry", IL._dllentry);
         getproc(rtl, "_sofinit",  IL._sofinit)
-    ELSIF CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuRVM32I} THEN
+    ELSIF CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuRVM32I, TARGETS.cpuRVM64I} THEN
         getproc(rtl, "_fmul",  IL._fmul);
         getproc(rtl, "_fdiv",  IL._fdiv);
         getproc(rtl, "_fdivi", IL._fdivi);
@@ -3322,7 +3322,7 @@ BEGIN
         getproc(rtl, "_flt",   IL._flt);
         getproc(rtl, "_pack",  IL._pack);
         getproc(rtl, "_unpk",  IL._unpk);
-        IF CPU = TARGETS.cpuRVM32I THEN
+        IF CPU IN {TARGETS.cpuRVM32I, TARGETS.cpuRVM64I} THEN
             getproc(rtl, "_error", IL._error)
         END
     END
@@ -3401,7 +3401,8 @@ BEGIN
     |TARGETS.cpuX86:       X86.CodeGen(outname, target, options)
     |TARGETS.cpuMSP430: MSP430.CodeGen(outname, target, options)
     |TARGETS.cpuTHUMB:   THUMB.CodeGen(outname, target, options)
-    |TARGETS.cpuRVM32I: RVM32I.CodeGen(outname, target, options)
+    |TARGETS.cpuRVM32I,
+     TARGETS.cpuRVM64I:  RVMxI.CodeGen(outname, target, options)
     END
 
 END compile;

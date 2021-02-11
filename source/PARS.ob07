@@ -668,7 +668,11 @@ BEGIN
              ELSE
                  call := PROG.cdecl
              END
-        |64: call := PROG.default64
+        |64: IF TARGETS.CPU = TARGETS.cpuAMD64 THEN
+                 call := PROG.default64
+             ELSE
+                 call := PROG.cdecl
+             END
         END
     END;
 

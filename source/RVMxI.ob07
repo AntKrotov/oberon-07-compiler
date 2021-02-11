@@ -5,11 +5,11 @@
     All rights reserved.
 *)
 
-MODULE RVM32I;
+MODULE RVMxI;
 
 IMPORT
 
-    PROG, WR := WRITER, IL, CHL := CHUNKLISTS, REG, UTILS, STRINGS, ERRORS;
+    PROG, WR := WRITER, IL, CHL := CHUNKLISTS, REG, UTILS, STRINGS, ERRORS, TARGETS;
 
 
 CONST
@@ -31,16 +31,17 @@ CONST
 
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opNOP = 5;
     opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; (* 16, 17, 18 *)
+    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15;
+    opLDD = 16; (* 17, 18 *)
     opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
-    opSTB = 34; opSTH = 36; opSTW = 38; (* 40, 42, 44 *)
+    opSTB = 34; opSTH = 36; opSTW = 38; opSTD = 40; (* 42, 44 *)
     opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
     opLSL = 56; opROR = 58; (* 60, 62 *) opCMP = 64;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
-    opSTBC = 35; opSTHC = 37; opSTWC = 39; (* 41, 43, 45 *)
+    opSTBC = 35; opSTHC = 37; opSTWC = 39; opSTDC = 41; (* 43, 45 *)
     opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
     opLSLC = 57; opRORC = 59; (* 61, 63 *) opCMPC = 65;
 
@@ -49,12 +50,12 @@ CONST
     opJEQ = 70; opJNE = 71; opJLT = 72; opJGE = 73; opJGT = 74; opJLE = 75;
     opSEQ = 76; opSNE = 77; opSLT = 78; opSGE = 79; opSGT = 80; opSLE = 81;
 
-    inf = 7F800000H;
-
 
 VAR
 
-    R: REG.REGS; count: INTEGER;
+    R: REG.REGS; count, szWord: INTEGER;
+
+    ldr, str: PROCEDURE (r1, r2: INTEGER);
 
 
 PROCEDURE OutByte (n: BYTE);
@@ -66,8 +67,13 @@ END OutByte;
 
 PROCEDURE OutInt (n: INTEGER);
 BEGIN
-    WR.Write32LE(n);
-    INC(count, 4)
+    IF szWord = 8 THEN
+        WR.Write64LE(n);
+        INC(count, 8)
+    ELSE (* szWord = 4 *)
+        WR.Write32LE(n);
+        INC(count, 4)
+    END
 END OutInt;
 
 
@@ -175,6 +181,12 @@ BEGIN
 END sub;
 
 
+PROCEDURE ldr64 (r1, r2: INTEGER);
+BEGIN
+    Emit(opLDD, r2 * 256 + r1, 0)
+END ldr64;
+
+
 PROCEDURE ldr32 (r1, r2: INTEGER);
 BEGIN
     Emit(opLDW, r2 * 256 + r1, 0)
@@ -191,6 +203,12 @@ PROCEDURE ldr8 (r1, r2: INTEGER);
 BEGIN
     Emit(opLDB, r2 * 256 + r1, 0)
 END ldr8;
+
+
+PROCEDURE str64 (r1, r2: INTEGER);
+BEGIN
+    Emit(opSTD, r1 * 256 + r2, 0)
+END str64;
 
 
 PROCEDURE str32 (r1, r2: INTEGER);
@@ -239,7 +257,7 @@ END jnz;
 PROCEDURE CallRTL (proc, par: INTEGER);
 BEGIN
     Emit(opCALL, IL.codes.rtl[proc], 0);
-    addrc(SP, par * 4)
+    addrc(SP, par * szWord)
 END CallRTL;
 
 
@@ -282,14 +300,24 @@ BEGIN
 END shift;
 
 
-PROCEDURE translate;
+PROCEDURE translate (szWord: INTEGER);
 VAR
     cmd, next: IL.COMMAND;
-    opcode, param1, param2: INTEGER;
-    r1, r2, r3: INTEGER;
-    label: INTEGER;
+
+    opcode, param1, param2, r1, r2, r3,
+    a, b, label, opLD, opST, opSTC: INTEGER;
 
 BEGIN
+    IF szWord = 8 THEN
+        opLD  := opLDD;
+        opST  := opSTD;
+        opSTC := opSTDC
+    ELSE
+        opLD  := opLDW;
+        opST  := opSTW;
+        opSTC := opSTWC
+    END;
+
     cmd := IL.codes.commands.first(IL.COMMAND);
 
     WHILE cmd # NIL DO
@@ -320,7 +348,7 @@ BEGIN
 
         |IL.opCLEANUP:
             IF param2 # 0 THEN
-                addrc(SP, param2 * 4)
+                addrc(SP, param2 * szWord)
             END
 
         |IL.opNOP, IL.opAND, IL.opOR:
@@ -332,24 +360,30 @@ BEGIN
             GlobalAdr(GetAnyReg(), param2)
 
         |IL.opLADR:
+            param2 := param2 * szWord;
             next := cmd.next(IL.COMMAND);
-            IF (next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVE32) OR (next.opcode = IL.opSAVEF) THEN
+            IF ((next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVEF)) & (szWord = 8) OR (next.opcode = IL.opSAVE64) THEN
                 UnOp(r1);
-                Emit(opSTW, BP * 256 + r1, param2 * 4);
+                Emit(opSTD, BP * 256 + r1, param2);
+                drop;
+                cmd := next
+            ELSIF ((next.opcode = IL.opSAVE) OR (next.opcode = IL.opSAVEF)) & (szWord = 4) OR (next.opcode = IL.opSAVE32) THEN
+                UnOp(r1);
+                Emit(opSTW, BP * 256 + r1, param2);
                 drop;
                 cmd := next
             ELSIF next.opcode = IL.opSAVE16 THEN
                 UnOp(r1);
-                Emit(opSTH, BP * 256 + r1, param2 * 4);
+                Emit(opSTH, BP * 256 + r1, param2);
                 drop;
                 cmd := next
             ELSIF next.opcode = IL.opSAVE8 THEN
                 UnOp(r1);
-                Emit(opSTB, BP * 256 + r1, param2 * 4);
+                Emit(opSTB, BP * 256 + r1, param2);
                 drop;
                 cmd := next
             ELSE
-                Emit(opADDRC, BP * 256 + GetAnyReg(), param2 * 4)
+                Emit(opADDRC, BP * 256 + GetAnyReg(), param2)
             END
 
         |IL.opPARAM:
@@ -415,7 +449,7 @@ BEGIN
 
         |IL.opSAVEC:
             UnOp(r1);
-            Emit(opSTWC, r1, param2);
+            Emit(opSTC, r1, param2);
             drop
 
         |IL.opSAVE8C:
@@ -428,15 +462,27 @@ BEGIN
             Emit(opSTHC, r1, param2 MOD 65536);
             drop
 
-        |IL.opSAVE, IL.opSAVE32, IL.opSAVEF:
+        |IL.opSAVE, IL.opSAVEF:
+            BinOp(r2, r1);
+            str(r1, r2);
+            drop;
+            drop
+
+        |IL.opSAVE32:
             BinOp(r2, r1);
             str32(r1, r2);
             drop;
             drop
 
+        |IL.opSAVE64:
+            BinOp(r2, r1);
+            str64(r1, r2);
+            drop;
+            drop
+
         |IL.opSAVEFI:
             BinOp(r2, r1);
-            str32(r2, r1);
+            str(r2, r1);
             drop;
             drop
 
@@ -457,13 +503,29 @@ BEGIN
             GlobalAdr(r1, param2);
             ldr32(r1, r1)
 
-        |IL.opVADR, IL.opLLOAD32:
-            Emit(opLDW, BP * 256 + GetAnyReg(), param2 * 4)
+        |IL.opGLOAD64:
+            r1 := GetAnyReg();
+            GlobalAdr(r1, param2);
+            ldr64(r1, r1)
+
+        |IL.opVADR:
+            Emit(opLD, BP * 256 + GetAnyReg(), param2 * szWord)
+
+        |IL.opLLOAD32:
+            Emit(opLDW, BP * 256 + GetAnyReg(), param2 * szWord)
+
+        |IL.opLLOAD64:
+            Emit(opLDD, BP * 256 + GetAnyReg(), param2 * szWord)
 
         |IL.opVLOAD32:
             r1 := GetAnyReg();
-            Emit(opLDW, BP * 256 + r1, param2 * 4);
+            Emit(opLD, BP * 256 + r1, param2 * szWord);
             ldr32(r1, r1)
+
+        |IL.opVLOAD64:
+            r1 := GetAnyReg();
+            Emit(opLDD, BP * 256 + r1, param2 * szWord);
+            ldr64(r1, r1)
 
         |IL.opGLOAD16:
             r1 := GetAnyReg();
@@ -471,11 +533,11 @@ BEGIN
             ldr16(r1, r1)
 
         |IL.opLLOAD16:
-            Emit(opLDH, BP * 256 + GetAnyReg(), param2 * 4)
+            Emit(opLDH, BP * 256 + GetAnyReg(), param2 * szWord)
 
         |IL.opVLOAD16:
             r1 := GetAnyReg();
-            Emit(opLDW, BP * 256 + r1, param2 * 4);
+            Emit(opLD, BP * 256 + r1, param2 * szWord);
             ldr16(r1, r1)
 
         |IL.opGLOAD8:
@@ -484,11 +546,11 @@ BEGIN
             ldr8(r1, r1)
 
         |IL.opLLOAD8:
-            Emit(opLDB, BP * 256 + GetAnyReg(), param2 * 4)
+            Emit(opLDB, BP * 256 + GetAnyReg(), param2 * szWord)
 
         |IL.opVLOAD8:
             r1 := GetAnyReg();
-            Emit(opLDW, BP * 256 + r1, param2 * 4);
+            Emit(opLD, BP * 256 + r1, param2 * szWord);
             ldr8(r1, r1)
 
         |IL.opLOAD8:
@@ -499,9 +561,17 @@ BEGIN
             UnOp(r1);
             ldr16(r1, r1)
 
-        |IL.opLOAD32, IL.opLOADF:
+        |IL.opLOAD32:
             UnOp(r1);
             ldr32(r1, r1)
+
+        |IL.opLOAD64:
+            UnOp(r1);
+            ldr64(r1, r1)
+
+        |IL.opLOADF:
+            UnOp(r1);
+            ldr(r1, r1)
 
         |IL.opLOOP, IL.opENDLOOP:
 
@@ -523,7 +593,13 @@ BEGIN
             UnOp(r1);
             next := cmd.next(IL.COMMAND);
             CASE next.opcode OF
-            |IL.opLOAD32, IL.opLOADF:
+            |IL.opLOADF:
+                Emit(opLD, r1 * 256 + r1, param2);
+                cmd := next
+            |IL.opLOAD64:
+                Emit(opLDD, r1 * 256 + r1, param2);
+                cmd := next
+            |IL.opLOAD32:
                 Emit(opLDW, r1 * 256 + r1, param2);
                 cmd := next
             |IL.opLOAD16:
@@ -702,19 +778,19 @@ BEGIN
 
         |IL.opASR2:
             UnOp(r1);
-            Emit(opASRC, r1, param2 MOD 32)
+            Emit(opASRC, r1, param2 MOD (szWord * 8))
 
         |IL.opLSL2:
             UnOp(r1);
-            Emit(opLSLC, r1, param2 MOD 32)
+            Emit(opLSLC, r1, param2 MOD (szWord * 8))
 
         |IL.opROR2:
             UnOp(r1);
-            Emit(opRORC, r1, param2 MOD 32)
+            Emit(opRORC, r1, param2 MOD (szWord * 8))
 
         |IL.opLSR2:
             UnOp(r1);
-            Emit(opLSRC, r1, param2 MOD 32)
+            Emit(opLSRC, r1, param2 MOD (szWord * 8))
 
         |IL.opCHR:
             UnOp(r1);
@@ -795,9 +871,9 @@ BEGIN
         |IL.opINCC:
             UnOp(r1);
             r2 := GetAnyReg();
-            ldr32(r2, r1);
+            ldr(r2, r1);
             addrc(r2, param2);
-            str32(r1, r2);
+            str(r1, r2);
             drop;
             drop
 
@@ -830,13 +906,13 @@ BEGIN
         |IL.opINC, IL.opDEC:
             BinOp(r2, r1);
             r3 := GetAnyReg();
-            ldr32(r3, r1);
+            ldr(r3, r1);
             IF opcode = IL.opINC THEN
                 add(r3, r2)
             ELSE
                 sub(r3, r2)
             END;
-            str32(r1, r3);
+            str(r1, r3);
             drop;
             drop;
             drop
@@ -845,14 +921,14 @@ BEGIN
             BinOp(r2, r1);
             Emit(opBIT, r2, r2);
             r3 := GetAnyReg();
-            ldr32(r3, r1);
+            ldr(r3, r1);
             IF opcode = IL.opINCL THEN
                 Emit(opOR, r3, r2)
             ELSE
                 Emit(opNOT, r2, 0);
                 Emit(opAND, r3, r2)
             END;
-            str32(r1, r3);
+            str(r1, r3);
             drop;
             drop;
             drop
@@ -860,13 +936,13 @@ BEGIN
         |IL.opINCLC, IL.opEXCLC:
             UnOp(r1);
             r2 := GetAnyReg();
-            ldr32(r2, r1);
+            ldr(r2, r1);
             IF opcode = IL.opINCLC THEN
                 Emit(opORC, r2, ORD({param2}))
             ELSE
                 Emit(opANDC, r2, ORD(-{param2}))
             END;
-            str32(r1, r2);
+            str(r1, r2);
             drop;
             drop
 
@@ -919,7 +995,7 @@ BEGIN
             UnOp(r1);
             r2 := GetAnyReg();
             ProcAdr(r2, param2);
-            str32(r1, r2);
+            str(r1, r2);
             drop;
             drop
 
@@ -928,7 +1004,7 @@ BEGIN
 
         |IL.opPUSHT:
             UnOp(r1);
-            Emit(opLDW, r1 * 256 + GetAnyReg(), -4)
+            Emit(opLD, r1 * 256 + GetAnyReg(), -szWord)
 
         |IL.opGET, IL.opGETC:
             IF opcode = IL.opGET THEN
@@ -945,6 +1021,7 @@ BEGIN
             |1: ldr8(r1, r1);  str8(r2, r1)
             |2: ldr16(r1, r1); str16(r2, r1)
             |4: ldr32(r1, r1); str32(r2, r1)
+            |8: ldr64(r1, r1); str64(r2, r1)
             END
 
         |IL.opNOT:
@@ -1094,8 +1171,8 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            INC(param2, 4);
-            ASSERT(UTILS.Align(param2, 4));
+            INC(param2, szWord);
+            ASSERT(UTILS.Align(param2, szWord));
             pushc(param2);
             pushc(param1);
             CallRTL(IL._new, 3)
@@ -1129,8 +1206,8 @@ BEGIN
         |IL.opTYPEGD:
             UnOp(r1);
             PushAll(0);
-            subrc(r1, 4);
-            ldr32(r1, r1);
+            subrc(r1, szWord);
+            ldr(r1, r1);
             push(r1);
             pushc(param2);
             CallRTL(IL._guardrec, 2);
@@ -1145,7 +1222,11 @@ BEGIN
             jnz(ACC, param1)
 
         |IL.opCONSTF:
-            movrc(GetAnyReg(), UTILS.d2s(cmd.float))
+            IF szWord = 8 THEN
+                movrc(GetAnyReg(), UTILS.splitf(cmd.float, a, b))
+            ELSE (* szWord = 4 *)
+                movrc(GetAnyReg(), UTILS.d2s(cmd.float))
+            END
 
         |IL.opMULF:
             PushAll(2);
@@ -1195,14 +1276,21 @@ BEGIN
 
         |IL.opUMINF:
             UnOp(r1);
-            Emit(opXORC, r1, ORD({31}))
+            Emit(opRORC, r1, -1);
+            Emit(opXORC, r1,  1);
+            Emit(opRORC, r1,  1)
 
         |IL.opFABS:
             UnOp(r1);
-            Emit(opANDC, r1, ORD({0..30}))
+            Emit(opLSLC, r1, 1);
+            Emit(opLSRC, r1, 1)
 
         |IL.opINF:
-            movrc(GetAnyReg(), inf)
+            r1 := GetAnyReg();
+            Emit(opMOVC, r1, 1);
+            Emit(opRORC, r1, 1);
+            Emit(opASRC, r1, 7 + 3 * ORD(szWord = 8));
+            Emit(opLSRC, r1, 1)
 
         |IL.opPUSHF:
             UnOp(r1);
@@ -1227,14 +1315,14 @@ BEGIN
 
         |IL.opLADR_SAVE:
             UnOp(r1);
-            Emit(opSTW, BP * 256 + r1, param2 * 4);
+            Emit(opST, BP * 256 + r1, param2 * szWord);
             drop
 
         |IL.opLADR_INCC:
             r1 := GetAnyReg();
-            Emit(opLDW, BP * 256 + r1, param1 * 4);
+            Emit(opLD, BP * 256 + r1, param1 * szWord);
             Emit(opADDC, r1, param2);
-            Emit(opSTW, BP * 256 + r1, param1 * 4);
+            Emit(opST, BP * 256 + r1, param1 * szWord);
             drop
 
         END;
@@ -1259,9 +1347,10 @@ BEGIN
 END prolog;
 
 
-PROCEDURE epilog (ram: INTEGER);
+PROCEDURE epilog (ram, szWord: INTEGER);
 VAR
-    tcount, dcount, i, offTypes, offStrings, szData, szGlobal, szHeapStack: INTEGER;
+    tcount, dcount, i, offTypes, offStrings,
+    szData, szGlobal, szHeapStack: INTEGER;
 
 BEGIN
     Emit(opSTOP, 0, 0);
@@ -1279,8 +1368,8 @@ BEGIN
         OutByte(CHL.GetByte(IL.codes.data, i))
     END;
 
-    IF dcount MOD 4 # 0 THEN
-        i := 4 - dcount MOD 4;
+    IF dcount MOD szWord # 0 THEN
+        i := szWord - dcount MOD szWord;
         WHILE i > 0 DO
             OutByte(0);
             DEC(i)
@@ -1288,13 +1377,13 @@ BEGIN
     END;
 
     szData := count - offTypes;
-    szGlobal := (IL.codes.bss DIV 4 + 1) * 4;
+    szGlobal := (IL.codes.bss DIV szWord + 1) * szWord;
     szHeapStack := ram - szData - szGlobal;
 
     OutInt(offTypes);
     OutInt(offStrings);
-    OutInt(szGlobal DIV 4);
-    OutInt(szHeapStack DIV 4);
+    OutInt(szGlobal DIV szWord);
+    OutInt(szHeapStack DIV szWord);
     FOR i := 1 TO 8 DO
         OutInt(0)
     END
@@ -1310,7 +1399,15 @@ VAR
     szData, szRAM: INTEGER;
 
 BEGIN
-    szData := (CHL.Length(IL.codes.types) + CHL.Length(IL.codes.data) DIV 4 + IL.codes.bss DIV 4 + 2) * 4;
+    szWord := TARGETS.WordSize;
+    IF szWord = 8 THEN
+        ldr := ldr64;
+        str := str64
+    ELSE
+        ldr := ldr32;
+        str := str32
+    END;
+    szData := (CHL.Length(IL.codes.types) + CHL.Length(IL.codes.data) DIV szWord + IL.codes.bss DIV szWord + 2) * szWord;
     szRAM := MIN(MAX(options.ram, minRAM), maxRAM) * 1024;
 
     IF szRAM - szData < 1024*1024 THEN
@@ -1323,11 +1420,11 @@ BEGIN
     REG.Init(R, push, pop, mov, xchg, NIL, NIL, GPRs, {});
 
     prolog;
-    translate;
-    epilog(szRAM);
+    translate(szWord);
+    epilog(szRAM, szWord);
 
     WR.Close
 END CodeGen;
 
 
-END RVM32I.
+END RVMxI.

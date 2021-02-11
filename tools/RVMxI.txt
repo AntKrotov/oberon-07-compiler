@@ -1,18 +1,20 @@
 ﻿
-    Экспериментальная 32-битная виртуальная машина RVM32I
+    Экспериментальная 32/64-битная виртуальная машина RVMxI
 ---------------------------------------------------------------------------------------------------
 
 Использование
 
-  Скомпилировать исполнитель/дизассемблер в \tools\RVM32I.ob07 (для Windows32 Console):
+  Скомпилировать исполнитель/дизассемблер в \tools\RVMxI.ob07 (для Windows32/64 Console):
 
-    Compiler.exe .\tools\RVM32I.ob07 win32con -nochk a
+    Compiler.exe .\tools\RVMxI.ob07 win32con -nochk a -out RVM32I.exe
+    Compiler.exe .\tools\RVMxI.ob07 win64con -nochk a -out RVM64I.exe
 
-  Будет создан файл "\tools\RVM32I.exe".
+  Будет создан файл "RVM32I.exe" и/или "RVM64I.exe".
 
-  Компилировать программу в байт-код RVM32I:
+  Компилировать программу в байт-код RVMxI:
 
     Compiler.exe program.ob07 rvm32i [-ram size]
+    Compiler.exe program.ob07 rvm64i [-ram size]
       -ram size  --  установить размер оперативной памяти для программы в килобайтах 32768..262144
                     (32..256 Мбайт), по умолчанию 32768 (32 Мбайт)
 
@@ -21,19 +23,21 @@
   Выпонить программу:
 
     RVM32I.exe program.bin -run
+    RVM64I.exe program.bin -run
 
   Дизассемблировать программу:
 
-    RVM32I.exe program.bin -dis program.asm
+    RVM32I.exe program.bin -dis program.txt
+    RVM64I.exe program.bin -dis program.txt
 
-    Будет создан файл "program.asm".
+    Будет создан файл "program.txt".
 ---------------------------------------------------------------------------------------------------
 
 Архитектура
 
     Регистры
 
-      Не меньше пяти 32-битных регистров:
+      Не меньше пяти 32/64-битных регистров:
 
         R0, R1, R2   регистры общего назначения
         BP(R3)       указатель кадра стэка
@@ -44,7 +48,8 @@
       Регистра связи нет (адрес возврата передается через стэк),
       регистр-счетчик команд (PC) -- скрытый, регистр флагов -- скрытый.
 
-      Нет вещественных регистров, операции с плавающей точкой (single) эмулируются.
+      Нет вещественных регистров, операции с плавающей точкой (single (32-бит) или double (64-бит))
+      эмулируются.
 
     Формат кадра стэка
 
@@ -52,8 +57,14 @@
 
         меньше <- |лок. переменные|старый BP|адрес возврата|парам1|парам2|...|парамN| -> больше
 
+          (* 32 бита *)
           адрес(парам1) = BP + 8
           адрес(парам2) = BP + 12
+          ...
+
+          (* 64 бита *)
+          адрес(парам1) = BP + 16
+          адрес(парам2) = BP + 24
           ...
 
       Параметры передаются через стэк справа налево (как cdecl), результат передается через R0,
@@ -78,10 +89,10 @@
 
   Где:
 
-      INTEGER = INT32
-      i = offTypes DIV 12;
-      t = (offStrings - offTypes) DIV 4
-      s = FILE_SIZE - offStrings - 48
+      INTEGER = INT32/INT64
+      i = offTypes DIV (3 * sizeof(INTEGER));
+      t = (offStrings - offTypes) DIV sizeof(INTEGER)
+      s = FILE_SIZE - offStrings - 12 * sizeof(INTEGER)
 ---------------------------------------------------------------------------------------------------
 
 Система команд
@@ -97,10 +108,13 @@
     XCHG Rn, Rm              6       n        m           temp := Rn; Rn := Rm; Rm := temp
     LDB Rn, [Rm + imm]       7   m*256 + n   imm          Rn := UInt8Ptr(Rm + imm)^
     LDH Rn, [Rm + imm]       8   m*256 + n   imm          Rn := UInt16Ptr(Rm + imm)^
-    LDW Rn, [Rm + imm]       9   m*256 + n   imm          Rn := Int32Ptr(Rm + imm)^
-    PUSH Rn                 10       n        0           DEC(SP, 4); Int32Ptr(SP)^ := Rn
-    PUSH imm                11      imm       0           DEC(SP, 4); Int32Ptr(SP)^ := imm
-    POP Rn                  12       n        0           Rn := Int32Ptr(SP)^; INC(SP, 4)
+    LDW Rn, [Rm + imm]       9   m*256 + n   imm          Rn := UInt32Ptr(Rm + imm)^
+*   PUSH Rn                 10       n        0           DEC(SP, 4); UInt32Ptr(SP)^ := Rn
+*   PUSH imm                11      imm       0           DEC(SP, 4); UInt32Ptr(SP)^ := imm
+*   POP Rn                  12       n        0           Rn := UInt32Ptr(SP)^; INC(SP, 4)
+**  PUSH Rn                 10       n        0           DEC(SP, 8); UInt64Ptr(SP)^ := Rn
+**  PUSH imm                11      imm       0           DEC(SP, 8); UInt64Ptr(SP)^ := imm
+**  POP Rn                  12       n        0           Rn := UInt64Ptr(SP)^; INC(SP, 8)
     L#hex:                  13      hex       0           метка:
     LEA Rn, TYPES + imm     14    n + 000H   imm          Rn := imm + address(TYPES)
     LEA Rn, STRINGS + imm   14    n + 100H   imm          Rn := imm + address(STRINGS)
@@ -108,6 +122,7 @@
     LEA Rn, HEAP + imm      14    n + 300H   imm          Rn := imm + address(HEAP)
     LEA Rn, STACK + imm     14    n + 400H   imm          Rn := imm + address(STACK)
     LLA Rn, L#hex           15       n       hex          Rn := address(L#hex)
+**  LDD Rn, [Rm + imm]      16   m*256 + n   imm          Rn := UInt64Ptr(Rm + imm)^
 
     JMP L#hex               19      hex       0           goto L#hex
     CALL L#hex              20      hex       0           push PC; goto L#hex
@@ -128,8 +143,12 @@
     STB [Rn], imm           35       n       imm          UInt8Ptr(Rn)^ := imm MOD 256
     STH [Rn + imm], Rm      36   n*256 + m   imm          UInt16Ptr(Rn + imm)^ := Rm MOD 65536
     STH [Rn], imm           37       n       imm          UInt16Ptr(Rn)^ := imm MOD 65536
-    STW [Rn + imm], Rm      38   n*256 + m   imm          Int32Ptr(Rn + imm)^ := Rm
-    STW [Rn], imm           39       n       imm          Int32Ptr(Rn)^ := imm
+*   STW [Rn + imm], Rm      38   n*256 + m   imm          UInt32Ptr(Rn + imm)^ := Rm
+*   STW [Rn], imm           39       n       imm          UInt32Ptr(Rn)^ := imm
+**  STW [Rn + imm], Rm      38   n*256 + m   imm          UInt32Ptr(Rn + imm)^ := Rm MOD 100000000H
+**  STW [Rn], imm           39       n       imm          UInt32Ptr(Rn)^ := imm MOD 100000000H
+**  STD [Rn + imm], Rm      40   n*256 + m   imm          UInt64Ptr(Rn + imm)^ := Rm
+**  STD [Rn], imm           41       n       imm          UInt64Ptr(Rn)^ := imm
 
     AND Rn, Rm              46       n        m           Rn := ORD(BITS(Rn) * BITS(Rm))
     AND Rn, imm             47       n       imm          Rn := ORD(BITS(Rn) * BITS(imm))
@@ -168,6 +187,9 @@
 Команда CMP сохраняет результат сравнения в скрытом регистре, этот результат используется
 в командах перехода по условию (JEQ, JNE, JLT, JGE, JGT, JLE, JBT) а также в командах
 установки регистра по условию (SEQ, SNE, SLT, SGE, SGT, SLE).
+
+*  Команда для 32-битной виртуальной машины
+** Команда для 64-битной виртуальной машины
 
 ---------------------------------------------------------------------------------------------------
 
@@ -237,10 +259,10 @@
   BYTE 0x4C, 0x00, 0x54, 0x65, 0x73, 0x74, 0x00, 0x00
 
   GLOBAL:
-  WORDS 0x00000004 (* размер глобальных переменных в словах (слово = 4 байта) *)
+  WORDS 0x00000004 (* размер глобальных переменных в словах (слово = 4 или 8 байт) *)
 
   HEAP:
-  WORDS 0x007FFFBF (* размер области кучи/стэка в словах (слово = 4 байта) *)
+  WORDS 0x007FFFBF (* размер области кучи/стэка в словах (слово = 4 или 8 байт) *)
   STACK:
   WORDS 8 (* зарезервировано *)
 ---------------------------------------------------------------------------------------------------

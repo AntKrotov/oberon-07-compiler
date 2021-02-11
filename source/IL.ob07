@@ -502,7 +502,7 @@ BEGIN
             old_opcode := -1
         END
 
-    ELSIF CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuRVM32I} THEN
+    ELSIF CPU IN {TARGETS.cpuTHUMB, TARGETS.cpuRVM32I, TARGETS.cpuRVM64I} THEN
 
         old_opcode := cur.opcode;
         param2 := nov.param2;

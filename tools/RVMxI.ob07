@@ -6,34 +6,37 @@
 *)
 
 (*
-    RVM32I executor and disassembler
+    RVMxI executor and disassembler
 
-    for win32 only
+    for Windows only
 
     Usage:
-    RVM32I.exe <program file> -run [program parameters]
-    RVM32I.exe <program file> -dis <output file>
+    RVMxI.exe <program file> -run [program parameters]
+    RVMxI.exe <program file> -dis <output file>
 *)
 
-MODULE RVM32I;
+MODULE RVMxI;
 
 IMPORT SYSTEM, File, Args, Out, API, HOST;
 
 
 CONST
 
+    szWORD = HOST.bit_depth DIV 8;
+
     opSTOP = 0; opRET = 1; opENTER = 2; opNEG = 3; opNOT = 4; opNOP = 5;
     opXCHG = 6; opLDB = 7; opLDH = 8; opLDW = 9; opPUSH = 10; opPUSHC = 11;
-    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15; (* 16, 17, 18 *)
+    opPOP = 12; opLABEL = 13; opLEA = 14; opLLA = 15;
+    opLDD = 16; (* 17, 18 *)
     opJMP = 19; opCALL = 20; opCALLI = 21;
 
     opMOV = 22; opMUL = 24; opADD = 26; opSUB = 28; opDIV = 30; opMOD = 32;
-    opSTB = 34; opSTH = 36; opSTW = 38; (* 40, 42, 44 *)
+    opSTB = 34; opSTH = 36; opSTW = 38; opSTD = 40; (* 42, 44 *)
     opAND = 46; opOR = 48; opXOR = 50; opASR = 52; opLSR = 54;
     opLSL = 56; opROR = 58; (* 60, 62 *) opCMP = 64;
 
     opMOVC = 23; opMULC = 25; opADDC = 27; opSUBC = 29; opDIVC = 31; opMODC = 33;
-    opSTBC = 35; opSTHC = 37; opSTWC = 39; (* 41, 43, 45 *)
+    opSTBC = 35; opSTHC = 37; opSTWC = 39; opSTDC = 41; (* 43, 45 *)
     opANDC = 47; opORC = 49; opXORC = 51; opASRC = 53; opLSRC = 55;
     opLSLC = 57; opRORC = 59; (* 61, 63 *) opCMPC = 65;
 
@@ -43,7 +46,7 @@ CONST
     opSEQ = 76; opSNE = 77; opSLT = 78; opSGE = 79; opSGT = 80; opSLE = 81;
 
 
-    nREG = 8;
+    nREG = 16;
     ACC = 0; BP = 3; SP = 4;
 
     Types   = 0;
@@ -80,40 +83,110 @@ VAR
 
 PROCEDURE syscall (ptr: INTEGER);
 VAR
-    fn, p1, p2, p3, p4, r: INTEGER;
+    fn, r: INTEGER;
 
     proc2: PROCEDURE (a, b: INTEGER): INTEGER;
     proc3: PROCEDURE (a, b, c: INTEGER): INTEGER;
     proc4: PROCEDURE (a, b, c, d: INTEGER): INTEGER;
 
+    r1, r2: REAL;
+
+
+    PROCEDURE GetInt (ptr, n: INTEGER): INTEGER;
+    BEGIN
+        SYSTEM.GET(ptr + SYSTEM.SIZE(INTEGER) * n, n)
+        RETURN n
+    END GetInt;
+
+
+    PROCEDURE GetReal (ptr, n: INTEGER): REAL;
+    VAR
+        r: REAL;
+
+    BEGIN
+        SYSTEM.GET(ptr + SYSTEM.SIZE(INTEGER) * n, r)
+        RETURN r
+    END GetReal;
+
+
 BEGIN
-    SYSTEM.GET(ptr,      fn);
-    SYSTEM.GET(ptr +  4, p1);
-    SYSTEM.GET(ptr +  8, p2);
-    SYSTEM.GET(ptr + 12, p3);
-    SYSTEM.GET(ptr + 16, p4);
+    fn := GetInt(ptr, 0);
     CASE fn OF
-    | 0:  HOST.ExitProcess(p1)
-    | 1:  SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.GetCurrentDirectory));
-          r := proc2(p1, p2)
-    | 2:  SYSTEM.PUT(SYSTEM.ADR(proc3), SYSTEM.ADR(HOST.GetArg));
-          r := proc3(p1 + 2, p2, p3)
-    | 3:  SYSTEM.PUT(SYSTEM.ADR(proc4), SYSTEM.ADR(HOST.FileRead));
-          SYSTEM.PUT(ptr, proc4(p1, p2, p3, p4))
-    | 4:  SYSTEM.PUT(SYSTEM.ADR(proc4), SYSTEM.ADR(HOST.FileWrite));
-          SYSTEM.PUT(ptr, proc4(p1, p2, p3, p4))
-    | 5:  SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.FileCreate));
-          SYSTEM.PUT(ptr, proc2(p1, p2))
-    | 6:  HOST.FileClose(p1)
-    | 7:  SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.FileOpen));
-          SYSTEM.PUT(ptr, proc2(p1, p2))
-    | 8:  HOST.OutChar(CHR(p1))
-    | 9:  SYSTEM.PUT(ptr, HOST.GetTickCount())
-    |10:  SYSTEM.PUT(ptr, HOST.UnixTime())
-    |11:  SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.isRelative));
-          SYSTEM.PUT(ptr, proc2(p1, p2))
-    |12:  SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.chmod));
-          r := proc2(p1, p2)
+    | 0:
+        HOST.ExitProcess(GetInt(ptr, 1))
+
+    | 1:
+        SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.GetCurrentDirectory));
+        r := proc2(GetInt(ptr, 1), GetInt(ptr, 2))
+
+    | 2:
+        SYSTEM.PUT(SYSTEM.ADR(proc3), SYSTEM.ADR(HOST.GetArg));
+        r := proc3(GetInt(ptr, 1) + 2, GetInt(ptr, 2), GetInt(ptr, 3))
+
+    | 3:
+        SYSTEM.PUT(SYSTEM.ADR(proc4), SYSTEM.ADR(HOST.FileRead));
+        SYSTEM.PUT(ptr, proc4(GetInt(ptr, 1), GetInt(ptr, 2), GetInt(ptr, 3), GetInt(ptr, 4)))
+
+    | 4:
+        SYSTEM.PUT(SYSTEM.ADR(proc4), SYSTEM.ADR(HOST.FileWrite));
+        SYSTEM.PUT(ptr, proc4(GetInt(ptr, 1), GetInt(ptr, 2), GetInt(ptr, 3), GetInt(ptr, 4)))
+
+    | 5:
+        SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.FileCreate));
+        SYSTEM.PUT(ptr, proc2(GetInt(ptr, 1), GetInt(ptr, 2)))
+
+    | 6:
+        HOST.FileClose(GetInt(ptr, 1))
+
+    | 7:
+        SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.FileOpen));
+        SYSTEM.PUT(ptr, proc2(GetInt(ptr, 1), GetInt(ptr, 2)))
+
+    | 8:
+        HOST.OutChar(CHR(GetInt(ptr, 1)))
+
+    | 9:
+        SYSTEM.PUT(ptr, HOST.GetTickCount())
+
+    |10:
+        SYSTEM.PUT(ptr, HOST.UnixTime())
+
+    |11:
+        SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.isRelative));
+        SYSTEM.PUT(ptr, proc2(GetInt(ptr, 1), GetInt(ptr, 2)))
+
+    |12:
+        SYSTEM.PUT(SYSTEM.ADR(proc2), SYSTEM.ADR(HOST.chmod));
+        r := proc2(GetInt(ptr, 1), GetInt(ptr, 2))
+
+    |100..103:
+        r1 := GetReal(ptr, 1);
+        r2 := GetReal(ptr, 2);
+        CASE fn OF
+        |100: SYSTEM.PUT(ptr, r2 * r1)
+        |101: SYSTEM.PUT(ptr, r2 / r1)
+        |102: SYSTEM.PUT(ptr, r2 + r1)
+        |103: SYSTEM.PUT(ptr, r2 - r1)
+        END
+
+    |104:
+        r1 := GetReal(ptr, 2);
+        r2 := GetReal(ptr, 3);
+        CASE GetInt(ptr, 1) OF
+        |0: SYSTEM.PUT(ptr, ORD(r2 = r1))
+        |1: SYSTEM.PUT(ptr, ORD(r2 # r1))
+        |2: SYSTEM.PUT(ptr, ORD(r2 < r1))
+        |3: SYSTEM.PUT(ptr, ORD(r2 <= r1))
+        |4: SYSTEM.PUT(ptr, ORD(r2 > r1))
+        |5: SYSTEM.PUT(ptr, ORD(r2 >= r1))
+        END
+
+    |105:
+        SYSTEM.PUT(ptr, FLOOR(GetReal(ptr, 1)))
+
+    |106:
+        SYSTEM.PUT(ptr, FLT(GetInt(ptr, 1)))
+
     END
 END syscall;
 
@@ -156,24 +229,30 @@ BEGIN
     WHILE cmd # NIL DO
         param1 := cmd.param1;
         param2 := cmd.param2;
+
         CASE cmd.op OF
         |opSTOP:     cmd := last
-        |opRET:      SYSTEM.GET(R[SP], cmd); INC(R[SP], 4)
-        |opENTER:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[BP]); R[BP] := R[SP]; WHILE param1 > 0 DO DEC(R[SP], 4); SYSTEM.PUT32(R[SP], 0); DEC(param1) END
-        |opPOP:      SYSTEM.GET32(R[SP], R[param1]); INC(R[SP], 4)
+        |opRET:      SYSTEM.GET(R[SP], cmd); INC(R[SP], szWORD)
+        |opENTER:    DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], R[BP]); R[BP] := R[SP];
+                     WHILE param1 > 0 DO DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], 0); DEC(param1) END
+        |opPOP:      SYSTEM.GET(R[SP], R[param1]); INC(R[SP], szWORD)
+        |opPUSH:     DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], R[param1])
+        |opPUSHC:    DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], param1)
+        |opCALL:     DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], cmd); cmd := Labels[param1]
+        |opCALLI:    DEC(R[SP], szWORD); SYSTEM.PUT(R[SP], cmd); SYSTEM.GET(SYSTEM.ADR(R[param1]), cmd)
         |opNEG:      R[param1] := -R[param1]
         |opNOT:      R[param1] := ORD(-BITS(R[param1]))
         |opNOP:
         |opXCHG:     i := R[param1]; R[param1] := R[param2]; R[param2] := i
         |opLDB:      i := param1 MOD 256; SYSTEM.GET8(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 256
         |opLDH:      i := param1 MOD 256; SYSTEM.GET16(R[param1 DIV 256] + param2, R[i]); R[i] := R[i] MOD 65536
-        |opLDW:      SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256])
-        |opPUSH:     DEC(R[SP], 4); SYSTEM.PUT32(R[SP], R[param1])
-        |opPUSHC:    DEC(R[SP], 4); SYSTEM.PUT32(R[SP], param1)
-        |opLLA:      SYSTEM.GET32(SYSTEM.ADR(Labels[param2]), R[param1])
+        |opLDW:      SYSTEM.GET32(R[param1 DIV 256] + param2, R[param1 MOD 256]);
+                     $IF (CPU_X8664)
+                         R[param1 MOD 256] := R[param1 MOD 256] MOD 100000000H
+                     $END
+        |opLDD:      SYSTEM.GET(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opLLA:      SYSTEM.GET(SYSTEM.ADR(Labels[param2]), R[param1])
         |opJMP:      cmd := Labels[param1]
-        |opCALL:     DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); cmd := Labels[param1]
-        |opCALLI:    DEC(R[SP], 4); SYSTEM.PUT(R[SP], cmd); SYSTEM.GET(SYSTEM.ADR(R[param1]), cmd)
         |opMOV:      R[param1] := R[param2]
         |opMOVC:     R[param1] := param2
         |opMUL:      R[param1] := R[param1] * R[param2]
@@ -189,9 +268,11 @@ BEGIN
         |opSTB:      SYSTEM.PUT8(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opSTH:      SYSTEM.PUT16(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opSTW:      SYSTEM.PUT32(R[param1 DIV 256] + param2, R[param1 MOD 256])
+        |opSTD:      SYSTEM.PUT(R[param1 DIV 256] + param2, R[param1 MOD 256])
         |opSTBC:     SYSTEM.PUT8(R[param1], param2)
         |opSTHC:     SYSTEM.PUT16(R[param1], param2)
         |opSTWC:     SYSTEM.PUT32(R[param1], param2)
+        |opSTDC:     SYSTEM.PUT(R[param1], param2)
         |opAND:      R[param1] := ORD(BITS(R[param1]) * BITS(R[param2]))
         |opANDC:     R[param1] := ORD(BITS(R[param1]) * BITS(param2))
         |opOR:       R[param1] := ORD(BITS(R[param1]) + BITS(R[param2]))
@@ -275,12 +356,12 @@ VAR
 
     PROCEDURE Hex (x: INTEGER);
     VAR
-        str: ARRAY 11 OF CHAR;
+        str: ARRAY 19 OF CHAR;
         n: INTEGER;
 
     BEGIN
-        n := 10;
-        str[10] := 0X;
+        n := szWORD * 2 + 2;
+        str[n] := 0X;
         WHILE n > 2 DO
             str[n - 1] := hexdgt(x MOD 16);
             x := x DIV 16;
@@ -372,6 +453,7 @@ BEGIN
         |opLDB:      String("LDB     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opLDH:      String("LDH     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opLDW:      String("LDW     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
+        |opLDD:      String("LDD     ");  Reg(param1 MOD 256); String(", ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("]")
         |opPUSH:     String("PUSH    ");  Reg(param1)
         |opPUSHC:    String("PUSH    ");  Hex(param1)
         |opLLA:      String("LLA     ");  RegL(param1, param2)
@@ -393,9 +475,11 @@ BEGIN
         |opSTB:      String("STB     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
         |opSTH:      String("STH     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
         |opSTW:      String("STW     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
+        |opSTD:      String("STD     ["); Reg(param1 DIV 256); String(" + "); Hex(param2); String("], "); Reg(param1 MOD 256)
         |opSTBC:     String("STB     ["); Reg(param1); String("], "); Hex(param2)
         |opSTHC:     String("STH     ["); Reg(param1); String("], "); Hex(param2)
         |opSTWC:     String("STW     ["); Reg(param1); String("], "); Hex(param2)
+        |opSTDC:     String("STD     ["); Reg(param1); String("], "); Hex(param2)
         |opAND:      String("AND     ");  Reg2(param1, param2)
         |opANDC:     String("AND     ");  RegC(param1, param2)
         |opOR:       String("OR      ");  Reg2(param1, param2)
@@ -443,7 +527,7 @@ BEGIN
         ELSE
             String(", ")
         END;
-        SYSTEM.GET32(ptr, t); INC(ptr, 4);
+        SYSTEM.GET(ptr, t); INC(ptr, szWORD);
         Hex(t)
     END;
     Ln;
@@ -480,9 +564,9 @@ VAR
 
 BEGIN
     op := 0; param1 := 0; param2 := 0;
-    SYSTEM.GET32(adr, op);
-    SYSTEM.GET32(adr + 4, param1);
-    SYSTEM.GET32(adr + 8, param2);
+    SYSTEM.GET(adr, op);
+    SYSTEM.GET(adr + szWORD, param1);
+    SYSTEM.GET(adr + szWORD * 2, param2);
     NEW(res);
     res.op := op;
     res.param1 := param1;
@@ -521,11 +605,11 @@ BEGIN
         offTypes := descr[0];
         ASSERT(offTypes < fsize - DescrSize);
         ASSERT(offTypes > 0);
-        ASSERT(offTypes MOD 12 = 0);
+        ASSERT(offTypes MOD (3 * szWORD) = 0);
         offStrings := descr[1];
         ASSERT(offStrings < fsize - DescrSize);
         ASSERT(offStrings > 0);
-        ASSERT(offStrings MOD 4 = 0);
+        ASSERT(offStrings MOD szWORD = 0);
         ASSERT(offStrings > offTypes);
         GlobalSize := descr[2];
         ASSERT(GlobalSize > 0);
@@ -540,21 +624,22 @@ BEGIN
         ASSERT(Sections[Strings] # 0);
         SYSTEM.MOVE(file + offStrings, Sections[Strings], fsize - offStrings - DescrSize);
 
-        Sections[Global] := API._NEW(GlobalSize * 4);
+        Sections[Global] := API._NEW(GlobalSize * szWORD);
         ASSERT(Sections[Global] # 0);
 
-        Sections[Heap] := API._NEW(HeapStackSize * 4);
+        Sections[Heap] := API._NEW(HeapStackSize * szWORD);
         ASSERT(Sections[Heap] # 0);
 
-        Sections[Stack] := Sections[Heap] + HeapStackSize * 4 - 32;
+        Sections[Stack] := Sections[Heap] + HeapStackSize * szWORD - szWORD*8;
 
-        n := offTypes DIV 12;
-        first := GetCommand(file + offTypes - n * 12);
+        n := offTypes DIV (3 * szWORD);
+
+        first := GetCommand(file + offTypes - n * (3 * szWORD));
         first.prev := NIL;
         last := first;
         DEC(n);
         WHILE n > 0 DO
-            cmd := GetCommand(file + offTypes - n * 12);
+            cmd := GetCommand(file + offTypes - n * (3 * szWORD));
             IF cmd.op = opLABEL THEN
                 Labels[cmd.param1] := cmd
             END;
@@ -568,7 +653,7 @@ BEGIN
         IF param = "-dis" THEN
             Args.GetArg(3, name);
             IF name # "" THEN
-                disasm(name, (offStrings - offTypes) DIV 4, fsize - offStrings - DescrSize, GlobalSize, HeapStackSize)
+                disasm(name, (offStrings - offTypes) DIV szWORD, fsize - offStrings - DescrSize, GlobalSize, HeapStackSize)
             END
         ELSIF param = "-run" THEN
             exec(Labels, first, last, Sections)
@@ -580,6 +665,5 @@ END main;
 
 
 BEGIN
-    ASSERT(API.BIT_DEPTH = 32);
     main
-END RVM32I.
+END RVMxI.
