@@ -73,17 +73,6 @@ BEGIN
 END IntToStr;
 
 
-PROCEDURE IntToHex* (x: INTEGER; VAR str: ARRAY OF CHAR; n: INTEGER);
-BEGIN
-    str[n] := 0X;
-    WHILE n > 0 DO
-        str[n - 1] := CHR(UTILS.hexdgt(x MOD 16));
-        x := x DIV 16;
-        DEC(n)
-    END
-END IntToHex;
-
-
 PROCEDURE search* (s: ARRAY OF CHAR; VAR pos: INTEGER; c: CHAR; forward: BOOLEAN);
 VAR
     length: INTEGER;
@@ -171,7 +160,7 @@ PROCEDURE space* (c: CHAR): BOOLEAN;
 END space;
 
 
-PROCEDURE cap (VAR c: CHAR);
+PROCEDURE cap* (VAR c: CHAR);
 BEGIN
     IF ("a" <= c) & (c <= "z") THEN
         c := CHR(ORD(c) - 32)

@@ -158,7 +158,7 @@ BEGIN
 
     n := -1;
     i := 0;
-    WHILE (s[i] # "H") & (s[i] # "X") & (error = 0) DO
+    WHILE (s[i] # "H") & (s[i] # "X") & (s[i] # "h") & (s[i] # "x") & (error = 0) DO
 
         d := digit[ORD(s[i])];
         IF (n = -1) & (d # 0) THEN
@@ -176,13 +176,13 @@ BEGIN
 
     value := UTILS.Long(value);
 
-    IF (s[i] = "X") & (n # -1) & (i - n > 4) THEN
+    IF ((s[i] = "X") OR (s[i] = "x")) & (n # -1) & (i - n > 4) THEN
         error := 3
     END;
 
     IF error = 0 THEN
         v.int := value;
-        IF s[i] = "X" THEN
+        IF (s[i] = "X") OR (s[i] = "x") THEN
             v.typ := tCHAR;
             IF ~check(v) THEN
                 v.typ := tWCHAR;
@@ -217,6 +217,7 @@ END opFloat2;
 PROCEDURE fconv* (s: ARRAY OF CHAR; VAR v: VALUE; VAR error: INTEGER);
 VAR
     value:    REAL;
+    frac:     REAL;
     exp10:    REAL;
     i, n, d:  INTEGER;
     minus:    BOOLEAN;
@@ -224,7 +225,8 @@ VAR
 BEGIN
     error := 0;
     value := 0.0;
-    exp10 := 10.0;
+    frac  := 0.0;
+    exp10 := 1.0;
     minus := FALSE;
     n := 0;
 
@@ -240,14 +242,19 @@ BEGIN
     INC(i);
 
     WHILE (error = 0) & STRINGS.digit(s[i]) DO
-        IF opFloat2(value, FLT(digit[ORD(s[i])]) / exp10, "+") & opFloat2(exp10, 10.0, "*") THEN
+        IF opFloat2(frac, 10.0, "*") & opFloat2(frac, FLT(digit[ORD(s[i])]), "+") THEN
+            exp10 := exp10 * 10.0;
             INC(i)
         ELSE
             error := 4
         END
     END;
 
-    IF s[i] = "E" THEN
+    IF ~opFloat2(value, frac / exp10, "+") THEN
+        error := 4
+    END;
+
+    IF (s[i] = "E") OR (s[i] = "e") THEN
         INC(i)
     END;
 

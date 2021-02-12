@@ -4,31 +4,33 @@
 
 Использование
 
-  Скомпилировать исполнитель/дизассемблер в \tools\RVMxI.ob07 (для Windows32/64 Console):
+  Скомпилировать исполнитель/дизассемблер в .\tools\RVMxI.ob07 
+  для Windows32/64 Console или Linux32/64:
 
-    Compiler.exe .\tools\RVMxI.ob07 win32con -nochk a -out RVM32I.exe
-    Compiler.exe .\tools\RVMxI.ob07 win64con -nochk a -out RVM64I.exe
+    Compiler.exe .\tools\RVMxI.ob07 win32con -nochk a -out RVMxI.exe
+    Compiler.exe .\tools\RVMxI.ob07 win64con -nochk a -out RVMxI.exe
+    Compiler ./tools/RVMxI.ob07 linux32exe -nochk a -out RVMxI
+    Compiler ./tools/RVMxI.ob07 linux64exe -nochk a -out RVMxI
 
-  Будет создан файл "RVM32I.exe" и/или "RVM64I.exe".
+  Будет создан файл "RVMxI.exe" и/или "RVMxI".
 
   Компилировать программу в байт-код RVMxI:
 
-    Compiler.exe program.ob07 rvm32i [-ram size]
-    Compiler.exe program.ob07 rvm64i [-ram size]
+    Compiler.exe program.ob07 rvm32i [-ram size] [-def host_linux]
+    Compiler.exe program.ob07 rvm64i [-ram size] [-def host_linux]
       -ram size  --  установить размер оперативной памяти для программы в килобайтах 32768..262144
                     (32..256 Мбайт), по умолчанию 32768 (32 Мбайт)
+      -def host_linux -- если байт-код будет исполняться на Linux (по умолчанию -- Windows)
 
     Будет создан файл "program.bin".
 
   Выпонить программу:
 
-    RVM32I.exe program.bin -run
-    RVM64I.exe program.bin -run
+    RVMxI.exe program.bin -run <параметры>
 
   Дизассемблировать программу:
 
-    RVM32I.exe program.bin -dis program.txt
-    RVM64I.exe program.bin -dis program.txt
+    RVMxI.exe program.bin -dis program.txt
 
     Будет создан файл "program.txt".
 ---------------------------------------------------------------------------------------------------

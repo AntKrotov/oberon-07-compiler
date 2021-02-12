@@ -8,8 +8,6 @@
 (*
     RVMxI executor and disassembler
 
-    for Windows only
-
     Usage:
     RVMxI.exe <program file> -run [program parameters]
     RVMxI.exe <program file> -dis <output file>
@@ -83,7 +81,7 @@ VAR
 
 PROCEDURE syscall (ptr: INTEGER);
 VAR
-    fn, r: INTEGER;
+    fn, r, n: INTEGER;
 
     proc2: PROCEDURE (a, b: INTEGER): INTEGER;
     proc3: PROCEDURE (a, b, c: INTEGER): INTEGER;
@@ -120,8 +118,9 @@ BEGIN
         r := proc2(GetInt(ptr, 1), GetInt(ptr, 2))
 
     | 2:
+        n := GetInt(ptr, 1);
         SYSTEM.PUT(SYSTEM.ADR(proc3), SYSTEM.ADR(HOST.GetArg));
-        r := proc3(GetInt(ptr, 1) + 2, GetInt(ptr, 2), GetInt(ptr, 3))
+        r := proc3(n - ORD(n = 0) + 2, GetInt(ptr, 2), GetInt(ptr, 3))
 
     | 3:
         SYSTEM.PUT(SYSTEM.ADR(proc4), SYSTEM.ADR(HOST.FileRead));

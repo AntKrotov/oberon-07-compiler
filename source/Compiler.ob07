@@ -198,6 +198,8 @@ BEGIN
     lib_path := path;
 
     UTILS.GetArg(1, inname);
+    STRINGS.replace(inname, "\", UTILS.slash);
+    STRINGS.replace(inname, "/", UTILS.slash);
 
     C.Ln;
     C.String("Akron Oberon Compiler v"); C.Int(UTILS.vMajor); C.String("."); C.Int2(UTILS.vMinor);

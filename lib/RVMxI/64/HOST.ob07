@@ -12,8 +12,17 @@ IMPORT SYSTEM, Trap;
 
 CONST
 
+    $IF (host_linux)
+
+    slash* = "/";
+    eol* = 0AX;
+
+    $ELSE
+
     slash* = "\";
     eol* = 0DX + 0AX;
+
+    $END
 
     bit_depth* = 64;
     maxint* = ROR(-2, 1);

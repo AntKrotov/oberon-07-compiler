@@ -243,18 +243,19 @@ BEGIN
         c := nextc(text)
     END;
 
-    WHILE S.hexdigit(c) DO
+    WHILE S.hexdigit(c) OR LowerCase & ("a" <= c) & (c <= "f") DO
+        S.cap(c);
         push(num, i, c);
         c := nextc(text);
         hex := TRUE
     END;
 
-    IF c = "H" THEN
+    IF (c = "H") OR LowerCase & (c = "h") THEN
         push(num, i, c);
         TXT.next(text);
         sym := lxHEX
 
-    ELSIF c = "X" THEN
+    ELSIF (c = "X") OR LowerCase & (c = "x") THEN
         push(num, i, c);
         TXT.next(text);
         sym := lxCHAR
@@ -281,7 +282,7 @@ BEGIN
                 c := nextc(text)
             END;
 
-            IF c = "E" THEN
+            IF (c = "E") OR LowerCase & (c = "e") THEN
 
                 push(num, i, c);
                 c := nextc(text);
