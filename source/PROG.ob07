@@ -463,11 +463,10 @@ BEGIN
 END openScope;
 
 
-PROCEDURE closeScope* (unit: UNIT; variables: LISTS.LIST);
+PROCEDURE closeScope* (unit: UNIT);
 VAR
     item: IDENT;
     del:  IDENT;
-    lvar: IL.LOCALVAR;
 
 BEGIN
     item := unit.idents.last(IDENT);
@@ -477,17 +476,6 @@ BEGIN
         item := item.prev(IDENT);
         IF (del.typ = idVAR) & (del.offset = -1) THEN
             ERRORS.HintMsg(del.name.s, del.pos.line, del.pos.col, 0)
-        END;
-        IF (variables # NIL) & (del.typ IN {idVAR, idPARAM}) & (del.offset # -1) THEN
-            IF del._type.typ IN BASICTYPES - {tREAL} + {tPOINTER, tPROCEDURE} THEN
-                lvar := IL.NewVar();
-                lvar.offset := del.offset;
-                lvar.size   := del._type.size;
-                IF del.typ = idVAR THEN
-                    lvar.offset := -lvar.offset
-                END;
-                LISTS.push(variables, lvar)
-            END
         END;
         LISTS.delete(unit.idents, del);
         C.push(idents, del)

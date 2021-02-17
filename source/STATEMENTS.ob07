@@ -710,12 +710,6 @@ BEGIN
 
     getpos(parser, pos);
 
-    IF e.obj IN {eSYSPROC, eSYSFUNC} THEN
-        IF parser.unit.scopeLvl > 0 THEN
-            parser.unit.scopes[parser.unit.scopeLvl].enter(IL.COMMAND).allocReg := FALSE
-        END
-    END;
-
     IF e.obj IN {eSTPROC, eSYSPROC} THEN
 
         CASE proc OF

@@ -1624,7 +1624,7 @@ BEGIN
 
     n := 0;
     FOR i := 0 TO 15 DO
-        IF i IN R.regs + R.vregs THEN
+        IF i IN R.regs THEN
             Push(i);
             INC(n)
         END
@@ -1639,7 +1639,7 @@ BEGIN
     Op2(opADD, imm(4), SP);
 
     FOR i := 15 TO 0 BY -1 DO
-        IF i IN R.regs + R.vregs THEN
+        IF i IN R.regs THEN
             Pop(i)
         END
     END;
@@ -1685,7 +1685,7 @@ BEGIN
 
     CodeList := LISTS.create(NIL);
     RelList  := LISTS.create(NIL);
-    REG.Init(R, Push, Pop, mov, xchg, NIL, NIL, {R4, R5, R6, R7}, {});
+    REG.Init(R, Push, Pop, mov, xchg, {R4, R5, R6, R7});
 
     prolog;
     translate(chkSTK IN options.checking);

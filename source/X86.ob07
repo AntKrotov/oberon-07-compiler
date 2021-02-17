@@ -2374,7 +2374,7 @@ BEGIN
         opt.pic := TRUE
     END;
 
-    REG.Init(R, push, pop, mov, xchg, NIL, NIL, {eax, ecx, edx}, {});
+    REG.Init(R, push, pop, mov, xchg, {eax, ecx, edx});
 
     prolog(opt.pic, target, opt.stack, dllinit, dllret);
     translate(opt.pic, tcount * 4);

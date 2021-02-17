@@ -976,7 +976,6 @@ VAR
         _import:    IL.IMPORT_PROC;
         endmod, b:  BOOLEAN;
         fparams:    SET;
-        variables:  LISTS.LIST;
         int, flt:   INTEGER;
         comma:      BOOLEAN;
         code, iv:   ARITH.VALUE;
@@ -1168,17 +1167,7 @@ VAR
             END
         END;
 
-        IF ~codeProc & (_import = NIL) THEN
-            variables := LISTS.create(NIL);
-        ELSE
-            variables := NIL
-        END;
-
-        PROG.closeScope(unit, variables);
-
-        IF ~codeProc & (_import = NIL) THEN
-            enter.variables := variables
-        END
+        PROG.closeScope(unit);
 
         RETURN endmod
     END ProcDeclaration;

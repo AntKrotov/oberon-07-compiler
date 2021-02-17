@@ -2382,7 +2382,7 @@ BEGIN
 
     program := BIN.create(IL.codes.lcount);
 
-    REG.Init(R, push, pop, mov, xchg, NIL, NIL, {R0, R1, R2, R3}, {});
+    REG.Init(R, push, pop, mov, xchg, {R0, R1, R2, R3});
 
     StkCount := 0;
 

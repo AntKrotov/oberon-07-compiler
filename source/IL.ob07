@@ -132,21 +132,13 @@ CONST
 
 TYPE
 
-    LOCALVAR* = POINTER TO RECORD (LISTS.ITEM)
-
-        offset*, size*, count*: INTEGER
-
-    END;
-
     COMMAND* = POINTER TO RECORD (LISTS.ITEM)
 
         opcode*:    INTEGER;
         param1*:    INTEGER;
         param2*:    INTEGER;
         param3*:    INTEGER;
-        float*:     REAL;
-        variables*: LISTS.LIST;
-        allocReg*:  BOOLEAN
+        float*:     REAL
 
     END;
 
@@ -215,7 +207,7 @@ VAR
     codes*: CODES;
     CPU: INTEGER;
 
-    commands, variables: C.COLLECTION;
+    commands: C.COLLECTION;
 
 
 PROCEDURE set_dmin* (value: INTEGER);
@@ -247,31 +239,10 @@ BEGIN
         NEW(cmd)
     ELSE
         cmd := citem(COMMAND)
-    END;
-
-    cmd.allocReg := FALSE
+    END
 
     RETURN cmd
 END NewCmd;
-
-
-PROCEDURE NewVar* (): LOCALVAR;
-VAR
-    lvar:  LOCALVAR;
-    citem: C.ITEM;
-
-BEGIN
-    citem := C.pop(variables);
-    IF citem = NIL THEN
-        NEW(lvar)
-    ELSE
-        lvar := citem(LOCALVAR)
-    END;
-
-    lvar.count := 0
-
-    RETURN lvar
-END NewVar;
 
 
 PROCEDURE setlast* (cmd: COMMAND);
@@ -601,23 +572,8 @@ BEGIN
 END AddCmd0;
 
 
-PROCEDURE deleteVarList (list: LISTS.LIST);
-VAR
-    last: LISTS.ITEM;
-
-BEGIN
-    WHILE list.last # NIL DO
-        last := LISTS.pop(list);
-        C.push(variables, last)
-    END
-END deleteVarList;
-
-
 PROCEDURE delete (cmd: COMMAND);
 BEGIN
-    IF cmd.variables # NIL THEN
-        deleteVarList(cmd.variables)
-    END;
     LISTS.delete(codes.commands, cmd);
     C.push(commands, cmd)
 END delete;
@@ -807,7 +763,6 @@ BEGIN
     cmd.opcode := opENTER;
     cmd.param1 := label;
     cmd.param3 := params;
-    cmd.allocReg := TRUE;
     insert(codes.last, cmd)
 
     RETURN codes.last
@@ -1180,7 +1135,6 @@ VAR
 
 BEGIN
     commands := C.create();
-    variables := C.create();
 
     CPU := pCPU;
 

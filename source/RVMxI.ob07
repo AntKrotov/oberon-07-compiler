@@ -1417,7 +1417,7 @@ BEGIN
     count := 0;
     WR.Create(outname);
 
-    REG.Init(R, push, pop, mov, xchg, NIL, NIL, GPRs, {});
+    REG.Init(R, push, pop, mov, xchg, GPRs);
 
     prolog;
     translate(szWord);

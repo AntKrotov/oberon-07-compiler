@@ -17,14 +17,11 @@ CONST
     R8*  =  8;  R9*  =  9;  R10* = 10;  R11* = 11;
     R12* = 12;  R13* = 13;  R14* = 14;  R15* = 15;
 
-    NVR = 32;
-
 
 TYPE
 
     OP1 = PROCEDURE (arg: INTEGER);
     OP2 = PROCEDURE (arg1, arg2: INTEGER);
-    OP3 = PROCEDURE (arg1, arg2, arg3: INTEGER);
 
     REGS* = RECORD
 
@@ -33,13 +30,8 @@ TYPE
         top*:    INTEGER;
         pushed*: INTEGER;
 
-        vregs*:  SET;
-        offs:    ARRAY NVR OF INTEGER;
-        size:    ARRAY NVR OF INTEGER;
-
         push, pop:  OP1;
-        mov,  xch:  OP2;
-        load, save: OP3
+        mov,  xch:  OP2
 
     END;
 
@@ -206,7 +198,7 @@ VAR
     res: BOOLEAN;
 
 BEGIN
-    res := FALSE;
+    res := TRUE;
 
     IF reg1 # reg2 THEN
         n1 := InStk(R, reg1);
@@ -215,23 +207,20 @@ BEGIN
         IF (n1 # -1) & (n2 # -1) THEN
             R.stk[n1] := reg2;
             R.stk[n2] := reg1;
-            R.xch(reg2, reg1);
-            res := TRUE
+            R.xch(reg2, reg1)
         ELSIF (n1 # -1) & (reg2 IN R.regs) THEN
             R.stk[n1] := reg2;
             INCL(R.regs, reg1);
             EXCL(R.regs, reg2);
-            R.mov(reg2, reg1);
-            res := TRUE
+            R.mov(reg2, reg1)
         ELSIF (n2 # -1) & (reg1 IN R.regs) THEN
             R.stk[n2] := reg1;
             EXCL(R.regs, reg1);
             INCL(R.regs, reg2);
-            R.mov(reg1, reg2);
-            res := TRUE
+            R.mov(reg1, reg2)
+        ELSE
+            res := FALSE
         END
-    ELSE
-        res := TRUE
     END
 
     RETURN res
@@ -253,7 +242,7 @@ BEGIN
     ELSIF R.top = 0 THEN
         reg1 := PopAnyReg(R);
         reg2 := R.stk[1]
-    ELSE (* R.top < 0 *)
+    ELSE (* R.top = -1 *)
         reg2 := PopAnyReg(R);
         reg1 := PopAnyReg(R)
     END
@@ -286,111 +275,7 @@ BEGIN
 END PushAll_1;
 
 
-PROCEDURE Lock* (VAR R: REGS; reg, offs, size: INTEGER);
-BEGIN
-    ASSERT(reg IN R.vregs);
-    ASSERT(offs # 0);
-    ASSERT(size IN {1, 2, 4, 8});
-    R.offs[reg] := offs;
-    R.size[reg] := size
-END Lock;
-
-
-PROCEDURE Release* (VAR R: REGS; reg: INTEGER);
-BEGIN
-    ASSERT(reg IN R.vregs);
-    R.offs[reg] := 0
-END Release;
-
-
-PROCEDURE Load* (R: REGS; reg: INTEGER);
-VAR
-    offs: INTEGER;
-
-BEGIN
-    ASSERT(reg IN R.vregs);
-    offs := R.offs[reg];
-    IF offs # 0 THEN
-        R.load(reg, offs, R.size[reg])
-    END
-END Load;
-
-
-PROCEDURE Save* (R: REGS; reg: INTEGER);
-VAR
-    offs: INTEGER;
-
-BEGIN
-    ASSERT(reg IN R.vregs);
-    offs := R.offs[reg];
-    IF offs # 0 THEN
-        R.save(reg, offs, R.size[reg])
-    END
-END Save;
-
-
-PROCEDURE Store* (R: REGS);
-VAR
-    i: INTEGER;
-
-BEGIN
-    FOR i := 0 TO NVR - 1 DO
-        IF i IN R.vregs THEN
-            Save(R, i)
-        END
-    END
-END Store;
-
-
-PROCEDURE Restore* (R: REGS);
-VAR
-    i: INTEGER;
-
-BEGIN
-    FOR i := 0 TO NVR - 1 DO
-        IF i IN R.vregs THEN
-            Load(R, i)
-        END
-    END
-END Restore;
-
-
-PROCEDURE Reset* (VAR R: REGS);
-VAR
-    i: INTEGER;
-
-BEGIN
-    FOR i := 0 TO NVR - 1 DO
-        IF i IN R.vregs THEN
-            R.offs[i] := 0
-        END
-    END
-END Reset;
-
-
-PROCEDURE GetVarReg* (R: REGS; offs: INTEGER): INTEGER;
-VAR
-    i, res: INTEGER;
-
-BEGIN
-    res := -1;
-    i := 0;
-    WHILE i < NVR DO
-        IF (i IN R.vregs) & (R.offs[i] = offs) THEN
-            res := i;
-            i := NVR
-        END;
-        INC(i)
-    END
-
-    RETURN res
-END GetVarReg;
-
-
-PROCEDURE Init* (VAR R: REGS; push, pop: OP1; mov, xch: OP2; load, save: OP3; regs, vregs: SET);
-VAR
-    i: INTEGER;
-
+PROCEDURE Init* (VAR R: REGS; push, pop: OP1; mov, xch: OP2; regs: SET);
 BEGIN
     R.regs := regs;
     R.pushed := 0;
@@ -400,16 +285,6 @@ BEGIN
     R.pop  := pop;
     R.mov  := mov;
     R.xch  := xch;
-    R.load := load;
-    R.save := save;
-
-    R.vregs := vregs;
-
-    FOR i := 0 TO NVR - 1 DO
-        R.offs[i] := 0;
-        R.size[i] := 0
-    END
-
 END Init;
 
 
