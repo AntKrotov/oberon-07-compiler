@@ -1655,8 +1655,6 @@ BEGIN
             INCL(R.regs, r1);
             ASSERT(REG.GetReg(R, r1))
 
-        |IL.opLOOP, IL.opENDLOOP:
-
         |IL.opINF:
             MovConst(GetAnyReg(), inf)
 

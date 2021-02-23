@@ -573,8 +573,6 @@ BEGIN
             UnOp(r1);
             ldr(r1, r1)
 
-        |IL.opLOOP, IL.opENDLOOP:
-
         |IL.opUMINUS:
             UnOp(r1);
             Emit(opNEG, r1, 0)

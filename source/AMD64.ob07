@@ -2204,8 +2204,6 @@ BEGIN
         |IL.opFNAME:
             fname := cmd(IL.FNAMECMD).fname
 
-        |IL.opLOOP, IL.opENDLOOP:
-
         END;
 
         cmd := cmd.next(COMMAND)

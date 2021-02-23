@@ -384,7 +384,7 @@ BEGIN
             END;
             IL.AddCmd(IL.opCOPYA, VarType.base.size);
             label := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJNZ, label);
+            IL.Jmp(IL.opJNZ, label);
             IL.OnError(line, errCOPY);
             IL.SetLabel(label)
 
@@ -1377,7 +1377,7 @@ BEGIN
 
     IF chkPTR IN Options.checking THEN
         label := IL.NewLabel();
-        IL.AddJmpCmd(IL.opJNZ1, label);
+        IL.Jmp(IL.opJNZ1, label);
         IL.OnError(pos.line, error);
         IL.SetLabel(label)
     END
@@ -1910,7 +1910,7 @@ VAR
                     IF (e.obj = eCONST) & isBoolean(e) THEN
                         IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
-                    IL.AddJmpCmd(IL.opJZ, label)
+                    IL.Jmp(IL.opJZ, label)
                 END
             END;
 
@@ -2006,7 +2006,7 @@ VAR
                 ELSE
                     IF e1.obj # eCONST THEN
                         label1 := IL.NewLabel();
-                        IL.AddJmpCmd(IL.opJG, label1)
+                        IL.Jmp(IL.opJG, label1)
                     END;
                     IF e.obj = eCONST THEN
                         IL.OnError(pos.line, errDIV);
@@ -2039,12 +2039,12 @@ VAR
 
         IF label # -1 THEN
             label1 := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJNZ, label1);
+            IL.Jmp(IL.opJNZ, label1);
             IL.SetLabel(label);
             IL.Const(0);
             IL.drop;
             label := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJMP, label);
+            IL.Jmp(IL.opJMP, label);
             IL.SetLabel(label1);
             IL.Const(1);
             IL.SetLabel(label);
@@ -2115,7 +2115,7 @@ VAR
                     IF (e.obj = eCONST) & isBoolean(e) THEN
                         IL.Const(ORD(ARITH.getBool(e.value)))
                     END;
-                    IL.AddJmpCmd(IL.opJNZ, label)
+                    IL.Jmp(IL.opJNZ, label)
                 END
 
             END;
@@ -2210,12 +2210,12 @@ VAR
 
         IF label # -1 THEN
             label1 := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJZ, label1);
+            IL.Jmp(IL.opJZ, label1);
             IL.SetLabel(label);
             IL.Const(1);
             IL.drop;
             label := IL.NewLabel();
-            IL.AddJmpCmd(IL.opJMP, label);
+            IL.Jmp(IL.opJMP, label);
             IL.SetLabel(label1);
             IL.Const(0);
             IL.SetLabel(label);
@@ -2635,7 +2635,7 @@ BEGIN
     L := IL.NewLabel();
 
     IF ~_if THEN
-        IL.AddCmd0(IL.opLOOP);
+        IL.AddCmd(IL.opNOP, IL.begin_loop);
         IL.SetLabel(L)
     END;
 
@@ -2649,7 +2649,7 @@ BEGIN
 
         IF e.obj = eCONST THEN
             IF ~ARITH.getBool(e.value) THEN
-                IL.AddJmpCmd(IL.opJMP, label)
+                IL.Jmp(IL.opJMP, label)
             END
         ELSE
             IL.AndOrOpt(label)
@@ -2665,7 +2665,7 @@ BEGIN
         parser.StatSeq(parser);
 
         IF ~_if OR (parser.sym # SCAN.lxEND) THEN
-            IL.AddJmpCmd(IL.opJMP, L)
+            IL.Jmp(IL.opJMP, L)
         END;
         IL.SetLabel(label)
 
@@ -2678,7 +2678,7 @@ BEGIN
         END;
         IL.SetLabel(L)
     ELSE
-        IL.AddCmd0(IL.opENDLOOP)
+        IL.AddCmd(IL.opNOP, IL.end_loop)
     END;
 
     PARS.checklex(parser, SCAN.lxEND);
@@ -2695,7 +2695,7 @@ VAR
     L:     IL.COMMAND;
 
 BEGIN
-    IL.AddCmd0(IL.opLOOP);
+    IL.AddCmd(IL.opNOP, IL.begin_loop);
 
     label := IL.NewLabel();
     IL.SetLabel(label);
@@ -2710,14 +2710,14 @@ BEGIN
 
     IF e.obj = eCONST THEN
         IF ~ARITH.getBool(e.value) THEN
-            IL.AddJmpCmd(IL.opJMP, label)
+            IL.Jmp(IL.opJMP, label)
         END
     ELSE
         IL.AndOrOpt(label);
         L.param1 := label
     END;
 
-    IL.AddCmd0(IL.opENDLOOP)
+    IL.AddCmd(IL.opNOP, IL.end_loop)
 END RepeatStatement;
 
 
@@ -2921,7 +2921,7 @@ VAR
             END;
 
             parser.StatSeq(parser);
-            IL.AddJmpCmd(IL.opJMP, _end);
+            IL.Jmp(IL.opJMP, _end);
 
             IF isRecPtr(caseExpr) THEN
                 caseExpr.ident._type := t
@@ -2970,7 +2970,7 @@ VAR
             IL.SetLabel(node.data(CASE_LABEL).self);
             IL._case(range.a, range.b, L, R);
             IF v.processed THEN
-                IL.AddJmpCmd(IL.opJMP, node.data(CASE_LABEL).variant)
+                IL.Jmp(IL.opJMP, node.data(CASE_LABEL).variant)
             END;
             v.processed := TRUE;
 
@@ -3004,7 +3004,7 @@ VAR
         _else := IL.NewLabel();
         table := IL.NewLabel();
         IL.AddCmd(IL.opSWITCH, ORD(isRecPtr(e)));
-        IL.AddJmpCmd(IL.opJMP, table);
+        IL.Jmp(IL.opJMP, table);
 
         tree := NIL;
 
@@ -3018,7 +3018,7 @@ VAR
         IF parser.sym = SCAN.lxELSE THEN
             PARS.Next(parser);
             parser.StatSeq(parser);
-            IL.AddJmpCmd(IL.opJMP, _end)
+            IL.Jmp(IL.opJMP, _end)
         ELSE
             IL.OnError(pos.line, errCASE)
         END;
@@ -3029,7 +3029,7 @@ VAR
         IF isRecPtr(e) THEN
             IL.SetLabel(table);
             TableT(tree);
-            IL.AddJmpCmd(IL.opJMP, _else)
+            IL.Jmp(IL.opJMP, _else)
         ELSE
             tree.data(CASE_LABEL).self := table;
             Table(tree, _else)
@@ -3088,7 +3088,7 @@ VAR
     L1, L2:    INTEGER;
 
 BEGIN
-    IL.AddCmd0(IL.opLOOP);
+    IL.AddCmd(IL.opNOP, IL.begin_loop);
 
     L1 := IL.NewLabel();
     L2 := IL.NewLabel();
@@ -3161,7 +3161,7 @@ BEGIN
         END
     END;
 
-    IL.AddJmpCmd(IL.opJZ, L2);
+    IL.Jmp(IL.opJZ, L2);
 
     PARS.checklex(parser, SCAN.lxDO);
     PARS.Next(parser);
@@ -3175,15 +3175,14 @@ BEGIN
 
     IL.AddCmd(IL.opINCC, st);
 
-    IL.AddJmpCmd(IL.opJMP, L1);
+    IL.Jmp(IL.opJMP, L1);
 
     PARS.checklex(parser, SCAN.lxEND);
     PARS.Next(parser);
 
     IL.SetLabel(L2);
 
-    IL.AddCmd0(IL.opENDLOOP)
-
+    IL.AddCmd(IL.opNOP, IL.end_loop)
 END ForStatement;
 
 

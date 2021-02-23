@@ -973,9 +973,6 @@ BEGIN
             Test(reg1);
             setcc(jne, reg1)
 
-        |IL.opLOOP:
-        |IL.opENDLOOP:
-
         |IL.opGET:
             BinOp(reg1, reg2);
             drop;

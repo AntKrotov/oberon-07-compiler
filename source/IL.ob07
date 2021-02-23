@@ -16,6 +16,8 @@ CONST
     call_win64* = 1;
     call_sysv*  = 2;
 
+    begin_loop* = 1; end_loop* = 2;
+
     opJMP* = 0; opLABEL* = 1; opCOPYS* = 2; opGADR* = 3; opCONST* = 4; opLLOAD32* = 5;
     opCOPYA* = 6; opCASET* = 7; opMULC* = 8; opMUL* = 9; opDIV* = 10; opMOD* = 11;
     opDIVL* = 12; opMODL* = 13; opDIVR* = 14; opMODR* = 15; opUMINUS* = 16;
@@ -44,7 +46,7 @@ CONST
     opCASEL* = 83; opCASER* = 84; opCASELR* = 85;
 
     opPOPSP* = 86;
-    opWIN64CALL* = 87; opWIN64CALLI* = 88; opWIN64CALLP* = 89; opLOOP* = 90; opENDLOOP* = 91;
+    opWIN64CALL* = 87; opWIN64CALLI* = 88; opWIN64CALLP* = 89; opAND* = 90; opOR* = 91;
 
     opLOAD8* = 92; opLOAD16* = 93; opLOAD32* = 94; opPRECALL* = 95; opRES* = 96; opRESF* = 97;
     opPUSHC* = 98; opSWITCH* = 99;
@@ -79,7 +81,6 @@ CONST
     opSAVE16C* = 213; opWCHR* = 214; opHANDLER* = 215;
 
     opSYSVCALL* = 216; opSYSVCALLI* = 217; opSYSVCALLP* = 218; opFNAME* = 219;
-    opAND* = 220; opOR* = 221;
 
 
     opSADR_PARAM* = -1; opLOAD64_PARAM* = -2; opLLOAD64_PARAM* = -3; opGLOAD64_PARAM* = -4;
@@ -600,7 +601,7 @@ BEGIN
 END delete2;
 
 
-PROCEDURE AddJmpCmd* (opcode: INTEGER; label: INTEGER);
+PROCEDURE Jmp* (opcode: INTEGER; label: INTEGER);
 VAR
     prev: COMMAND;
     not:  BOOLEAN;
@@ -623,7 +624,7 @@ BEGIN
     IF not THEN
         delete(prev)
     END
-END AddJmpCmd;
+END Jmp;
 
 
 PROCEDURE AndOrOpt* (VAR label: INTEGER);
@@ -680,16 +681,16 @@ BEGIN
         END;
 
         IF jz THEN
-            AddJmpCmd(opJZ, label)
+            Jmp(opJZ, label)
         ELSE
-            AddJmpCmd(opJNZ, label)
+            Jmp(opJNZ, label)
         END;
 
         IF op = opOR THEN
             SetLabel(l)
         END
     ELSE
-        AddJmpCmd(opJZ, label)
+        Jmp(opJZ, label)
     END;
 
     setlast(codes.last)
@@ -708,7 +709,7 @@ VAR
 BEGIN
     AddCmd(op, t);
     label := NewLabel();
-    AddJmpCmd(opJNZ, label);
+    Jmp(opJNZ, label);
     OnError(line, error);
     SetLabel(label)
 END TypeGuard;
@@ -802,9 +803,9 @@ END LeaveC;
 PROCEDURE Call* (proc, callconv, fparams: INTEGER);
 BEGIN
     CASE callconv OF
-    |call_stack: AddJmpCmd(opCALL, proc)
-    |call_win64: AddJmpCmd(opWIN64CALL, proc)
-    |call_sysv:  AddJmpCmd(opSYSVCALL, proc)
+    |call_stack: Jmp(opCALL, proc)
+    |call_win64: Jmp(opWIN64CALL, proc)
+    |call_sysv:  Jmp(opSYSVCALL, proc)
     END;
     codes.last(COMMAND).param2 := fparams
 END Call;
@@ -813,9 +814,9 @@ END Call;
 PROCEDURE CallImp* (proc: LISTS.ITEM; callconv, fparams: INTEGER);
 BEGIN
     CASE callconv OF
-    |call_stack: AddJmpCmd(opCALLI, proc(IMPORT_PROC).label)
-    |call_win64: AddJmpCmd(opWIN64CALLI, proc(IMPORT_PROC).label)
-    |call_sysv:  AddJmpCmd(opSYSVCALLI, proc(IMPORT_PROC).label)
+    |call_stack: Jmp(opCALLI, proc(IMPORT_PROC).label)
+    |call_win64: Jmp(opWIN64CALLI, proc(IMPORT_PROC).label)
+    |call_sysv:  Jmp(opSYSVCALLI, proc(IMPORT_PROC).label)
     END;
     codes.last(COMMAND).param2 := fparams
 END CallImp;
@@ -833,34 +834,34 @@ END CallP;
 
 PROCEDURE AssignProc* (proc: INTEGER);
 BEGIN
-    AddJmpCmd(opSAVEP, proc)
+    Jmp(opSAVEP, proc)
 END AssignProc;
 
 
 PROCEDURE AssignImpProc* (proc: LISTS.ITEM);
 BEGIN
-    AddJmpCmd(opSAVEIP, proc(IMPORT_PROC).label)
+    Jmp(opSAVEIP, proc(IMPORT_PROC).label)
 END AssignImpProc;
 
 
 PROCEDURE PushProc* (proc: INTEGER);
 BEGIN
-    AddJmpCmd(opPUSHP, proc)
+    Jmp(opPUSHP, proc)
 END PushProc;
 
 
 PROCEDURE PushImpProc* (proc: LISTS.ITEM);
 BEGIN
-    AddJmpCmd(opPUSHIP, proc(IMPORT_PROC).label)
+    Jmp(opPUSHIP, proc(IMPORT_PROC).label)
 END PushImpProc;
 
 
 PROCEDURE ProcCmp* (proc: INTEGER; eq: BOOLEAN);
 BEGIN
     IF eq THEN
-        AddJmpCmd(opEQP, proc)
+        Jmp(opEQP, proc)
     ELSE
-        AddJmpCmd(opNEP, proc)
+        Jmp(opNEP, proc)
     END
 END ProcCmp;
 
@@ -868,9 +869,9 @@ END ProcCmp;
 PROCEDURE ProcImpCmp* (proc: LISTS.ITEM; eq: BOOLEAN);
 BEGIN
     IF eq THEN
-        AddJmpCmd(opEQIP, proc(IMPORT_PROC).label)
+        Jmp(opEQIP, proc(IMPORT_PROC).label)
     ELSE
-        AddJmpCmd(opNEIP, proc(IMPORT_PROC).label)
+        Jmp(opNEIP, proc(IMPORT_PROC).label)
     END
 END ProcImpCmp;
 

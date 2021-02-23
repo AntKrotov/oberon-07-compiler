@@ -1263,7 +1263,7 @@ BEGIN
     END;
 
     label := IL.NewLabel();
-    IL.AddJmpCmd(IL.opJMP, label);
+    IL.Jmp(IL.opJMP, label);
 
     name := IL.putstr(unit.name.s);
 
@@ -1277,7 +1277,7 @@ BEGIN
     FOR errno := 1 TO LEN(IL.codes.errlabels) - 1 DO
         IL.SetErrLabel(errno);
         IL.AddCmd(IL.opPUSHC, errno);
-        IL.AddJmpCmd(IL.opJMP, errlabel)
+        IL.Jmp(IL.opJMP, errlabel)
     END;
 
     endmod := DeclarationSequence(parser);
