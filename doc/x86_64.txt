@@ -223,7 +223,7 @@ UTF-8 с BOM-сигнатурой.
   Синтаксис оператора CASE:
 
         CaseStatement =
-                CASE Expression OF Сase {"|" Сase}
+                CASE Expression OF Case {"|" Case}
                         [ELSE StatementSequence] END.
         Case = [CaseLabelList ":" StatementSequence].
         CaseLabelList = CaseLabels {"," CaseLabels}.
@@ -251,7 +251,7 @@ ARRAY OF WCHAR допускаются все те же операции, как 
 ARRAY OF CHAR, за исключением встроенной процедуры CHR, которая возвращает
 только тип CHAR. Для получения значения типа WCHAR, следует использовать
 процедуру WCHR вместо CHR. Для правильной работы с типом, необходимо сохранять
-исходный код в кодировке UTF-8 c BOM.
+исходный код в кодировке UTF-8 с BOM.
 
 ------------------------------------------------------------------------------
         Конкатенация строковых и символьных констант

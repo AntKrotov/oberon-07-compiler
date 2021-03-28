@@ -141,7 +141,7 @@ UTF-8 с BOM-сигнатурой.
   Синтаксис оператора CASE:
 
         CaseStatement =
-                CASE Expression OF Сase {"|" Сase}
+                CASE Expression OF Case {"|" Case}
                         [ELSE StatementSequence] END.
         Case = [CaseLabelList ":" StatementSequence].
         CaseLabelList = CaseLabels {"," CaseLabels}.
@@ -422,7 +422,7 @@ SYSTEM.
   - при выполнении тела модуля
 
 ------------------------------------------------------------------------------
-        Структура ПЗУ (RОM)
+        Структура ПЗУ (ROM)
 
   начало -> | свободная область | код | данные | векторы прерываний | <- конец
 
