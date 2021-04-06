@@ -1546,7 +1546,9 @@ BEGIN
 
         PARS.checklex(parser, SCAN.lxRSQUARE);
         PARS.Next(parser);
-        e.ident := NIL
+        IF ~(isArr(e) & (e._type.length = 0) & (parser.sym = SCAN.lxLSQUARE)) THEN
+            e.ident := NIL
+        END
 
     ELSIF parser.sym = SCAN.lxCARET DO
         getpos(parser, pos);

@@ -70,17 +70,12 @@ END pop;
 
 PROCEDURE InStk (R: REGS; reg: INTEGER): INTEGER;
 VAR
-    i, n: INTEGER;
+    i: INTEGER;
 
 BEGIN
-    i := 0;
-    n := R.top;
-    WHILE (i <= n) & (R.stk[i] # reg) DO
-        INC(i)
-    END;
-
-    IF i > n THEN
-        i := -1
+    i := R.top;
+    WHILE (i >= 0) & (R.stk[i] # reg) DO
+        DEC(i)
     END
 
     RETURN i
