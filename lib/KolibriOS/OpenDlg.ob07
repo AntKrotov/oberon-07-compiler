@@ -1,5 +1,5 @@
 ﻿(*
-    Copyright 2016, 2018, 2020 Anton Krotov
+    Copyright 2016, 2018, 2020, 2021 Anton Krotov
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -19,12 +19,17 @@ MODULE OpenDlg;
 
 IMPORT sys := SYSTEM, KOSAPI;
 
+CONST
+  topen* = 0;
+  tsave* = 1;
+  tdir* = 2;
+
 TYPE
 
   DRAW_WINDOW = PROCEDURE;
 
   TDialog = RECORD
-    _type,
+    _type*,
     procinfo,
     com_area_name,
     com_area,

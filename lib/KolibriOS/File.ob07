@@ -1,5 +1,5 @@
 ﻿(*
-    Copyright 2016, 2018 Anton Krotov
+    Copyright 2016, 2018, 2021 Anton Krotov
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -89,6 +89,20 @@ BEGIN
 
     RETURN KOSAPI.sysfunc22(70, sys.ADR(fs), res2) = 0
 END GetFileInfo;
+
+
+PROCEDURE FileSize* (FName: ARRAY OF CHAR): INTEGER;
+VAR
+    Info: rFD;
+    res: INTEGER;
+BEGIN
+    IF GetFileInfo(FName, Info) THEN
+        res := Info.size
+    ELSE
+        res := -1
+    END
+    RETURN res
+END FileSize;
 
 
 PROCEDURE Exists* (FName: ARRAY OF CHAR): BOOLEAN;
