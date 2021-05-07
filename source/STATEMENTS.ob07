@@ -1141,6 +1141,7 @@ BEGIN
             END
 
         |PROG.stORD:
+            IL.AddCmd(IL.opPRECALL, 0);
             PExpression(parser, e);
             PARS.check(isChar(e) OR isBoolean(e) OR isSet(e) OR isCharW(e) OR isStringW1(e), pos, 66);
             IF e.obj = eCONST THEN
