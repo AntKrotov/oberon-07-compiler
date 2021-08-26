@@ -711,12 +711,13 @@ BEGIN
 END close;
 
 
-PROCEDURE init* (lower: BOOLEAN);
+PROCEDURE init* (lower: BOOLEAN; TabSize: INTEGER);
 VAR
     i: INTEGER;
     delim: ARRAY 23 OF CHAR;
 
 BEGIN
+    TXT.setTabSize(TabSize);
     upto := FALSE;
     LowerCase := lower;
 

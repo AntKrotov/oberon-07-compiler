@@ -71,7 +71,7 @@ TYPE
 
     OPTIONS* = RECORD
 
-        version*, stack*, ram*, rom*: INTEGER;
+        version*, stack*, ram*, rom*, tab*: INTEGER;
         pic*, lower*: BOOLEAN;
         checking*: SET
 
@@ -1211,7 +1211,7 @@ END ResetLocSize;
 PROCEDURE create* (options: OPTIONS);
 BEGIN
     LowerCase := options.lower;
-    SCAN.init(options.lower);
+    SCAN.init(options.lower, options.tab);
     idents := C.create();
 
     UTILS.SetBitDepth(TARGETS.BitDepth, TARGETS.RealSize = 8);
