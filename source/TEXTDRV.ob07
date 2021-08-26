@@ -16,6 +16,8 @@ CONST
 
     CHUNK = 1024 * 256;
 
+    defTabSize* = 4;
+
 
 TYPE
 
@@ -95,7 +97,7 @@ BEGIN
         ELSIF c = HT THEN
             text.col := text.col + TabSize - text.col MOD TabSize;
             text.eol := FALSE;
-            text.CR := FALSE
+            text.CR  := FALSE
         ELSE
             IF text.utf8 THEN
                 IF ORD(c) DIV 64 # 2 THEN
@@ -105,7 +107,7 @@ BEGIN
                 INC(text.col)
             END;
             text.eol := FALSE;
-            text.CR := FALSE
+            text.CR  := FALSE
         END
 
     END
@@ -197,12 +199,12 @@ BEGIN
     IF (0 < n) & (n <= 64) THEN
         TabSize := n
     ELSE
-        TabSize := 4
+        TabSize := defTabSize
     END
 END setTabSize;
 
 
 BEGIN
-    setTabSize(0);
+    TabSize := defTabSize;
     texts := C.create()
 END TEXTDRV.

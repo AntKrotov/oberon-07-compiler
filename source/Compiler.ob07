@@ -8,7 +8,7 @@
 MODULE Compiler;
 
 IMPORT ST := STATEMENTS, PARS, UTILS, PATHS, PROG, C := CONSOLE,
-       ERRORS, STRINGS, WRITER, MSP430, THUMB, TARGETS, SCAN;
+       ERRORS, STRINGS, WRITER, MSP430, THUMB, TARGETS, SCAN, TEXTDRV;
 
 
 CONST
@@ -188,6 +188,7 @@ VAR
 
 BEGIN
     options.stack := 2;
+    options.tab := TEXTDRV.defTabSize;
     options.version := 65536;
     options.pic := FALSE;
     options.lower := FALSE;
@@ -292,6 +293,7 @@ BEGIN
     STRINGS.append(lib_path, UTILS.slash);
 
     keys(options, outname);
+    TEXTDRV.setTabSize(options.tab);
     IF outname = "" THEN
         outname := path;
         STRINGS.append(outname, modname);

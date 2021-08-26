@@ -1211,7 +1211,7 @@ END ResetLocSize;
 PROCEDURE create* (options: OPTIONS);
 BEGIN
     LowerCase := options.lower;
-    SCAN.init(options.lower, options.tab);
+    SCAN.init(options.lower);
     idents := C.create();
 
     UTILS.SetBitDepth(TARGETS.BitDepth, TARGETS.RealSize = 8);
