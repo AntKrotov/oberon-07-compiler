@@ -1,0 +1,19 @@
+MODULE TESTING;
+   (*
+      Testing for compiler Anton Krotov
+      (c) svi, BSD-2.
+   *)
+
+IMPORT Out, CT:=COLLECTIONS;
+
+VAR
+   res: BOOLEAN;
+
+BEGIN
+   Out.String("Testing begin...");Out.Ln;
+   res := CT.test();
+   IF res # FALSE THEN
+      Out.String("Test COLLECTIOS/create(): failed");Out.Ln();
+   END;
+   Out.String("Test COLLECTIOS/create(): ok");Out.Ln();
+END TESTING.

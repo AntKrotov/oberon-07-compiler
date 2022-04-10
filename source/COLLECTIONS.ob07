@@ -7,6 +7,7 @@
 
 MODULE COLLECTIONS;
 
+IMPORT Out;
 
 TYPE
 
@@ -55,5 +56,23 @@ BEGIN
     RETURN collection
 END create;
 
+(* --------- TESTING ------------ *)
+PROCEDURE test*():BOOLEAN;
+VAR
+    collections: COLLECTION;
+    res: BOOLEAN;
+BEGIN
+    Out.String("test.COLLECTIONS.create()");Out.Ln;
+    collections := create();
+    IF collections = NIL THEN
+        Out.String("test.COLLECTIONS.create(): collections = NIL");Out.Ln;
+        res := FALSE;
+    END;
+    IF collections.last # NIL THEN
+        Out.String("test.COLLECTIONS.create(): collections.last # NIL");Out.Ln;
+        res := FALSE;
+    END
+    RETURN res
+END test;
 
 END COLLECTIONS.
