@@ -26,6 +26,7 @@ Linux
 make       # Собирает компилятор под Linux x64
 make lin64 # -//-
 make lin32 # Собирает компилятор под Linux x32
+make lin64sample # Собирает и запускает примеры под Linux x64
 make win32 # Собирает компилятор под Windows x64
 make win32 # Собирает компилятор под Windows x32
 make col   # Собирает компилятор под KolibriOS
