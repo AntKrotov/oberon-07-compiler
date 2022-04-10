@@ -17,3 +17,16 @@
 [en]Additional modules
 [ru]Дополнительные модули
 ```
+
+## Цели сборки
+
+Linux
+
+```bash
+make       # Собирает компилятор под Linux x64
+make lin64 # -//-
+make lin32 # Собирает компилятор под Linux x32
+make win32 # Собирает компилятор под Windows x64
+make win32 # Собирает компилятор под Windows x32
+make col   # Собирает компилятор под KolibriOS
+```
