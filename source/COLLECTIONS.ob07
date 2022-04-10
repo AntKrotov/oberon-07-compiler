@@ -67,19 +67,17 @@ PROCEDURE test*():BOOLEAN;
         collection := create();
         IF collection = NIL THEN
             Out.String("test.COLLECTIONS.create(): collection = NIL");Out.Ln;
-            res := res & FALSE;
+            res := FALSE;
         END;
         IF collection.last # NIL THEN
             Out.String("test.COLLECTIONS.create(): collection.last # NIL");Out.Ln;
             res := FALSE;
-            res := res & FALSE;
         END;
         Out.String("test.COLLECTIONS.push()");Out.Ln;
         push(collection, item);
         IF collection.last # item THEN
             Out.String("test.COLLECTIONS.push(): collection.last # item");Out.Ln;
             res := FALSE;
-            res := res & FALSE;
         END;
         RETURN res
 END test;
