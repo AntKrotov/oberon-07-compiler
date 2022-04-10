@@ -58,21 +58,30 @@ END create;
 
 (* --------- TESTING ------------ *)
 PROCEDURE test*():BOOLEAN;
-VAR
-    collections: COLLECTION;
-    res: BOOLEAN;
-BEGIN
-    Out.String("test.COLLECTIONS.create()");Out.Ln;
-    collections := create();
-    IF collections = NIL THEN
-        Out.String("test.COLLECTIONS.create(): collections = NIL");Out.Ln;
-        res := FALSE;
-    END;
-    IF collections.last # NIL THEN
-        Out.String("test.COLLECTIONS.create(): collections.last # NIL");Out.Ln;
-        res := FALSE;
-    END
-    RETURN res
+    VAR
+        collection: COLLECTION;
+        res: BOOLEAN;
+        item: ITEM;
+    BEGIN
+        Out.String("test.COLLECTIONS.create()");Out.Ln;
+        collection := create();
+        IF collection = NIL THEN
+            Out.String("test.COLLECTIONS.create(): collection = NIL");Out.Ln;
+            res := res & FALSE;
+        END;
+        IF collection.last # NIL THEN
+            Out.String("test.COLLECTIONS.create(): collection.last # NIL");Out.Ln;
+            res := FALSE;
+            res := res & FALSE;
+        END;
+        Out.String("test.COLLECTIONS.push()");Out.Ln;
+        push(collection, item);
+        IF collection.last # item THEN
+            Out.String("test.COLLECTIONS.push(): collection.last # item");Out.Ln;
+            res := FALSE;
+            res := res & FALSE;
+        END;
+        RETURN res
 END test;
 
 END COLLECTIONS.
