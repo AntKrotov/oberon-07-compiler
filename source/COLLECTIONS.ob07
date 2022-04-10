@@ -11,12 +11,15 @@ IMPORT Out;
 
 TYPE
 
+    (* Элемент коллекции. Поле "link" содержит ссылку на свой же тип в
+        качестве продолжения цепочки *)
     ITEM* = POINTER TO RECORD
 
         link: ITEM
 
     END;
 
+    (* Коллекция содержит "голову" всей цепочки *)
     COLLECTION* = POINTER TO RECORD
 
         last: ITEM
@@ -24,6 +27,11 @@ TYPE
     END;
 
 
+(* push -- добавляет в коллецию элемент.
+    Элемент голову коллекции пристраивает себе в хвост,
+    а сам становится голвоой коллекции. Поэтому элемент
+    НЕ МОЖЕТ быть NIL. #TODO: не хватает проверок на то, что коллекция
+    не NIL и элемент не NIL. Ошибка вываливается ВО ВРЕМЯ РАБОТЫ. *)
 PROCEDURE push* (collection: COLLECTION; item: ITEM);
 BEGIN
     item.link := collection.last;
