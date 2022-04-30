@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2021, Anton Krotov
+    Copyright (c) 2018-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -954,9 +954,10 @@ BEGIN
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
             IF e.obj = eCONST THEN
-                LoadConst(e)
-            END;
-            IL.AddCmd0(IL.opMOVE)
+                IL.AddCmd(IL.opCOPY, ARITH.Int(e.value))
+            ELSE
+                IL.AddCmd0(IL.opMOVE)
+            END
 
         |PROG.sysCOPY:
             FOR i := 1 TO 2 DO
@@ -974,9 +975,10 @@ BEGIN
             PExpression(parser, e);
             PARS.check(isInt(e), pos, 66);
             IF e.obj = eCONST THEN
-                LoadConst(e)
-            END;
-            IL.AddCmd0(IL.opMOVE)
+                IL.AddCmd(IL.opCOPY, ARITH.Int(e.value))
+            ELSE
+                IL.AddCmd0(IL.opMOVE)
+            END
 
         |PROG.sysCODE:
             REPEAT
