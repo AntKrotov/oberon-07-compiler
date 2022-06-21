@@ -1621,6 +1621,15 @@ BEGIN
         callconv := IL.call_sysv;
         fparSize := LSL(ORD(PROG.getFloatParamsPos(procType, PROG.MAXSYSVPARAM - 1, int, flt)), 5) + parSize;
         stk_par := MAX(0, int - 6) + MAX(0, flt - 8)
+    ELSIF cconv IN {PROG.fastcall, PROG._fastcall} THEN
+        IF parSize = 0 THEN
+            callconv := IL.call_stack
+        ELSIF parSize = 1 THEN
+            callconv := IL.call_fast1
+        ELSIF parSize >= 2 THEN
+            callconv := IL.call_fast2
+        END;
+        fparSize := 0
     ELSE
         callconv := IL.call_stack;
         fparSize := 0

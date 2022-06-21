@@ -775,6 +775,14 @@ BEGIN
             drop;
             ASSERT(R.top = -1)
 
+        |IL.opFASTCALL:
+            IF param2 = 1 THEN
+                pop(ecx)
+            ELSIF param2 = 2 THEN
+                pop(ecx);
+                pop(edx)
+            END
+
         |IL.opPRECALL:
             PushAll(0);
             IF (param2 # 0) & (fr >= 0) THEN
@@ -831,6 +839,15 @@ BEGIN
             ASSERT(R.top = -1);
 
             SetLabel(param1);
+
+            IF cmd.param3 > 0 THEN
+                pop(eax);
+                IF cmd.param3 >= 2 THEN
+                    push(edx)
+                END;
+                push(ecx);
+                push(eax)
+            END;
 
             push(ebp);
             mov(ebp, esp);
