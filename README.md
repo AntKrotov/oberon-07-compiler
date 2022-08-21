@@ -29,7 +29,7 @@ make lin32        # Собирает компилятор под Linux x32
 make lin.test     # Собирает и запускает тесты под Linux x64
 make lin64sample1 # Собирает и запускает пример-1 под Linux x64
 make lin64sample2 # Собирает и запускает пример-2 под Linux x64
-make win32        # Собирает компилятор под Windows x64
+make win64        # Собирает компилятор под Windows x64
 make win32        # Собирает компилятор под Windows x32
 make col          # Собирает компилятор под KolibriOS
 ```
