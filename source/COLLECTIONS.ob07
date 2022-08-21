@@ -7,15 +7,19 @@
 
 MODULE COLLECTIONS;
 
+IMPORT Out;
 
 TYPE
 
+    (* Элемент коллекции. Поле "link" содержит ссылку на свой же тип в
+        качестве продолжения цепочки *)
     ITEM* = POINTER TO RECORD
 
         link: ITEM
 
     END;
 
+    (* Коллекция содержит "голову" всей цепочки *)
     COLLECTION* = POINTER TO RECORD
 
         last: ITEM
@@ -23,6 +27,11 @@ TYPE
     END;
 
 
+(* push -- добавляет в коллецию элемент.
+    Элемент голову коллекции пристраивает себе в хвост,
+    а сам становится голвоой коллекции. Поэтому элемент
+    НЕ МОЖЕТ быть NIL. #TODO: не хватает проверок на то, что коллекция
+    не NIL и элемент не NIL. Ошибка вываливается ВО ВРЕМЯ РАБОТЫ. *)
 PROCEDURE push* (collection: COLLECTION; item: ITEM);
 BEGIN
     item.link := collection.last;
@@ -55,5 +64,30 @@ BEGIN
     RETURN collection
 END create;
 
+(* --------- TESTING ------------ *)
+PROCEDURE test*():BOOLEAN;
+    VAR
+        collection: COLLECTION;
+        res: BOOLEAN;
+        item: ITEM;
+    BEGIN
+        Out.String("test.COLLECTIONS.create()");Out.Ln;
+        collection := create();
+        IF collection = NIL THEN
+            Out.String("test.COLLECTIONS.create(): collection = NIL");Out.Ln;
+            res := FALSE;
+        END;
+        IF collection.last # NIL THEN
+            Out.String("test.COLLECTIONS.create(): collection.last # NIL");Out.Ln;
+            res := FALSE;
+        END;
+        Out.String("test.COLLECTIONS.push()");Out.Ln;
+        push(collection, item);
+        IF collection.last # item THEN
+            Out.String("test.COLLECTIONS.push(): collection.last # item");Out.Ln;
+            res := FALSE;
+        END;
+        RETURN res
+END test;
 
 END COLLECTIONS.
