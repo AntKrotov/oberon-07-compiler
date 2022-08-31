@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020-2021, Anton Krotov
+    Copyright (c) 2020-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -31,7 +31,7 @@ CONST
 
 VAR
 
-    maxreal*: REAL;
+    maxreal*, inf*: REAL;
 
 
 PROCEDURE syscall0 (fn: INTEGER): INTEGER;
@@ -180,6 +180,7 @@ END splitf;
 
 
 BEGIN
+    inf := SYSTEM.INF();
     maxreal := 1.9;
     PACK(maxreal, 127)
 END HOST.

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2021, Anton Krotov
+    Copyright (c) 2018-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -67,7 +67,7 @@ VAR
     Params: ARRAY MAX_PARAM, 2 OF INTEGER;
     argc: INTEGER;
 
-    maxreal*: REAL;
+    maxreal*, inf*: REAL;
 
 
 PROCEDURE [windows-, "kernel32.dll", "GetTickCount"]
@@ -332,6 +332,7 @@ END d2s;
 
 
 BEGIN
+    inf := SYSTEM.INF();
     maxreal := 1.9;
     PACK(maxreal, 1023);
     hConsoleOutput := _GetStdHandle(-11);

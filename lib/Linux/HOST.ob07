@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2021, Anton Krotov
+    Copyright (c) 2019-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -29,7 +29,7 @@ TYPE
 
 VAR
 
-    maxreal*: REAL;
+    maxreal*, inf*: REAL;
 
     argc: INTEGER;
 
@@ -234,6 +234,7 @@ END GetSym;
 
 
 BEGIN
+    inf := SYSTEM.INF();
     maxreal := 1.9;
     PACK(maxreal, 1023);
     SYSTEM.GET(API.MainParam, argc);
