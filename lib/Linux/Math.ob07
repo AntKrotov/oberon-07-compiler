@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2021, Anton Krotov
+    Copyright (c) 2019-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -394,8 +394,7 @@ BEGIN
     ELSIF x < -15.0 THEN
         x := -ONE
     ELSE
-        x := exp(TWO * x);
-        x := (x - ONE) / (x + ONE)
+        x := ONE - TWO / (exp(TWO * x) + ONE)
     END
 
     RETURN x

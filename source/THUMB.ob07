@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2021, Anton Krotov
+    Copyright (c) 2019-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -1587,14 +1587,6 @@ BEGIN
             Tst(r1);
             SetCC(jne, r1)
 
-        |IL.opCHR:
-            UnOp(r1);
-            Code(0B2C0H + r1 * 9) (* uxtb r1, r1 *)
-
-        |IL.opWCHR:
-            UnOp(r1);
-            Code(0B280H + r1 * 9) (* uxth r1, r1 *)
-
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             BinOp(r1, r2);
             Shift(opcode, r1, r2);
@@ -1619,11 +1611,6 @@ BEGIN
                 |IL.opLSR2: LsrImm(r1, n)
                 END
             END
-
-        |IL.opCHKBYTE:
-            BinOp(r1, r2);
-            CmpConst(r1, 256);
-            jcc(jb, param1)
 
         |IL.opCHKIDX:
             UnOp(r1);

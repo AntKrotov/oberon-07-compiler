@@ -402,12 +402,6 @@ BEGIN
                         IL.AddCmd(IL.opSAVE8C, ARITH.Int(e.value))
                     END
                 ELSE
-                    IF chkBYTE IN Options.checking THEN
-                        label := IL.NewLabel();
-                        IL.AddCmd2(IL.opCHKBYTE, label, 0);
-                        IL.OnError(line, errBYTE);
-                        IL.SetLabel(label)
-                    END;
                     IL.AddCmd0(IL.opSAVE8)
                 END
             END
@@ -1062,7 +1056,7 @@ BEGIN
                 IF chkCHR IN Options.checking THEN
                     CheckRange(256, pos.line, errCHR)
                 ELSE
-                    IL.AddCmd0(IL.opCHR)
+                    IL.AddCmd(IL.opMODR, 256)
                 END
             END
 
@@ -1077,7 +1071,7 @@ BEGIN
                 IF chkWCHR IN Options.checking THEN
                     CheckRange(65536, pos.line, errWCHR)
                 ELSE
-                    IL.AddCmd0(IL.opWCHR)
+                    IL.AddCmd(IL.opMODR, 65536)
                 END
             END
 
@@ -2599,6 +2593,9 @@ BEGIN
 
         NextPos(parser, pos);
         expression(parser, e1);
+        IF (e._type.typ = PROG.tBYTE) & (e1.obj # eCONST) & (e1._type.typ = PROG.tINTEGER) & (chkBYTE IN Options.checking) THEN
+            CheckRange(256, pos.line, errBYTE)
+        END;
 
         IL.setlast(endcall.prev(IL.COMMAND));
 

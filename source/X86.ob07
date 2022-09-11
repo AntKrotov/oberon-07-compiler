@@ -1438,11 +1438,6 @@ BEGIN
             pushc(param1);
             CallRTL(pic, IL._move)
 
-        |IL.opCHKBYTE:
-            BinOp(reg1, reg2);
-            cmprc(reg1, 256);
-            jcc(jb, param1)
-
         |IL.opCHKIDX:
             UnOp(reg1);
             cmprc(reg1, param2);
@@ -1556,14 +1551,6 @@ BEGIN
             PushAll(2);
             CallRTL(pic, IL._lengthw);
             GetRegA
-
-        |IL.opCHR:
-            UnOp(reg1);
-            andrc(reg1, 255)
-
-        |IL.opWCHR:
-            UnOp(reg1);
-            andrc(reg1, 65535)
 
         |IL.opASR, IL.opROR, IL.opLSL, IL.opLSR:
             UnOp(reg1);
