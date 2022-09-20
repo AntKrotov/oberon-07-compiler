@@ -954,14 +954,13 @@ BEGIN
             jmp(param1)
 
         |IL.opPARAM:
-            n := param2;
-            IF n = 1 THEN
+            IF param2 = 1 THEN
                 UnOp(reg1);
                 push(reg1);
                 drop
             ELSE
-                ASSERT(R.top + 1 <= n);
-                PushAll(n)
+                ASSERT(R.top + 1 <= param2);
+                PushAll(param2)
             END
 
         |IL.opCLEANUP:

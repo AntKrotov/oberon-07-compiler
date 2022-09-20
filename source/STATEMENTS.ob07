@@ -1386,6 +1386,8 @@ VAR
     field:  PROG.FIELD;
     pos:    PARS.POSITION;
     t, idx: PARS.EXPR;
+    sysVal: BOOLEAN;
+    n:      INTEGER;
 
 
     PROCEDURE LoadAdr (e: PARS.EXPR);
@@ -1438,7 +1440,6 @@ VAR
         _type: PROG._TYPE;
 
     BEGIN
-
         IF chkIDX IN Options.checking THEN
             label := IL.NewLabel();
             IL.AddCmd2(IL.opCHKIDX2, label, 0);
@@ -1471,12 +1472,35 @@ VAR
 
 BEGIN
     qualident(parser, e);
+    sysVal := (e.obj = eSYSPROC) & (e.stproc = PROG.sysVAL);
+    IF sysVal THEN
+        PARS.checklex(parser, SCAN.lxLROUND);
+        PARS.Next(parser);
+        getpos(parser, pos);
+        designator(parser, e);
+        PARS.check(isVar(e), pos, 93);
+        IF PROG.isOpenArray(e._type) THEN
+            n := PROG.Dim(e._type);
+            WHILE n > 0 DO
+                IL.drop;
+                DEC(n)
+            END
+        END;
+        PARS.checklex(parser, SCAN.lxCOMMA);
+        PARS.Next(parser);
+        getpos(parser, pos);
+        qualident(parser, t);
+        PARS.check(t.obj = eTYPE, pos, 79);
+        e._type := t._type;
+        PARS.checklex(parser, SCAN.lxRROUND);
+        PARS.Next(parser)
+    END;
 
     IF e.obj IN {ePROC, eIMP} THEN
         PROG.UseProc(parser.unit, e.ident.proc)
     END;
 
-    IF isVar(e) THEN
+    IF isVar(e) & ~sysVal THEN
         LoadAdr(e)
     END;
 

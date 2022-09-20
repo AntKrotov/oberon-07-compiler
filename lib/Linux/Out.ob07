@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020-2021, Anton Krotov
+    Copyright (c) 2020-2022, Anton Krotov
     All rights reserved.
 *)
 
@@ -49,22 +49,12 @@ BEGIN
 END Int;
 
 
-PROCEDURE intval (x: REAL): INTEGER;
-VAR
-    i: INTEGER;
-
-BEGIN
-    SYSTEM.GET(SYSTEM.ADR(x), i)
-    RETURN i
-END intval;
-
-
 PROCEDURE Real* (x: REAL; width: INTEGER);
 BEGIN
     IF bit_depth = 32 THEN
         printf3(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), x)
     ELSE
-        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), intval(x))
+        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), SYSTEM.VAL(x, INTEGER))
     END
 END Real;
 
@@ -74,7 +64,7 @@ BEGIN
     IF bit_depth = 32 THEN
         printf3(SYSTEM.SADR("%*.*f"), width, precision, x)
     ELSE
-        printf4(SYSTEM.SADR("%*.*f"), width, precision, intval(x))
+        printf4(SYSTEM.SADR("%*.*f"), width, precision, SYSTEM.VAL(x, INTEGER))
     END
 END FixReal;
 

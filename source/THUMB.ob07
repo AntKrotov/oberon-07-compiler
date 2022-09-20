@@ -1151,14 +1151,13 @@ BEGIN
             PushAll(0)
 
         |IL.opPARAM:
-            n := param2;
-            IF n = 1 THEN
+            IF param2 = 1 THEN
                 UnOp(r1);
                 push(r1);
                 drop
             ELSE
-                ASSERT(R.top + 1 <= n);
-                PushAll(n)
+                ASSERT(R.top + 1 <= param2);
+                PushAll(param2)
             END
 
         |IL.opCLEANUP:
