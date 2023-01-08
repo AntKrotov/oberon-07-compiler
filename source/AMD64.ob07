@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, Anton Krotov
+    Copyright (c) 2018-2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -1343,8 +1343,8 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            n := param2 + 8;
-            ASSERT(UTILS.Align(n, 8));
+            n := param2 + 16;
+            ASSERT(UTILS.Align(n, 16));
             pushc(n);
             pushc(param1);
             CallRTL(IL._new)
@@ -2371,6 +2371,7 @@ VAR
 
 BEGIN
     Xmm[0] := 0;
+    X86.align16(TRUE);
     tcount := CHL.Length(IL.codes.types);
 
     Win64RegPar[0] := rcx;

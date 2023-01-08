@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2021, Anton Krotov
+    Copyright (c) 2018-2021, 2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -176,8 +176,8 @@ PROCEDURE [oberon] _new* (t, size: INTEGER; VAR ptr: INTEGER);
 BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
-        SYSTEM.PUT(ptr, t);
-        INC(ptr, WORD)
+        SYSTEM.PUT(ptr + 8, t);
+        INC(ptr, 16)
     END
 END _new;
 
@@ -185,7 +185,7 @@ END _new;
 PROCEDURE [oberon] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
-        ptr := API._DISPOSE(ptr - WORD)
+        ptr := API._DISPOSE(ptr - 16)
     END
 END _dispose;
 
@@ -701,8 +701,8 @@ PROCEDURE [stdcall] _new* (t, size: INTEGER; VAR ptr: INTEGER);
 BEGIN
     ptr := API._NEW(size);
     IF ptr # 0 THEN
-        SYSTEM.PUT(ptr, t);
-        INC(ptr, WORD)
+        SYSTEM.PUT(ptr + ORD(API.OS = "LINUX")*12, t);
+        INC(ptr, 4 + ORD(API.OS = "LINUX")*12)
     END
 END _new;
 
@@ -710,7 +710,7 @@ END _new;
 PROCEDURE [stdcall] _dispose* (VAR ptr: INTEGER);
 BEGIN
     IF ptr # 0 THEN
-        ptr := API._DISPOSE(ptr - WORD)
+        ptr := API._DISPOSE(ptr - (4 + ORD(API.OS = "LINUX")*12))
     END
 END _dispose;
 

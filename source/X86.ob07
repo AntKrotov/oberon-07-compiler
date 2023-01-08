@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, Anton Krotov
+    Copyright (c) 2018-2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -1814,8 +1814,17 @@ BEGIN
 
         |IL.opNEW:
             PushAll(1);
-            n := param2 + 8;
-            ASSERT(UTILS.Align(n, 32));
+            CASE TARGETS.OS OF
+            |TARGETS.osWIN32:
+                n := param2 + 4;
+                ASSERT(UTILS.Align(n, 4))
+            |TARGETS.osLINUX32:
+                n := param2 + 16;
+                ASSERT(UTILS.Align(n, 16))
+            |TARGETS.osKOS:
+                n := param2 + 8;
+                ASSERT(UTILS.Align(n, 32))
+            END;
             pushc(n);
             pushc(param1);
             CallRTL(pic, IL._new)
@@ -2430,6 +2439,19 @@ BEGIN
 END epilog;
 
 
+PROCEDURE align16* (bit64: BOOLEAN);
+BEGIN
+    IF TARGETS.WinLin THEN
+        WHILE CHL.Length(IL.codes.data) MOD 16 # 0 DO
+            CHL.PushByte(IL.codes.data, 0)
+        END;
+        WHILE CHL.Length(IL.codes.types) MOD (4 - 2*ORD(bit64)) # 0 DO
+            CHL.PushInt(IL.codes.types, 0)
+        END
+    END
+END align16;
+
+
 PROCEDURE CodeGen* (outname: ARRAY OF CHAR; target: INTEGER; options: PROG.OPTIONS);
 VAR
     dllret, dllinit, sofinit: INTEGER;
@@ -2437,6 +2459,7 @@ VAR
 
 BEGIN
     FR[0] := 0;
+    align16(FALSE);
     tcount := CHL.Length(IL.codes.types);
 
     opt := options;
@@ -2462,7 +2485,6 @@ BEGIN
     epilog(opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
 
     BIN.fixup(program);
-
     IF TARGETS.OS = TARGETS.osWIN32 THEN
         PE32.write(program, outname, target = TARGETS.Win32C, target = TARGETS.Win32DLL, FALSE)
     ELSIF target = TARGETS.KolibriOS THEN
@@ -2472,7 +2494,6 @@ BEGIN
     ELSIF TARGETS.OS = TARGETS.osLINUX32 THEN
         ELF.write(program, outname, sofinit, target = TARGETS.Linux32SO, FALSE)
     END
-
 END CodeGen;
 
 

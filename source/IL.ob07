@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, Anton Krotov
+    Copyright (c) 2018-2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -265,12 +265,22 @@ BEGIN
 END PutByte;
 
 
+PROCEDURE AlignData (n: INTEGER);
+BEGIN
+    WHILE CHL.Length(codes.data) MOD n # 0 DO
+        PutByte(0)
+    END
+END AlignData;
+
+
 PROCEDURE putstr* (s: ARRAY OF CHAR): INTEGER;
 VAR
     i, n, res: INTEGER;
 BEGIN
+    IF TARGETS.WinLin THEN
+        AlignData(16)
+    END;
     res := CHL.Length(codes.data);
-
     i := 0;
     n := LENGTH(s);
     WHILE i < n DO
@@ -290,6 +300,9 @@ VAR
 
 BEGIN
     IF codes.charoffs[c] = -1 THEN
+        IF TARGETS.WinLin THEN
+            AlignData(16)
+        END;
         res := CHL.Length(codes.data);
         PutByte(c);
         PutByte(0);
@@ -307,12 +320,12 @@ VAR
     i, n, res: INTEGER;
 
 BEGIN
-    res := CHL.Length(codes.data);
-
-    IF ODD(res) THEN
-        PutByte(0);
-        INC(res)
+    IF TARGETS.WinLin THEN
+        AlignData(16)
+    ELSE
+        AlignData(2)
     END;
+    res := CHL.Length(codes.data);
 
     n := STRINGS.Utf8To16(s, codes.wstr);
 
@@ -341,12 +354,12 @@ VAR
 
 BEGIN
     IF codes.wcharoffs[c] = -1 THEN
-        res := CHL.Length(codes.data);
-
-        IF ODD(res) THEN
-            PutByte(0);
-            INC(res)
+        IF TARGETS.WinLin THEN
+            AlignData(16)
+        ELSE
+            AlignData(2)
         END;
+        res := CHL.Length(codes.data);
 
         IF TARGETS.LittleEndian THEN
             PutByte(c MOD 256);

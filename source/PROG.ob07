@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, Anton Krotov
+    Copyright (c) 2018-2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -240,13 +240,18 @@ END NewIdent;
 
 PROCEDURE getOffset* (varIdent: IDENT): INTEGER;
 VAR
-    size: INTEGER;
+    size, glob_align: INTEGER;
 
 BEGIN
     IF varIdent.offset = -1 THEN
         size := varIdent._type.size;
         IF varIdent.global THEN
-            IF UTILS.Align(program.bss, varIdent._type.align) THEN
+            IF TARGETS.WinLin THEN
+                glob_align := 16
+            ELSE
+                glob_align := varIdent._type.align
+            END;
+            IF UTILS.Align(program.bss, glob_align) THEN
                 IF UTILS.maxint - program.bss >= size THEN
                     varIdent.offset := program.bss;
                     INC(program.bss, size)

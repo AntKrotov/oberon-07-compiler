@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2021, Anton Krotov
+    Copyright (c) 2019-2021, 2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -12,6 +12,7 @@ IMPORT SYSTEM;
 
 CONST
 
+    OS* = "LINUX";
     eol* = 0AX;
 
     BIT_DEPTH* = (ORD(LSL(1, 31) > 0) + 1) * 32;
