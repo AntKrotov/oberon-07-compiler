@@ -1263,7 +1263,11 @@ BEGIN
 
     IF TARGETS.RealSize # 0 THEN
         program.stTypes.tREAL := enterType(tREAL, TARGETS.RealSize, 0, NIL);
-        program.stTypes.tREAL.align := TARGETS.RealSize
+        IF TARGETS.OS = TARGETS.osLINUX32 THEN
+            program.stTypes.tREAL.align := 4
+        ELSE
+            program.stTypes.tREAL.align := TARGETS.RealSize
+        END
     END;
 
     program.stTypes.tSTRING := enterType(tSTRING, TARGETS.WordSize, 0, NIL);
