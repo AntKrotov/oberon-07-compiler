@@ -73,7 +73,7 @@ TYPE
 
     OPTIONS* = RECORD
 
-        version*, stack*, ram*, rom*, tab*: INTEGER;
+        version*, stack*, ram*, rom*, tab*, PE32FileAlignment*: INTEGER;
         pic*, lower*, uses*: BOOLEAN;
         checking*: SET
 

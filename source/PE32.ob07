@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2020, 2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -32,7 +32,6 @@ CONST
     SHC_bss   = 0C0000080H;
 
     SectionAlignment = 1000H;
-    FileAlignment    =  200H;
 
 
 TYPE
@@ -155,6 +154,7 @@ VAR
     SectionHeaders:  ARRAY 16 OF IMAGE_SECTION_HEADER;
     libcnt:          INTEGER;
     SizeOfWord:      INTEGER;
+    FileAlignment:   INTEGER;
 
 
 PROCEDURE Export (program: BIN.PROGRAM; name: INTEGER; VAR ExportDir: IMAGE_EXPORT_DIRECTORY): INTEGER;
@@ -348,7 +348,7 @@ BEGIN
 END WriteFileHeader;
 
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll, amd64: BOOLEAN);
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; console, dll, amd64: BOOLEAN; fa: INTEGER);
 VAR
     i, n, temp: INTEGER;
 
@@ -465,6 +465,12 @@ VAR
 
 
 BEGIN
+    IF (fa = 512) OR (fa = 1024) OR (fa = 2048) OR (fa = 4096) THEN
+        FileAlignment := fa
+    ELSE
+        FileAlignment := 512
+    END;
+
     SizeOfWord := SIZE_OF_DWORD * (ORD(amd64) + 1);
 
     Size.Code  := CHL.Length(program.code);
@@ -516,7 +522,7 @@ BEGIN
     OptionalHeader.MinorSubsystemVersion        :=  0X;
     OptionalHeader.Win32VersionValue            :=  0H;
     OptionalHeader.SizeOfImage                  :=  SectionAlignment;
-    OptionalHeader.SizeOfHeaders                :=  400H;
+    OptionalHeader.SizeOfHeaders                :=  MAX(FileAlignment, 1024);
     OptionalHeader.CheckSum                     :=  0;
     OptionalHeader.Subsystem                    :=  WCHR((2 + ORD(console)) * ORD(~dll));
     OptionalHeader.DllCharacteristics           :=  0040X;

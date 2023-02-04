@@ -66,6 +66,9 @@ BEGIN
                 DEC(i)
             END
 
+        ELSIF param = "-fa" THEN
+            getVal(i, options.PE32FileAlignment)
+
         ELSIF param = "-out" THEN
             INC(i);
             UTILS.GetArg(i, param);
@@ -255,6 +258,7 @@ BEGIN
         C.StringLn("  -rom <size>           set size of ROM in bytes (MSP430) or Kbytes (STM32)"); C.Ln;
         C.StringLn("  -tab <width>          set width for tabs"); C.Ln;
         C.StringLn("  -uses                 list imported modules"); C.Ln;
+        C.StringLn("  -fa <size>            set PE32 file alignment {512 (def.), 1024, 2048, 4096}"); C.Ln;
         UTILS.Exit(0)
     END;
 

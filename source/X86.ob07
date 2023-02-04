@@ -2486,7 +2486,7 @@ BEGIN
 
     BIN.fixup(program);
     IF TARGETS.OS = TARGETS.osWIN32 THEN
-        PE32.write(program, outname, target = TARGETS.Win32C, target = TARGETS.Win32DLL, FALSE)
+        PE32.write(program, outname, target = TARGETS.Win32C, target = TARGETS.Win32DLL, FALSE, opt.PE32FileAlignment)
     ELSIF target = TARGETS.KolibriOS THEN
         KOS.write(program, outname)
     ELSIF target = TARGETS.KolibriOSDLL THEN
