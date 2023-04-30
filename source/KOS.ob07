@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2020, Anton Krotov
+    Copyright (c) 2018-2020, 2023, Anton Krotov
     All rights reserved.
 *)
 
@@ -77,13 +77,10 @@ BEGIN
 END Import;
 
 
-PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR);
-
+PROCEDURE write* (program: BIN.PROGRAM; FileName: ARRAY OF CHAR; kernel: BOOLEAN);
 CONST
-
     PARAM_SIZE    = 2048;
     FileAlignment = 16;
-
 
 VAR
     header: HEADER;
@@ -100,7 +97,7 @@ VAR
     ImportTable: CHL.INTLIST;
     ILen, libcount, isize: INTEGER;
 
-    icount, dcount, ccount: INTEGER;
+    icount, dcount, ccount, glob32_size: INTEGER;
 
     code: CHL.BYTELIST;
 
@@ -111,7 +108,11 @@ BEGIN
     dcount := CHL.Length(program.data);
     ccount := CHL.Length(program.code);
 
-    text  := base + HEADER_SIZE;
+    text := base;
+    IF ~kernel THEN
+        INC(text, HEADER_SIZE)
+    END;
+
     data  := WR.align(text + ccount, FileAlignment);
     idata := WR.align(data + dcount, FileAlignment);
 
@@ -175,17 +176,18 @@ BEGIN
 
     WR.Create(FileName);
 
-    FOR i := 0 TO 7 DO
-        WR.WriteByte(ORD(header.menuet01[i]))
+    IF ~kernel THEN
+        FOR i := 0 TO 7 DO
+            WR.WriteByte(ORD(header.menuet01[i]))
+        END;
+        WR.Write32LE(header.ver);
+        WR.Write32LE(header.start);
+        WR.Write32LE(header.size);
+        WR.Write32LE(header.mem);
+        WR.Write32LE(header.sp);
+        WR.Write32LE(header.param);
+        WR.Write32LE(header.path)
     END;
-
-    WR.Write32LE(header.ver);
-    WR.Write32LE(header.start);
-    WR.Write32LE(header.size);
-    WR.Write32LE(header.mem);
-    WR.Write32LE(header.sp);
-    WR.Write32LE(header.param);
-    WR.Write32LE(header.path);
 
     CHL.WriteToFile(code);
     WR.Padding(FileAlignment);
@@ -196,8 +198,15 @@ BEGIN
     FOR i := 0 TO ILen - 1 DO
         WR.Write32LE(CHL.GetInt(ImportTable, i))
     END;
-
     CHL.WriteToFile(program._import);
+    WR.Padding(FileAlignment);
+
+    IF kernel THEN
+        glob32_size := program.bss DIV 4 + ORD(program.bss MOD 4 # 0);
+        FOR i := 1 TO glob32_size DO
+            WR.Write32LE(0)
+        END
+    END;
 
     WR.Close
 END write;

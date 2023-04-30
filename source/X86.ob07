@@ -774,7 +774,7 @@ BEGIN
 END LoadFltConst;
 
 
-PROCEDURE translate (pic: BOOLEAN; stroffs: INTEGER);
+PROCEDURE translate (pic: BOOLEAN; stroffs, target: INTEGER);
 VAR
     cmd, next: COMMAND;
 
@@ -1887,19 +1887,28 @@ BEGIN
 
         |IL.opISREC:
             PushAll(2);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._isrec);
             GetRegA
 
         |IL.opIS:
             PushAll(1);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._is);
             GetRegA
 
         |IL.opTYPEGR:
             PushAll(1);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._guardrec);
             GetRegA
 
@@ -1907,7 +1916,10 @@ BEGIN
             UnOp(reg1);
             PushAll(0);
             push(reg1);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._guard);
             GetRegA
 
@@ -1915,14 +1927,20 @@ BEGIN
             UnOp(reg1);
             PushAll(0);
             pushm(reg1, -4);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._guardrec);
             GetRegA
 
         |IL.opCASET:
             push(ecx);
             push(ecx);
-            pushc(param2 * tcount);
+            IF ~(target IN {TARGETS.KolibriOSDrv, TARGETS.KolibriOSKer}) THEN                
+                param2 := param2*tcount
+            END;
+            pushc(param2);
             CallRTL(pic, IL._guardrec);
             pop(ecx);
             test(eax);
@@ -2286,8 +2304,12 @@ BEGIN
     mainLocVarSize := 0;
     LocVarSize := 0;
 
-    IF target = TARGETS.Win32DLL THEN
-        pushm(ebp, 16);
+    IF target IN {TARGETS.Win32DLL, TARGETS.KolibriOSDrv} THEN
+        IF target = TARGETS.Win32DLL THEN
+            pushm(ebp, 16)
+        ELSE
+            pushc(0)
+        END;
         pushm(ebp, 12);
         pushm(ebp, 8);
         CallRTL(pic, IL._dllentry);
@@ -2390,10 +2412,20 @@ BEGIN
         movrc(eax, 1);
         OutByte(0C9H); (* leave *)
         OutByte3(0C2H, 0CH, 0) (* ret 12 *)
+    ELSIF target = TARGETS.KolibriOSDrv THEN
+        OutByte(0C9H); (* leave *)
+        ret;
+        SetLabel(dllret);
+        movrc(eax, 0);
+        OutByte(0C9H); (* leave *)
+        ret
     ELSIF target = TARGETS.KolibriOSDLL THEN
         movrc(eax, 1);
         OutByte(0C9H); (* leave *)
         ret
+    ELSIF target = TARGETS.KolibriOSKer THEN
+        OutByte(0C9H); (* leave *)
+        ret;
     ELSIF target = TARGETS.Linux32SO THEN
         OutByte(0C9H); (* leave *)
         ret;
@@ -2474,6 +2506,10 @@ BEGIN
         opt.pic := FALSE
     END;
 
+    IF target IN {TARGETS.KolibriOSKer, TARGETS.KolibriOSDrv} THEN
+        opt.pic := TRUE
+    END;
+
     IF TARGETS.OS IN {TARGETS.osWIN32, TARGETS.osLINUX32} THEN
         opt.pic := TRUE
     END;
@@ -2481,14 +2517,16 @@ BEGIN
     REG.Init(R, push, pop, mov, xchg, {eax, ecx, edx});
 
     dllinit := prolog(opt.pic, target, opt.stack, dllret);
-    translate(opt.pic, tcount * 4);
+    translate(opt.pic, tcount * 4, target);
     epilog(opt.pic, outname, target, opt.stack, opt.version, dllinit, dllret, sofinit);
 
     BIN.fixup(program);
     IF TARGETS.OS = TARGETS.osWIN32 THEN
         PE32.write(program, outname, target = TARGETS.Win32C, target = TARGETS.Win32DLL, FALSE, opt.PE32FileAlignment)
-    ELSIF target = TARGETS.KolibriOS THEN
-        KOS.write(program, outname)
+    ELSIF target = TARGETS.KolibriOSDrv THEN
+        PE32.write(program, outname, FALSE, TRUE, FALSE, 512)
+    ELSIF target IN {TARGETS.KolibriOS, TARGETS.KolibriOSKer} THEN
+        KOS.write(program, outname, target = TARGETS.KolibriOSKer)
     ELSIF target = TARGETS.KolibriOSDLL THEN
         MSCOFF.write(program, outname, opt.version)
     ELSIF TARGETS.OS = TARGETS.osLINUX32 THEN
