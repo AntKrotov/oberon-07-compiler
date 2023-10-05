@@ -10,8 +10,8 @@ VAR
 BEGIN
     str := "Привет!";
     Out.StringW(str); Out.Ln;
-    str[2] := "е";
-    str[5] := "д";
+    str[0] := "п";
+    str[6] := "?";
     Out.StringW(str)
 END main;
 

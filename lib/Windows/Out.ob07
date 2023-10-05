@@ -33,16 +33,22 @@ PROCEDURE [windows, "kernel32.dll", ""]
     GetStdHandle (nStdHandle: INTEGER): INTEGER;
 
 
-PROCEDURE Char* (x: CHAR);
+PROCEDURE CharW* (c: WCHAR);
 BEGIN
-    printf1(SYSTEM.SADR("%c"), ORD(x))
-END Char;
+    WriteConsoleW(hConsoleOutput, SYSTEM.ADR(c), 1, 0, 0)
+END CharW;
 
 
 PROCEDURE StringW* (s: ARRAY OF WCHAR);
 BEGIN
     WriteConsoleW(hConsoleOutput, SYSTEM.ADR(s[0]), LENGTH(s), 0, 0)
 END StringW;
+
+
+PROCEDURE Char* (c: CHAR);
+BEGIN
+    printf1(SYSTEM.SADR("%c"), ORD(c))
+END Char;
 
 
 PROCEDURE String* (s: ARRAY OF CHAR);
