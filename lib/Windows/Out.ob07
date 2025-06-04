@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2020-2022, Anton Krotov
+    Copyright (c) 2020-2022, 2025 Anton Krotov
     All rights reserved.
 *)
 
@@ -74,7 +74,7 @@ BEGIN
     IF bit_depth = 32 THEN
         printf3(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), x)
     ELSE
-        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), SYSTEM.VAL(x, INTEGER))
+        printf4(SYSTEM.SADR("%*.*E"), width, MAX(MIN(width - 8, 15), 1), SYSTEM.VAL(INTEGER, x))
     END
 END Real;
 
@@ -84,7 +84,7 @@ BEGIN
     IF bit_depth = 32 THEN
         printf3(SYSTEM.SADR("%*.*f"), width, precision, x)
     ELSE
-        printf4(SYSTEM.SADR("%*.*f"), width, precision, SYSTEM.VAL(x, INTEGER))
+        printf4(SYSTEM.SADR("%*.*f"), width, precision, SYSTEM.VAL(INTEGER, x))
     END
 END FixReal;
 

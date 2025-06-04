@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2023, Anton Krotov
+    Copyright (c) 2018-2023, 2025 Anton Krotov
     All rights reserved.
 *)
 
@@ -1483,6 +1483,11 @@ BEGIN
         PARS.checklex(parser, SCAN.lxLROUND);
         PARS.Next(parser);
         getpos(parser, pos);
+        qualident(parser, t);
+        PARS.check(t.obj = eTYPE, pos, 79);
+        PARS.checklex(parser, SCAN.lxCOMMA);
+        PARS.Next(parser);
+        getpos(parser, pos);
         designator(parser, e);
         PARS.check(isVar(e), pos, 93);
         IF PROG.isOpenArray(e._type) THEN
@@ -1492,11 +1497,6 @@ BEGIN
                 DEC(n)
             END
         END;
-        PARS.checklex(parser, SCAN.lxCOMMA);
-        PARS.Next(parser);
-        getpos(parser, pos);
-        qualident(parser, t);
-        PARS.check(t.obj = eTYPE, pos, 79);
         e._type := t._type;
         PARS.checklex(parser, SCAN.lxRROUND);
         PARS.Next(parser)

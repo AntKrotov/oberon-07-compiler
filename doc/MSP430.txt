@@ -104,7 +104,7 @@ UTF-8 с BOM-сигнатурой.
         PROCEDURE SADR(x: строковая константа): INTEGER
                 возвращает адрес x
 
-        PROCEDURE VAL(v: любой тип; T): T
+        PROCEDURE VAL(T; v: любой тип): T
                 v - переменная;
                 интерпретирует v, как переменную типа T
 

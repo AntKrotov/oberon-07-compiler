@@ -142,7 +142,7 @@ UTF-8 с BOM-сигнатурой.
         PROCEDURE WSADR(x: строковая константа (WCHAR)): INTEGER
                 возвращает адрес x
 
-        PROCEDURE VAL(v: любой тип; T): T
+        PROCEDURE VAL(T; v: любой тип): T
                 v - переменная;
                 интерпретирует v, как переменную типа T
 
