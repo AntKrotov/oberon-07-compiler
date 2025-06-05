@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2019-2021, 2023, Anton Krotov
+    Copyright (c) 2019-2021, 2023, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -24,6 +24,8 @@ TYPE
 
     SOFINI = PROCEDURE;
 
+    Trap = PROCEDURE (ModNum, ModNamePtr, line, error: INTEGER);
+
 
 VAR
 
@@ -39,6 +41,7 @@ VAR
     free          : PROCEDURE [linux] (ptr: INTEGER);
 
     fini: SOFINI;
+    trap*: Trap;
 
 
 PROCEDURE DebugMsg* (lpText, lpCaption: INTEGER);
@@ -89,6 +92,7 @@ END GetSym;
 PROCEDURE init* (sp, code: INTEGER);
 BEGIN
     fini := NIL;
+    trap := NIL;
     SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER) * 2, dlopen);
     SYSTEM.GET(code - 1000H - SYSTEM.SIZE(INTEGER),     dlsym);
     MainParam := sp;
@@ -119,6 +123,12 @@ PROCEDURE SetFini* (ProcFini: SOFINI);
 BEGIN
     fini := ProcFini
 END SetFini;
+
+
+PROCEDURE SetTrap* (_trap: Trap);
+BEGIN
+    trap := _trap
+END SetTrap;
 
 
 END API.

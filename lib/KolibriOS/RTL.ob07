@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2021, Anton Krotov
+    Copyright (c) 2018-2021, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -435,6 +435,10 @@ VAR
     s, temp: ARRAY 1024 OF CHAR;
 
 BEGIN
+    IF API.trap # NIL THEN
+        API.trap(modnum, _module, line, err)
+    END;
+
     CASE err OF
     | 1: s := "assertion failure"
     | 2: s := "NIL dereference"

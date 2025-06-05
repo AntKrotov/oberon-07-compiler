@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2021, 2023, Anton Krotov
+    Copyright (c) 2018-2021, 2023, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -31,6 +31,8 @@ TYPE
 
     DLL_ENTRY* = PROCEDURE (hinstDLL, fdwReason, lpvReserved: INTEGER);
 
+    Trap = PROCEDURE (ModNum, ModNamePtr, line, error: INTEGER);
+
 
 VAR
 
@@ -40,6 +42,8 @@ VAR
     process_detach,
     thread_detach,
     thread_attach: DLL_ENTRY;
+
+    trap*: Trap;
 
 
 PROCEDURE [windows-, KERNEL, ""] ExitProcess (code: INTEGER);
@@ -73,6 +77,7 @@ BEGIN
     process_detach := NIL;
     thread_detach  := NIL;
     thread_attach  := NIL;
+    trap := NIL;
     base := code - SectionAlignment;
     heap := GetProcessHeap()
 END init;
@@ -129,6 +134,12 @@ BEGIN
     thread_detach  := _thread_detach;
     thread_attach  := _thread_attach
 END SetDll;
+
+
+PROCEDURE SetTrap* (_trap: Trap);
+BEGIN
+    trap := _trap
+END SetTrap;
 
 
 END API.

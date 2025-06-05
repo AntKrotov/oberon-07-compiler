@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, Anton Krotov
+    Copyright (c) 2018-2022, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -155,6 +155,7 @@ BEGIN
     |124: str := "unknown flag"
     |125: str := "flag not supported"
     |126: str := "type of formal parameter should not be REAL"
+    |127: str := "NIL is not allowed in constant expressions"
     END;
     C.StringLn(str);
     C.String("  file:  ");  C.StringLn(fname);

@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018, 2020-2022, Anton Krotov
+    Copyright (c) 2018, 2020-2022, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -28,6 +28,8 @@ TYPE
 
     CRITICAL_SECTION = ARRAY 2 OF INTEGER;
 
+    Trap = PROCEDURE (ModNum, ModNamePtr, line, error: INTEGER);
+
 
 VAR
 
@@ -39,6 +41,8 @@ VAR
     multi: BOOLEAN;
 
     base*: INTEGER;
+
+    trap*: Trap;
 
 
 PROCEDURE [stdcall] zeromem* (dwords: INTEGER; adr: INTEGER);
@@ -260,6 +264,7 @@ END DebugMsg;
 PROCEDURE init* (import_, code: INTEGER);
 BEGIN
     multi := FALSE;
+    trap := NIL;
     base := code - SizeOfHeader;
     K.sysfunc2(68, 11);
     InitializeCriticalSection(CriticalSection);
@@ -285,6 +290,12 @@ END dllentry;
 
 PROCEDURE sofinit*;
 END sofinit;
+
+
+PROCEDURE SetTrap* (_trap: Trap);
+BEGIN
+    trap := _trap
+END SetTrap;
 
 
 END API.

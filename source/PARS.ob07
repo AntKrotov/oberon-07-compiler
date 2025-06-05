@@ -1,7 +1,7 @@
 ﻿(*
     BSD 2-Clause License
 
-    Copyright (c) 2018-2022, 2025 Anton Krotov
+    Copyright (c) 2018-2022, 2025, Anton Krotov
     All rights reserved.
 *)
 
@@ -391,7 +391,8 @@ BEGIN
     parser.constexp := TRUE;
     parser.expression(parser, e);
     parser.constexp := FALSE;
-    check((e.obj = eCONST) & (e._type # PROG.program.stTypes.tNIL), pos, 62);
+    check(e.obj = eCONST, pos, 62);
+    check(e._type # PROG.program.stTypes.tNIL, pos, 127);
     v := e.value
 END ConstExpression;
 
